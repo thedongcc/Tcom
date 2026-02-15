@@ -55,10 +55,10 @@ jobs:
           
           # 检查图标文件属性
           echo "--- Icon Properties ---"
-          ls -l resources/icon.ico || echo "Icon not found!"
+          ls -l resources/icons/icon.png || echo "Icon not found!"
           
           # 直接运行 electron-builder 以确保参数透传
-          DEBUG=electron-builder ./node_modules/.bin/electron-builder --publish always
+          DEBUG=electron-builder ./node_modules/.bin/electron-builder --config config/electron-builder.json5 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
