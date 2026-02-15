@@ -1,0 +1,45 @@
+{
+  "appId": "com.thedong.Tcom",
+  "productName": "Tcom",
+  "asar": true,
+  "directories": {
+    "output": "release/${version}",
+    "buildResources": "resources"
+  },
+
+  "releaseInfo": {
+    "releaseNotesFile": "release_notes.md"
+  },
+  "win": {
+    "icon": "icons/icon.png",
+    "target": [
+
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "shortcutName": "Tcom",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "differentialPackage": false
+  },
+  "files": [
+    "dist",
+    "dist-electron",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "resources",
+      "to": "resources",
+      "filter": ["**/*"]
+    }
+  ]
+}

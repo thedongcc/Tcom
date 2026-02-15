@@ -1,0 +1,79 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'V*' # 当推送以 V 开头的 tag (如 V0.0.1) 时触发
+
+permissions:
+  contents: write # 显式授予创建 Release 和上传文件的权限
+
+jobs:
+  build:
+    runs-on: windows-latest # 你的软件目前侧重 Windows，使用 Windows 构建最稳定
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Extract Release Notes
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Extracting notes for version: $VERSION"
+          # 使用 awk 提取当前版本之后的内容，直到遇到下一个 ## 标题或文件末尾
+          awk "/## \[$VERSION\]/{flag=1;next} /^## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          echo "--- Extracted Release Notes ---"
+          cat release_notes.md
+          echo "-------------------------------"
+          # 将内容存入环境变量（可选，但 release_notes.md 文件才是 electron-builder 使用的）
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat release_notes.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Build Application
+        run: npm run build:app
+
+      - name: List Build Artifacts
+        shell: bash
+        run: ls -R dist dist-electron
+
+      - name: Build and Publish Electron
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Building and Publishing version: $VERSION"
+          
+          # 检查图标文件属性
+          echo "--- Icon Properties ---"
+          ls -l resources/icon.ico || echo "Icon not found!"
+          
+          # 直接运行 electron-builder 以确保参数透传
+          DEBUG=electron-builder ./node_modules/.bin/electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Force Update Release Notes
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          echo "Updating release notes for $TAG..."
+          # 使用 GitHub CLI 强制覆盖 Release 的 Description
+          gh release edit "$TAG" --notes-file release_notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+
+

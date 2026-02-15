@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tcom</title>
+</head>
+
+<body>
+  <div id="root">
+    <style>
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #1e1e1e;
+        color: #cccccc;
+        font-family: monospace;
+        flex-direction: column;
+        gap: 16px;
+        overflow: hidden;
+        padding-top: 30px;
+        /* Space for titlebar */
+      }
+
+      .titlebar-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 30px;
+        background-color: #3c3c3c;
+        -webkit-app-region: drag;
+        user-select: none;
+      }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #3c3c3c;
+        border-top-color: #007acc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <div class="loading-container">
+      <div class="titlebar-placeholder"></div>
+      <div class="spinner"></div>
+      <div>Loading Tcom...</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
