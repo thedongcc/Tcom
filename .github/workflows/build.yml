@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'V*' # 当推送以 V 开头的 tag (如 V0.0.1) 时触发
+      - 'v*' # 当推送以 v 开头的 tag (如 v0.0.1) 时触发
 
 permissions:
   contents: write # 显式授予创建 Release 和上传文件的权限
