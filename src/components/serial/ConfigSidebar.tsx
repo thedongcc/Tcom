@@ -51,12 +51,9 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                 <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-[#969696] flex justify-between">
                         Port
-                        <RefreshCw
-                            size={12}
-                            className="cursor-pointer hover:text-white"
-                            onClick={listPorts}
-                            title="Refresh Ports"
-                        />
+                        <button onClick={listPorts} className="hover:text-white" title="Refresh Ports">
+                            <RefreshCw size={12} />
+                        </button>
                     </label>
                     <select
                         className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"

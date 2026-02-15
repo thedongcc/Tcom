@@ -2,6 +2,8 @@ export interface ThemeColors {
     // Log Area
     rxTextColor: string;
     txTextColor: string;
+    rxLabelColor: string;
+    txLabelColor: string;
     infoColor: string;
     errorColor: string;
     timestampColor: string;
@@ -45,6 +47,8 @@ export const DEFAULT_THEME: ThemeConfig = {
     colors: {
         rxTextColor: '#cccccc',
         txTextColor: '#ce9178',
+        rxLabelColor: '#6a9955',
+        txLabelColor: '#d16969',
         infoColor: '#9cdcfe',
         errorColor: '#f48771',
         timestampColor: '#569cd6',

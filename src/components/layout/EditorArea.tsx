@@ -319,6 +319,7 @@ const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutA
             <Group
                 key={`${node.id}-${node.direction}`}
                 id={node.id}
+                // @ts-ignore
                 direction={node.direction}
                 className={`h-full w-full ${node.direction === 'vertical' ? '!flex-col' : '!flex-row'}`}
                 style={{ display: 'flex' }}

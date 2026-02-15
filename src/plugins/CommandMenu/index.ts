@@ -7,7 +7,7 @@ export const CommandMenuPlugin: Plugin = {
     name: 'Command Menu',
     version: '1.0.0',
     description: 'Manage and send frequently used serial commands',
-    icon: Terminal,
+    icon: Terminal as any,
     sidebarComponent: CommandListSidebar,
     activate: (context) => {
         console.log('CommandMenu Plugin Activated');

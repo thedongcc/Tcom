@@ -72,9 +72,9 @@ interface ActivityBarProps {
 }
 
 const DEFAULT_ITEMS = [
-    { id: 'explorer', icon: <Files size={24} strokeWidth={1.5} />, label: 'Explorer' },
-    { id: 'serial', icon: <Monitor size={24} strokeWidth={1.5} />, label: 'Serial Monitor' },
-    { id: 'extensions', icon: <Box size={24} strokeWidth={1.5} />, label: 'Extensions' },
+    { id: 'explorer', icon: <Files size={24} />, label: 'Explorer' },
+    { id: 'serial', icon: <Monitor size={24} />, label: 'Serial Monitor' },
+    { id: 'extensions', icon: <Box size={24} />, label: 'Extensions' },
 ];
 
 export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
@@ -240,7 +240,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
 
                 <div className="relative" ref={menuRef}>
                     <ActivityItem
-                        icon={<Settings size={24} strokeWidth={1.5} />}
+                        icon={<Settings size={24} />}
                         active={isMenuOpen}
                         onClick={() => {
                             if (isMenuOpen) resetMenu();

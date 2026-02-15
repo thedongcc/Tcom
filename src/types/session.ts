@@ -17,6 +17,11 @@ export interface BaseSessionConfig {
     name: string;
     type: SessionType;
     autoConnect: boolean;
+    // Optional properties that might be accessed generically (careful with this)
+    uiState?: any;
+    connection?: any;
+    txCRC?: CRCConfig;
+    rxCRC?: CRCConfig;
 }
 
 export interface SettingsSessionConfig extends BaseSessionConfig {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Token, CRCConfig, FlagConfig, HexConfig } from '../../types/token';
+import { Token, CRCConfig, FlagConfig, HexConfig, TimestampConfig, AutoIncConfig } from '../../types/token';
 import { X, Check, ChevronDown } from 'lucide-react';
 
 interface TokenConfigPopoverProps {
@@ -13,7 +13,7 @@ interface TokenConfigPopoverProps {
 export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, position }: TokenConfigPopoverProps) => {
     console.log('TokenConfigPopover Rendering:', { token, position });
     const popoverRef = useRef<HTMLDivElement>(null);
-    const [config, setConfig] = useState<CRCConfig | FlagConfig | HexConfig>(token.config);
+    const [config, setConfig] = useState<CRCConfig | FlagConfig | HexConfig | TimestampConfig | AutoIncConfig>(token.config);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

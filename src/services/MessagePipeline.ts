@@ -31,7 +31,7 @@ export const MessagePipeline = {
             const segments = parseDOM(div);
             console.log('MessagePipeline: Parsed segments', segments);
             data = compileSegments(segments, mode, tokens);
-            console.log('MessagePipeline: Compiled data', { length: data instanceof Uint8Array ? data.length : data.length, data });
+            console.log('MessagePipeline: Compiled data', { length: data.length, data });
         } else if (mode === 'hex') {
             // Plain Hex
             data = parseHex(content);

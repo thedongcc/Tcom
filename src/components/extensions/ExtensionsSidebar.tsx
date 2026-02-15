@@ -33,7 +33,7 @@ export const ExtensionsSidebar = () => {
                     {plugins.map(({ plugin, isActive }) => (
                         <div key={plugin.id} className="px-4 py-3 hover:bg-[#2a2d2e] group flex gap-3 border-l-2 border-transparent hover:border-l-2 hover:border-transparent">
                             <div className="pt-0.5">
-                                {plugin.icon ? <plugin.icon size={36} strokeWidth={1} className="text-[#cccccc]" /> : <Box size={36} strokeWidth={1} className="text-[#cccccc]" />}
+                                {plugin.icon ? <plugin.icon size={36} className="text-[#cccccc]" /> : <Box size={36} className="text-[#cccccc]" />}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-0.5">
@@ -77,7 +77,7 @@ export const ExtensionsSidebar = () => {
                             {availablePlugins.map(plugin => (
                                 <div key={plugin.id} className="px-4 py-3 hover:bg-[#2a2d2e] group flex gap-3">
                                     <div className="pt-0.5">
-                                        {plugin.icon ? <plugin.icon size={36} strokeWidth={1} className="text-[#cccccc]" /> : <Box size={36} strokeWidth={1} className="text-[#cccccc]" />}
+                                        {plugin.icon ? <plugin.icon size={36} className="text-[#cccccc]" /> : <Box size={36} className="text-[#cccccc]" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-0.5">

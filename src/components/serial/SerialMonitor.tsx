@@ -1,4 +1,6 @@
 
+// No changes yet, need to view SerialInput.tsx
+// Placeholder to allow tool execution sequence
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';

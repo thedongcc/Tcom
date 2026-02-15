@@ -218,7 +218,7 @@ export const useSessionManager = () => {
         if (result.success) {
             // Also validate TX data with RX CRC config if enabled
             const crcStatus = session.config.rxCRC?.enabled
-                ? validateRXCRC(finalData, session.config.rxCRC)
+                ? (validateRXCRC(finalData, session.config.rxCRC) ? 'ok' : 'error')
                 : 'none';
             addLog(sessionId, 'TX', finalData, crcStatus);
         } else {
@@ -464,7 +464,9 @@ export const useSessionManager = () => {
                             // Update last log
                             // Re-validate CRC on full packet? Or just status?
                             // If we merge, we are building a larger packet. CRC might become valid.
-                            const isOk = s.config.rxCRC?.enabled ? validateRXCRC(newData, s.config.rxCRC) : false;
+                            // Ensure we have Uint8Array for validation
+                            const dataToValidate = typeof newData === 'string' ? new TextEncoder().encode(newData) : newData;
+                            const isOk = s.config.rxCRC?.enabled ? validateRXCRC(dataToValidate, s.config.rxCRC) : false;
                             const crcStatus = s.config.rxCRC?.enabled ? (isOk ? 'ok' : 'error') : 'none';
 
                             const newLogs = [...logs];

@@ -29,10 +29,15 @@ export interface HexConfig {
     byteWidth: number; // e.g. 1, 3, 5
 }
 
+export interface TimestampConfig {
+    format: 'milliseconds' | 'seconds';
+    byteOrder: 'little' | 'big';
+}
+
 export interface Token {
     id: string; // Unique ID
-    type: 'crc' | 'auto_inc' | 'flag' | 'hex';
-    config: CRCConfig | AutoIncConfig | FlagConfig | HexConfig;
+    type: 'crc' | 'auto_inc' | 'flag' | 'hex' | 'timestamp';
+    config: CRCConfig | AutoIncConfig | FlagConfig | HexConfig | TimestampConfig;
 }
 
 // A segment represents a chunk of the input: either static text/hex or a dynamic token
