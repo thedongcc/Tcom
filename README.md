@@ -1,8 +1,8 @@
 # Tcom 🚀
 A serial com tool with modern ui
 
-[![GitHub Release](https://img.shields.io/github/v/release/thedongcc/SerialTool?style=flat-square)](https://github.com/thedongcc/SerialTool/releases)
-[![Build and Release](https://github.com/thedongcc/SerialTool/actions/workflows/build.yml/badge.svg)](https://github.com/thedongcc/SerialTool/actions/workflows/build.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/thedongcc/Tcom?style=flat-square)](https://github.com/thedongcc/Tcom/releases)
+[![Build and Release](https://github.com/thedongcc/Tcom/actions/workflows/build.yml/badge.svg)](https://github.com/thedongcc/Tcom/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 **前情提要** 本软件是Vibe Coding产物，仅供学习或参考，不建议在生产环境中使用。
@@ -27,7 +27,7 @@ A serial com tool with modern ui
 ## 🚀 快速开始
 
 ### 安装使用
-在 [Releases](https://github.com/thedongcc/SerialTool/releases) 页面下载最新版本的 `Tcom-Setup-x.x.x.exe`，安装后即可使用。
+在 [Releases](https://github.com/thedongcc/Tcom/releases) 页面下载最新版本的 `Tcom-Setup-x.x.x.exe`，安装后即可使用。
 
 ### 本地开发
 ```bash
@@ -53,13 +53,13 @@ npm run build
 欢迎通过 Issue 提供建议或通过 Pull Request 贡献代码。
 
 **Author**: [@thedongcc](https://github.com/thedongcc)  
-**License**: [MIT](file:///p:/Webstorm/SerialTool_V1/LICENSE)
+**License**: [MIT](file:///p:/Webstorm/Tcom_V1/LICENSE)
 
 ---
 
 ## ☕ 赞赏支持
 
-如果本项目对您有所帮助，欢迎请我喝杯咖啡，支持我继续完善 SerialTool！
+如果本项目对您有所帮助，欢迎请我喝杯咖啡，支持我继续完善 Tcom！
 
 <div align="left">
   <img src="resources/payment/wechat.png" alt="WeChat Pay" width="200" style="margin-right: 20px;" />

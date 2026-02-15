@@ -271,10 +271,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                                         <span>Color Theme</span>
                                         <span className="text-[11px] opacity-60">Ctrl+K Ctrl+T</span>
                                     </div>
-                                    <div className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => alert('Run Update check')}>
-                                        <span>Check for Updates...</span>
-                                    </div>
+
                                 </>
                             ) : (
                                 <>

@@ -33,12 +33,15 @@ export const useAutoUpdate = () => {
             }
         });
 
-        // Silent check on startup
-        window.updateAPI.check().catch(() => {
-            // Silently ignore errors on startup check
-        });
+        // Silent check on startup with delay to ensure UI is ready
+        const timer = setTimeout(() => {
+            window.updateAPI.check().catch(() => { });
+        }, 2000);
 
-        return () => removeStatusListener();
+        return () => {
+            removeStatusListener();
+            clearTimeout(timer);
+        };
     }, []);
 
     const checkForUpdates = useCallback(() => {

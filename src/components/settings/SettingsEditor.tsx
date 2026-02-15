@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, RefreshCw } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
-import { UpdateDialog } from '../common/UpdateDialog';
 
 const ColorInput = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +72,6 @@ const Group = ({ title, children }: { title: string, children: React.ReactNode }
 export const SettingsEditor = () => {
     const { config, updateColors, updateConfig, resetConfig, importConfig, exportConfig } = useSettings();
     const [searchTerm, setSearchTerm] = useState('');
-    const [showUpdate, setShowUpdate] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,20 +136,7 @@ export const SettingsEditor = () => {
             {/* Content using default VSCode variable colors for UI, but controls specific vars for Serial Monitor */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
 
-                <Group title="Software Update">
-                    <div className="py-2 px-2 border-b border-[var(--vscode-settings-row-hover-bg)] flex items-center justify-between">
-                        <div>
-                            <label className="block text-[13px] text-[var(--vscode-fg)] font-medium">Auto Update</label>
-                            <p className="text-[11px] text-[#969696]">Check and download updates automatically.</p>
-                        </div>
-                        <button
-                            onClick={() => setShowUpdate(true)}
-                            className="bg-[#007acc] hover:bg-[#0098ff] text-white px-3 py-1.5 rounded-sm text-xs flex items-center gap-2 transition-colors shadow-sm"
-                        >
-                            <RefreshCw size={14} /> Check for updates
-                        </button>
-                    </div>
-                </Group>
+
 
                 <Group title="Serial Monitor Colors">
                     <ColorInput label="Received Label (RX)" value={config.colors.rxLabelColor} onChange={v => updateColors({ rxLabelColor: v })} />
@@ -214,7 +199,7 @@ export const SettingsEditor = () => {
                     </div>
                 </Group>
             </div>
-            {showUpdate && <UpdateDialog onClose={() => setShowUpdate(false)} />}
+
         </div>
     );
 };
