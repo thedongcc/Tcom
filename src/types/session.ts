@@ -78,6 +78,15 @@ export interface MqttSessionConfig extends BaseSessionConfig {
     autoReconnect: boolean;
     connectTimeout: number; // seconds
     topics: MqttTopicConfig[];
+    uiState?: {
+        autoScroll?: boolean;
+        showTimestamp?: boolean;
+        viewMode?: 'text' | 'hex' | 'json';
+        fontSize?: number;
+        fontFamily?: string;
+        mergeRepeats?: boolean;
+        // add other detailed state if needed
+    };
 }
 
 export interface GraphSessionConfig extends BaseSessionConfig {

@@ -237,21 +237,12 @@ export const useSessionManager = () => {
         const result = await window.mqttAPI.publish(sessionId, topic, payload, options);
 
         if (result.success) {
-            const payloadStr = typeof payload === 'string' ? payload : new TextDecoder().decode(payload);
-            // Log TX
-            const newLogs = [...session.logs, {
-                type: 'TX',
-                data: payload,
-                timestamp: Date.now(),
-                topic: topic,
-                crcStatus: 'none'
-            } as LogEntry];
-            if (newLogs.length > MAX_LOGS) newLogs.shift();
-            updateSession(sessionId, () => ({ logs: newLogs }));
+            // Log TX via addLog to support merging
+            addLog(sessionId, 'TX', payload, 'none', topic);
         } else {
             addLog(sessionId, 'ERROR', `Publish failed: ${result.error}`);
         }
-    }, [sessions, updateSession]);
+    }, [sessions, addLog]);
 
     // Mock Incoming Messages for MQTT - DISABLED for clarity
     /*

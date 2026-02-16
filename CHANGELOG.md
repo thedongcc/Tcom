@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.1] - 2026-02-16
 ### Added
-- 
+- 串口接收区数据统计增加筛选功能
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -22,3 +22,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - 取消设置中的check update功能
+- 移除串口接收区option菜单中的display filter功能

@@ -282,6 +282,8 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                                 session={session as any}
                                 onShowSettings={onShowSettings}
                                 onPublish={(topic, payload, qos, retain) => sessionManager.publishMqtt(session.id, topic, payload, { qos, retain })}
+                                onUpdateConfig={(updates) => sessionManager.updateSessionConfig(session.id, updates)}
+                                onClearLogs={() => sessionManager.clearLogs(session.id)}
                             />;
                         }
                         return <SerialMonitor

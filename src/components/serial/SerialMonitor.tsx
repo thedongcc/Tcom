@@ -4,7 +4,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';
-import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
@@ -265,6 +265,12 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return true; // 'all'
     });
 
+    const toggleFilter = (mode: 'tx' | 'rx') => {
+        const newMode = filterMode === mode ? 'all' : mode;
+        setFilterMode(newMode);
+        saveUIState({ filterMode: newMode });
+    };
+
     const fontFamilyClass = fontFamily === 'consolas' ? 'font-[Consolas]' : fontFamily === 'courier' ? 'font-[Courier]' : 'font-mono';
 
     const handleInputStateChange = useCallback((state: { content: string, html: string, tokens: any, mode: 'text' | 'hex', lineEnding: string }) => {
@@ -371,13 +377,21 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 <div className="flex items-center gap-4">
                     {/* Stats Display - Refined JetBrains Style */}
                     <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
-                        <div className="flex items-center gap-1.5 px-3 py-1 hover:bg-[#2a2d2e] transition-colors group">
-                            <span className="text-[11px] font-semibold text-[#aaaaaa] font-mono">T:</span>
-                            <span className="text-[11px] font-semibold text-[#cccccc] font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter TX only"
+                            onClick={() => toggleFilter('tx')}
+                        >
+                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
+                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 px-3 py-1 hover:bg-[#2a2d2e] transition-colors group">
-                            <span className="text-[11px] font-semibold text-[#aaaaaa] font-mono">R:</span>
-                            <span className="text-[11px] font-semibold text-[#cccccc] font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter RX only"
+                            onClick={() => toggleFilter('rx')}
+                        >
+                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#aaaaaa]'}`}>R:</span>
+                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
                     {/* Mode Toggle & Options Group */}
@@ -417,25 +431,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
                                             <div className="text-[12px] text-[#cccccc] font-bold">Log Settings</div>
                                             <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
-                                        </div>
-
-                                        {/* Filter Section */}
-                                        <div className="mb-5 px-1">
-                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
-                                                <span>Display Filter</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
-                                            <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-7">
-                                                {(['all', 'rx', 'tx'] as const).map(mode => (
-                                                    <button
-                                                        key={mode}
-                                                        className={`flex-1 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase ${filterMode === mode ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
-                                                        onClick={() => { setFilterMode(mode); saveUIState({ filterMode: mode }); }}
-                                                    >
-                                                        {mode}
-                                                    </button>
-                                                ))}
-                                            </div>
                                         </div>
 
                                         {/* Encoding Section */}
@@ -742,7 +737,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
                             <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
                                 {showTimestamp && (
-                                    <span className="text-[var(--st-timestamp)] font-mono opacity-90">
+                                    <span className="text-[#999] font-mono opacity-90">
                                         [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
                                     </span>
                                 )}

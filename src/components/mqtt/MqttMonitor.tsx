@@ -1,6 +1,8 @@
 import { MqttSessionConfig, LogEntry } from '../../types/session';
-import { useRef, useEffect, useState } from 'react';
-import { Send, History } from 'lucide-react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { Send, Trash2, ArrowDownToLine, Menu, X, ChevronDown, Download, Settings, RefreshCw, Check, Filter } from 'lucide-react';
+import { useSettings } from '../../context/SettingsContext';
+import { useToast } from '../../context/ToastContext';
 
 interface MqttMonitorProps {
     session: {
@@ -11,104 +13,491 @@ interface MqttMonitorProps {
     };
     onShowSettings?: (view: string) => void;
     onPublish: (topic: string, payload: string | Uint8Array, qos: 0 | 1 | 2, retain: boolean) => void;
+    onUpdateConfig?: (updates: Partial<MqttSessionConfig>) => void;
+    onClearLogs?: () => void;
 }
 
-export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorProps) => {
+const defaultFonts = [
+    { label: 'Monospace (Default)', value: 'mono' },
+    { label: 'JetBrains Mono (Built-in)', value: 'JetBrains Mono' },
+    { label: 'Consolas', value: 'consolas' },
+    { label: 'Courier New', value: 'Courier New' },
+    { label: 'Microsoft YaHei UI', value: 'Microsoft YaHei UI' },
+    { label: 'Segoe UI', value: 'Segoe UI' },
+    { label: 'Inter', value: 'Inter' },
+];
+
+export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs }: MqttMonitorProps) => {
+    const { config: themeConfig } = useSettings();
+    const { showToast } = useToast();
+    const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Initial State from Config
+    const uiState = config.uiState || {};
+
+    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'json'>(uiState.viewMode || 'text');
+    const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
+    const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
+    const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
+    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 13);
+    const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'mono');
+    const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
+    const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
+
+    // Font Selection Logic
+    const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
+    const [availableFonts, setAvailableFonts] = useState<any[]>([]);
+
+    const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
     // Publish State
     const [topic, setTopic] = useState('test/topic');
     const [payload, setPayload] = useState('{"msg": "hello"}');
     const [qos, setQos] = useState<0 | 1 | 2>(0);
     const [retain, setRetain] = useState(false);
-    const [format, setFormat] = useState<'text' | 'hex' | 'json'>('text');
+    const [publishFormat, setPublishFormat] = useState<'text' | 'hex' | 'json'>('text');
 
-    // Auto-scroll to bottom
+    // Helper: Save UI State
+    const saveUIState = (updates: any) => {
+        if (!onUpdateConfig) return;
+        const currentUI = config.uiState || {};
+        onUpdateConfig({ uiState: { ...currentUI, ...updates } });
+    };
+
+    // Auto-scroll logic
     useEffect(() => {
-        if (scrollRef.current) {
+        if (scrollRef.current && autoScroll) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [session.logs]);
+    }, [logs, autoScroll, filterMode]); // Added filterMode dependency to scroll when filter changes
+
+    // System Fonts Loading
+    useEffect(() => {
+        if (showAllFonts) {
+            // @ts-ignore - queryLocalFonts is an experimental API
+            if (window.queryLocalFonts) {
+                // @ts-ignore
+                window.queryLocalFonts().then((fonts: any[]) => {
+                    // Filter and deduplicate
+                    const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
+                        .map(name => fonts.find((f: any) => f.fullName === name))
+                        .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
+                    setAvailableFonts(uniqueFonts);
+                }).catch((e: any) => {
+                    console.error('Failed to query local fonts:', e);
+                });
+            }
+        }
+    }, [showAllFonts]);
+
+    // Helpers
+    const formatTimestamp = (ts: number) => {
+        const date = new Date(ts);
+        const fmt = themeConfig.timestampFormat || 'HH:mm:ss.SSS';
+        const pad = (n: number, w: number = 2) => n.toString().padStart(w, '0');
+        return fmt
+            .replace('HH', pad(date.getHours()))
+            .replace('mm', pad(date.getMinutes()))
+            .replace('ss', pad(date.getSeconds()))
+            .replace('SSS', pad(date.getMilliseconds(), 3));
+    };
+
+    const formatData = (data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
+        if (mode === 'hex') {
+            const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+        }
+        if (mode === 'json') {
+            try {
+                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
+                const obj = JSON.parse(str);
+                return JSON.stringify(obj, null, 2);
+            } catch {
+                // fallback to text if invalid json
+            }
+        }
+        // Text
+        if (typeof data === 'string') return data;
+        try {
+            return new TextDecoder().decode(data);
+        } catch {
+            return `[Binary ${data.length} bytes]`;
+        }
+    };
+
+    const getDataLengthText = (data: string | Uint8Array) => {
+        let length = 0;
+        if (typeof data === 'string') {
+            length = new TextEncoder().encode(data).length;
+        } else {
+            length = data.length;
+        }
+        return `[${length}B]`;
+    };
 
     const handleSend = () => {
         if (!session.isConnected || !topic) return;
 
         let data: string | Uint8Array = payload;
 
-        if (format === 'hex') {
-            // Convert Hex string to Uint8Array
+        if (publishFormat === 'hex') {
             const cleanHex = payload.replace(/\s+/g, '');
             if (!/^[0-9A-Fa-f]*$/.test(cleanHex) || cleanHex.length % 2 !== 0) {
-                // TODO: Show error
+                showToast('Invalid Hex String', 'error');
                 return;
             }
-            const bytes = new Uint8Array(cleanHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
-            data = bytes;
-        } else if (format === 'json') {
-            // Validate JSON
+            if (cleanHex.length > 0)
+                data = new Uint8Array(cleanHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+            else
+                data = new Uint8Array(0);
+
+        } else if (publishFormat === 'json') {
             try {
                 JSON.parse(payload);
             } catch (e) {
-                // Allow sending invalid JSON? User choice. Let's send as string.
+                // warning optional
             }
         }
-
         onPublish(topic, data, qos, retain);
     };
 
+    const handleClearLogs = () => {
+        if (onClearLogs) onClearLogs();
+    };
+
+    const handleSaveLogs = () => {
+        const content = logs.map(log => {
+            const timestamp = new Date(log.timestamp).toLocaleTimeString();
+            const dataStr = formatData(log.data, viewMode);
+            const topicStr = log.topic ? `[${log.topic}] ` : '';
+            return `[${timestamp}][${log.type}] ${topicStr}${dataStr}`;
+        }).join('\n');
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mqtt_log_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Toggle Filter Mode
+    const toggleFilter = (mode: 'tx' | 'rx') => {
+        const newMode = filterMode === mode ? 'all' : mode;
+        setFilterMode(newMode);
+        saveUIState({ filterMode: newMode });
+    };
+
+    // Stats Calculation
+    const txBytes = logs.filter(log => log.type === 'TX').reduce((sum, log) => {
+        const count = log.repeatCount || 1;
+        const len = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
+        return sum + (len * count);
+    }, 0);
+
+    const rxBytes = logs.filter(log => log.type === 'RX').reduce((sum, log) => {
+        const count = log.repeatCount || 1;
+        const len = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
+        return sum + (len * count);
+    }, 0);
+
+    // Filter Logs for Display
+    const filteredLogs = logs.filter(log => {
+        if (filterMode === 'tx') return log.type === 'TX';
+        if (filterMode === 'rx') return log.type === 'RX';
+        return true;
+    });
+
     return (
-        <div className="absolute inset-0 flex flex-col bg-[#1e1e1e] font-mono text-sm">
+        <div className="absolute inset-0 flex flex-col bg-[var(--st-rx-bg)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }}>
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
+                <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
+                    {isConnected ? (
+                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                    ) : (
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                    )}
+                    {config.host}:{config.port}
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {/* Stats with Filter Toggle */}
+                    <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter TX only"
+                            onClick={() => toggleFilter('tx')}
+                        >
+                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
+                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
+                        </div>
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter RX only"
+                            onClick={() => toggleFilter('rx')}
+                        >
+                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#aaaaaa]'}`}>R:</span>
+                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
+                        </div>
+                    </div>
+
+                    {/* View Mode */}
+                    <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-[26px]">
+                        {(['text', 'hex', 'json'] as const).map(m => (
+                            <button
+                                key={m}
+                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase ${viewMode === m ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}
+                            >
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Options */}
+                    <div className="relative">
+                        <button
+                            className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors flex items-center gap-1.5 border border-transparent ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
+                            onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                            title="Options"
+                        >
+                            <Menu size={16} />
+                            <span className="text-[11px] font-medium">Options</span>
+                        </button>
+                        {showOptionsMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
+                                <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
+                                    <div className="flex items-center justify-between mb-2 pb-1 border-b border-[#3c3c3c]">
+                                        <div className="text-[12px] text-[#cccccc] font-bold">Log Settings</div>
+                                    </div>
+                                    <div className="space-y-3 px-1">
+
+                                        {/* Features */}
+                                        <div className="space-y-2 mb-4">
+                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
+                                                <span>Features</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                            </div>
+
+                                            <label className="flex items-center justify-between cursor-pointer group">
+                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Timestamp</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={showTimestamp}
+                                                    onChange={(e) => { setShowTimestamp(e.target.checked); saveUIState({ showTimestamp: e.target.checked }); }}
+                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
+                                                />
+                                            </label>
+
+                                            <label className="flex items-center justify-between cursor-pointer group">
+                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Data Length</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={showDataLength}
+                                                    onChange={(e) => { setShowDataLength(e.target.checked); saveUIState({ showDataLength: e.target.checked }); }}
+                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
+                                                />
+                                            </label>
+
+                                            <label className="flex items-center justify-between cursor-pointer group">
+                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Merge Repeats</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={mergeRepeats}
+                                                    onChange={(e) => { setMergeRepeats(e.target.checked); saveUIState({ mergeRepeats: e.target.checked }); }}
+                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
+                                                />
+                                            </label>
+                                        </div>
+
+                                        {/* Font Settings */}
+                                        <div className="space-y-3 mb-4">
+                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
+                                                <span>Appearance</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] text-[#cccccc]">Font Size:</span>
+                                                <div className="relative">
+                                                    <select
+                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-20 appearance-none hover:bg-[#454545] transition-colors"
+                                                        value={fontSize}
+                                                        onChange={(e) => { const val = Number(e.target.value); setFontSize(val); saveUIState({ fontSize: val }); }}
+                                                    >
+                                                        {[10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => (
+                                                            <option key={size} value={size}>{size}px</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
+                                                        <ChevronDown size={10} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-[11px] text-[#cccccc]">Font Family:</span>
+                                                <div className="relative">
+                                                    <select
+                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-full appearance-none hover:bg-[#454545] transition-colors pr-6"
+                                                        value={fontFamily}
+                                                        onChange={(e) => { setFontFamily(e.target.value); saveUIState({ fontFamily: e.target.value }); }}
+                                                    >
+                                                        <optgroup label="Preset Fonts">
+                                                            {defaultFonts.map(f => (
+                                                                <option key={f.value} value={f.value}>{f.label}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                        {showAllFonts && availableFonts.length > 0 && (
+                                                            <optgroup label="System Fonts">
+                                                                {availableFonts.map((font: any) => (
+                                                                    <option key={font.fullName} value={font.fullName}>
+                                                                        {font.fullName}
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
+                                                    </select>
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
+                                                        <ChevronDown size={12} />
+                                                    </div>
+                                                </div>
+
+                                                <label className="flex items-center gap-2 mt-1 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={showAllFonts}
+                                                        onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
+                                                        className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e]"
+                                                    />
+                                                    <span className="text-[10px] text-[#969696]">Show System Fonts</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="pt-2 border-t border-[#3c3c3c]">
+                                            <button
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors"
+                                                onClick={() => {
+                                                    handleSaveLogs();
+                                                    setShowOptionsMenu(false);
+                                                }}
+                                            >
+                                                <Download size={14} />
+                                                <span>Export Log</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
+                        <button
+                            className={`p-1 rounded transition-colors ${autoScroll ? 'text-[#4ec9b0] bg-[#1e1e1e]' : 'text-[#969696] hover:text-[#cccccc] hover:bg-[#3c3c3c]'}`}
+                            onClick={() => {
+                                const newState = !autoScroll;
+                                setAutoScroll(newState);
+                                saveUIState({ autoScroll: newState });
+                                if (newState && scrollRef.current) {
+                                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                }
+                            }}
+                            title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
+                        >
+                            <ArrowDownToLine size={14} />
+                        </button>
+                        <button
+                            className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors"
+                            onClick={handleClearLogs}
+                            title="Clear Logs"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
             {/* Logs Area */}
-            <div className="flex-1 overflow-auto p-4" ref={scrollRef}>
-                {session.logs.length === 0 && (
-                    <div className="text-[#666] italic text-center mt-10">
+            <div
+                className="flex-1 overflow-auto p-4"
+                ref={scrollRef}
+                style={{
+                    fontSize: `${fontSize}px`,
+                    fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily,
+                    lineHeight: '1.6'
+                }}
+            >
+                {logs.length === 0 && (
+                    <div className="text-[#666] italic text-center mt-10 select-none">
                         {session.isConnected ? 'Connected. Waiting for messages...' : 'Disconnected.'}
                     </div>
                 )}
-                {session.logs.map((log, i) => (
-                    <div key={i} className="mb-1 break-words font-mono text-[13px] flex items-start gap-2 group hover:bg-[#2a2d2e] -mx-2 px-2 py-0.5">
-                        <span className="text-[#666] shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                {filteredLogs.map((log, i) => (
+                    <div key={i} className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative border-l-2 leading-relaxed ${log.type === 'ERROR' ? 'bg-[#4b1818]/20 border-[#f48771]' : 'border-transparent'}`}>
+
+                        {/* Timestamp & Repeats */}
+                        {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                            <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
+                                {showTimestamp && (
+                                    <span className="text-[#999999] font-mono opacity-90">
+                                        [{formatTimestamp(log.timestamp)}]
+                                    </span>
+                                )}
+                                {log.repeatCount && log.repeatCount > 1 && (
+                                    <span className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] pt-[1px]">
+                                        x{log.repeatCount}
+                                    </span>
+                                )}
+                            </div>
+                        )}
 
                         {/* Direction & Type */}
-                        <span className={`font-bold shrink-0 w-8 text-center ${log.type === 'RX' ? 'text-[#ce9178]' :
-                            log.type === 'TX' ? 'text-[#4ec9b0]' :
-                                log.type === 'ERROR' ? 'text-red-500' : 'text-[#569cd6]'
+                        <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px] shrink-0
+                            ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
+                                log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
+                                    log.type === 'ERROR' ? 'bg-red-500 text-white' :
+                                        'bg-[#454545] text-[#cccccc]'
                             }`}>
-                            {log.type === 'RX' ? 'IN' : log.type === 'TX' ? 'OUT' : log.type}
+                            {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : log.type}
                         </span>
 
-                        {/* Topic Pill */}
+                        {/* Topic Pill - Compact */}
                         {log.topic && (
                             <span
-                                className="px-1.5 rounded text-[11px] shrink-0 border border-current opacity-90"
+                                className="h-[18px] flex items-center px-1.5 rounded-[3px] text-[11px] leading-none border border-current opacity-90 select-text shrink-0 pt-[1px]"
                                 style={{
-                                    color: (session.config as MqttSessionConfig).topics.find(t =>
-                                        // Match exact or wildcards? Usually exact for log display.
-                                        // But we want to match the subscription color.
-                                        // MQTT wildcards: + and #. 
-                                        // Simple match for now: if we have an exact config for this topic, use it.
-                                        // Or check if it matches a subscription pattern? That's complex.
-                                        // Let's just try to find exact match first, or just use a hashing color if not found?
-                                        // User asked: "列表中的topic颜色不同，所以mqtt数据显示区的topic也应该显示对应的颜色"
-                                        // This implies if I subscribed to "test/a" (Red), I expect messages in "test/a" to be Red.
-                                        t.path === log.topic
-                                    )?.color || '#9cdcfe' // Default blue
+                                    color: (session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe',
+                                    borderColor: (session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe',
+                                    backgroundColor: ((session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe') + '15'
                                 }}
                             >
                                 {log.topic}
                             </span>
                         )}
 
+                        {/* Data Length */}
+                        {showDataLength && (
+                            <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] shrink-0">
+                                {getDataLengthText(log.data)}
+                            </span>
+                        )}
+
                         {/* Payload */}
-                        <span className="text-[#d4d4d4] break-all whitespace-pre-wrap">
-                            {(() => {
-                                if (typeof log.data === 'string') return log.data;
-                                try {
-                                    return new TextDecoder().decode(log.data);
-                                } catch (e) {
-                                    return `[Binary ${log.data.length} bytes]`;
-                                }
-                            })()}
+                        <span className={`whitespace-pre-wrap break-all select-text flex-1 ${log.type === 'TX' ? 'text-[#4ec9b0]' :
+                            log.type === 'RX' ? 'text-[#ce9178]' :
+                                log.type === 'ERROR' ? 'text-red-400' :
+                                    'text-[#569cd6]'
+                            }`}>
+                            {formatData(log.data, viewMode)}
                         </span>
                     </div>
                 ))}
@@ -128,14 +517,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorP
                             list="mqtt-topics-list"
                         />
                         <datalist id="mqtt-topics-list">
-                            {(session.config as MqttSessionConfig).topics.map(t => (
+                            {(session.config.topics || []).map(t => (
                                 <option key={t.id} value={t.path}>{t.path}</option>
                             ))}
                         </datalist>
-                        {/* 
-                         Alternatively, we can use a custom dropdown if datalist styling is too native/ugly.
-                         But datalist is robust for "select or type".
-                        */}
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -170,8 +555,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorP
                             {['text', 'json', 'hex'].map((fmt) => (
                                 <div
                                     key={fmt}
-                                    className={`text-[10px] text-center cursor-pointer py-1 rounded-sm uppercase ${format === fmt ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:bg-[#333]'}`}
-                                    onClick={() => setFormat(fmt as any)}
+                                    className={`text-[10px] text-center cursor-pointer py-1 rounded-sm uppercase ${publishFormat === fmt ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:bg-[#333]'}`}
+                                    onClick={() => setPublishFormat(fmt as any)}
                                 >
                                     {fmt}
                                 </div>
@@ -183,7 +568,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorP
                         className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] p-2 text-[12px] font-mono outline-none focus:border-[var(--vscode-focusBorder)] resize-none"
                         value={payload}
                         onChange={(e) => setPayload(e.target.value)}
-                        placeholder={`Enter ${format} payload...`}
+                        placeholder={`Enter ${publishFormat} payload...`}
                     />
 
                     <button
