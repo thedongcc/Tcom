@@ -35,35 +35,54 @@ export const useSessionManager = () => {
         setSessions(prev => prev.map(s => {
             if (s.id === sessionId) {
                 const logs = s.logs;
-                const lastLog = logs[logs.length - 1];
                 const mergeRepeats = s.config.uiState?.mergeRepeats;
 
-                // Check for duplicate to merge
-                if (mergeRepeats && lastLog && lastLog.type === type && lastLog.topic === topic) {
-                    let isSameData = false;
-                    if (typeof lastLog.data === 'string' && typeof data === 'string') {
-                        isSameData = lastLog.data === data;
-                    } else if (lastLog.data instanceof Uint8Array && data instanceof Uint8Array) {
-                        if (lastLog.data.length === data.length) {
-                            isSameData = true;
-                            for (let i = 0; i < data.length; i++) {
-                                if (lastLog.data[i] !== data[i]) {
-                                    isSameData = false;
-                                    break;
-                                }
-                            }
+                if (mergeRepeats) {
+                    // Logic: Strict sequential (only merges with immediate previous log)
+                    // This applies to both Serial and MQTT now per user request.
+                    let lastIdx = -1;
+
+                    // Check ONLY the very last log
+                    if (logs.length > 0) {
+                        const last = logs[logs.length - 1];
+                        // Ensure type and topic match (for MQTT topic segregation)
+                        if (last.type === type && last.topic === topic) {
+                            lastIdx = logs.length - 1;
                         }
                     }
 
-                    if (isSameData) {
-                        // Merge!
-                        const newLogs = [...logs];
-                        newLogs[newLogs.length - 1] = {
-                            ...lastLog,
-                            timestamp: Date.now(), // Update timestamp to latest
-                            repeatCount: (lastLog.repeatCount || 1) + 1
-                        };
-                        return { ...s, logs: newLogs };
+                    if (lastIdx !== -1) {
+                        const lastLog = logs[lastIdx];
+                        let isSameData = false;
+                        if (typeof lastLog.data === 'string' && typeof data === 'string') {
+                            isSameData = lastLog.data === data;
+                        } else if (lastLog.data instanceof Uint8Array && data instanceof Uint8Array) {
+                            if (lastLog.data.length === data.length) {
+                                isSameData = true;
+                                for (let i = 0; i < data.length; i++) {
+                                    if (lastLog.data[i] !== data[i]) {
+                                        isSameData = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isSameData) {
+                            // Merge!
+                            // Move to END (restore original behavior)
+                            const updatedLog = {
+                                ...lastLog,
+                                timestamp: Date.now(),
+                                repeatCount: (lastLog.repeatCount || 1) + 1
+                            };
+
+                            const newLogs = [...logs];
+                            newLogs.splice(lastIdx, 1); // Remove from old position
+                            newLogs.push(updatedLog);   // Add to end
+
+                            return { ...s, logs: newLogs };
+                        }
                     }
                 }
 

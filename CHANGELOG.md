@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.1] - 2026-02-16
 ### Added
 - 串口接收区数据统计增加筛选功能
+- 修改mqtt监视器内容显示为聊天样式
 
 ### Fixed
 - 修复重复发送不被计数问题

@@ -32,6 +32,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const { showToast } = useToast();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
+    const initialLogCountRef = useRef(logs.length); // Track log count at mount to skip flash on tab switch
 
     // Initial State from Config
     const uiState = config.uiState || {};
@@ -210,8 +211,50 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         return true;
     });
 
+    // JSON Highlighter Helper
+    const renderPayload = (data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
+        if (mode === 'json') {
+            try {
+                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
+                const obj = JSON.parse(str);
+                const json = JSON.stringify(obj, null, 2);
+
+                const escaped = json
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                // Enhanced Regex for keys, strings, numbers, booleans, null, and punctuation
+                const highlighted = escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[\[\]{}:,])/g, (match) => {
+                    let cls = 'color: #d4d4d4;'; // default/punctuation
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'color: #9cdcfe; font-weight: bold;'; // key
+                        } else {
+                            cls = 'color: #ce9178;'; // string
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'color: #569cd6; font-weight: bold;'; // boolean
+                    } else if (/null/.test(match)) {
+                        cls = 'color: #569cd6; font-weight: bold;'; // null
+                    } else if (/^-?\d/.test(match)) {
+                        cls = 'color: #b5cea8;'; // number
+                    } else if (/[\[\]{}:,]/.test(match)) {
+                        cls = 'color: #ffd700; font-weight: bold;'; // punctuation
+                    }
+                    return `<span style="${cls}">${match}</span>`;
+                });
+
+                return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
+            } catch (e) {
+                // fallback to text if invalid json
+            }
+        }
+        return formatData(data, mode);
+    };
+
     return (
-        <div className="absolute inset-0 flex flex-col bg-[var(--st-rx-bg)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }}>
+        <div className="absolute inset-0 flex flex-col bg-[#1e1e1e] select-none">
             {/* Toolbar */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
                 <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
@@ -224,16 +267,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Stats with Filter Toggle */}
-                    <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
-                        <div
-                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
-                            title="Click to filter TX only"
-                            onClick={() => toggleFilter('tx')}
-                        >
-                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
-                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
-                        </div>
+                    {/* Stats with Filter Toggle - Swapped R/T Order */}
+                    <div className="flex items-center bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-sm">
                         <div
                             className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
                             title="Click to filter RX only"
@@ -241,6 +276,14 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         >
                             <span className={`text-[11px] font-semibold font-mono ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#aaaaaa]'}`}>R:</span>
                             <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
+                        </div>
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter TX only"
+                            onClick={() => toggleFilter('tx')}
+                        >
+                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
+                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
                         </div>
                     </div>
 
@@ -426,81 +469,123 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 </div>
             </div>
 
-            {/* Logs Area */}
+            {/* Logs Area - Compact Chat Bubble Layout */}
             <div
-                className="flex-1 overflow-auto p-4"
+                className="flex-1 overflow-auto p-2 flex flex-col gap-1.5 select-text scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
                 ref={scrollRef}
                 style={{
                     fontSize: `${fontSize}px`,
                     fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily,
-                    lineHeight: '1.6'
+                    lineHeight: '1.4'
                 }}
             >
                 {logs.length === 0 && (
-                    <div className="text-[#666] italic text-center mt-10 select-none">
+                    <div className="text-[#666] italic text-center mt-10 select-none text-sm">
                         {session.isConnected ? 'Connected. Waiting for messages...' : 'Disconnected.'}
                     </div>
                 )}
-                {filteredLogs.map((log, i) => (
-                    <div key={i} className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative border-l-2 leading-relaxed ${log.type === 'ERROR' ? 'bg-[#4b1818]/20 border-[#f48771]' : 'border-transparent'}`}>
+                {filteredLogs.map((log, i) => {
+                    const isTX = log.type === 'TX';
+                    const isRX = log.type === 'RX';
+                    const isError = log.type === 'ERROR';
+                    const isInfo = log.type === 'INFO';
 
-                        {/* Timestamp & Repeats */}
-                        {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                            <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
-                                {showTimestamp && (
-                                    <span className="text-[#999999] font-mono opacity-90">
-                                        [{formatTimestamp(log.timestamp)}]
-                                    </span>
-                                )}
-                                {log.repeatCount && log.repeatCount > 1 && (
-                                    <span className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] pt-[1px]">
-                                        x{log.repeatCount}
-                                    </span>
-                                )}
+
+
+                    // Determine Topic Color
+                    const topicColor = (session.config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
+                    // Slightly transparent versions for Topic Pill (not bubble background)
+                    const bgTint = topicColor + '15';
+                    const borderTint = topicColor + '50';
+
+                    if (isError || isInfo || !log.topic) {
+                        return (
+                            <div key={`${i}-${log.timestamp}`} className="flex justify-center my-1">
+                                <span className={`px-3 py-0.5 rounded-full text-[0.8em] font-medium border ${isError
+                                    ? 'bg-red-900/20 text-red-400 border-red-500/10'
+                                    : 'bg-[#1e1e1e] text-[#666] border-[#333]'
+                                    }`}>
+                                    {isInfo ? formatData(log.data, 'text') : (log.topic ? formatData(log.data, 'text') : `[${log.type}] ${formatData(log.data, 'text')}`)}
+                                </span>
                             </div>
-                        )}
+                        );
+                    }
 
-                        {/* Direction & Type */}
-                        <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px] shrink-0
-                            ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
-                                log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
-                                    log.type === 'ERROR' ? 'bg-red-500 text-white' :
-                                        'bg-[#454545] text-[#cccccc]'
-                            }`}>
-                            {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : log.type}
-                        </span>
-
-                        {/* Topic Pill - Compact */}
-                        {log.topic && (
-                            <span
-                                className="h-[18px] flex items-center px-1.5 rounded-[3px] text-[11px] leading-none border border-current opacity-90 select-text shrink-0 pt-[1px]"
+                    return (
+                        <div key={`${i}-${log.timestamp}-${log.repeatCount || 0}`} className={`flex w-full group relative ${isTX ? 'justify-end' : 'justify-start'}`}>
+                            {/* Message Bubble - Compact & Colored */}
+                            <div
+                                className={`relative max-w-[90%] rounded-lg px-3 py-2 border shadow-sm transition-all overflow-hidden
+                                ${isTX
+                                        ? 'rounded-br-sm'
+                                        : 'rounded-bl-sm'
+                                    } ${i >= initialLogCountRef.current ? 'animate-flash-new' : ''}`}
                                 style={{
-                                    color: (session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe',
-                                    borderColor: (session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe',
-                                    backgroundColor: ((session.config.topics || []).find(t => t.path === log.topic)?.color || '#9cdcfe') + '15'
+                                    backgroundColor: 'transparent', // Transparent background for all
+                                    borderColor: topicColor + '80', // Full border in topic color with semi-transparency
+
+                                    // CSS Vars for animation
+                                    // @ts-ignore
+                                    '--flash-color': topicColor + '40', // Flash glow color
+                                    '--flash-border': topicColor,      // Flash border color (full opacity)
+                                    '--final-bg': 'transparent',
+                                    '--final-border': topicColor + '80' // Semi-transparent final border
                                 }}
                             >
-                                {log.topic}
-                            </span>
-                        )}
 
-                        {/* Data Length */}
-                        {showDataLength && (
-                            <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] shrink-0">
-                                {getDataLengthText(log.data)}
-                            </span>
-                        )}
+                                {/* Header: Timestamp & Topic */}
+                                <div className={`flex items-baseline gap-2 mb-1 opacity-90 select-none relative z-10 ${isTX ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    {/* Timestamp - brackets added */}
+                                    {showTimestamp && (
+                                        <span className="text-[#999] text-[0.9em] font-mono whitespace-nowrap leading-none">
+                                            [{formatTimestamp(log.timestamp)}]
+                                        </span>
+                                    )}
 
-                        {/* Payload */}
-                        <span className={`whitespace-pre-wrap break-all select-text flex-1 ${log.type === 'TX' ? 'text-[#4ec9b0]' :
-                            log.type === 'RX' ? 'text-[#ce9178]' :
-                                log.type === 'ERROR' ? 'text-red-400' :
-                                    'text-[#569cd6]'
-                            }`}>
-                            {formatData(log.data, viewMode)}
-                        </span>
-                    </div>
-                ))}
+                                    {/* Topic Pill */}
+                                    {log.topic && (
+                                        <span
+                                            className="px-1.5 py-0.5 rounded-[3px] text-[0.9em] font-medium leading-none border border-current opacity-100 select-text max-w-[300px] truncate shadow-sm cursor-pointer hover:opacity-80"
+                                            style={{
+                                                color: topicColor,
+                                                borderColor: borderTint,
+                                                backgroundColor: bgTint
+                                            }}
+                                            title={log.topic}
+                                        >
+                                            {log.topic}
+                                        </span>
+                                    )}
+
+                                    {/* Repeat Badge - Flash on change via key */}
+                                    {log.repeatCount && log.repeatCount > 1 && (
+                                        <span
+                                            key={log.repeatCount} // Trigger animation on count change
+                                            className="text-[0.9em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 py-0.5 rounded-[3px] border border-[#FFD700]/40 min-w-[24px] text-center shadow-[0_0_8px_rgba(255,215,0,0.15)] animate-flash-gold"
+                                        >
+                                            x{log.repeatCount}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Body: Payload - JSON Rendering Support */}
+                                <div className={`relative z-10 whitespace-pre-wrap break-all select-text font-mono text-[1.05em] leading-snug
+                                    ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
+                                    {renderPayload(log.data, viewMode)}
+                                </div>
+
+                                {/* Link Indicator/Footer */}
+                                {showDataLength && (
+                                    <div className={`mt-1 flex relative z-10 ${isTX ? 'justify-end' : 'justify-start'}`}>
+                                        <span className="text-[0.75em] text-[#666] font-mono bg-black/20 px-1.5 rounded-[3px]">
+                                            {getDataLengthText(log.data)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Rich Publish Area */}
@@ -572,8 +657,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     />
 
                     <button
-                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${session.isConnected ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white' : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'
-                            }`}
+                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${session.isConnected ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white' : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'}`}
                         onClick={handleSend}
                         disabled={!session.isConnected}
                     >

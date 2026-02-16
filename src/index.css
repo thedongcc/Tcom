@@ -277,19 +277,21 @@ body {
   animation: flash-gold 0.3s ease-out forwards;
 }
 
-/* New log entry flash */
+/* New log entry flash with dynamic border color support */
 @keyframes flash-new {
   0% {
-    background-color: rgba(0, 122, 204, 0.25);
-    border-left-color: rgba(0, 122, 204, 0.9);
+    background-color: var(--flash-color, rgba(0, 122, 204, 0.15));
+    border-color: var(--flash-border, rgba(0, 122, 204, 0.6));
+    box-shadow: 0 0 8px var(--flash-color, rgba(0, 122, 204, 0.2));
   }
 
   100% {
-    background-color: transparent;
-    border-left-color: transparent;
+    background-color: var(--final-bg, transparent);
+    border-color: var(--final-border, #3c3c3c);
+    box-shadow: none;
   }
 }
 
 .animate-flash-new {
-  animation: flash-new 0.9s ease-out;
+  animation: flash-new 1s ease-out;
 }

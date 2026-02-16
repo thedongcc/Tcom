@@ -85,7 +85,9 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         fontSize?: number;
         fontFamily?: string;
         mergeRepeats?: boolean;
-        // add other detailed state if needed
+        showDataLength?: boolean;
+        showAllFonts?: boolean;
+        filterMode?: 'all' | 'rx' | 'tx';
     };
 }
 

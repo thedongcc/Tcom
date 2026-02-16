@@ -730,7 +730,12 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     <div
                         key={index}
                         className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative border-l-2 leading-relaxed ${index >= initialLogCountRef.current ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border-[#f48771]' : 'border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''}`}
-                        style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
+                        style={{
+                            fontSize: 'inherit',
+                            fontFamily: 'inherit',
+                            // @ts-ignore - CSS variables for animation
+                            '--final-border': 'transparent' // Ensure left border returns to transparent after animation
+                        }}
                         onContextMenu={(e) => handleLogContextMenu(e, log)}
                     >
                         {/* Timestamp & Repeat Count Container */}
