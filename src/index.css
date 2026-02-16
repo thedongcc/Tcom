@@ -281,17 +281,42 @@ body {
 @keyframes flash-new {
   0% {
     background-color: var(--flash-color, rgba(0, 122, 204, 0.15));
+  }
+
+  100% {
+    background-color: var(--final-bg, transparent);
+  }
+}
+
+.animate-flash-new {
+  animation: flash-new 1s ease-out;
+}
+
+/* MQTT message slide-in animation with flash effect */
+@keyframes mqtt-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+    background-color: var(--flash-color, rgba(0, 122, 204, 0.15));
     border-color: var(--flash-border, rgba(0, 122, 204, 0.6));
     box-shadow: 0 0 8px var(--flash-color, rgba(0, 122, 204, 0.2));
   }
 
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+
+
   100% {
+    opacity: 1;
+    transform: translateY(0px);
     background-color: var(--final-bg, transparent);
     border-color: var(--final-border, #3c3c3c);
     box-shadow: none;
   }
 }
 
-.animate-flash-new {
-  animation: flash-new 1s ease-out;
+.animate-mqtt-slide-in {
+  animation: mqtt-slide-in 0.5s ease-out;
 }

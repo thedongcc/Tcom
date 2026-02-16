@@ -52,7 +52,7 @@ interface TabProps {
     isGroupActive?: boolean;
     unsaved?: boolean;
     onClose: (e: React.MouseEvent) => void;
-    onClick: () => void;
+    onClick: (e: React.MouseEvent) => void;
 }
 
 const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabProps) => (
@@ -118,7 +118,7 @@ const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: Group
     return (
         <div
             className={`relative z-50 flex h-9 bg-[#252526] border-b border-[#2b2b2b] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
-            onMouseDown={() => setActiveGroupId(group.id)}
+            onClick={() => setActiveGroupId(group.id)}
         >
             {children}
         </div>
@@ -213,7 +213,8 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                                         active={isTabActive}
                                         isGroupActive={isActive}
                                         label={session.config.name || '(Unknown)'}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             sessionManager.setActiveSessionId(viewId);
                                             openSession(viewId, node.id);
                                         }}
@@ -232,36 +233,24 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                         )}
                     </SortableContext>
 
-                    {/* Add Tab */}
-                    <div
-                        onClick={async (e) => {
-                            e.stopPropagation();
-                            setActiveGroupId(node.id);
-                            const newId = await sessionManager.createSession();
-                            if (newId) openSession(newId, node.id);
-                        }}
-                        className="h-full px-2 flex items-center justify-center cursor-pointer hover:bg-[var(--vscode-hover)] text-[#969696] hover:text-[var(--vscode-fg)]"
-                        title="New Serial Monitor"
-                    >
-                        <Plus size={16} />
-                    </div>
-                </HeaderDropZone>
 
-                {/* Actions - Only visible if there are tabs */}
-                {node.views && node.views.length > 0 && (
-                    <div className="flex items-center px-1 gap-1">
-                        <div
-                            className="p-1 hover:bg-[var(--vscode-hover)] rounded cursor-pointer text-[var(--vscode-fg)]"
-                            title="Split Editor Right"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                splitGroup(node.id, 'horizontal');
-                            }}
-                        >
-                            <Columns size={14} />
+
+                    {/* Actions - Only visible if there are tabs */}
+                    {node.views && node.views.length > 0 && (
+                        <div className="flex items-center px-1 gap-1 ml-auto">
+                            <div
+                                className="p-1 hover:bg-[var(--vscode-hover)] rounded cursor-pointer text-[var(--vscode-fg)]"
+                                title="Split Editor Right"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    splitGroup(node.id, 'horizontal');
+                                }}
+                            >
+                                <Columns size={14} />
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </HeaderDropZone>
             </GroupHeader>
 
             {/* Content */}
@@ -272,18 +261,23 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                         if (!session) return <div className="p-4 text-center text-gray-500">Session not found</div>;
 
                         if (session.config.type === 'settings') {
-                            return <div className="absolute inset-0"><SettingsEditor /></div>;
+                            return <div key={session.id} className="absolute inset-0"><SettingsEditor /></div>;
                         }
                         if (session.config.type === 'graph') {
-                            return <div className="absolute inset-0"><GraphEditor sessionId={session.id} /></div>;
+                            return <div key={session.id} className="absolute inset-0"><GraphEditor sessionId={session.id} /></div>;
                         }
                         if (session.config.type === 'mqtt') {
                             return <MqttMonitor
+                                key={session.id}
                                 session={session as any}
                                 onShowSettings={onShowSettings}
                                 onPublish={(topic, payload, qos, retain) => sessionManager.publishMqtt(session.id, topic, payload, { qos, retain })}
                                 onUpdateConfig={(updates) => sessionManager.updateSessionConfig(session.id, updates)}
                                 onClearLogs={() => sessionManager.clearLogs(session.id)}
+                                onConnectRequest={() => {
+                                    sessionManager.setActiveSessionId(session.id);
+                                    return sessionManager.connectSession(session.id);
+                                }}
                             />;
                         }
                         return <SerialMonitor
@@ -301,9 +295,10 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                         />;
                     })()
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 select-none pointer-events-none">
-                        <LayoutTemplate size={64} className="mb-4 text-[var(--vscode-fg)]" />
-                        <p className="text-lg">Empty Group</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 select-none pointer-events-none text-center p-4">
+                        <LayoutTemplate size={64} className="mb-4 text-[var(--vscode-fg)] opacity-50" />
+                        <p className="text-lg font-medium text-[var(--vscode-fg)]">No Editor Open</p>
+                        <p className="text-sm text-[#888] mt-2 max-w-[300px]">Select a session from the sidebar or create a new one to get started.</p>
                     </div>
                 )}
             </div>

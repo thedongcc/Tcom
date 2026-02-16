@@ -18,10 +18,16 @@ const COLORS = [
 
 export const MqttConfigPanel = ({ config, isConnected, onUpdate, onConnectToken, onDisconnectToken }: MqttConfigPanelProps) => {
     // Collapsible Connection Settings
-    const [isConnectionExpanded, setIsConnectionExpanded] = useState(!isConnected);
+    const isConnectionExpanded = config.uiState?.connectionExpanded !== undefined ? config.uiState.connectionExpanded : (!isConnected);
 
-    // Auto collapse on connect, expand on disconnect (optional, user might want to stay expanded)
-    // Let's keep it manual but default intelligently on mount
+    const toggleConnectionExpanded = () => {
+        onUpdate({
+            uiState: {
+                ...config.uiState,
+                connectionExpanded: !isConnectionExpanded
+            }
+        });
+    };
 
     const [newTopicPath, setNewTopicPath] = useState('');
 
@@ -60,7 +66,7 @@ export const MqttConfigPanel = ({ config, isConnected, onUpdate, onConnectToken,
             <div className="border-b border-[var(--vscode-border)] shrink-0">
                 <div
                     className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[#252526] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[#2a2d2e]"
-                    onClick={() => setIsConnectionExpanded(!isConnectionExpanded)}
+                    onClick={toggleConnectionExpanded}
                 >
                     {isConnectionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     Broker Connection

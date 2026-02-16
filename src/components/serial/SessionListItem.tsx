@@ -90,7 +90,9 @@ export const SessionListItem = ({
                             ? (portInfo
                                 ? formatPortInfo(portInfo)
                                 : (session as any).lastDescription || (session as any).connection?.path || 'No Port')
-                            : (session as any).brokerUrl || session.type}
+                            : session.type === 'mqtt'
+                                ? ((session as any).host && (session as any).port ? `${(session as any).host}:${(session as any).port}` : 'Not Configured')
+                                : (session as any).brokerUrl || session.type}
                     </span>
                 </div>
             )}

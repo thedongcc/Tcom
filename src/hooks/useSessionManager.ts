@@ -71,7 +71,7 @@ export const useSessionManager = () => {
                         if (isSameData) {
                             // Merge!
                             // Move to END (restore original behavior)
-                            const updatedLog = {
+                            const updatedLog: LogEntry = {
                                 ...lastLog,
                                 timestamp: Date.now(),
                                 repeatCount: (lastLog.repeatCount || 1) + 1
@@ -86,7 +86,7 @@ export const useSessionManager = () => {
                     }
                 }
 
-                const newLogs = [...logs, { type, data, timestamp: Date.now(), crcStatus, topic }];
+                const newLogs = [...logs, { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic }];
                 if (newLogs.length > MAX_LOGS) newLogs.shift();
                 return { ...s, logs: newLogs };
             }
@@ -147,11 +147,12 @@ export const useSessionManager = () => {
                 }));
 
                 cleanupRefs.current.set(sessionId, cleanups);
+                return true;
             } else {
                 updateSession(sessionId, () => ({ isConnecting: false }));
                 addLog(sessionId, 'ERROR', `Connection failed: ${result.error}`);
+                return false;
             }
-            return;
         }
 
         if (session.config.type && session.config.type !== 'serial') {
@@ -490,8 +491,6 @@ export const useSessionManager = () => {
 
                             return prev.map(x => x.id === session.id ? { ...x, logs: newLogs } : x);
 
-                            return prev.map(x => x.id === session.id ? { ...x, logs: newLogs } : x);
-
                         } else {
                             // Check for REPEAT merge (Strict equality check)
                             // This is for distinct packets that are identical, NOT chunk merging.
@@ -529,7 +528,7 @@ export const useSessionManager = () => {
 
                             // New Log
                             const isOk = validateRXCRC(data, s.config.rxCRC);
-                            const newLogs = [...s.logs, { type: 'RX', data, timestamp: now, crcStatus: s.config.rxCRC.enabled ? (isOk ? 'ok' : 'error') : 'none' } as LogEntry];
+                            const newLogs = [...s.logs, { id: crypto.randomUUID(), type: 'RX', data, timestamp: now, crcStatus: s.config.rxCRC.enabled ? (isOk ? 'ok' : 'error') : 'none' } as LogEntry];
                             if (newLogs.length > MAX_LOGS) newLogs.shift();
                             return prev.map(x => x.id === session.id ? { ...x, logs: newLogs } : x);
                         }

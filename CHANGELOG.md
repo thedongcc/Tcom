@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - 串口接收区数据统计增加筛选功能
 - 修改mqtt监视器内容显示为聊天样式
+- 增加串口监视区平滑动画开关
+- 增加mqtt监视区平滑动画开关
+- 增加标签页持久化特性
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -20,7 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 解决font family无法显示电脑中全部字体问题
 - 解决mqtt订阅问题
 - 更改mqtt配置、交互、显示逻辑
+- 优化mqtt气泡动画
+- 解决串口监视区行内内容像素差异化问题
+- 修复标签切换后必须点击工作区才能完全切换的问题
+- 修改串口发送按钮的图标和文字
+- 完善更新相关逻辑
 
 ### Removed
 - 取消设置中的check update功能
 - 移除串口接收区option菜单中的display filter功能
+- 取消标签栏中的加号

@@ -7,6 +7,7 @@ interface UpdateStatus {
     releaseNotes?: string;
     releaseDate?: string;
     error?: string;
+    releaseUrl?: string;
 }
 
 interface ProgressInfo {
@@ -23,7 +24,7 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
     useEffect(() => {
         // Initial check when dialog opens manually
         window.updateAPI.check().catch(err => {
-            setStatus({ type: 'error', error: err.message });
+            setStatus({ type: 'error', error: err.message, releaseUrl: 'https://github.com/thedongcc/Tcom/releases' });
         });
 
         const removeStatusListener = window.updateAPI.onStatus((data) => {
@@ -55,6 +56,14 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
         window.updateAPI.install();
     };
 
+    const handleManualDownload = () => {
+        if (status.releaseUrl && window.shellAPI) {
+            window.shellAPI.openExternal(status.releaseUrl);
+        } else if (window.shellAPI) {
+            window.shellAPI.openExternal('https://github.com/thedongcc/Tcom/releases');
+        }
+    };
+
     const renderContent = () => {
         switch (status.type) {
             case 'checking':
@@ -79,8 +88,14 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
                         <div className="text-center">
                             <p className="text-[13px] text-[#cccccc]">检查更新时出错</p>
                             <p className="text-[11px] text-red-400 mt-1 max-w-[300px] break-words">{status.error}</p>
+                            <p className="text-[11px] text-[#969696] mt-2">若是网络问题，请尝试手动下载</p>
                         </div>
-                        <button onClick={onClose} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c]">关闭</button>
+                        <div className="flex gap-2 mt-2">
+                            <button onClick={handleManualDownload} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c] flex items-center gap-1">
+                                <Download size={14} /> 手动下载
+                            </button>
+                            <button onClick={onClose} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c]">关闭</button>
+                        </div>
                     </div>
                 );
             case 'available':
@@ -104,6 +119,9 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
 
                         <div className="flex justify-end gap-2 mt-2">
                             <button onClick={onClose} className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs">稍后再说</button>
+                            <button onClick={handleManualDownload} className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs flex items-center gap-1" title="若自动下载失败请尝试此选项">
+                                手动下载
+                            </button>
                             <button onClick={handleDownload} className="px-4 py-1.5 bg-[#007acc] text-white rounded-sm text-xs hover:bg-[#0098ff] flex items-center gap-2">
                                 <Download size={14} /> 立即下载
                             </button>
@@ -124,8 +142,13 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
                             />
                         </div>
                         <div className="flex justify-between text-[11px] text-[#969696]">
-                            <span>{(progress?.transferred || 0 / 1024 / 1024).toFixed(2)} MB / {(progress?.total || 0 / 1024 / 1024).toFixed(2)} MB</span>
+                            <span>{((progress?.transferred || 0) / 1024 / 1024).toFixed(2)} MB / {((progress?.total || 0) / 1024 / 1024).toFixed(2)} MB</span>
                             <span>{((progress?.bytesPerSecond || 0) / 1024 / 1024).toFixed(2)} MB/s</span>
+                        </div>
+                        <div className="text-center mt-2">
+                            <button onClick={handleManualDownload} className="text-[11px] text-[#666] hover:text-[#007acc] underline">
+                                下载太慢或失败？尝试手动下载
+                            </button>
                         </div>
                     </div>
                 );

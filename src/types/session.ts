@@ -2,6 +2,7 @@ import { SerialOpenOptions } from '../vite-env';
 import { CRCConfig } from '../utils/crc';
 
 export interface LogEntry {
+    id: string;
     type: 'RX' | 'TX' | 'INFO' | 'ERROR';
     data: string | Uint8Array;
     timestamp: number;
@@ -54,6 +55,7 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         autoScroll?: boolean;
         chunkTimeout?: number; // ms to merge consecutive RX chunks
         mergeRepeats?: boolean; // Merge identical consecutive logs
+        smoothScroll?: boolean;
     };
 }
 
@@ -88,6 +90,8 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         showDataLength?: boolean;
         showAllFonts?: boolean;
         filterMode?: 'all' | 'rx' | 'tx';
+        smoothScroll?: boolean;
+        connectionExpanded?: boolean;
     };
 }
 

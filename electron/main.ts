@@ -740,7 +740,8 @@ class AppUpdater {
         type: 'available',
         version: info.version,
         releaseNotes: info.releaseNotes,
-        releaseDate: info.releaseDate
+        releaseDate: info.releaseDate,
+        releaseUrl: `https://github.com/thedongcc/Tcom/releases/tag/v${info.version}`
       });
     });
 
@@ -749,7 +750,11 @@ class AppUpdater {
     });
 
     autoUpdater.on('error', (err) => {
-      this.win.webContents.send('update:status', { type: 'error', error: err.message });
+      this.win.webContents.send('update:status', {
+        type: 'error',
+        error: err.message,
+        releaseUrl: 'https://github.com/thedongcc/Tcom/releases'
+      });
     });
 
     autoUpdater.on('download-progress', (progressObj) => {

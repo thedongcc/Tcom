@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 // --- Types ---
 
@@ -89,6 +89,43 @@ export const useEditorLayout = () => {
         activeViewId: null
     });
     const [activeGroupId, setActiveGroupId] = useState<string>('group-0');
+
+    // -- Persistence --
+    const [persistenceKey, setPersistenceKey] = useState<string | null>(null);
+
+    // Load from local storage when key changes
+    useEffect(() => {
+        if (!persistenceKey) return;
+
+        try {
+            const saved = localStorage.getItem(`editor-layout-${persistenceKey}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.root && parsed.activeGroupId) {
+                    setLayout(parsed.root);
+                    setActiveGroupId(parsed.activeGroupId);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load layout:', e);
+        }
+    }, [persistenceKey]);
+
+    // Save to local storage when layout changes
+    useEffect(() => {
+        if (!persistenceKey || !layout) return;
+
+        const state: EditorLayoutState = { root: layout, activeGroupId };
+        try {
+            localStorage.setItem(`editor-layout-${persistenceKey}`, JSON.stringify(state));
+        } catch (e) {
+            console.error('Failed to save layout:', e);
+        }
+    }, [layout, activeGroupId, persistenceKey]);
+
+    const setPersistenceKeyFn = useCallback((key: string | null) => {
+        setPersistenceKey(key);
+    }, []);
 
     // -- Actions --
 
@@ -355,11 +392,14 @@ export const useEditorLayout = () => {
     return {
         layout,
         activeGroupId,
+        getActiveGroup: () => activeGroupId,
         setActiveGroupId,
         openSession,
         closeView,
         splitGroup,
         moveView,
-        splitDrop
+        splitDrop,
+        findNode,
+        setPersistenceKey: setPersistenceKeyFn
     };
 };

@@ -12,6 +12,7 @@ import { useCommandContext } from '../../context/CommandContext';
 import { ContextMenu } from '../common/ContextMenu';
 import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { generateUniqueName } from '../../utils/commandUtils';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const formatTimestamp = (ts: number, fmt: string) => {
     const date = new Date(ts);
@@ -43,6 +44,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const currentPort = config.type === 'serial' ? config.connection.path : '';
     const scrollRef = useRef<HTMLDivElement>(null);
     const initialLogCountRef = useRef(logs.length); // Track log count at mount to skip flash on tab switch
+    const mountTimeRef = useRef(Date.now()); // Track mount time for animation logic
 
     const uiState = (config as any).uiState || {};
     console.log('SerialMonitor: uiState loaded', { sessionId: session.id, inputHTML: uiState.inputHTML, inputContent: uiState.inputContent });
@@ -58,6 +60,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 13);
     const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier'>(uiState.fontFamily || 'mono');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
+    const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -213,7 +216,11 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     useEffect(() => {
         if (scrollRef.current && autoScroll) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            requestAnimationFrame(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+            });
         }
     }, [logs, autoScroll]);
 
@@ -495,13 +502,23 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     />
                                                 </label>
 
-                                                {/* Merge Repeats */}
                                                 <label className="flex items-center justify-between cursor-pointer group">
                                                     <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Merge Repeats</span>
                                                     <input
                                                         type="checkbox"
                                                         checked={mergeRepeats}
                                                         onChange={(e) => { setMergeRepeats(e.target.checked); saveUIState({ mergeRepeats: e.target.checked }); }}
+                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
+                                                    />
+                                                </label>
+
+                                                {/* Smooth Scroll */}
+                                                <label className="flex items-center justify-between cursor-pointer group" title="开启会影响显示效果和数据速率">
+                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Smooth Animation</span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={smoothScroll}
+                                                        onChange={(e) => { setSmoothScroll(e.target.checked); saveUIState({ smoothScroll: e.target.checked }); }}
                                                         className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
                                                     />
                                                 </label>
@@ -693,7 +710,11 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                 saveUIState({ autoScroll: newState });
                                 // If enabling, scroll to bottom immediately
                                 if (newState && scrollRef.current) {
-                                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                    requestAnimationFrame(() => {
+                                        if (scrollRef.current) {
+                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                        }
+                                    });
                                 }
                             }}
                             title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
@@ -726,70 +747,134 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         <p>No data</p>
                     </div>
                 )}
-                {filteredLogs.map((log, index) => (
-                    <div
-                        key={index}
-                        className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative border-l-2 leading-relaxed ${index >= initialLogCountRef.current ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border-[#f48771]' : 'border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''}`}
-                        style={{
-                            fontSize: 'inherit',
-                            fontFamily: 'inherit',
-                            // @ts-ignore - CSS variables for animation
-                            '--final-border': 'transparent' // Ensure left border returns to transparent after animation
-                        }}
-                        onContextMenu={(e) => handleLogContextMenu(e, log)}
-                    >
-                        {/* Timestamp & Repeat Count Container */}
-                        {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                            <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
-                                {showTimestamp && (
-                                    <span className="text-[#999] font-mono opacity-90">
-                                        [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
-                                    </span>
-                                )}
-                                {log.repeatCount && log.repeatCount > 1 && (
-                                    <span
-                                        key={log.repeatCount}
-                                        className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] animate-flash-gold pt-[1px]"
-                                    >
-                                        x{log.repeatCount}
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
-                            {showPacketType && (
-                                <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px]
-                                    ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
-                                        log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
-                                            'bg-[#454545] text-[#cccccc]'
-                                    }`}>
-                                    {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'INFO'}
-                                </span>
-                            )}
-                            {showDataLength && (
-                                <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px]">
-                                    {getDataLengthText(log.data)}
-                                </span>
-                            )}
-                        </div>
-                        <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
-                            log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
-                                log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
-                                    'text-[var(--st-info-text)]'
-                            }`}>
-                            {formatData(log.data, viewMode, encoding)}
-                        </span>
-                        {log.crcStatus === 'error' && (
-                            <span className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30">
-                                CRC Error
-                            </span>
-                        )}
+                {filteredLogs.length > 100 && (
+                    <div className="text-center text-[10px] text-[#666] py-1 select-none">
+                        ... {filteredLogs.length - 100} earlier messages hidden for performance ...
                     </div>
-                ))}
+                )}
+                <AnimatePresence initial={false}>
+                    {filteredLogs.slice(-100).map((log) => {
+                        // Animation Logic
+                        const isNewLog = log.timestamp > mountTimeRef.current;
+
+                        // System/Info Messages - Centered Notification Style
+                        if (log.type === 'INFO' || log.type === 'ERROR') {
+                            const content = formatData(log.data, 'text', encoding);
+
+                            // Determine style based on content/type
+                            let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
+                            if (log.type === 'ERROR') {
+                                styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                            } else if (content.includes('Open') || content.includes('Connected') || content.includes('Restored')) {
+                                styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+                            } else if (content.includes('Close') || content.includes('Disconnected') || content.includes('Error')) {
+                                styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                            } else {
+                                styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+                            }
+
+                            return (
+                                <div key={log.id} className="flex justify-center my-2">
+                                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
+                                        {content}
+                                    </span>
+                                </div>
+                            );
+                        }
+
+                        // Standard Data Logs (TX/RX)
+                        const variants = {
+                            hidden: { opacity: 0, x: -20 },
+                            visible: {
+                                opacity: 1,
+                                x: 0,
+                                transition: { duration: 0.15, ease: "easeOut" as any }
+                            }
+                        };
+
+                        return (
+                            <motion.div
+                                key={log.id}
+                                layout={smoothScroll ? "position" : undefined}
+                                initial={smoothScroll && isNewLog ? "hidden" : false}
+                                animate={smoothScroll ? "visible" : undefined}
+                                variants={variants}
+                                transition={{
+                                    // Layout transition: fast and smooth, no bounce to prevent "jelly" effect on fast streams
+                                    layout: { duration: 0.15, ease: "circOut" as any },
+                                    // Opacity/Transform transition
+                                    default: { duration: 0.15, ease: "easeOut" as any }
+                                }}
+                                className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-[#f48771]' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''}`}
+                                style={{
+                                    fontSize: 'inherit',
+                                    fontFamily: 'inherit',
+                                    // @ts-ignore - CSS variables for animation
+                                    '--flash-color': 'rgba(0, 122, 204, 0.25)'
+                                }}
+                                onContextMenu={(e) => handleLogContextMenu(e, log)}
+                            >
+                                {/* Timestamp & Repeat Count Container */}
+                                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                                    <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
+                                        {showTimestamp && (
+                                            <span className="text-[#999] font-mono opacity-90">
+                                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
+                                            </span>
+                                        )}
+                                        {log.repeatCount && log.repeatCount > 1 && (
+                                            <span
+                                                key={log.repeatCount}
+                                                className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] animate-flash-gold pt-[1px]"
+                                            >
+                                                x{log.repeatCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
+                                    {showPacketType && (
+                                        <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px]
+                                        ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
+                                                log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
+                                                    'bg-[#454545] text-[#cccccc]'
+                                            }`}>
+                                            {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'SYS'}
+                                        </span>
+                                    )}
+                                    {showDataLength && (
+                                        <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px]">
+                                            {getDataLengthText(log.data)}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
+                                    log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
+                                        log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
+                                            'text-[var(--st-info-text)]'
+                                    }`}>
+                                    {formatData(log.data, viewMode, encoding)}
+                                </span>
+                                {log.crcStatus === 'error' && (
+                                    <span className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30">
+                                        CRC Error
+                                    </span>
+                                )}
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
+                {/* Anchor for auto-scroll */}
+                <div ref={(el) => {
+                    if (el && autoScroll) {
+                        el.scrollIntoView({ behavior: 'auto' });
+                    }
+                }} />
+
             </div>
 
             {/* Serial Input Area */}
-            <SerialInput
+            < SerialInput
                 key={session.id}
                 onSend={handleSend}
                 initialContent={uiState.inputContent || ''}
@@ -818,38 +903,42 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     }
                 }}
             />
-            {contextMenu && (
-                <ContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    onClose={() => setContextMenu(null)}
-                    items={[
-                        {
-                            label: 'Copy',
-                            icon: <Copy size={13} />,
-                            onClick: () => handleCopyLog(contextMenu.log)
-                        },
-                        {
-                            label: 'Add to Command',
-                            icon: <FileText size={13} />,
-                            onClick: () => handleAddToCommand(contextMenu.log)
-                        }
-                    ]}
-                />
-            )}
+            {
+                contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        onClose={() => setContextMenu(null)}
+                        items={[
+                            {
+                                label: 'Copy',
+                                icon: <Copy size={13} />,
+                                onClick: () => handleCopyLog(contextMenu.log)
+                            },
+                            {
+                                label: 'Add to Command',
+                                icon: <FileText size={13} />,
+                                onClick: () => handleAddToCommand(contextMenu.log)
+                            }
+                        ]}
+                    />
+                )
+            }
 
-            {showCommandEditor && (
-                <CommandEditorDialog
-                    item={{
-                        id: 'new',
-                        type: 'command',
-                        ...showCommandEditor
-                    }}
-                    onClose={() => setShowCommandEditor(null)}
-                    onSave={handleSaveCommand}
-                    existingNames={commands.filter(c => !c.parentId).map(c => c.name)}
-                />
-            )}
-        </div>
+            {
+                showCommandEditor && (
+                    <CommandEditorDialog
+                        item={{
+                            id: 'new',
+                            type: 'command',
+                            ...showCommandEditor
+                        }}
+                        onClose={() => setShowCommandEditor(null)}
+                        onSave={handleSaveCommand}
+                        existingNames={commands.filter(c => !c.parentId).map(c => c.name)}
+                    />
+                )
+            }
+        </div >
     );
 };

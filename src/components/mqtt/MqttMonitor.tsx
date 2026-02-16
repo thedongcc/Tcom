@@ -3,6 +3,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Send, Trash2, ArrowDownToLine, Menu, X, ChevronDown, Download, Settings, RefreshCw, Check, Filter } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface MqttMonitorProps {
     session: {
@@ -15,6 +16,7 @@ interface MqttMonitorProps {
     onPublish: (topic: string, payload: string | Uint8Array, qos: 0 | 1 | 2, retain: boolean) => void;
     onUpdateConfig?: (updates: Partial<MqttSessionConfig>) => void;
     onClearLogs?: () => void;
+    onConnectRequest?: () => Promise<boolean>;
 }
 
 const defaultFonts = [
@@ -27,12 +29,13 @@ const defaultFonts = [
     { label: 'Inter', value: 'Inter' },
 ];
 
-export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs }: MqttMonitorProps) => {
+export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs, onConnectRequest }: MqttMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
-    const initialLogCountRef = useRef(logs.length); // Track log count at mount to skip flash on tab switch
+    const initialLogCountRef = useRef(logs.length); // Track log count at mount
+    const mountTimeRef = useRef(Date.now()); // Track mount time to filter out old repeat animations
 
     // Initial State from Config
     const uiState = config.uiState || {};
@@ -41,6 +44,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
+    const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : false);
     const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 13);
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'mono');
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
@@ -63,13 +67,24 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const saveUIState = (updates: any) => {
         if (!onUpdateConfig) return;
         const currentUI = config.uiState || {};
-        onUpdateConfig({ uiState: { ...currentUI, ...updates } });
+        onUpdateConfig({
+            uiState: {
+                ...currentUI,
+                ...updates,
+                viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll,
+                fontSize, fontFamily, mergeRepeats, filterMode
+            }
+        });
     };
 
     // Auto-scroll logic
     useEffect(() => {
         if (scrollRef.current && autoScroll) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            requestAnimationFrame(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+            });
         }
     }, [logs, autoScroll, filterMode]); // Added filterMode dependency to scroll when filter changes
 
@@ -137,8 +152,36 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         return `[${length}B]`;
     };
 
-    const handleSend = () => {
-        if (!session.isConnected || !topic) return;
+    const handleSend = async () => {
+        if (!isConnected) {
+            if (onConnectRequest) {
+                try {
+                    const success = await onConnectRequest();
+                    if (!success) {
+                        // If connection failed (likely config), show settings and highlight
+                        if (onShowSettings) onShowSettings('connection');
+                        showToast('Connection failed. Please check configuration.', 'error');
+                        return;
+                    }
+                    // If success, we could wait for connection, but onPublish might fail if not ready immediately.
+                    // Ideally we wait for isConnected state, but that requires useEffect or polling.
+                    // For now, let's assume if connectRequest returns true, it's initiating.
+                    // But actually, we should probably just return and let user click again or queue it?
+                    // Let's try to send if immediate, else warn.
+                    // A better UX: "Connecting..." toast.
+                } catch (e) {
+                    if (onShowSettings) onShowSettings('connection');
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+
+        if (!topic) {
+            showToast('Topic is required', 'error');
+            return;
+        }
 
         let data: string | Uint8Array = payload;
 
@@ -319,12 +362,21 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                     </div>
                                     <div className="space-y-3 px-1">
 
-                                        {/* Features */}
                                         <div className="space-y-2 mb-4">
                                             <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
                                                 <span>Features</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
                                             </div>
+
+                                            <label className="flex items-center justify-between cursor-pointer group">
+                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Smooth Animation</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={smoothScroll}
+                                                    onChange={(e) => { setSmoothScroll(e.target.checked); saveUIState({ smoothScroll: e.target.checked }); }}
+                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
+                                                />
+                                            </label>
 
                                             <label className="flex items-center justify-between cursor-pointer group">
                                                 <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Timestamp</span>
@@ -450,7 +502,18 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                 setAutoScroll(newState);
                                 saveUIState({ autoScroll: newState });
                                 if (newState && scrollRef.current) {
-                                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                    const scroll = () => {
+                                        if (scrollRef.current) {
+                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                        }
+                                    };
+
+                                    if (smoothScroll && logs.length > 0 && Date.now() - mountTimeRef.current > 1000) {
+                                        requestAnimationFrame(scroll); // smooth (already async)
+                                    } else {
+                                        // Wrap in RAF to ensure it runs after strict React lifecycle steps
+                                        requestAnimationFrame(scroll);
+                                    }
                                 }
                             }}
                             title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
@@ -479,12 +542,18 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     lineHeight: '1.4'
                 }}
             >
+
                 {logs.length === 0 && (
                     <div className="text-[#666] italic text-center mt-10 select-none text-sm">
                         {session.isConnected ? 'Connected. Waiting for messages...' : 'Disconnected.'}
                     </div>
                 )}
-                {filteredLogs.map((log, i) => {
+                {filteredLogs.length > 100 && (
+                    <div className="text-center text-[10px] text-[#666] py-1 select-none">
+                        ... {filteredLogs.length - 100} earlier messages hidden for performance ...
+                    </div>
+                )}
+                {filteredLogs.slice(-100).map((log) => {
                     const isTX = log.type === 'TX';
                     const isRX = log.type === 'RX';
                     const isError = log.type === 'ERROR';
@@ -499,37 +568,69 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     const borderTint = topicColor + '50';
 
                     if (isError || isInfo || !log.topic) {
+                        const content = isInfo ? formatData(log.data, 'text') : (log.topic ? formatData(log.data, 'text') : `[${log.type}] ${formatData(log.data, 'text')}`);
+
+                        // Determine style based on content/type
+                        let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
+                        if (isError) {
+                            styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                        } else if (content.includes('Connected') || content.includes('Subscribing')) {
+                            styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+                        } else if (content.includes('Disconnected') || content.includes('Unsubscribing') || content.includes('closed')) {
+                            styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                        } else {
+                            styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+                        }
+
                         return (
-                            <div key={`${i}-${log.timestamp}`} className="flex justify-center my-1">
-                                <span className={`px-3 py-0.5 rounded-full text-[0.8em] font-medium border ${isError
-                                    ? 'bg-red-900/20 text-red-400 border-red-500/10'
-                                    : 'bg-[#1e1e1e] text-[#666] border-[#333]'
-                                    }`}>
-                                    {isInfo ? formatData(log.data, 'text') : (log.topic ? formatData(log.data, 'text') : `[${log.type}] ${formatData(log.data, 'text')}`)}
+                            <div key={log.id} className="flex justify-center my-2">
+                                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
+                                    {content}
                                 </span>
                             </div>
                         );
                     }
 
+                    // Animation Logic
+                    const isNewLog = log.timestamp > mountTimeRef.current;
+                    const isRepeat = log.repeatCount && log.repeatCount > 1;
+
+                    const variants = {
+                        hidden: { opacity: 0, y: 10, scale: 0.98 },
+                        visible: {
+                            opacity: 1,
+                            y: 0,
+                            scale: 1,
+                            transition: { duration: 0.2, ease: "easeOut" as any }
+                        }
+                    };
+
                     return (
-                        <div key={`${i}-${log.timestamp}-${log.repeatCount || 0}`} className={`flex w-full group relative ${isTX ? 'justify-end' : 'justify-start'}`}>
+                        <motion.div
+                            key={log.id}
+                            initial={smoothScroll && isNewLog && !isRepeat ? "hidden" : false}
+                            animate="visible"
+                            variants={variants}
+                            className={`flex w-full group relative ${isTX ? 'justify-end' : 'justify-start'}`}
+                        >
                             {/* Message Bubble - Compact & Colored */}
                             <div
+                                key={`${log.id}-${log.repeatCount || 0}`} // Force re-render on repeat to trigger flash
                                 className={`relative max-w-[90%] rounded-lg px-3 py-2 border shadow-sm transition-all overflow-hidden
-                                ${isTX
+                                    ${isTX
                                         ? 'rounded-br-sm'
                                         : 'rounded-bl-sm'
-                                    } ${i >= initialLogCountRef.current ? 'animate-flash-new' : ''}`}
+                                    } ${isNewLog ? 'animate-flash-new' : ''}`}
                                 style={{
-                                    backgroundColor: 'transparent', // Transparent background for all
+                                    backgroundColor: '#2d2d2d', // Lighter gray background
                                     borderColor: topicColor + '80', // Full border in topic color with semi-transparency
 
-                                    // CSS Vars for animation
+                                    // CSS Vars for animation - unified blue flash color for all topics
                                     // @ts-ignore
-                                    '--flash-color': topicColor + '40', // Flash glow color
-                                    '--flash-border': topicColor,      // Flash border color (full opacity)
-                                    '--final-bg': 'transparent',
-                                    '--final-border': topicColor + '80' // Semi-transparent final border
+                                    '--flash-color': 'rgba(0, 122, 204, 0.25)', // Unified blue flash glow
+                                    '--flash-border': '#007acc',      // Unified blue flash border
+                                    '--final-bg': '#2d2d2d',   // Final background state matches initial
+                                    '--final-border': topicColor + '80' // Semi-transparent final border (keeps topic color)
                                 }}
                             >
 
@@ -560,7 +661,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                     {/* Repeat Badge - Flash on change via key */}
                                     {log.repeatCount && log.repeatCount > 1 && (
                                         <span
-                                            key={log.repeatCount} // Trigger animation on count change
                                             className="text-[0.9em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 py-0.5 rounded-[3px] border border-[#FFD700]/40 min-w-[24px] text-center shadow-[0_0_8px_rgba(255,215,0,0.15)] animate-flash-gold"
                                         >
                                             x{log.repeatCount}
@@ -570,7 +670,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
                                 {/* Body: Payload - JSON Rendering Support */}
                                 <div className={`relative z-10 whitespace-pre-wrap break-all select-text font-mono text-[1.05em] leading-snug
-                                    ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
+                                        ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
                                     {renderPayload(log.data, viewMode)}
                                 </div>
 
@@ -583,7 +683,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </motion.div>
                     );
                 })}
             </div>
@@ -657,12 +757,17 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     />
 
                     <button
-                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${session.isConnected ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white' : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'}`}
+                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${session.isConnected
+                            ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white'
+                            : onConnectRequest
+                                ? 'bg-[#2d2d2d] hover:bg-[#3c3c3c] text-[#cccccc] cursor-pointer border border-[#3c3c3c] hover:border-[#007acc]'
+                                : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'}`}
                         onClick={handleSend}
-                        disabled={!session.isConnected}
+                        disabled={!session.isConnected && !onConnectRequest}
+                        title={!session.isConnected ? (onConnectRequest ? "Connect and Send" : "Disconnected") : "Send Payload"}
                     >
-                        <Send size={16} />
-                        <span className="text-[10px]">Send</span>
+                        {session.isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div></div>}
+                        <span className="text-[10px]">{session.isConnected ? 'Send' : 'Connect'}</span>
                     </button>
                 </div>
             </div>

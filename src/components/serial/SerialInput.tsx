@@ -352,14 +352,14 @@ export const SerialInput = ({
 
                 {!hideExtras && (
                     <button
-                        className={`nav-item px-3 flex flex-row items-center justify-center gap-2 rounded-sm transition-colors ${isConnected
+                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
                             ? (isEmpty ? 'bg-[#3c3c3c] text-[#666] cursor-not-allowed' : 'bg-[#007acc] hover:bg-[#0062a3] text-white')
-                            : 'bg-[#3c3c3c] bg-opacity-50 text-[#666] hover:bg-[#4c4c4c] cursor-pointer'}`}
+                            : 'bg-[#2d2d2d] hover:bg-[#3c3c3c] text-[#cccccc] cursor-pointer border border-[#3c3c3c] hover:border-[#007acc]'}`}
                         onClick={() => handleSend()}
-                        title={isConnected ? (isEmpty ? 'Type message to send' : 'Send Data') : 'Open Serial Connection'}
+                        title={isConnected ? (isEmpty ? 'Type message to send' : 'Send Data') : 'Connect and Send'}
                     >
-                        <Send size={16} />
-                        <span className="text-[13px] font-medium">Send</span>
+                        {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div></div>}
+                        <span className="text-[10px]">{isConnected ? 'Send' : 'Connect'}</span>
                     </button>
                 )}
             </div>
