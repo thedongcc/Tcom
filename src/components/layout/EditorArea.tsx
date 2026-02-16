@@ -71,10 +71,10 @@ const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabPro
             <span className="text-[13px] truncate">{label}</span>
             {unsaved && <div className="w-2 h-2 rounded-full bg-white opacity-60"></div>}
         </div>
-        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center">
             <div
                 onClick={onClose}
-                className={`p-0.5 rounded-md hover:bg-[var(--vscode-hover)] ${active ? 'opacity-100' : ''} `}>
+                className="p-0.5 rounded-md hover:bg-[var(--vscode-hover)]">
                 <X size={14} />
             </div>
         </div>

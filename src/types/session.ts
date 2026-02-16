@@ -33,6 +33,8 @@ export interface SerialSessionConfig extends BaseSessionConfig {
     connection: SerialOpenOptions;
     txCRC: CRCConfig;
     rxCRC: CRCConfig;
+    // Persisted port description
+    lastDescription?: string;
     // UI State (persistent)
     uiState?: {
         // Input area
@@ -47,11 +49,19 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         encoding?: 'utf-8' | 'gbk' | 'ascii';
         fontSize?: number;
         fontFamily?: 'mono' | 'consolas' | 'courier';
+        showAllFonts?: boolean;
         showTimestamp?: boolean;
         autoScroll?: boolean;
         chunkTimeout?: number; // ms to merge consecutive RX chunks
         mergeRepeats?: boolean; // Merge identical consecutive logs
     };
+}
+
+export interface MqttTopicConfig {
+    id: string;
+    path: string;
+    color: string;
+    subscribed: boolean;
 }
 
 export interface MqttSessionConfig extends BaseSessionConfig {
@@ -67,7 +77,7 @@ export interface MqttSessionConfig extends BaseSessionConfig {
     cleanSession: boolean;
     autoReconnect: boolean;
     connectTimeout: number; // seconds
-    topics: string[];
+    topics: MqttTopicConfig[];
 }
 
 export interface GraphSessionConfig extends BaseSessionConfig {

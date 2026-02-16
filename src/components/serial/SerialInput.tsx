@@ -229,10 +229,20 @@ export const SerialInput = ({
         onSend(data, mode);
     }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens]);
 
+    // Use a ref to store the latest handleSend callback
+    const handleSendRef = useRef(handleSend);
+    useEffect(() => {
+        handleSendRef.current = handleSend;
+    }, [handleSend]);
+
     // Timer Effect
     useEffect(() => {
         if (isTimerRunning && timerInterval > 0) {
-            timerRef.current = setInterval(handleSend, timerInterval);
+            timerRef.current = setInterval(() => {
+                if (handleSendRef.current) {
+                    handleSendRef.current();
+                }
+            }, timerInterval);
         } else {
             if (timerRef.current) {
                 clearInterval(timerRef.current);
@@ -240,7 +250,7 @@ export const SerialInput = ({
             }
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isTimerRunning, timerInterval, handleSend]);
+    }, [isTimerRunning, timerInterval]);
 
     return (
         <div className={`${hideExtras ? '' : 'border-t border-[var(--vscode-border)]'} bg-[#252526] p-2 flex flex-col gap-2 shrink-0 select-none`}>

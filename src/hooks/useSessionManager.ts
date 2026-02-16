@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SessionState, SessionConfig, LogEntry } from '../types/session';
+import { SessionState, SessionConfig, LogEntry, MqttTopicConfig } from '../types/session';
 import { SerialPortInfo } from '../vite-env';
 import { applyTXCRC, validateRXCRC } from '../utils/crc';
+import { formatPortInfo } from '../utils/format';
 // virtualPortService removed - no longer needed
 
 const MAX_LOGS = 1000;
@@ -703,10 +704,90 @@ export const useSessionManager = () => {
     }, [sessions, updateSessionConfig]);
 
 
+
+
+    // Monitor ports and update lastDescription for sessions
+    useEffect(() => {
+        sessions.forEach(session => {
+            if (session.config.type === 'serial') {
+                const port = ports.find(p => p.path === session.config.connection.path);
+                if (port) {
+                    const desc = formatPortInfo(port);
+                    if (session.config.lastDescription !== desc) {
+                        updateSessionConfig(session.id, { lastDescription: desc });
+                    }
+                }
+            }
+        });
+    }, [sessions, ports, updateSessionConfig]);
+
+    // Monitor MQTT topics and update subscriptions dynamically
+    const prevTopicsRef = useRef<Record<string, MqttTopicConfig[]>>({});
+
+    useEffect(() => {
+        sessions.forEach(session => {
+            if (session.config.type === 'mqtt' && session.isConnected) {
+                const currentTopics = (session.config as any).topics || [];
+                // Ensure topics are objects (migration might have happened or checking types)
+                // In runtime, if we just loaded, they might be strings if we didn't migrate yet?
+                // We should ensure migration happens on load.
+                // But let's handle safety here too.
+                const validCurrentTopics: MqttTopicConfig[] = currentTopics.map((t: any) => {
+                    if (typeof t === 'string') {
+                        return { id: t, path: t, color: '#cccccc', subscribed: true };
+                    }
+                    return t;
+                });
+
+                const prevTopics = prevTopicsRef.current[session.id] || [];
+
+                // Calculate active subscriptions (subscribed === true)
+                const currentActive = validCurrentTopics.filter(t => t.subscribed).map(t => t.path);
+                const prevActive = prevTopics.filter(t => t.subscribed).map(t => t.path);
+
+                // Find added/enabled subscriptions
+                const added = currentActive.filter(t => !prevActive.includes(t));
+                // Find removed/disabled subscriptions
+                const removed = prevActive.filter(t => !currentActive.includes(t));
+
+                if (window.mqttAPI) {
+                    added.forEach(topic => {
+                        console.log(`[MQTT] Subscribing to ${topic}`);
+                        window.mqttAPI.subscribe(session.id, topic);
+                    });
+                    removed.forEach(topic => {
+                        console.log(`[MQTT] Unsubscribing from ${topic}`);
+                        window.mqttAPI.unsubscribe(session.id, topic);
+                    });
+                }
+
+                // Update ref
+                if (added.length > 0 || removed.length > 0) {
+                    // We store the full config state as prev
+                    prevTopicsRef.current[session.id] = validCurrentTopics;
+                } else {
+                    // If paths didn't change but maybe color changed, we still want to update ref?
+                    // Actually we only care about paths and subscribed status for the effect.
+                    // But for detecting future changes, we should keep it sync.
+                    // A deep compare would be better but expensive.
+                    // Let's just update if we differ in length or content?
+                    // Simple approach: Always update ref to current state if we are connected, 
+                    // so we compare against latest next time.
+                    prevTopicsRef.current[session.id] = validCurrentTopics;
+                }
+
+            } else if (session.config.type === 'mqtt' && !session.isConnected) {
+                // Reset ref when disconnected to ensure we re-subscribe on next connect
+                prevTopicsRef.current[session.id] = [];
+            }
+        });
+    }, [sessions]);
+
     // Initial load — workspace-based
     useEffect(() => {
         listPorts();
         const interval = setInterval(listPorts, 5000);
+        // ... (rest of existing effect)
 
         // Initialize workspace
         const initWorkspace = async () => {

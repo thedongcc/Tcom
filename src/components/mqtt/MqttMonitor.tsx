@@ -79,7 +79,22 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorP
 
                         {/* Topic Pill */}
                         {log.topic && (
-                            <span className="bg-[#333] text-[#9cdcfe] px-1.5 rounded text-[11px] shrink-0 border border-[#444]">
+                            <span
+                                className="px-1.5 rounded text-[11px] shrink-0 border border-current opacity-90"
+                                style={{
+                                    color: (session.config as MqttSessionConfig).topics.find(t =>
+                                        // Match exact or wildcards? Usually exact for log display.
+                                        // But we want to match the subscription color.
+                                        // MQTT wildcards: + and #. 
+                                        // Simple match for now: if we have an exact config for this topic, use it.
+                                        // Or check if it matches a subscription pattern? That's complex.
+                                        // Let's just try to find exact match first, or just use a hashing color if not found?
+                                        // User asked: "列表中的topic颜色不同，所以mqtt数据显示区的topic也应该显示对应的颜色"
+                                        // This implies if I subscribed to "test/a" (Red), I expect messages in "test/a" to be Red.
+                                        t.path === log.topic
+                                    )?.color || '#9cdcfe' // Default blue
+                                }}
+                            >
                                 {log.topic}
                             </span>
                         )}
@@ -103,15 +118,24 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish }: MqttMonitorP
             <div className="border-t border-[var(--vscode-border)] bg-[#252526] p-2 flex flex-col gap-2 shrink-0">
                 {/* Top Row: Topic, QoS, Retain */}
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-[#3c3c3c] border border-[#3c3c3c] rounded-sm px-2 py-1 flex-1">
+                    <div className="flex items-center gap-1 bg-[#3c3c3c] border border-[#3c3c3c] rounded-sm px-2 py-1 flex-1 relative">
                         <span className="text-[#969696] text-[11px]">Topic</span>
                         <input
                             className="bg-transparent border-none outline-none text-[#cccccc] text-[12px] flex-1 font-mono"
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
                             placeholder="topic/path"
+                            list="mqtt-topics-list"
                         />
-                        <History size={12} className="text-[#969696] cursor-pointer hover:text-white" />
+                        <datalist id="mqtt-topics-list">
+                            {(session.config as MqttSessionConfig).topics.map(t => (
+                                <option key={t.id} value={t.path}>{t.path}</option>
+                            ))}
+                        </datalist>
+                        {/* 
+                         Alternatively, we can use a custom dropdown if datalist styling is too native/ugly.
+                         But datalist is robust for "select or type".
+                        */}
                     </div>
 
                     <div className="flex items-center gap-1">

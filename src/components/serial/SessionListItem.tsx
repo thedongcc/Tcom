@@ -4,6 +4,7 @@ import { SessionConfig, SessionType } from '../../types/session';
 import { FolderOpen, Network, Cpu } from 'lucide-react';
 
 import { SerialPortInfo } from '../../vite-env';
+import { formatPortInfo } from '../../utils/format';
 interface SessionListItemProps {
     session: SessionConfig;
     portInfo?: SerialPortInfo;
@@ -88,7 +89,7 @@ export const SessionListItem = ({
                         {session.type === 'serial'
                             ? (portInfo
                                 ? formatPortInfo(portInfo)
-                                : `${(session as any).connection?.path || 'No Port'}`)
+                                : (session as any).lastDescription || (session as any).connection?.path || 'No Port')
                             : (session as any).brokerUrl || session.type}
                     </span>
                 </div>
@@ -97,19 +98,4 @@ export const SessionListItem = ({
     );
 };
 
-const formatPortInfo = (port: SerialPortInfo) => {
-    let name = port.friendlyName || '';
-    // Remove (COMx) repetition
-    name = name.replace(/\(COM\d+\)/gi, '').trim();
-    // Remove path repetition if friendlyName starts with it
-    if (name.startsWith(port.path)) {
-        name = name.substring(port.path.length).trim();
-    }
 
-    // Add manufacturer if not already in name
-    if (port.manufacturer && !name.includes(port.manufacturer)) {
-        name = `${name} (${port.manufacturer})`;
-    }
-
-    return `${port.path} ${name}`.trim();
-};

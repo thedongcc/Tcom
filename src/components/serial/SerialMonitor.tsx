@@ -62,6 +62,38 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
+    // Font Selection Logic
+    const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
+    const [availableFonts, setAvailableFonts] = useState<any[]>([]);
+
+    const defaultFonts = [
+        { label: 'Monospace (Default)', value: 'mono' },
+        { label: 'JetBrains Mono (Built-in)', value: 'JetBrains Mono' },
+        { label: 'Consolas', value: 'consolas' },
+        { label: 'Courier New', value: 'Courier New' },
+        { label: 'Microsoft YaHei UI', value: 'Microsoft YaHei UI' },
+        { label: 'Segoe UI', value: 'Segoe UI' },
+        { label: 'Inter', value: 'Inter' },
+    ];
+
+    useEffect(() => {
+        if (showAllFonts) {
+            // @ts-ignore - queryLocalFonts is an experimental API
+            if (window.queryLocalFonts) {
+                // @ts-ignore
+                window.queryLocalFonts().then((fonts: any[]) => {
+                    // Filter and deduplicate
+                    const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
+                        .map(name => fonts.find((f: any) => f.fullName === name))
+                        .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
+                    setAvailableFonts(uniqueFonts);
+                }).catch((e: any) => {
+                    console.error('Failed to query local fonts:', e);
+                });
+            }
+        }
+    }, [showAllFonts]);
+
     // CRC is in session.config.rxCRC.enabled
     const crcEnabled = (config as any).rxCRC?.enabled || false;
     const rxCRC = (config as any).rxCRC || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
@@ -101,17 +133,19 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     // Calculate statistics
     const txBytes = logs.filter(log => log.type === 'TX').reduce((sum, log) => {
+        const count = log.repeatCount || 1;
         if (typeof log.data === 'string') {
-            return sum + new TextEncoder().encode(log.data).length;
+            return sum + (new TextEncoder().encode(log.data).length * count);
         }
-        return sum + log.data.length;
+        return sum + (log.data.length * count);
     }, 0);
 
     const rxBytes = logs.filter(log => log.type === 'RX').reduce((sum, log) => {
+        const count = log.repeatCount || 1;
         if (typeof log.data === 'string') {
-            return sum + new TextEncoder().encode(log.data).length;
+            return sum + (new TextEncoder().encode(log.data).length * count);
         }
-        return sum + log.data.length;
+        return sum + (log.data.length * count);
     }, 0);
 
     // Clear logs
@@ -329,7 +363,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     )}
 
                     {config.type === 'serial' ?
-                        `${config.connection.path || 'No Port'} -${config.connection.baudRate} -${config.connection.dataBits} -${config.connection.parity === 'none' ? 'N' : config.connection.parity.toUpperCase()} -${config.connection.stopBits} `
+                        `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${config.connection.parity === 'none' ? 'N' : config.connection.parity.toUpperCase()}${config.connection.stopBits}`
                         : config.type === 'mqtt' ?
                             `${config.host}:${config.port} ` : 'Connected'}
                 </div>
@@ -338,11 +372,11 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     {/* Stats Display - Refined JetBrains Style */}
                     <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
                         <div className="flex items-center gap-1.5 px-3 py-1 hover:bg-[#2a2d2e] transition-colors group">
-                            <span className="text-[11px] font-semibold text-[#888888] group-hover:text-[#aaaaaa] transition-colors font-mono">T:</span>
+                            <span className="text-[11px] font-semibold text-[#aaaaaa] font-mono">T:</span>
                             <span className="text-[11px] font-semibold text-[#cccccc] font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
                         <div className="flex items-center gap-1.5 px-3 py-1 hover:bg-[#2a2d2e] transition-colors group">
-                            <span className="text-[11px] font-semibold text-[#888888] group-hover:text-[#aaaaaa] transition-colors font-mono">R:</span>
+                            <span className="text-[11px] font-semibold text-[#aaaaaa] font-mono">R:</span>
                             <span className="text-[11px] font-semibold text-[#cccccc] font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
@@ -574,20 +608,36 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                                 {/* Font Family */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#cccccc]">Font Family:</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-[#cccccc]">Font Family:</span>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer group">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
+                                                                checked={showAllFonts}
+                                                                onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
+                                                            />
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">Show All System Fonts</span>
+                                                        </label>
+                                                    </div>
                                                     <div className="relative text-wrap">
                                                         <select
                                                             className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1.5 w-full appearance-none hover:bg-[#454545] transition-colors pr-8"
                                                             value={fontFamily}
                                                             onChange={(e) => { setFontFamily(e.target.value as any); saveUIState({ fontFamily: e.target.value as any }); }}
                                                         >
-                                                            <option value="mono">Monospace (Default)</option>
-                                                            <option value="consolas">Consolas</option>
-                                                            <option value="JetBrains Mono">JetBrains Mono</option>
-                                                            <option value="Microsoft YaHei UI">Microsoft YaHei UI</option>
-                                                            <option value="Segoe UI">Segoe UI</option>
-                                                            <option value="Inter">Inter</option>
-                                                            <option value="Courier New">Courier New</option>
+                                                            <optgroup label="Built-in / Recommended">
+                                                                {defaultFonts.map(f => (
+                                                                    <option key={f.value} value={f.value}>{f.label}</option>
+                                                                ))}
+                                                            </optgroup>
+                                                            {showAllFonts && availableFonts.length > 0 && (
+                                                                <optgroup label="System Fonts">
+                                                                    {availableFonts.map(f => (
+                                                                        <option key={f.postscriptName || f.fullName} value={f.fullName}>{f.fullName}</option>
+                                                                    ))}
+                                                                </optgroup>
+                                                            )}
                                                         </select>
                                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
                                                             <ChevronDown size={12} />

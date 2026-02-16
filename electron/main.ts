@@ -285,7 +285,13 @@ function createWindow() {
 
           // Restore subscriptions if any
           if (config.topics && Array.isArray(config.topics)) {
-            config.topics.forEach((t: string) => client.subscribe(t));
+            config.topics.forEach((t: any) => {
+              if (typeof t === 'string') {
+                client.subscribe(t);
+              } else if (t && t.path && t.subscribed) {
+                client.subscribe(t.path);
+              }
+            });
           }
         }
       };
@@ -302,7 +308,16 @@ function createWindow() {
         }
       };
 
-      client.on('connect', handleInitialSuccess);
+      const handleConnect = () => {
+        if (!initialConnectHandled) {
+          handleInitialSuccess();
+        } else {
+          // Reconnection
+          if (!win?.isDestroyed()) win?.webContents.send('mqtt:status', { connectionId, status: 'connected' });
+        }
+      };
+
+      client.on('connect', handleConnect);
 
       client.on('message', (topic: string, message: Buffer) => {
         if (!win?.isDestroyed()) {
