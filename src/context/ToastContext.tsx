@@ -88,7 +88,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
     }, []);
 
-    // Global copy event listener
+    // Global keyboard and clipboard event listeners
     useEffect(() => {
         const handleCopy = () => {
             const selection = window.getSelection();
@@ -97,8 +97,43 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
         };
 
+        const handlePaste = (e: ClipboardEvent) => {
+            // Check if paste actually happened (not just Ctrl+V on non-editable area)
+            const target = e.target as HTMLElement;
+            const isEditable = target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(target.tagName);
+
+            if (isEditable) {
+                showToast('已粘贴', 'success', 800);
+            }
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+            const key = e.key.toLowerCase();
+
+            // Paste Empty Check: Ctrl+V
+            if (isCtrlOrMeta && key === 'v') {
+                // We use a slight timeout to check if handlePaste was triggered
+                // or check clipboard directly if possible (though limited in browsers)
+                navigator.clipboard.readText().then(text => {
+                    if (!text) {
+                        showToast('无可粘贴的内容', 'warning', 800);
+                    }
+                }).catch(() => {
+                    // Privacy settings might block readText
+                });
+            }
+        };
+
         document.addEventListener('copy', handleCopy);
-        return () => document.removeEventListener('copy', handleCopy);
+        document.addEventListener('paste', handlePaste);
+        window.addEventListener('keydown', handleKeyDown, true);
+
+        return () => {
+            document.removeEventListener('copy', handleCopy);
+            document.removeEventListener('paste', handlePaste);
+            window.removeEventListener('keydown', handleKeyDown, true);
+        };
     }, [showToast]);
 
     return (

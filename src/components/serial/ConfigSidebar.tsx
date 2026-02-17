@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, Save, FolderOpen, Play, Square } from 'lucide-react';
+import { RefreshCw, Play, Square } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { SerialSessionConfig, MqttSessionConfig } from '../../types/session';
 import { MqttConfigPanel } from '../mqtt/MqttConfigPanel';
 import { MonitorConfigPanel } from '../serial-monitor/MonitorConfig';
+import { CustomSelect } from '../common/CustomSelect';
 
 interface ConfigSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -11,8 +12,8 @@ interface ConfigSidebarProps {
 
 // Extracted Serial Panel
 const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionManager: ReturnType<typeof useSessionManager> }) => {
-    const { config, isConnected, isConnecting } = session;
-    const { connection, txCRC, rxCRC } = config as SerialSessionConfig;
+    const { config, isConnected } = session;
+    const { connection } = config as SerialSessionConfig;
 
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = sessionManager;
     const uiState = (config as any).uiState || {};
@@ -40,6 +41,14 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
         updateSessionConfig(session.id, { connection: { ...connection, ...updates } });
     };
 
+    const portItems = ports.map(port => ({
+        label: `${port.path} ${port.friendlyName ? port.friendlyName.replace(`(${port.path})`, '').trim() : ''}`,
+        value: port.path,
+        busy: port.busy,
+        error: port.error,
+        description: port.manufacturer ? `Manufacturer: ${port.manufacturer}` : undefined
+    }));
+
     return (
         <div className="flex flex-col h-full bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)]">
             <div className="px-4 py-2 border-b border-[var(--vscode-border)] bg-[#252526] text-[11px] font-bold text-[#cccccc] uppercase tracking-wide">
@@ -50,28 +59,21 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
             <div className="px-4 py-2 flex flex-col gap-3">
                 {/* Port Selector */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696] flex justify-between">
-                        Port
+                    <label className="text-[11px] text-[#969696] flex justify-between items-center">
+                        <div className="flex items-center gap-1.5">
+                            Port
+                        </div>
                         <button onClick={listPorts} className="hover:text-white" title="Refresh Ports">
                             <RefreshCw size={12} />
                         </button>
                     </label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
+                    <CustomSelect
+                        items={portItems}
                         value={connection.path}
-                        onChange={(e) => updateConnection({ path: e.target.value })}
+                        onChange={(val) => updateConnection({ path: val })}
                         disabled={isConnected}
-                    >
-                        <option value="" disabled>Select Port</option>
-                        {ports.map(port => (
-                            <option key={port.path} value={port.path}>
-                                {port.path} {port.friendlyName
-                                    ? port.friendlyName.replace(`(${port.path})`, '').trim()
-                                    : ''}
-                                {(!port.friendlyName && !port.manufacturer) ? '' : (port.manufacturer ? ` (${port.manufacturer})` : '')}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select Port"
+                    />
                 </div>
 
                 {/* Baud Rate Selector */}

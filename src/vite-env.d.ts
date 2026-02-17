@@ -4,9 +4,12 @@ export interface SerialPortInfo {
     serialNumber?: string;
     pnpId?: string;
     locationId?: string;
+    friendlyName?: string;
     vendorId?: string;
     productId?: string;
-    friendlyName?: string;
+    busy?: boolean;
+    status?: 'available' | 'busy' | 'error';
+    error?: string;
 }
 
 export interface SerialOpenOptions {

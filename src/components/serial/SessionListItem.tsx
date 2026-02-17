@@ -9,6 +9,7 @@ interface SessionListItemProps {
     session: SessionConfig;
     portInfo?: SerialPortInfo;
     isActive: boolean;
+    isConnected: boolean;
     isEditing: boolean;
     editName: string;
     onEditNameChange: (name: string) => void;
@@ -30,6 +31,7 @@ export const SessionListItem = ({
     session,
     portInfo,
     isActive,
+    isConnected,
     isEditing,
     editName,
     onEditNameChange,
@@ -52,6 +54,8 @@ export const SessionListItem = ({
         transition,
         opacity: isDragging ? 0.5 : 1,
     };
+
+    const isPortBusy = !isConnected && portInfo?.busy;
 
     return (
         <div
@@ -84,7 +88,15 @@ export const SessionListItem = ({
                 />
             ) : (
                 <div className="flex flex-col overflow-hidden flex-1">
-                    <span className="truncate font-medium">{session.name}</span>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                        <span className="truncate font-medium">{session.name}</span>
+                        {session.type === 'serial' && portInfo && (
+                            <div
+                                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
+                                title={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')}
+                            />
+                        )}
+                    </div>
                     <span className="text-[10px] text-[#858585] truncate">
                         {session.type === 'serial'
                             ? (portInfo

@@ -112,15 +112,15 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
                 if (e.shiftKey) {
-                    if (canRedo) redo();
+                    redo();
                 } else {
-                    if (canUndo) undo();
+                    undo();
                 }
                 return;
             }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
                 e.preventDefault();
-                if (canRedo) redo();
+                redo();
                 return;
             }
 

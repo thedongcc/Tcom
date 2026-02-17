@@ -173,11 +173,6 @@ export const useSessionManager = () => {
     }, [updateSessionConfig]);
 
     // --- Persistence for Active Session ---
-    useEffect(() => {
-        if (activeSessionId && workspacePath) {
-            localStorage.setItem(`active-session-${workspacePath}`, activeSessionId);
-        }
-    }, [activeSessionId, workspacePath]);
 
     const findSetupcPath = useCallback(() => {
         const monitorSession = sessionsRef.current.find(s => s.config.type === 'monitor');
@@ -210,6 +205,14 @@ export const useSessionManager = () => {
         setPorts(allPorts);
     }, [findSetupcPath]);
 
+    // Refresh ports immediately when active session changes (Tab switching)
+    useEffect(() => {
+        if (activeSessionId && workspacePath) {
+            localStorage.setItem(`active-session-${workspacePath}`, activeSessionId);
+            listPorts();
+        }
+    }, [activeSessionId, workspacePath, listPorts]);
+
     const connectSession = useCallback(async (sessionId: string) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || session.isConnected || session.isConnecting) return;
@@ -217,24 +220,30 @@ export const useSessionManager = () => {
         if (session.config.type === 'mqtt') {
             if (!window.mqttAPI) { addLog(sessionId, 'ERROR', 'MQTT API missing'); return; }
             updateSession(sessionId, () => ({ isConnecting: true }));
-            const result = await window.mqttAPI.connect(sessionId, session.config);
-            if (result.success) {
-                updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
-                addLog(sessionId, 'INFO', `Connected to ${(session.config as any).host}`);
-                const cleanups: (() => void)[] = [];
-                cleanups.push(window.mqttAPI.onMessage(sessionId, (topic, payload) => addLog(sessionId, 'RX', payload, undefined, topic)));
-                cleanups.push(window.mqttAPI.onStatus(sessionId, (status) => {
-                    if (status === 'disconnected') {
-                        updateSession(sessionId, () => ({ isConnected: false }));
-                        addLog(sessionId, 'INFO', 'Disconnected (Remote)');
-                    }
-                }));
-                cleanups.push(window.mqttAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', `MQTT Error: ${err}`)));
-                cleanupRefs.current.set(sessionId, cleanups);
-                return true;
-            } else {
+            try {
+                const result = await window.mqttAPI.connect(sessionId, session.config);
+                if (result.success) {
+                    updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
+                    addLog(sessionId, 'INFO', `Connected to ${(session.config as any).host}`);
+                    const cleanups: (() => void)[] = [];
+                    cleanups.push(window.mqttAPI.onMessage(sessionId, (topic, payload) => addLog(sessionId, 'RX', payload, undefined, topic)));
+                    cleanups.push(window.mqttAPI.onStatus(sessionId, (status) => {
+                        if (status === 'disconnected') {
+                            updateSession(sessionId, () => ({ isConnected: false }));
+                            addLog(sessionId, 'INFO', 'Disconnected (Remote)');
+                        }
+                    }));
+                    cleanups.push(window.mqttAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', `MQTT Error: ${err}`)));
+                    cleanupRefs.current.set(sessionId, cleanups);
+                    return true;
+                } else {
+                    updateSession(sessionId, () => ({ isConnecting: false }));
+                    addLog(sessionId, 'ERROR', `Connection failed: ${result.error}`);
+                    return false;
+                }
+            } catch (err: any) {
                 updateSession(sessionId, () => ({ isConnecting: false }));
-                addLog(sessionId, 'ERROR', `Connection failed: ${result.error}`);
+                addLog(sessionId, 'ERROR', `Connection Error: ${err.message}`);
                 return false;
             }
         }
@@ -258,18 +267,28 @@ export const useSessionManager = () => {
                 return false;
             }
             if ((window as any).monitorAPI) {
-                const res = await (window as any).monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort });
-                if (res.success) {
-                    updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
-                    addLog(sessionId, 'INFO', 'Monitor started');
-                    const cleanups: (() => void)[] = [];
-                    cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => addLog(sessionId, type, data, 'ok', type === 'TX' ? 'virtual' : 'physical')));
-                    cleanups.push(window.monitorAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', err)));
-                    cleanups.push(window.monitorAPI.onClosed(sessionId, (origin) => addLog(sessionId, 'INFO', `${origin} Closed`)));
-                    cleanupRefs.current.set(sessionId, cleanups);
-                    return true;
-                } else {
-                    addLog(sessionId, 'ERROR', res.error);
+                try {
+                    const res = await (window as any).monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort });
+                    if (res.success) {
+                        updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
+                        addLog(sessionId, 'INFO', 'Monitor started');
+                        const cleanups: (() => void)[] = [];
+                        cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => addLog(sessionId, type, data, 'ok', type === 'TX' ? 'virtual' : 'physical')));
+                        cleanups.push(window.monitorAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', err)));
+                        cleanups.push(window.monitorAPI.onClosed(sessionId, (data: any) => {
+                            const { origin, path } = data;
+                            const label = origin === 'Internal' ? 'Internal Bridge Port' : 'Physical Device';
+                            addLog(sessionId, 'INFO', `${label}: ${path} Disconnected`);
+                        }));
+                        cleanupRefs.current.set(sessionId, cleanups);
+                        return true;
+                    } else {
+                        addLog(sessionId, 'ERROR', res.error);
+                        updateSession(sessionId, () => ({ isConnecting: false }));
+                        return false;
+                    }
+                } catch (err: any) {
+                    addLog(sessionId, 'ERROR', `Monitor Start Error: ${err.message}`);
                     updateSession(sessionId, () => ({ isConnecting: false }));
                     return false;
                 }
@@ -279,14 +298,20 @@ export const useSessionManager = () => {
 
         if (!window.serialAPI) return;
         updateSession(sessionId, () => ({ isConnecting: true }));
-        const result = await window.serialAPI.open(sessionId, session.config.connection);
-        if (result.success) {
-            updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
-            addLog(sessionId, 'INFO', `Connected to ${session.config.connection.path}`);
-            return true;
-        } else {
+        try {
+            const result = await window.serialAPI.open(sessionId, session.config.connection);
+            if (result.success) {
+                updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
+                addLog(sessionId, 'INFO', `Connected to ${session.config.connection.path}`);
+                return true;
+            } else {
+                updateSession(sessionId, () => ({ isConnecting: false }));
+                addLog(sessionId, 'ERROR', `Failed: ${result.error}`);
+                return false;
+            }
+        } catch (err: any) {
             updateSession(sessionId, () => ({ isConnecting: false }));
-            addLog(sessionId, 'ERROR', `Failed: ${result.error}`);
+            addLog(sessionId, 'ERROR', `Serial Open Error: ${err.message}`);
             return false;
         }
     }, [updateSession, addLog, updateSessionConfig]);
@@ -304,6 +329,14 @@ export const useSessionManager = () => {
         } else if (session.config.type === 'monitor' && (window as any).monitorAPI) {
             const monitorConfig = session.config as MonitorSessionConfig;
             await (window as any).monitorAPI.stop(sessionId);
+
+            // Clean up IPC listeners
+            const cleanups = cleanupRefs.current.get(sessionId);
+            if (cleanups) {
+                cleanups.forEach(c => c());
+                cleanupRefs.current.delete(sessionId);
+            }
+
             if (monitorConfig.autoDestroyPair && monitorConfig.pairedPort && monitorConfig.setupcPath) {
                 try {
                     await Com0Com.removePair(monitorConfig.setupcPath, monitorConfig.pairedPort);
@@ -487,7 +520,7 @@ export const useSessionManager = () => {
     // --- Background Tasks ---
     useEffect(() => {
         listPorts();
-        const interval = setInterval(listPorts, 5000);
+        const interval = setInterval(listPorts, 2000);
         const initWs = async () => {
             if (!window.workspaceAPI) return;
             const lastWs = await window.workspaceAPI.getLastWorkspace();

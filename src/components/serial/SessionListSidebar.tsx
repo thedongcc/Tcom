@@ -211,6 +211,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                                 session={session}
                                 portInfo={sessionManager.ports.find(p => p.path === (session as any).connection?.path)}
                                 isActive={sessionManager.activeSessionId === session.id}
+                                isConnected={sessionManager.sessions.find(s => s.id === session.id)?.isConnected || false}
                                 isEditing={editingId === session.id}
                                 editName={editName}
                                 onEditNameChange={setEditName}

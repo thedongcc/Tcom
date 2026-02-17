@@ -48,15 +48,29 @@ const LogItem = React.memo(({
     timestampFormat
 }: any) => {
     if (log.type === 'INFO' || log.type === 'ERROR') {
-        const content = formatData(log.data, 'text', encoding);
+        const content = formatData(log.data, 'text', encoding).trim();
         let style = "bg-gray-800/40 text-gray-400 border-gray-600/30";
-        if (log.type === 'ERROR') style = "bg-red-900/20 text-red-400 border-red-500/30";
-        else if (content.includes('Started') || content.includes('Restored')) style = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+        if (log.type === 'ERROR') {
+            style = "bg-red-900/40 text-red-400 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)]";
+        } else if (content.includes('Internal Bridge Port')) {
+            // 蓝色系用于内部桥接端口
+            style = "bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold";
+        } else if (content.includes('Physical Device')) {
+            // 青色系用于物理设备
+            style = "bg-emerald-600/20 text-emerald-400 border-emerald-500/30 font-semibold";
+        } else if (content.includes('Started') || content.includes('Restored') || content.includes('Monitor started')) {
+            style = "bg-green-600/20 text-green-400 border-green-500/30 font-bold";
+        }
         return (
-            <div className="flex justify-center my-2">
-                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${style}`}>
+            <div className="flex justify-center my-2 gap-2 items-center">
+                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${style}`}>
                     {content}
                 </span>
+                {log.repeatCount && log.repeatCount > 1 && (
+                    <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
+                        x{log.repeatCount}
+                    </span>
+                )}
             </div>
         );
     }

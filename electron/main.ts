@@ -2,6 +2,19 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 
+// --- Global Exception Handler (Anti-Crash) ---
+// Windows SerialPort (GetOverlappedResult) sometimes throws uncatchable errors
+// when a port (especially com0com) is closed while I/O is pending.
+process.on('uncaughtException', (error) => {
+  const msg = error?.message || String(error);
+  if (msg.includes('Operation aborted') || msg.includes('GetOverlappedResult')) {
+    console.error('[Main] Intercepted non-controlled SerialPort error to prevent crash:', msg);
+    return; // Prevent app exit
+  }
+  console.error('[Main] Uncaught Exception:', error);
+  // Optional: check if we should app.quit() for other errors
+});
+
 // --- File Write Queue to prevent corruption during concurrent saves ---
 class FileWriteQueue {
   private static queues: Map<string, Promise<void>> = new Map();
@@ -152,7 +165,42 @@ class SerialService {
         }
       }
 
-      return { success: true, ports };
+      // 4. Check busy status for each port
+      // We skip ports already opened by our own application (they are in this.ports)
+      const openedPaths = new Set(Array.from(this.ports.values()).map(p => p.path));
+
+      const portsWithStatus = await Promise.all(ports.map(async (port: any) => {
+        if (openedPaths.has(port.path)) {
+          return { ...port, busy: false, status: 'available' }; // It's "available" to us because we own it
+        }
+
+        return new Promise((resolve) => {
+          const p = new SP({
+            path: port.path,
+            baudRate: 9600,
+            autoOpen: false
+          });
+
+          p.open((err: any) => {
+            if (err) {
+              const errorMsg = err.message || '';
+              const isBusy = errorMsg.includes('Access denied') || errorMsg.includes('File not found') || errorMsg.includes('busy');
+              resolve({
+                ...port,
+                busy: isBusy,
+                status: isBusy ? 'busy' : 'error',
+                error: errorMsg
+              });
+            } else {
+              p.close(() => {
+                resolve({ ...port, busy: false, status: 'available' });
+              });
+            }
+          });
+        });
+      }));
+
+      return { success: true, ports: portsWithStatus };
     } catch (error: any) {
       console.error('Error listing ports:', error);
       return { success: false, error: error.message };
@@ -252,124 +300,180 @@ class MonitorService {
   private mainWindow: BrowserWindow;
   // Map<sessionId, { internal: SerialPort, physical: SerialPort }>
   // Map<sessionId, { internal: SerialPort, physical: SerialPort, pollTimer?: NodeJS.Timeout }>
-  private sessions: Map<string, { internal: any; physical: any; pollTimer?: NodeJS.Timeout }> = new Map();
+  private sessions: Map<string, { internal: any; physical: any; pollTimer?: NodeJS.Timeout, isStopping?: boolean }> = new Map();
+  private writeQueues: Map<string, Map<'virtual' | 'physical', Promise<void>>> = new Map();
+
+  private async enqueueWrite(sessionId: string, target: 'virtual' | 'physical', writeFn: () => Promise<any>) {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.isStopping) return Promise.resolve();
+
+    if (!this.writeQueues.has(sessionId)) {
+      this.writeQueues.set(sessionId, new Map());
+    }
+    const sessionQueues = this.writeQueues.get(sessionId)!;
+    const existing = sessionQueues.get(target) || Promise.resolve();
+
+    const next = existing
+      .then(async () => {
+        const currentSession = this.sessions.get(sessionId);
+        if (!currentSession || currentSession.isStopping) return;
+
+        // Force a timeout for the write operation itself to prevent queue deadlocks
+        let isDone = false;
+        await Promise.race([
+          writeFn().finally(() => { isDone = true; }),
+          new Promise(resolve => setTimeout(() => {
+            if (!isDone) console.warn(`[Monitor] Write task for ${target} timed out in queue, forcing release.`);
+            resolve(true);
+          }, 1500))
+        ]);
+      })
+      .catch(err => {
+        console.error(`[Monitor] Queue write error for ${target}:`, err.message);
+      });
+
+    sessionQueues.set(target, next);
+    return next;
+  }
 
   constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
   }
 
+  private formatPath(path: string) {
+    if (!path) return path;
+    return path.replace(/^\\\\.\\/, '');
+  }
+
   async start(sessionId: string, config: any) {
+    // 使用局部变量保持对实例的引用，并在 openWithTracking 中实时同步
+    let internal: any = null;
+    let physical: any = null;
+    let pollTimer: NodeJS.Timeout | null = null;
+
     try {
       const SP = getSerialPort();
       if (this.sessions.has(sessionId)) {
         await this.stop(sessionId);
       }
 
-      // Map config properties to what we need
-      // Frontend sends MonitorSessionConfig which has 'pairedPort'
-      // We use 'pairedPort' as the internal port to connect to.
       const internalPortPath = config.pairedPort || config.internalPort;
       const physicalPortPath = config.physicalSerialPort || config.physicalPort;
-      // Connection details might be in config.connection object or top level depending on how it was passed
       const baudRate = config.connection?.baudRate || config.baudRate || 9600;
 
       console.log(`[Monitor] Starting session ${sessionId}`);
-      console.log(`[Monitor] Internal (Bridge): ${internalPortPath}, Physical: ${physicalPortPath}, Baud: ${baudRate}`);
 
       if (!internalPortPath || !physicalPortPath) {
-        throw new Error('Missing port configuration (pairedPort or physicalSerialPort)');
+        throw new Error('Missing port configuration');
       }
 
-      // Open Internal Port (Virtual side linked to App)
-      const internal = new SP({
-        path: internalPortPath,
-        baudRate: baudRate,
-        autoOpen: false
-      });
+      const setupEvents = (source: any, target: any, label: string, sourceType: 'TX' | 'RX', path: string) => {
+        // 重置监听，防止多重绑定
+        source.removeAllListeners('data');
+        source.removeAllListeners('error');
+        source.removeAllListeners('close');
 
-      // Open Physical Port (Device)
-      const physical = new SP({
-        path: physicalPortPath,
-        baudRate: baudRate,
-        autoOpen: false
-      });
-
-      const setupEvents = (source: any, target: any, label: string, sourceType: 'TX' | 'RX') => {
         source.on('data', (data: any) => {
-          if (target && target.isOpen) {
-            target.write(data);
-          }
+          // Use queue to avoid overlapping I/O
+          this.enqueueWrite(sessionId, sourceType === 'TX' ? 'physical' : 'virtual', () => {
+            return new Promise((resolve) => {
+              if (target && target.isOpen) {
+                target.write(data, (err: any) => {
+                  if (err) console.error(`[Monitor] Forwarding error from ${label}:`, err.message);
+                  resolve(true); // Always resolve to let next item in queue run
+                });
+              } else {
+                resolve(true);
+              }
+            });
+          });
+
           if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send('monitor:data', { sessionId, type: sourceType, data });
           }
         });
+
         source.on('error', (err: any) => {
-          console.error(`[Monitor] ${label} Error:`, err);
           if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${label}: ${err.message}` });
+            this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${label} (${this.formatPath(path)}): ${err.message}` });
           }
         });
+
         source.on('close', () => {
-          console.log(`[Monitor] ${label} Closed`);
           if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            this.mainWindow.webContents.send('monitor:closed', { sessionId, origin: label });
+            this.mainWindow.webContents.send('monitor:closed', { sessionId, origin: label, path: this.formatPath(path) });
           }
         });
       };
 
-      const openPort = (port: any, label: string, partner: any, sourceType: 'TX' | 'RX') => new Promise((resolve, reject) => {
-        // PRE-BIND events before opening to ensure no data is missed at start
-        setupEvents(port, partner, label, sourceType);
+      // 封装开启逻辑，并实时同步实例引用到作用域变量，确保 catch 块可以全局清理
+      const openWithTracking = async (path: string, label: string, isInternal: boolean) => {
+        let currentPath = path;
+        let port = new SP({ path: currentPath, baudRate, autoOpen: false });
 
-        port.open((err: any) => {
-          if (err) {
-            // Retry with \\.\ prefix if file not found (common on windows)
-            if (process.platform === 'win32' && (err.message.includes('File not found') || err.message.includes('Access denied'))) {
-              const retryPath = port.path.startsWith('\\\\.\\') ? port.path : `\\\\.\\${port.path}`;
-              console.log(`[Monitor] Retrying open ${label} with path ${retryPath}`);
-              try {
-                const SP = getSerialPort();
-                const retryPort = new SP({
-                  path: retryPath,
-                  baudRate: port.settings.baudRate,
-                  autoOpen: false
-                });
-                // Re-bind events to the new instance
-                setupEvents(retryPort, partner, label, sourceType);
-                retryPort.open((retryErr: any) => {
-                  if (retryErr) {
-                    reject(new Error(`Failed to open ${label} (${port.path}): ${err.message} (Retry: ${retryErr.message})`));
-                  } else {
-                    resolve(retryPort);
-                  }
-                });
-              } catch (e: any) {
-                reject(new Error(`Failed to open ${label} (${port.path}): ${err.message} (Retry failed: ${e.message})`));
-              }
-            } else {
-              reject(new Error(`Failed to open ${label} (${port.path}): ${err.message}`));
-            }
-          } else {
-            resolve(port);
-          }
+        // 关键：立即同步引用
+        if (isInternal) internal = port; else physical = port;
+
+        const attemptOpen = (p: any) => new Promise((resolve, reject) => {
+          p.open((err: any) => err ? reject(err) : resolve(p));
         });
-      });
 
-      // We need to capture the opened instances
-      const [internalOpened, physicalOpened] = await Promise.all([
-        openPort(internal, 'Internal/Virtual', physical, 'TX'),
-        openPort(physical, 'Physical', internal, 'RX')
+        try {
+          return await attemptOpen(port);
+        } catch (err: any) {
+          if (process.platform === 'win32' && (err.message.includes('File not found') || err.message.includes('Access denied'))) {
+            const retryPath = currentPath.startsWith('\\\\.\\') ? currentPath : `\\\\.\\${currentPath}`;
+            if (retryPath !== currentPath) {
+              console.log(`[Monitor] Retrying ${label} with ${retryPath}`);
+
+              // 释放旧对象句柄
+              port.close(() => { });
+
+              const retryPort = new SP({ path: retryPath, baudRate, autoOpen: false });
+              // 关键：更新引用
+              if (isInternal) internal = retryPort; else physical = retryPort;
+
+              try {
+                return await attemptOpen(retryPort);
+              } catch (retryErr: any) {
+                let msg = retryErr.message;
+                const simpleRetryPath = this.formatPath(retryPath);
+                if (msg.includes('Access denied')) {
+                  msg = `Selected Port: ${simpleRetryPath} is occupied (Access Denied)`;
+                } else if (msg.includes('File not found')) {
+                  msg = `Selected Port: ${simpleRetryPath} not found`;
+                }
+                throw new Error(msg);
+              }
+            }
+          }
+
+          let msg = err.message;
+          const simpleCurrentPath = this.formatPath(currentPath);
+          if (msg.includes('Access denied')) {
+            msg = `Selected Port: ${simpleCurrentPath} is occupied (Access Denied)`;
+          } else if (msg.includes('File not found')) {
+            msg = `Selected Port: ${simpleCurrentPath} not found`;
+          }
+          throw new Error(msg);
+        }
+      };
+
+      // 并行开启
+      const [iP, pP] = await Promise.all([
+        openWithTracking(internalPortPath, 'Internal', true),
+        openWithTracking(physicalPortPath, 'Physical', false)
       ]);
 
-      // Update session with correct instances
-      // 4. Start status polling for virtual port (to detect if partner software is open)
+      // 绑定转发逻辑（必须在两个都打开后执行）
+      setupEvents(iP, pP, 'Internal', 'TX', internalPortPath);
+      setupEvents(pP, iP, 'Physical', 'RX', physicalPortPath);
+
       let lastPartnerStatus = false;
-      const pollTimer = setInterval(async () => {
+      pollTimer = setInterval(async () => {
         try {
-          if (internalOpened && (internalOpened as any).isOpen) {
-            const signals = await (internalOpened as any).getControlSignals();
-            // Expanded signal check: DSR, CTS, or DCD (Carrier Detect)
-            // Different drivers/configurations pull different pins
+          if (internal && internal.isOpen) {
+            const signals = await internal.getControlSignals();
             const isPartnerOpen = !!(signals.carrierDetect || signals.dsr || signals.cts);
             if (isPartnerOpen !== lastPartnerStatus) {
               lastPartnerStatus = isPartnerOpen;
@@ -378,20 +482,29 @@ class MonitorService {
               }
             }
           }
-        } catch (e) { /* ignore */ }
+        } catch { }
       }, 1000);
 
-      // Update session with correct instances and timer
-      // @ts-ignore
-      this.sessions.set(sessionId, { internal: internalOpened, physical: physicalOpened, pollTimer });
-
+      this.sessions.set(sessionId, { internal, physical, pollTimer });
       return { success: true };
+    } catch (error: any) {
+      console.error(`[Monitor] Start failed for session ${sessionId}, executing cleanup.`, error.message);
 
-    } catch (e: any) {
-      console.error('[Monitor] Start failed:', e);
-      // Ensure cleanup if partial fail
-      await this.stop(sessionId);
-      return { success: false, error: e.message };
+      if (pollTimer) clearInterval(pollTimer);
+
+      // 在清理时强制移除所有监听器，避免触发逻辑死循环或多重报错
+      internal?.removeAllListeners();
+      physical?.removeAllListeners();
+
+      const forceClose = (p: any) => new Promise(resolve => {
+        if (!p) return resolve(true);
+        p.close(() => resolve(true));
+      });
+
+      // 同时清理物理和虚拟端口句柄
+      await Promise.all([forceClose(internal), forceClose(physical)]);
+
+      return { success: false, error: error.message };
     }
   }
 
@@ -403,15 +516,27 @@ class MonitorService {
     if (!session) return { success: true };
 
     const closePort = (port: any) => new Promise(resolve => {
-      if (port && port.isOpen) {
-        port.close((err: any) => resolve(true));
+      if (port) {
+        // 关键：立即移除所有监听器，并直接关闭，不再执行可能 hang 的 flush/drain
+        port.removeAllListeners();
+        if (port.isOpen) {
+          port.close((err: any) => {
+            if (err) console.error('[Monitor] Port close error (ignored):', err.message);
+            resolve(true);
+          });
+        } else {
+          resolve(true);
+        }
       } else {
         resolve(true);
       }
     });
 
+    if (session) session.isStopping = true;
+
     await Promise.all([closePort(session.internal), closePort(session.physical)]);
     this.sessions.delete(sessionId);
+    this.writeQueues.delete(sessionId);
     return { success: true };
   }
 
@@ -424,50 +549,60 @@ class MonitorService {
       return { success: false, error: 'Session not found' };
     }
 
+
     const port = target === 'virtual' ? session.internal : session.physical;
     // Note: Writing to 'virtual' (Internal) means sending TO the App (via the pair).
     // Writing to 'physical' means sending TO the device.
 
-    if (!port) {
-      console.error(`[Monitor] Write failed: Port for ${target} is null`);
-      return { success: false, error: 'Target port is null' };
-    }
-
-    if (!port.isOpen) {
-      console.error(`[Monitor] Write failed: Port for ${target} is not open`);
+    if (!port || !port.isOpen) {
       return { success: false, error: 'Target port not open' };
     }
 
     return new Promise(async (resolve) => {
       const payload = typeof data === 'string' ? data : Buffer.from(data);
 
-      // Use a timeout to prevent hanging on blocked virtual ports
-      let timeoutId = setTimeout(async () => {
-        let extraInfo = "";
-        if (target === 'virtual') {
-          extraInfo = " (Virtual port buffer full/Partner not responding)";
-        }
-        console.error(`[Monitor] Write timeout${extraInfo}`);
-        resolve({ success: false, error: `Write timed out${extraInfo}` });
-      }, 1000);
+      this.enqueueWrite(sessionId, target, () => {
+        return new Promise((innerResolve) => {
+          let timeoutId = setTimeout(() => {
+            console.error(`[Monitor] Injection write timeout for ${target}`);
+            innerResolve(true);
+            resolve({ success: false, error: 'Write timed out' });
+          }, 1000);
 
-      port.write(payload, async (err: any) => {
-        clearTimeout(timeoutId);
-        if (err) {
-          let errorMsg = err.message;
-          if (target === 'virtual') {
-            try {
-              const signals = await port.getControlSignals();
-              if (!signals.carrierDetect && !signals.dsr && !signals.cts) {
-                errorMsg = "Write failed: Partner software (external port) is not open. com0com buffers are full.";
+          try {
+            port.write(payload, async (err: any) => {
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null as any;
               }
-            } catch (e) { /* ignore */ }
+              if (err) {
+                let errorMsg = err.message;
+                if (target === 'virtual' && port.isOpen) {
+                  try {
+                    const signals = await port.getControlSignals();
+                    if (!signals.carrierDetect && !signals.dsr && !signals.cts) {
+                      errorMsg = "Write failed: Partner software (external port) is not open.";
+                    }
+                  } catch (e) { /* ignore */ }
+                }
+                console.error(`[Monitor] Injection write error:`, errorMsg);
+                innerResolve(true);
+                resolve({ success: false, error: errorMsg });
+              } else {
+                innerResolve(true);
+                resolve({ success: true });
+              }
+            });
+          } catch (syncErr: any) {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null as any;
+            }
+            console.error(`[Monitor] Injection write sync error:`, syncErr.message);
+            innerResolve(true);
+            resolve({ success: false, error: syncErr.message });
           }
-          console.error(`[Monitor] Write error:`, errorMsg);
-          resolve({ success: false, error: errorMsg });
-        } else {
-          resolve({ success: true });
-        }
+        });
       });
     });
   }

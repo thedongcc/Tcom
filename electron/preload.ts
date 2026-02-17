@@ -140,10 +140,10 @@ contextBridge.exposeInMainWorld('monitorAPI', {
     ipcRenderer.on('monitor:error', listener);
     return () => ipcRenderer.off('monitor:error', listener);
   },
-  onClosed: (sessionId: string, callback: (origin: string) => void) => {
-    const listener = (_: any, args: { sessionId: string, origin: string }) => {
+  onClosed: (sessionId: string, callback: (args: { origin: string, path: string }) => void) => {
+    const listener = (_: any, args: { sessionId: string, origin: string, path: string }) => {
       if (args.sessionId === sessionId) {
-        callback(args.origin);
+        callback({ origin: args.origin, path: args.path });
       }
     };
     ipcRenderer.on('monitor:closed', listener);
