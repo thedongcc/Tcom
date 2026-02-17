@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { SideBar } from './SideBar';
@@ -8,6 +8,7 @@ import { Panel } from './Panel';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { SessionProvider } from '../../context/SessionContext';
+import { SessionConfig } from '../../types/session';
 
 import { PluginProvider } from '../../context/PluginContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
@@ -18,11 +19,15 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
     const sessionManager = useSessionManager();
     const editorLayout = useEditorLayout();
     const { showUpdateDialog, setShowUpdateDialog } = useAutoUpdate();
+    // Track restored IDs to avoid infinite loops when savedSessions updates during restoration
+    const restoredIdsRef = useRef<Set<string>>(new Set());
 
     // Persist layout based on workspace
     useEffect(() => {
         if (sessionManager.workspacePath) {
             editorLayout.setPersistenceKey(sessionManager.workspacePath);
+            // Reset restoration set when switching workspaces
+            restoredIdsRef.current.clear();
         }
     }, [sessionManager.workspacePath]);
 
@@ -31,23 +36,38 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
         if (!editorLayout.layout || !sessionManager.savedSessions.length) return;
 
         const restoreSessions = () => {
+            const toOpen: SessionConfig[] = [];
+
             const traverse = (node: any) => {
                 if (!node) return;
                 if (node.type === 'leaf') {
                     node.views.forEach((viewId: string) => {
+                        if (restoredIdsRef.current.has(viewId)) return;
+
                         const isActive = sessionManager.sessions.some(s => s.id === viewId);
                         if (!isActive) {
                             const saved = sessionManager.savedSessions.find(s => s.id === viewId);
                             if (saved) {
-                                sessionManager.openSavedSession(saved);
+                                toOpen.push(saved);
+                            } else {
+                                console.warn('[Layout] Cleaning up dead session from layout:', viewId);
+                                // We keep the cleanup in a separate microtask or defer it
+                                setTimeout(() => editorLayout.closeView(node.id, viewId), 0);
                             }
                         }
+                        restoredIdsRef.current.add(viewId);
                     });
                 } else if (node.type === 'split') {
                     node.children.forEach(traverse);
                 }
             };
+
             traverse(editorLayout.layout);
+
+            if (toOpen.length > 0) {
+                console.log(`[Layout] Batch opening ${toOpen.length} sessions`);
+                sessionManager.openSavedSessions(toOpen);
+            }
         };
 
         // Defer restoration to next tick to avoid flushSync warnings during initial render
@@ -56,7 +76,7 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
         }, 0);
 
         return () => clearTimeout(timer);
-    }, [editorLayout.layout, sessionManager.savedSessions]);
+    }, [editorLayout.layout, sessionManager.savedSessions.length]); // Only depend on length change to start restoration
 
     const handleOpenSettings = async () => {
         // Check if settings session exists

@@ -11,7 +11,7 @@ export interface LogEntry {
     repeatCount?: number;
 }
 
-export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'graph';
+export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'graph' | 'monitor';
 
 export interface BaseSessionConfig {
     id: string;
@@ -104,7 +104,40 @@ export interface GraphSessionConfig extends BaseSessionConfig {
     };
 }
 
-export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | GraphSessionConfig;
+export interface MonitorSessionConfig extends BaseSessionConfig {
+    type: 'monitor';
+    setupcPath?: string;
+    virtualSerialPort?: string;
+    physicalSerialPort?: string;
+    connection: SerialOpenOptions; // Use this to store parameters for the physical port
+    linked?: boolean;
+    setupcOutput?: string;
+    // Pairing Logic
+    pairedPort?: string; // The internal port (e.g. COM101) automatically paired with virtualSerialPort
+    autoDestroyPair?: boolean; // Whether to destroy the pair on session close/delete
+    uiState?: {
+        viewMode?: 'text' | 'hex';
+        filterMode?: 'all' | 'rx' | 'tx';
+        encoding?: 'utf-8' | 'gbk' | 'ascii';
+        fontSize?: number;
+        fontFamily?: 'mono' | 'consolas' | 'courier';
+        showTimestamp?: boolean;
+        showPacketType?: boolean;
+        showDataLength?: boolean;
+        autoScroll?: boolean;
+        smoothScroll?: boolean;
+        mergeRepeats?: boolean;
+        showAllFonts?: boolean;
+        // Input Persistence
+        inputContent?: string;
+        inputHTML?: string;
+        inputTokens?: Record<string, any>;
+        inputMode?: 'text' | 'hex';
+        lineEnding?: '' | '\n' | '\r' | '\r\n';
+    };
+}
+
+export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | GraphSessionConfig | MonitorSessionConfig;
 
 export interface SessionState {
     id: string; // Same as config.id

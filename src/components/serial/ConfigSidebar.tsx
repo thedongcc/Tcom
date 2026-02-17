@@ -3,6 +3,7 @@ import { RefreshCw, Save, FolderOpen, Play, Square } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { SerialSessionConfig, MqttSessionConfig } from '../../types/session';
 import { MqttConfigPanel } from '../mqtt/MqttConfigPanel';
+import { MonitorConfigPanel } from '../serial-monitor/MonitorConfig';
 
 interface ConfigSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -200,6 +201,15 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
                 Graph Editor Active<br />
                 No sidebar settings available.
             </div>
+        );
+    }
+
+    if (activeSession.config.type === 'monitor') {
+        return (
+            <MonitorConfigPanel
+                session={activeSession}
+                sessionManager={sessionManager}
+            />
         );
     }
 

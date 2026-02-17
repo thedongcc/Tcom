@@ -50,6 +50,15 @@ declare global {
         com0comAPI: {
             exec: (command: string) => Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }>;
             installDriver: () => Promise<{ success: boolean; path?: string; error?: string }>;
+            setFriendlyName: (port: string, name: string) => Promise<{ success: boolean; error?: string }>;
+        }
+        monitorAPI: {
+            start: (sessionId: string, config: any) => Promise<{ success: boolean; error?: string }>;
+            stop: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+            write: (sessionId: string, target: 'virtual' | 'physical', data: any) => Promise<{ success: boolean; error?: string }>;
+            onData: (sessionId: string, callback: (type: 'RX' | 'TX', data: Uint8Array) => void) => () => void;
+            onError: (sessionId: string, callback: (err: string) => void) => () => void;
+            onClosed: (sessionId: string, callback: (origin: string) => void) => () => void;
         }
         tcpAPI: {
             start: (port: number) => Promise<{ success: boolean; error?: string }>;

@@ -4,6 +4,7 @@ import { X, LayoutTemplate, Plus, Columns } from 'lucide-react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { SerialMonitor } from '../serial/SerialMonitor';
 import { MqttMonitor } from '../mqtt/MqttMonitor';
+import { MonitorTerminal } from '../serial-monitor/MonitorTerminal';
 import { GraphEditor } from '../graph-editor/GraphEditor';
 import { SettingsEditor } from '../settings/SettingsEditor';
 import { useSessionManager } from '../../hooks/useSessionManager';
@@ -278,6 +279,13 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                                     sessionManager.setActiveSessionId(session.id);
                                     return sessionManager.connectSession(session.id);
                                 }}
+                            />;
+                        }
+                        if (session.config.type === 'monitor') {
+                            return <MonitorTerminal
+                                key={session.id}
+                                session={session}
+                                onShowSettings={onShowSettings}
                             />;
                         }
                         return <SerialMonitor

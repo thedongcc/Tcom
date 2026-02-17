@@ -114,7 +114,41 @@ contextBridge.exposeInMainWorld('workspaceAPI', {
 
 contextBridge.exposeInMainWorld('com0comAPI', {
   exec: (command: string) => ipcRenderer.invoke('com0com:exec', command),
-  installDriver: () => ipcRenderer.invoke('com0com:install')
+  installDriver: () => ipcRenderer.invoke('com0com:install'),
+  setFriendlyName: (port: string, name: string) => ipcRenderer.invoke('com0com:name', { port, name })
+});
+
+contextBridge.exposeInMainWorld('monitorAPI', {
+  start: (sessionId: string, config: any) => ipcRenderer.invoke('monitor:start', { sessionId, config }),
+  stop: (sessionId: string) => ipcRenderer.invoke('monitor:stop', { sessionId }),
+  write: (sessionId: string, target: 'virtual' | 'physical', data: any) => ipcRenderer.invoke('monitor:write', { sessionId, target, data }),
+  onData: (sessionId: string, callback: (type: 'RX' | 'TX', data: Uint8Array) => void) => {
+    const listener = (_: any, args: { sessionId: string, type: 'RX' | 'TX', data: Uint8Array }) => {
+      if (args.sessionId === sessionId) {
+        callback(args.type, args.data);
+      }
+    };
+    ipcRenderer.on('monitor:data', listener);
+    return () => ipcRenderer.off('monitor:data', listener);
+  },
+  onError: (sessionId: string, callback: (err: string) => void) => {
+    const listener = (_: any, args: { sessionId: string, error: string }) => {
+      if (args.sessionId === sessionId) {
+        callback(args.error);
+      }
+    };
+    ipcRenderer.on('monitor:error', listener);
+    return () => ipcRenderer.off('monitor:error', listener);
+  },
+  onClosed: (sessionId: string, callback: (origin: string) => void) => {
+    const listener = (_: any, args: { sessionId: string, origin: string }) => {
+      if (args.sessionId === sessionId) {
+        callback(args.origin);
+      }
+    };
+    ipcRenderer.on('monitor:closed', listener);
+    return () => ipcRenderer.off('monitor:closed', listener);
+  }
 });
 
 contextBridge.exposeInMainWorld('tcpAPI', {

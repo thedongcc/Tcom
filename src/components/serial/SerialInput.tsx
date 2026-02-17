@@ -7,9 +7,8 @@ import { MessagePipeline } from '../../services/MessagePipeline';
 // TipTap Imports
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { SerialToken } from './SerialTokenExtension';
+import { SerialToken, SERIAL_TOKEN_CLICK_EVENT } from './SerialTokenExtension';
 import { SuggestionExtension, getSuggestionOptions } from './SuggestionExtension';
-import { SERIAL_TOKEN_CLICK_EVENT } from './SerialTokenComponent';
 import { useToast } from '../../context/ToastContext';
 
 interface SerialInputProps {

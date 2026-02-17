@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { X, Network, FileText, Monitor, Cpu, Server } from 'lucide-react';
+import { X, Network, FileText, Monitor, Cpu, Server, Activity } from 'lucide-react';
 import { SessionType } from '../../types/session';
 
 interface NewSessionDialogProps {
@@ -21,6 +21,7 @@ const OPTIONS: SessionTypeOption[] = [
     { type: 'tcp', label: 'TCP Client', icon: Server, description: 'Raw TCP socket connection' },
     { type: 'udp', label: 'UDP Socket', icon: Network, description: 'Datagram communication' },
     { type: 'ssh', label: 'SSH Terminal', icon: Monitor, description: 'Secure Shell connection' },
+    { type: 'monitor', label: 'Serial Monitor', icon: Activity, description: 'Bridge & Monitor Serial Ports' },
     { type: 'file', label: 'File Monitor', icon: FileText, description: 'Watch and read files' },
 ];
 

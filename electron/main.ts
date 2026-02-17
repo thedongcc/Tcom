@@ -1,9 +1,37 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'node:path'
-// Lazy load SerialPort to improve startup speed
-// import { SerialPort as SerialPortType } from 'serialport' // Type only
-let SerialPortClass: any = null;
+import fs from 'node:fs/promises'
 
+// --- File Write Queue to prevent corruption during concurrent saves ---
+class FileWriteQueue {
+  private static queues: Map<string, Promise<void>> = new Map();
+
+  static async enqueue(filePath: string, writeFn: () => Promise<void>) {
+    const existing = this.queues.get(filePath) || Promise.resolve();
+    const next = existing.then(async () => {
+      try {
+        await writeFn();
+      } catch (err) {
+        console.error(`[WriteQueue] Failed to write to ${filePath}:`, err);
+        throw err;
+      }
+    });
+
+    this.queues.set(filePath, next);
+
+    // Clean up queue after completion
+    next.finally(() => {
+      if (this.queues.get(filePath) === next) {
+        this.queues.delete(filePath);
+      }
+    });
+
+    return next;
+  }
+}
+
+// --- SerialPort Management ---
+let SerialPortClass: any = null;
 function getSerialPort() {
   if (!SerialPortClass) {
     SerialPortClass = require('serialport').SerialPort || require('serialport');
@@ -23,9 +51,107 @@ class SerialService {
   async listPorts() {
     try {
       const SP = getSerialPort();
-      if (!SP) throw new Error('SerialPort module not loaded');
       // @ts-ignore
-      const ports = await SP.list();
+      let ports = [];
+      try {
+        if (SP) {
+          ports = await SP.list();
+        }
+      } catch (e) {
+        console.warn('SerialPort.list failed, falling back to registry', e);
+      }
+
+      // Windows Registry Fallback (for com0com and others)
+      // Windows Registry Fallback (for com0com and others)
+      if (process.platform === 'win32') {
+        try {
+          const { exec } = require('node:child_process');
+
+          // 1. Get active COM ports map from Hardware DeviceMap
+          // \Device\com0com10 -> COM1
+          const activePorts = new Map<string, string>(); // PortName -> DevicePath
+
+          await new Promise<void>((resolve) => {
+            exec('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', (err: any, stdout: string) => {
+              if (!err && stdout) {
+                const lines = stdout.split('\r\n');
+                lines.forEach(line => {
+                  const parts = line.trim().split(/\s{4,}/);
+                  if (parts.length >= 3) {
+                    const portName = parts[parts.length - 1]; // COM11
+                    if (portName && portName.startsWith('COM')) {
+                      activePorts.set(portName, parts[0]);
+                    }
+                  }
+                });
+              }
+              resolve();
+            });
+          });
+
+          // 2. Get Friendly Names from Enum (Recursive)
+          // This is specifically to find names like "Tcom Virtual Port (COM11)"
+          const friendlyNames = new Map<string, string>();
+          await new Promise<void>((resolve) => {
+            exec('reg query HKLM\\SYSTEM\\CurrentControlSet\\Enum\\com0com /s', (err: any, stdout: string) => {
+              if (!err && stdout) {
+                // Parse logical blocks (naive but effective for reg query output)
+                const enumLines = stdout.split('\r\n');
+                enumLines.forEach(line => {
+                  const trimmed = line.trim();
+                  // Check if line contains FriendlyName
+                  if (trimmed.startsWith('FriendlyName') && trimmed.includes('REG_SZ')) {
+                    // FriendlyName    REG_SZ    Tcom Virtual Port (COM11)
+                    const parts = trimmed.split(/\s{4,}/); // Split by multiple spaces
+                    if (parts.length >= 3) {
+                      const name = parts[parts.length - 1]; // "Tcom Virtual Port (COM11)"
+                      // Extract COM port from end of string: "... (COM11)"
+                      const match = name.match(/\((COM\d+)\)$/);
+                      if (match) {
+                        friendlyNames.set(match[1], name);
+                      }
+                    }
+                  }
+                });
+              }
+              resolve();
+            });
+          });
+
+          // 3. Merge into ports list
+          activePorts.forEach((device, portName) => {
+            const exists = ports.find((p: any) => p.path === portName);
+            const friendly = friendlyNames.get(portName);
+
+            // Determine manufacturer from device path
+            let manufacturer = undefined;
+            if (device.toLowerCase().includes('com0com')) {
+              manufacturer = 'com0com';
+            } else if (device.toLowerCase().includes('bthmodem')) {
+              manufacturer = 'Microsoft (Bluetooth)';
+            }
+
+            if (exists) {
+              // Determine if we should update friendlyName?
+              // If we found a better friendly name (and it's not just the port name)
+              if (friendly && (!exists.friendlyName || exists.friendlyName === portName || exists.friendlyName.includes('Serial Port'))) {
+                exists.friendlyName = friendly;
+              }
+            } else {
+              ports.push({
+                path: portName,
+                manufacturer: manufacturer,
+                friendlyName: friendly || (manufacturer ? `${manufacturer} Port (${portName})` : `Serial Port (${portName})`),
+                pnpId: device
+              });
+            }
+          });
+
+        } catch (e) {
+          console.warn('Registry lookup failed', e);
+        }
+      }
+
       return { success: true, ports };
     } catch (error: any) {
       console.error('Error listing ports:', error);
@@ -122,6 +248,213 @@ class SerialService {
   }
 }
 
+class MonitorService {
+  private mainWindow: BrowserWindow;
+  // Map<sessionId, { internal: SerialPort, physical: SerialPort }>
+  private sessions: Map<string, { internal: any; physical: any }> = new Map();
+
+  constructor(mainWindow: BrowserWindow) {
+    this.mainWindow = mainWindow;
+  }
+
+  async start(sessionId: string, config: any) {
+    try {
+      const SP = getSerialPort();
+      if (this.sessions.has(sessionId)) {
+        await this.stop(sessionId);
+      }
+
+      // Map config properties to what we need
+      // Frontend sends MonitorSessionConfig which has 'pairedPort'
+      // We use 'pairedPort' as the internal port to connect to.
+      const internalPortPath = config.pairedPort || config.internalPort;
+      const physicalPortPath = config.physicalSerialPort || config.physicalPort;
+      // Connection details might be in config.connection object or top level depending on how it was passed
+      const baudRate = config.connection?.baudRate || config.baudRate || 9600;
+
+      console.log(`[Monitor] Starting session ${sessionId}`);
+      console.log(`[Monitor] Internal (Bridge): ${internalPortPath}, Physical: ${physicalPortPath}, Baud: ${baudRate}`);
+
+      if (!internalPortPath || !physicalPortPath) {
+        throw new Error('Missing port configuration (pairedPort or physicalSerialPort)');
+      }
+
+      // Open Internal Port (Virtual side linked to App)
+      const internal = new SP({
+        path: internalPortPath,
+        baudRate: baudRate,
+        autoOpen: false
+      });
+
+      // Open Physical Port (Device)
+      const physical = new SP({
+        path: physicalPortPath,
+        baudRate: baudRate,
+        autoOpen: false
+      });
+
+      const openPort = (port: any, label: string) => new Promise((resolve, reject) => {
+        port.open((err: any) => {
+          if (err) {
+            // Retry with \\.\ prefix if file not found (common on windows for some drivers/high ports)
+            if (process.platform === 'win32' && (err.message.includes('File not found') || err.message.includes('Access denied'))) {
+              const retryPath = port.path.startsWith('\\\\.\\') ? port.path : `\\\\.\\${port.path}`;
+              console.log(`[Monitor] Retrying open ${label} with path ${retryPath}`);
+              // Re-instantiate with new path? No, SP instance path is fixed? 
+              // SerialPort path is read-only usually. We need new instance.
+              // But we can just fail here and let outer loop handle? No, we need to handle it inside openPort wrapper?
+              // Easier to just try creating a second instance here if first failed?
+              // Or better: Checking path before creating SP instance locally in start()?
+              // But start() creates instances before calling openPort. 
+
+              // Let's rely on re-instantiating.
+              try {
+                const SP = getSerialPort();
+                const retryPort = new SP({
+                  path: retryPath,
+                  baudRate: port.settings.baudRate,
+                  autoOpen: false
+                });
+                retryPort.open((retryErr: any) => {
+                  if (retryErr) {
+                    reject(new Error(`Failed to open ${label} (${port.path}): ${err.message} (Retry: ${retryErr.message})`));
+                  } else {
+                    // Swap the instance in calling scope? 
+                    // We can't easily swap `internal`/`physical` variables here without changing structure.
+                    // So we must return the opened port instance!
+                    resolve(retryPort);
+                  }
+                });
+              } catch (e: any) {
+                reject(new Error(`Failed to open ${label} (${port.path}): ${err.message} (Retry failed: ${e.message})`));
+              }
+            } else {
+              reject(new Error(`Failed to open ${label} (${port.path}): ${err.message}`));
+            }
+          } else {
+            resolve(port);
+          }
+        });
+      });
+
+      // We need to capture the opened instances (might be different due to retry)
+      const [internalOpened, physicalOpened] = await Promise.all([
+        openPort(internal, 'Internal/Virtual'),
+        openPort(physical, 'Physical')
+      ]);
+
+      // Update session with potentially new instances
+      // @ts-ignore
+      this.sessions.set(sessionId, { internal: internalOpened, physical: physicalOpened });
+
+      // Re-bind events to the ACTUALLY opened ports
+      const bindEvents = (source: any, target: any, label: string, sourceType: 'TX' | 'RX') => {
+        source.on('data', (data: any) => {
+          if (target.isOpen) {
+            target.write(data);
+          }
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            // console.log(`[Monitor] Sending ${sourceType} data bytes:`, data.length); 
+            this.mainWindow.webContents.send('monitor:data', { sessionId, type: sourceType, data });
+          } else {
+            console.warn('[Monitor] MainWindow destroyed or missing, cannot send data');
+          }
+        });
+        source.on('error', (err: any) => handleError(label, err));
+        source.on('close', () => handleClose(label));
+      };
+
+      // Clear old listeners if any (new instances won't have them, old ones are closed/gc'd)
+      // But we need to make sure we use the NEW instances for binding.
+      const internalFinal = internalOpened as any;
+      const physicalFinal = physicalOpened as any;
+
+      // Error handling
+      const handleError = (origin: string, err: any) => {
+        console.error(`[Monitor] ${origin} Error:`, err);
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${origin}: ${err.message}` });
+        }
+      };
+
+      // Close handling
+      const handleClose = (origin: string) => {
+        console.log(`[Monitor] ${origin} Closed`);
+        // If one closes, maybe close the other? Or just notify?
+        // Usually if physical unplugs, we might want to stop.
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('monitor:closed', { sessionId, origin });
+        }
+      };
+
+      bindEvents(internalFinal, physicalFinal, 'Internal', 'TX');
+      bindEvents(physicalFinal, internalFinal, 'Physical', 'RX');
+
+      return { success: true };
+
+    } catch (e: any) {
+      console.error('[Monitor] Start failed:', e);
+      // Ensure cleanup if partial fail
+      await this.stop(sessionId);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async stop(sessionId: string) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return { success: true };
+
+    const closePort = (port: any) => new Promise(resolve => {
+      if (port && port.isOpen) {
+        port.close((err: any) => resolve(true));
+      } else {
+        resolve(true);
+      }
+    });
+
+    await Promise.all([closePort(session.internal), closePort(session.physical)]);
+    this.sessions.delete(sessionId);
+    return { success: true };
+  }
+
+  // Write directly (Injection)
+  async write(sessionId: string, target: 'virtual' | 'physical', data: string | number[]) {
+    console.log(`[Monitor] Write request: Session=${sessionId}, Target=${target}, DataLen=${data.length}`);
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      console.error(`[Monitor] Write failed: Session ${sessionId} not found`);
+      return { success: false, error: 'Session not found' };
+    }
+
+    const port = target === 'virtual' ? session.internal : session.physical;
+    // Note: Writing to 'virtual' (Internal) means sending TO the App (via the pair).
+    // Writing to 'physical' means sending TO the device.
+
+    if (!port) {
+      console.error(`[Monitor] Write failed: Port for ${target} is null`);
+      return { success: false, error: 'Target port is null' };
+    }
+
+    if (!port.isOpen) {
+      console.error(`[Monitor] Write failed: Port for ${target} is not open`);
+      return { success: false, error: 'Target port not open' };
+    }
+
+    return new Promise(resolve => {
+      const payload = typeof data === 'string' ? data : Buffer.from(data);
+      port.write(payload, (err: any) => {
+        if (err) {
+          console.error(`[Monitor] Write error:`, err);
+          resolve({ success: false, error: err.message });
+        } else {
+          console.log(`[Monitor] Write success`);
+          resolve({ success: true });
+        }
+      });
+    });
+  }
+}
+
 // The built directory structure
 //
 // ├─┬─ dist
@@ -143,6 +476,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 let win: BrowserWindow | null
 let serialService: SerialService | null = null
+let monitorService: MonitorService | null = null
 
 const stateFile = path.join(app.getPath('userData'), 'window-state.json');
 const saveState = () => {
@@ -192,6 +526,8 @@ function createWindow() {
 
   // Initialize SerialService
   serialService = new SerialService(win)
+  // Initialize MonitorService
+  monitorService = new MonitorService(win)
 
   // Register IPC Handlers
   ipcMain.handle('serial:list-ports', async () => {
@@ -209,6 +545,19 @@ function createWindow() {
   ipcMain.handle('serial:write', async (_event, { connectionId, data }) => {
     return serialService?.write(connectionId, data)
   })
+
+  // Monitor IPC
+  ipcMain.handle('monitor:start', async (_event, { sessionId, config }) => {
+    return monitorService?.start(sessionId, config);
+  });
+
+  ipcMain.handle('monitor:stop', async (_event, { sessionId }) => {
+    return monitorService?.stop(sessionId);
+  });
+
+  ipcMain.handle('monitor:write', async (_event, { sessionId, target, data }) => {
+    return monitorService?.write(sessionId, target, data);
+  });
 
   // MQTT Service Logic
   const mqtt = require('mqtt');
@@ -487,7 +836,12 @@ function createWindow() {
       await fs.mkdir(wsPath, { recursive: true });
       const safeName = config.name.replace(/[<>:"/\\|?*]/g, '_');
       const filePath = path.join(wsPath, `${safeName}.json`);
-      await fs.writeFile(filePath, JSON.stringify(config, null, 2));
+
+      // Use WriteQueue to serialize writes to the same file
+      await FileWriteQueue.enqueue(filePath, async () => {
+        await fs.writeFile(filePath, JSON.stringify(config, null, 2));
+      });
+
       return { success: true, filePath };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -566,14 +920,48 @@ function createWindow() {
   ipcMain.handle('com0com:exec', async (_event, command) => {
     return new Promise((resolve) => {
       // Only allow setupc commands for security (basic check)
-      if (!command.startsWith('setupc')) {
+      // Allow full paths (e.g. "C:\...\setupc.exe") or just "setupc"
+      if (!command.toLowerCase().includes('setupc')) {
         return resolve({ success: false, error: 'Unauthorized command' });
       }
 
       const execCommand = (cmd: string) => {
-        exec(cmd, (error: any, stdout: string, stderr: string) => {
+        let cwd = undefined;
+        try {
+          // Try to extract directory from command to set as CWD
+          // Command might be quoted: "C:\path\to\setupc.exe" list
+          // Or simple: setupc list
+          let exePath = '';
+          if (cmd.startsWith('"')) {
+            const closeQuoteIndex = cmd.indexOf('"', 1);
+            if (closeQuoteIndex > 1) {
+              exePath = cmd.substring(1, closeQuoteIndex);
+            }
+          } else {
+            const spaceIndex = cmd.indexOf(' ');
+            if (spaceIndex > 0) {
+              exePath = cmd.substring(0, spaceIndex);
+            } else {
+              exePath = cmd;
+            }
+          }
+
+          if (exePath && (exePath.includes('\\') || exePath.includes('/'))) {
+            cwd = path.dirname(exePath);
+          }
+        } catch (e) {
+          console.warn('[com0com] Failed to parse CWD:', e);
+        }
+
+        console.log(`[com0com] Executing: ${cmd}`);
+        console.log(`[com0com] CWD: ${cwd || 'default'}`);
+
+        exec(cmd, { cwd }, (error: any, stdout: string, stderr: string) => {
           if (error) {
             console.log(`[com0com] Command failed: ${cmd}`, error.message);
+            console.log(`[com0com] Stdout:`, stdout); // Log stdout too!
+            console.log(`[com0com] Stderr:`, stderr);
+
             // If it was the first try (just 'setupc'), and it failed, try the local path
             if (cmd.startsWith('setupc') && !cmd.includes('\\') && !cmd.includes('/')) {
               const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
@@ -607,30 +995,90 @@ function createWindow() {
               child.stdout.on('data', (d: any) => out += d.toString());
               child.stderr.on('data', (d: any) => errOut += d.toString());
 
-              child.on('error', (e: any) => {
-                console.log(`[com0com] Spawn error:`, e);
-                resolve({ success: false, error: e.message, stderr: errOut });
-              });
-
               child.on('close', (code: number) => {
                 if (code === 0) {
                   console.log(`[com0com] Spawn success`);
                   resolve({ success: true, stdout: out });
                 } else {
                   console.log(`[com0com] Spawn exited with ${code}`);
-                  resolve({ success: false, error: `Process exited with code ${code}`, stderr: errOut });
+                  resolve({ success: false, error: `Process exited with code ${code}`, stderr: errOut, stdout: out });
                 }
               });
             } else {
-              resolve({ success: false, error: error.message, stderr });
+              resolve({ success: false, error: error.message, stderr, stdout });
             }
           } else {
+            console.log(`[com0com] Success. Stdout len: ${stdout.length}`);
             resolve({ success: true, stdout });
           }
         });
       };
 
       execCommand(command);
+    });
+  });
+
+  // com0com:name - Set Friendly Name for a COM port
+  ipcMain.handle('com0com:name', async (_event, { port, name }) => {
+    if (!/^COM\d+$/.test(port)) return { success: false, error: 'Invalid port format' };
+    const safeName = name.replace(/["\r\n]/g, '');
+
+    const psScript = `
+      $port = "${port}"
+      $friendlyName = "${safeName}"
+      
+      try {
+        # The PortName is stored in "Device Parameters" subkey of the device instance.
+        # We need to find the instance key where "Device Parameters\\PortName" equals $port.
+        
+        $root = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\com0com\\port"
+        if (-not (Test-Path $root)) {
+             Write-Output "Com0com registry not found"
+             exit 1
+        }
+        
+        $foundInstance = $null
+        
+        # Iterate over all instances (CNCA0, CNCB0, etc.)
+        Get-ChildItem -Path $root -ErrorAction SilentlyContinue | ForEach-Object {
+           $instanceKey = $_.PSPath
+           $paramsKey = Join-Path $instanceKey "Device Parameters"
+           
+           if (Test-Path $paramsKey) {
+               $p = Get-ItemProperty -Path $paramsKey -Name "PortName" -ErrorAction SilentlyContinue
+               if ($p -and $p.PortName -eq $port) {
+                   $foundInstance = $instanceKey
+               }
+           }
+        }
+        
+        if ($foundInstance) {
+           # Set FriendlyName on the INSTANCE key (not Device Parameters)
+           New-ItemProperty -Path $foundInstance -Name "FriendlyName" -Value $friendlyName -PropertyType String -Force | Out-Null
+           Write-Output "Success: Set $friendlyName for $foundInstance"
+        } else {
+           Write-Output "Port $port not found in registry"
+        }
+      } catch {
+        Write-Output "Error: $_"
+      }
+    `;
+
+    return new Promise((resolve) => {
+      const { spawn } = require('node:child_process');
+      const child = spawn('powershell.exe', ['-Command', psScript], { windowsHide: true });
+
+      let out = '';
+      child.stdout.on('data', (d: any) => out += d.toString());
+
+      child.on('close', (code: number) => {
+        const output = out.trim();
+        if (output.includes('Success')) {
+          resolve({ success: true });
+        } else {
+          resolve({ success: false, error: output || `Exited with ${code}` });
+        }
+      });
     });
   });
 
