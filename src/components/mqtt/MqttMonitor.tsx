@@ -10,6 +10,7 @@ interface MqttMonitorProps {
         id: string;
         config: MqttSessionConfig;
         isConnected: boolean;
+        isConnecting: boolean;
         logs: LogEntry[];
     };
     onShowSettings?: (view: string) => void;
@@ -757,17 +758,26 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     />
 
                     <button
-                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${session.isConnected
+                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
                             ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white'
-                            : onConnectRequest
+                            : (onConnectRequest && !session.isConnecting)
                                 ? 'bg-[#2d2d2d] hover:bg-[#3c3c3c] text-[#cccccc] cursor-pointer border border-[#3c3c3c] hover:border-[#007acc]'
                                 : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'}`}
                         onClick={handleSend}
-                        disabled={!session.isConnected && !onConnectRequest}
-                        title={!session.isConnected ? (onConnectRequest ? "Connect and Send" : "Disconnected") : "Send Payload"}
+                        disabled={(!isConnected && !onConnectRequest) || session.isConnecting}
+                        title={session.isConnecting ? "Connecting..." : !isConnected ? (onConnectRequest ? "Connect and Send" : "Disconnected") : "Send Payload"}
                     >
-                        {session.isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div></div>}
-                        <span className="text-[10px]">{session.isConnected ? 'Send' : 'Connect'}</span>
+                        {session.isConnecting ? (
+                            <RefreshCw size={16} className="animate-spin" />
+                        ) : isConnected ? (
+                            <Send size={16} />
+                        ) : (
+                            <div className="relative">
+                                <Send size={16} className="opacity-50" />
+                                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div>
+                            </div>
+                        )}
+                        <span className="text-[10px]">{session.isConnecting ? '...' : isConnected ? 'Send' : 'Connect'}</span>
                     </button>
                 </div>
             </div>

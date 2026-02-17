@@ -562,10 +562,24 @@ function createWindow() {
   // MQTT Service Logic
   const mqtt = require('mqtt');
   const mqttClients = new Map();
+  const pendingMqttConnections = new Set();
 
   ipcMain.handle('mqtt:connect', async (_event, { connectionId, config }) => {
+    // Prevent overlapping connection attempts for the same sessionId
+    if (pendingMqttConnections.has(connectionId)) {
+      console.warn(`[MQTT] Connection already in progress for ${connectionId}, skipping.`);
+      return { success: false, error: 'Connection attempt already in progress' };
+    }
+
+    pendingMqttConnections.add(connectionId);
+
     // config: { protocol, host, port, clientId, username, password, keepAlive, clean, ... }
     return new Promise((resolve) => {
+      const finish = (result: any) => {
+        pendingMqttConnections.delete(connectionId);
+        resolve(result);
+      };
+
       if (mqttClients.has(connectionId)) {
         const existing = mqttClients.get(connectionId);
         if (existing.connected) {
@@ -622,14 +636,14 @@ function createWindow() {
       } catch (err: any) {
         // Synchronous error (e.g. invalid URL)
         console.error(`[MQTT] Sync Error ${connectionId}:`, err);
-        return resolve({ success: false, error: err.message });
+        return finish({ success: false, error: err.message });
       }
 
       const handleInitialSuccess = () => {
         if (!initialConnectHandled) {
           initialConnectHandled = true;
           mqttClients.set(connectionId, client);
-          resolve({ success: true });
+          finish({ success: true });
           if (!win?.isDestroyed()) win?.webContents.send('mqtt:status', { connectionId, status: 'connected' });
 
           // Restore subscriptions if any
@@ -653,7 +667,7 @@ function createWindow() {
           // If autoReconnect is true, we could arguably leave it. But users usually expect "Connected" or "Failed" on click.
           // So we force fail the promise.
           client.end(true);
-          resolve({ success: false, error: err });
+          finish({ success: false, error: err });
         }
       };
 

@@ -16,3 +16,14 @@ export const formatPortInfo = (port: SerialPortInfo) => {
 
     return `${port.path} ${name}`.trim();
 };
+export const formatTimestamp = (ts: number, fmt: string) => {
+    const date = new Date(ts);
+    const pad = (n: number, w: number = 2) => n.toString().padStart(w, '0');
+
+    // Simple Replacer
+    return fmt
+        .replace('HH', pad(date.getHours()))
+        .replace('mm', pad(date.getMinutes()))
+        .replace('ss', pad(date.getSeconds()))
+        .replace('SSS', pad(date.getMilliseconds(), 3));
+};

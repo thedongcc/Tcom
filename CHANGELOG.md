@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修改串口发送按钮的图标和文字
 - 完善更新相关逻辑
 - 稳定Session管理器
+- 改善串口监测标签页中的样式
+- 修复流量统计逻辑
+- 修复mqtt点击连接过快问题
 
 ### Removed
 - 取消设置中的check update功能

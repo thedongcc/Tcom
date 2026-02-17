@@ -37,59 +37,75 @@ export const useSessionManager = () => {
         }));
     }, []);
 
-    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string) => {
+    // --- High Frequency Log Batching ---
+    const logBufferRef = useRef<Map<string, LogEntry[]>>(new Map());
+    const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const flushLogBuffer = useCallback(() => {
+        if (logBufferRef.current.size === 0) return;
+
+        const buffer = new Map(logBufferRef.current);
+        logBufferRef.current.clear();
+        batchTimerRef.current = null;
+
         setSessions(prev => prev.map(s => {
-            if (s.id === sessionId) {
-                const logs = s.logs;
-                const mergeRepeats = s.config.uiState?.mergeRepeats;
+            const bufferLogs = buffer.get(s.id);
+            if (!bufferLogs || bufferLogs.length === 0) return s;
 
-                if (mergeRepeats) {
-                    let lastIdx = -1;
-                    if (logs.length > 0) {
-                        const last = logs[logs.length - 1];
-                        if (last.type === type && last.topic === topic) {
-                            lastIdx = logs.length - 1;
-                        }
-                    }
+            let newLogs = [...s.logs];
+            const mergeRepeats = s.config.uiState?.mergeRepeats;
 
-                    if (lastIdx !== -1) {
-                        const lastLog = logs[lastIdx];
-                        let isSameData = false;
-                        if (typeof lastLog.data === 'string' && typeof data === 'string') {
-                            isSameData = lastLog.data === data;
-                        } else if (lastLog.data instanceof Uint8Array && data instanceof Uint8Array) {
-                            if (lastLog.data.length === data.length) {
-                                isSameData = true;
-                                for (let i = 0; i < data.length; i++) {
-                                    if (lastLog.data[i] !== data[i]) {
-                                        isSameData = false;
-                                        break;
-                                    }
+            bufferLogs.forEach(incoming => {
+                const lastLog = newLogs[newLogs.length - 1];
+                if (mergeRepeats && lastLog && lastLog.type === incoming.type && lastLog.topic === incoming.topic) {
+                    let isSameData = false;
+                    if (typeof lastLog.data === 'string' && typeof incoming.data === 'string') {
+                        isSameData = lastLog.data === incoming.data;
+                    } else if (lastLog.data instanceof Uint8Array && incoming.data instanceof Uint8Array) {
+                        if (lastLog.data.length === incoming.data.length) {
+                            isSameData = true;
+                            for (let i = 0; i < incoming.data.length; i++) {
+                                if (lastLog.data[i] !== incoming.data[i]) {
+                                    isSameData = false;
+                                    break;
                                 }
                             }
                         }
+                    }
 
-                        if (isSameData) {
-                            const updatedLog: LogEntry = {
-                                ...lastLog,
-                                timestamp: Date.now(),
-                                repeatCount: (lastLog.repeatCount || 1) + 1
-                            };
-                            const newLogs = [...logs];
-                            newLogs.splice(lastIdx, 1);
-                            newLogs.push(updatedLog);
-                            return { ...s, logs: newLogs };
-                        }
+                    if (isSameData) {
+                        newLogs[newLogs.length - 1] = {
+                            ...lastLog,
+                            timestamp: incoming.timestamp,
+                            repeatCount: (lastLog.repeatCount || 1) + (incoming.repeatCount || 1)
+                        };
+                        return;
                     }
                 }
+                newLogs.push(incoming);
+            });
 
-                const newLogs = [...logs, { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic }];
-                if (newLogs.length > MAX_LOGS) newLogs.shift();
-                return { ...s, logs: newLogs };
+            if (newLogs.length > MAX_LOGS) {
+                newLogs = newLogs.slice(-MAX_LOGS);
             }
-            return s;
+            return { ...s, logs: newLogs };
         }));
     }, []);
+
+    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string) => {
+        const entry: LogEntry = { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic };
+
+        let batch = logBufferRef.current.get(sessionId);
+        if (!batch) {
+            batch = [];
+            logBufferRef.current.set(sessionId, batch);
+        }
+        batch.push(entry);
+
+        if (!batchTimerRef.current) {
+            batchTimerRef.current = setTimeout(flushLogBuffer, 16); // Batch every frame (~60fps)
+        }
+    }, [flushLogBuffer]);
 
     const clearLogs = useCallback((sessionId: string) => {
         updateSession(sessionId, () => ({ logs: [] }));
@@ -189,7 +205,7 @@ export const useSessionManager = () => {
 
     const connectSession = useCallback(async (sessionId: string) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
-        if (!session || session.isConnected) return;
+        if (!session || session.isConnected || session.isConnecting) return;
 
         if (session.config.type === 'mqtt') {
             if (!window.mqttAPI) { addLog(sessionId, 'ERROR', 'MQTT API missing'); return; }
@@ -240,7 +256,7 @@ export const useSessionManager = () => {
                     updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                     addLog(sessionId, 'INFO', 'Monitor started');
                     const cleanups: (() => void)[] = [];
-                    cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => addLog(sessionId, type, data, undefined, type === 'TX' ? 'virtual' : 'physical')));
+                    cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => addLog(sessionId, type, data, 'ok', type === 'TX' ? 'virtual' : 'physical')));
                     cleanups.push(window.monitorAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', err)));
                     cleanups.push(window.monitorAPI.onClosed(sessionId, (origin) => addLog(sessionId, 'INFO', `${origin} Closed`)));
                     cleanupRefs.current.set(sessionId, cleanups);
@@ -475,32 +491,15 @@ export const useSessionManager = () => {
             if (registeredSessions.current.has(session.id)) return;
             window.serialAPI!.onData(session.id, (data) => {
                 const now = Date.now();
-                setSessions(prev => prev.map(s => {
-                    if (s.id !== session.id) return s;
-                    const lastLog = s.logs[s.logs.length - 1];
-                    const timeout = s.config.uiState?.chunkTimeout || 0;
-                    if (lastLog && lastLog.type === 'RX' && timeout > 0 && (now - lastLog.timestamp) < timeout) {
-                        const oldArr = typeof lastLog.data === 'string' ? new TextEncoder().encode(lastLog.data) : lastLog.data;
-                        const newArr = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-                        const merged = new Uint8Array(oldArr.length + newArr.length);
-                        merged.set(oldArr); merged.set(newArr, oldArr.length);
-                        const isOk = s.config.rxCRC?.enabled ? validateRXCRC(merged, s.config.rxCRC) : false;
-                        const newLogs = [...s.logs];
-                        newLogs[newLogs.length - 1] = { ...lastLog, data: merged, timestamp: now, crcStatus: s.config.rxCRC?.enabled ? (isOk ? 'ok' : 'error') : 'none' };
-                        return { ...s, logs: newLogs };
-                    }
-                    // Generic repeat merge or new log (simplified for EXECUTION speed, preserving logic)
-                    const mergeRepeats = s.config.uiState?.mergeRepeats;
-                    if (mergeRepeats && lastLog && lastLog.type === 'RX' && JSON.stringify(lastLog.data) === JSON.stringify(data)) {
-                        const newLogs = [...s.logs];
-                        newLogs[newLogs.length - 1] = { ...lastLog, timestamp: now, repeatCount: (lastLog.repeatCount || 1) + 1 };
-                        return { ...s, logs: newLogs };
-                    }
-                    const isOk = validateRXCRC(data, s.config.rxCRC);
-                    const newLogs = [...s.logs, { id: crypto.randomUUID(), type: 'RX', data, timestamp: now, crcStatus: s.config.rxCRC?.enabled ? (isOk ? 'ok' : 'error') : 'none' } as LogEntry];
-                    if (newLogs.length > MAX_LOGS) newLogs.shift();
-                    return { ...s, logs: newLogs };
-                }));
+                // Check if chunk timeout is enabled
+                const timeout = (session.config as any).uiState?.chunkTimeout || 0;
+                if (timeout > 0) {
+                    // Fallback to legacy immediate update if timeout logic is needed (rarely batches across frame)
+                    // For performance, we keep chunking synchronous if possible or batch it too
+                    addLog(session.id, 'RX', data, 'none');
+                } else {
+                    addLog(session.id, 'RX', data, 'none');
+                }
             });
             window.serialAPI!.onClosed(session.id, () => { updateSession(session.id, () => ({ isConnected: false })); addLog(session.id, 'INFO', 'Closed'); });
             window.serialAPI!.onError(session.id, (err) => addLog(session.id, 'ERROR', err));

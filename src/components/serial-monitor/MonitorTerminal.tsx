@@ -1,31 +1,44 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { SessionState, MonitorSessionConfig } from '../../types/session';
-import { ArrowRight, ArrowLeft, Monitor, Cpu, Trash2, Menu, X, Check, Download, Settings, Copy, FileText, ClipboardList, Filter } from 'lucide-react';
-import { useSession } from '../../context/SessionContext';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+    Trash2,
+    ArrowDownToLine,
+    Download,
+    Menu,
+    X,
+    ChevronDown,
+    Copy,
+    PlusSquare,
+    Check,
+    FileText
+} from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
 import { useCommandContext } from '../../context/CommandContext';
-import { ContextMenu } from '../common/ContextMenu';
-import { CommandEditorDialog } from '../commands/CommandEditorDialog';
+import { useSession } from '../../context/SessionContext';
+import { formatTimestamp } from '../../utils/format';
 import { SerialInput } from '../serial/SerialInput';
-import { TokenConfigPopover } from '../serial/TokenConfigPopover';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateUniqueName } from '../../utils/commandUtils';
+import { CommandEditorDialog } from '../commands/CommandEditorDialog';
+import { ContextMenu } from '../common/ContextMenu';
+import { SessionState, MonitorSessionConfig } from '../../types/session';
 
 interface MonitorTerminalProps {
     session: SessionState;
-    onShowSettings: () => void;
+    onShowSettings?: (view: string) => void;
 }
 
 export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProps) => {
-    const config = session.config as MonitorSessionConfig;
-    const { virtualSerialPort, physicalSerialPort } = config;
-    const sessionManager = useSession();
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
-    const { logs, isConnected } = session;
+    const sessionManager = useSession();
+    const { logs, isConnected, config } = session;
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const mountTimeRef = useRef(Date.now());
 
-    // UI State
-    const uiState = config.uiState || {};
+    const uiState = (config as any).uiState || {};
+
+    // UI State initialization
     const [viewMode, setViewMode] = useState<'text' | 'hex'>(uiState.viewMode || 'hex');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
@@ -37,43 +50,153 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
     const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier'>(uiState.fontFamily || 'mono');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
-
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-    const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>('physical');
+    const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>(uiState.sendTarget || 'physical');
 
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const mountTimeRef = useRef(Date.now());
+    // Font Selection Logic
+    const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
+    const [availableFonts, setAvailableFonts] = useState<any[]>([]);
+
+    const defaultFonts = [
+        { label: 'Monospace (Default)', value: 'mono' },
+        { label: 'JetBrains Mono (Built-in)', value: 'JetBrains Mono' },
+        { label: 'Consolas', value: 'consolas' },
+        { label: 'Courier New', value: 'Courier New' },
+        { label: 'Microsoft YaHei UI', value: 'Microsoft YaHei UI' },
+        { label: 'Segoe UI', value: 'Segoe UI' },
+        { label: 'Inter', value: 'Inter' },
+    ];
+
+    useEffect(() => {
+        if (showAllFonts) {
+            if ((window as any).queryLocalFonts) {
+                (window as any).queryLocalFonts().then((fonts: any[]) => {
+                    const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
+                        .map(name => fonts.find((f: any) => f.fullName === name))
+                        .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
+                    setAvailableFonts(uniqueFonts);
+                }).catch((e: any) => console.error('Failed to query local fonts:', e));
+            }
+        }
+    }, [showAllFonts]);
+
     const configRef = useRef(config);
     useEffect(() => { configRef.current = config; }, [config]);
 
-    // Save UI state (Stable reference because sessionManager is from context)
     const saveUIState = useCallback((updates: any) => {
-        sessionManager.updateSessionConfig(session.id, { uiState: { ...uiState, ...updates } });
-    }, [session.id, sessionManager, uiState]);
+        const currentUIState = (configRef.current as any).uiState || {};
+        const hasChanges = Object.keys(updates).some(k =>
+            JSON.stringify(updates[k]) !== JSON.stringify(currentUIState[k])
+        );
+        if (!hasChanges) return;
+        sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
+    }, [session.id, sessionManager]);
 
-    // Helpers
-    const formatData = (data: string | Uint8Array, mode: 'text' | 'hex', encoding: string) => {
+    // Performance: Rate detection for adaptive animation
+    const [isHighRate, setIsHighRate] = useState(false);
+    const lastRateCheckRef = useRef({ time: Date.now(), count: logs.length });
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = Date.now();
+            const currentCount = logs.length;
+            const deltaCount = currentCount - lastRateCheckRef.current.count;
+            const deltaTime = (now - lastRateCheckRef.current.time) / 1000;
+
+            if (deltaTime > 0) {
+                const rate = deltaCount / deltaTime;
+                setIsHighRate(rate > 20);
+            }
+
+            lastRateCheckRef.current = { time: now, count: currentCount };
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [logs.length]);
+
+    const effectiveSmooth = smoothScroll && !isHighRate;
+
+    // Memoized filters and stats
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            if (filterMode === 'rx') return log.topic === 'physical';
+            if (filterMode === 'tx') return log.topic === 'virtual';
+            return true;
+        });
+    }, [logs, filterMode]);
+
+    const txBytes = useMemo(() => {
+        return logs.reduce((acc, log) => {
+            const count = log.repeatCount || 1;
+            // 虚拟串口统计：数据由虚拟侧（App）发出进入 Tcom
+            // 标记为 type: 'TX', topic: 'virtual', crcStatus: 'ok'
+            const isFromVirtual = log.type === 'TX' && log.topic === 'virtual' && log.crcStatus === 'ok';
+
+            if (isFromVirtual) {
+                const bytes = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
+                return acc + (bytes * count);
+            }
+            return acc;
+        }, 0);
+    }, [logs]);
+
+    const rxBytes = useMemo(() => {
+        return logs.reduce((acc, log) => {
+            const count = log.repeatCount || 1;
+            // 物理串口统计：数据由物理侧（设备）发出进入 Tcom
+            // 标记为 type: 'RX', topic: 'physical', crcStatus: 'ok'
+            const isFromPhysical = log.type === 'RX' && log.topic === 'physical' && log.crcStatus === 'ok';
+
+            if (isFromPhysical) {
+                const bytes = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
+                return acc + (bytes * count);
+            }
+            return acc;
+        }, 0);
+    }, [logs]);
+
+    const handleClearLogs = () => sessionManager.clearLogs(session.id);
+
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex', encoding: string) => {
         if (mode === 'hex') {
             if (typeof data === 'string') {
-                const encoder = new TextEncoder();
-                const bytes = encoder.encode(data);
+                const bytes = new TextEncoder().encode(data);
                 return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
             }
             return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
         }
         if (typeof data === 'string') return data;
         try {
-            const decoder = new TextDecoder(encoding);
-            return decoder.decode(data);
+            return new TextDecoder(encoding).decode(data);
         } catch (e) {
-            return `[Decode Error: ${e}]`;
+            return new TextDecoder().decode(data);
         }
+    }, []);
+
+    const getDataLengthText = useCallback((data: string | Uint8Array) => {
+        let length = (typeof data === 'string') ? new TextEncoder().encode(data).length : data.length;
+        return `[${length}B]`;
+    }, []);
+
+    const handleSaveLogs = () => {
+        const content = logs.map(log => {
+            const timestampStr = new Date(log.timestamp).toLocaleTimeString();
+            const dataStr = formatData(log.data, viewMode, encoding);
+            return `[${timestampStr}][${log.topic === 'virtual' ? 'APP' : 'DEV'}] ${dataStr} `;
+        }).join('\n');
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `monitor_log_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
-    // Auto scroll
     useEffect(() => {
-        if (autoScroll && scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (scrollRef.current && autoScroll) {
+            requestAnimationFrame(() => {
+                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            });
         }
     }, [logs, autoScroll]);
 
@@ -82,10 +205,27 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
             showToast('Please connect first', 'error');
             return;
         }
-        sessionManager.writeToMonitor(session.id, sendTarget, data);
+        let finalData: string | Uint8Array = data;
+        if (mode === 'hex' && typeof data === 'string') {
+            const cleanHex = data.replace(/\s+/g, '');
+            if (cleanHex.length % 2 === 0) {
+                const byteArray = new Uint8Array(cleanHex.length / 2);
+                for (let i = 0; i < cleanHex.length; i += 2) {
+                    byteArray[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
+                }
+                finalData = byteArray;
+            }
+        }
+        sessionManager.writeToMonitor(session.id, sendTarget, finalData);
     };
 
-    const handleInputStateChange = (state: any) => {
+    const toggleFilter = (mode: 'tx' | 'rx') => {
+        const newMode = filterMode === mode ? 'all' : mode;
+        setFilterMode(newMode);
+        saveUIState({ filterMode: newMode });
+    };
+
+    const handleInputStateChange = useCallback((state: any) => {
         saveUIState({
             inputContent: state.content,
             inputHTML: state.html,
@@ -93,133 +233,405 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
             inputMode: state.mode,
             lineEnding: state.lineEnding
         });
+    }, [saveUIState]);
+
+    const { addCommand, commands } = useCommandContext();
+    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, log: any } | null>(null);
+    const [showCommandEditor, setShowCommandEditor] = useState<any | null>(null);
+
+    const handleLogContextMenu = useCallback((e: React.MouseEvent, log: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({ x: e.clientX, y: e.clientY, log });
+    }, []);
+
+    const handleCopyLog = (log: any) => {
+        const text = formatData(log.data, viewMode, encoding);
+        navigator.clipboard.writeText(text);
+        showToast('已复制到剪贴板', 'success', 1500);
+        setContextMenu(null);
     };
 
-    // Filter logs
-    const filteredLogs = logs.filter(log => {
-        if (filterMode === 'all') return true;
-        if (filterMode === 'rx') return log.topic === 'physical';
-        if (filterMode === 'tx') return log.topic === 'virtual';
-        return true;
-    });
+    const handleAddToCommand = (log: any) => {
+        const payload = formatData(log.data, viewMode, encoding);
+        setShowCommandEditor({
+            name: generateUniqueName(commands, 'command', undefined),
+            payload: payload,
+            mode: viewMode === 'hex' ? 'hex' : 'text',
+            tokens: {},
+            lineEnding: ''
+        });
+        setContextMenu(null);
+    };
+
+    const handleSaveCommand = (updates: any) => {
+        addCommand({ ...updates, parentId: undefined });
+        setShowCommandEditor(null);
+    };
+
+    // Memoized Log Item Component
+    const LogItem = useMemo(() => React.memo(({ log, isNewLog, effectiveSmooth, viewMode, encoding, showTimestamp, showPacketType, showDataLength, config, onContextMenu, formatData, formatTimestamp, getDataLengthText, themeConfig }: any) => {
+        if (log.type === 'INFO' || log.type === 'ERROR') {
+            const content = formatData(log.data, 'text', encoding);
+            let style = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+            if (log.type === 'ERROR') style = "bg-red-900/20 text-red-400 border-red-500/30";
+            else if (content.includes('Started') || content.includes('Restored')) style = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+            return (
+                <div className="flex justify-center my-2">
+                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${style}`}>
+                        {content}
+                    </span>
+                </div>
+            );
+        }
+
+        const monitorConfig = config as MonitorSessionConfig;
+
+        return (
+            <motion.div
+                layout={effectiveSmooth ? "position" : undefined}
+                initial={effectiveSmooth && isNewLog ? { opacity: 0, x: -10 } : false}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.15 }}
+                className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
+                style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'rgba(0, 122, 204, 0.25)' } as any}
+                onContextMenu={(e) => onContextMenu(e, log)}
+            >
+                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                    <div className="shrink-0 flex items-center h-[1.6em] gap-1.5">
+                        {showTimestamp && (
+                            <span className="text-[#999] font-mono opacity-90">
+                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS')}]
+                            </span>
+                        )}
+                        {log.repeatCount && log.repeatCount > 1 && (
+                            <span className="h-[18px] flex items-center justify-center text-[11px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px]">
+                                x{log.repeatCount}
+                            </span>
+                        )}
+                    </div>
+                )}
+                <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
+                    {showPacketType && (
+                        <div className={`h-[18px] flex items-center justify-center font-bold font-mono px-2 rounded-[3px] text-[10px] border shadow-sm
+                        ${log.topic === 'virtual' ? 'bg-[#007acc]/20 text-[#4daafc] border-[#007acc]/30' : 'bg-[#4ec9b0]/10 text-[#4ec9b0] border-[#4ec9b0]/30'}`}>
+                            {log.type === 'TX' && log.crcStatus === 'none' ? (
+                                <span className="flex items-center gap-1">
+                                    <span className="font-extrabold text-[#79c0ff]">Tcom</span>
+                                    <span className="opacity-40 text-[8px]">→</span>
+                                    <span className="opacity-90">{log.topic === 'virtual' ? monitorConfig.virtualSerialPort : (monitorConfig.connection?.path || 'DEV')}</span>
+                                </span>
+                            ) : (
+                                log.topic === 'virtual' ? (
+                                    <span className="flex items-center gap-1">
+                                        <span className="opacity-70">{monitorConfig.virtualSerialPort}</span>
+                                        <span className="opacity-40 text-[8px]">→</span>
+                                        <span className="font-extrabold">{monitorConfig.connection?.path || 'DEV'}</span>
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1">
+                                        <span className="font-extrabold">{monitorConfig.connection?.path || 'DEV'}</span>
+                                        <span className="opacity-40 text-[8px]">→</span>
+                                        <span className="opacity-70">{monitorConfig.virtualSerialPort}</span>
+                                    </span>
+                                )
+                            )}
+                        </div>
+                    )}
+                    {showDataLength && (
+                        <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-white/10 bg-white/5 text-[#aaaaaa]">
+                            {getDataLengthText(log.data)}
+                        </span>
+                    )}
+                </div>
+                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
+                    {formatData(log.data, viewMode, encoding)}
+                </span>
+            </motion.div>
+        );
+    }), [effectiveSmooth, viewMode, encoding, showTimestamp, showPacketType, showDataLength, config, formatData, getDataLengthText, themeConfig.timestampFormat]);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--vscode-bg)] text-[var(--vscode-fg)] font-sans select-none relative overflow-hidden">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--vscode-border)] bg-[var(--vscode-header-bg)] shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                        <button
-                            onClick={() => { setViewMode('text'); saveUIState({ viewMode: 'text' }); }}
-                            className={`px-2 py-0.5 text-xs font-medium rounded sm ${viewMode === 'text' ? 'bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)]' : 'hover:bg-[var(--vscode-hover-bg)]'}`}
-                        >
-                            Text
-                        </button>
-                        <button
-                            onClick={() => { setViewMode('hex'); saveUIState({ viewMode: 'hex' }); }}
-                            className={`px-2 py-0.5 text-xs font-medium rounded sm ${viewMode === 'hex' ? 'bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)]' : 'hover:bg-[var(--vscode-hover-bg)]'}`}
-                        >
-                            Hex
-                        </button>
-                    </div>
+        <div
+            className="absolute inset-0 flex flex-col bg-[var(--st-rx-bg)] bg-cover bg-center select-none"
+            style={{ backgroundImage: 'var(--st-rx-bg-img)' }}
+            onClick={() => setContextMenu(null)}
+        >
+            <style>
+                {`
+                    input[type=number]::-webkit-inner-spin-button,
+                    input[type=number]::-webkit-outer-spin-button {
+                        -webkit-appearance: none;
+                        margin: 0;
+                    }
+                    input[type=number] {
+                        -moz-appearance: textfield;
+                    }
+                    @keyframes flash-new {
+                        0% { background-color: var(--flash-color); }
+                        100% { background-color: transparent; }
+                    }
+                    .animate-flash-new {
+                        animation: flash-new 1s ease-out forwards;
+                    }
+                `}
+            </style>
 
-                    <div className="h-4 w-px bg-[var(--vscode-border)]" />
-
-                    <div className="flex items-center gap-1.5">
-                        <button
-                            onClick={() => { setFilterMode('all'); saveUIState({ filterMode: 'all' }); }}
-                            className={`px-2 py-0.5 text-xs font-medium rounded sm ${filterMode === 'all' ? 'bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)]' : 'hover:bg-[var(--vscode-hover-bg)]'}`}
-                        >
-                            All
-                        </button>
-                        <button
-                            onClick={() => { setFilterMode('rx'); saveUIState({ filterMode: 'rx' }); }}
-                            className={`px-2 py-0.5 text-xs font-medium rounded sm ${filterMode === 'rx' ? 'bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)]' : 'hover:bg-[var(--vscode-hover-bg)]'}`}
-                        >
-                            Device
-                        </button>
-                        <button
-                            onClick={() => { setFilterMode('tx'); saveUIState({ filterMode: 'tx' }); }}
-                            className={`px-2 py-0.5 text-xs font-medium rounded sm ${filterMode === 'tx' ? 'bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)]' : 'hover:bg-[var(--vscode-hover-bg)]'}`}
-                        >
-                            App
-                        </button>
-                    </div>
+            {/* Toolbar - Clone of SerialMonitor */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
+                <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
+                    {isConnected ? (
+                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                    ) : (
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                    )}
+                    <span className="opacity-80">Monitor: </span>
+                    <span className="text-[#4daafc] font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
+                    <span className="text-gray-600 px-1">⟷</span>
+                    <span className="text-[#4ec9b0] font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
+                    {isHighRate && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 text-[9px] font-bold border border-orange-500/30 animate-pulse">
+                            HIGH LOAD: AUTO-OPTIMIZING
+                        </span>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => sessionManager.clearLogs(session.id)}
-                        className="p-1 rounded hover:bg-[var(--vscode-hover-bg)] text-[var(--vscode-icon-fg)]"
-                        title="Clear Logs"
-                    >
-                        <Trash2 size={14} />
-                    </button>
-                    <button
-                        onClick={onShowSettings}
-                        className="p-1 rounded hover:bg-[var(--vscode-hover-bg)] text-[var(--vscode-icon-fg)]"
-                        title="Monitor Settings"
-                    >
-                        <Settings size={14} />
-                    </button>
+                <div className="flex items-center gap-4">
+                    {/* Stats Display */}
+                    <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter APP only"
+                            onClick={() => toggleFilter('tx')}
+                        >
+                            <span className={`text-[9px] font-bold font-mono tracking-tighter ${filterMode === 'tx' ? 'text-white/80' : 'text-[#aaaaaa]'}`}>{(config as MonitorSessionConfig).virtualSerialPort}:</span>
+                            <span className={`text-[11px] font-bold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
+                        </div>
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            title="Click to filter DEV only"
+                            onClick={() => toggleFilter('rx')}
+                        >
+                            <span className={`text-[9px] font-bold font-mono tracking-tighter ${filterMode === 'rx' ? 'text-[#1e1e1e]/60' : 'text-[#aaaaaa]'}`}>{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
+                            <span className={`text-[11px] font-bold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
+                        </div>
+                    </div>
+
+                    {/* Mode Toggle & Options */}
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-[26px]">
+                            <button
+                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] ${viewMode === 'text' ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                onClick={() => { setViewMode('text'); saveUIState({ viewMode: 'text' }); }}
+                            >
+                                TXT
+                            </button>
+                            <button
+                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] ${viewMode === 'hex' ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                onClick={() => { setViewMode('hex'); saveUIState({ viewMode: 'hex' }); }}
+                            >
+                                HEX
+                            </button>
+                        </div>
+
+                        <div className="relative">
+                            <button
+                                className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors flex items-center gap-1.5 border border-transparent ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
+                                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                            >
+                                <Menu size={16} />
+                                <span className="text-[11px] font-medium">Options</span>
+                            </button>
+                            {showOptionsMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
+                                    <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
+                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
+                                            <div className="text-[12px] text-[#cccccc] font-bold">Monitor Settings</div>
+                                            <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
+                                        </div>
+
+                                        {/* Encoding */}
+                                        <div className="mb-5 px-1 pt-2">
+                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb]">
+                                                <span>Encoding</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                            </div>
+                                            <div className="relative">
+                                                <select
+                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1.5 hover:bg-[#454545] transition-colors appearance-none pr-8 outline-none"
+                                                    value={encoding}
+                                                    onChange={(e) => { setEncoding(e.target.value as any); saveUIState({ encoding: e.target.value as any }); }}
+                                                >
+                                                    <option value="utf-8">UTF-8</option>
+                                                    <option value="gbk">GBK</option>
+                                                    <option value="ascii">ASCII</option>
+                                                </select>
+                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
+                                                    <ChevronDown size={12} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Features */}
+                                        <div className="mb-5 px-1 pt-2">
+                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb]">
+                                                <span>Features</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                            </div>
+                                            <div className="space-y-3">
+                                                {[
+                                                    { label: 'Timestamp', value: showTimestamp, setter: setShowTimestamp, key: 'showTimestamp' },
+                                                    { label: 'Packet Type', value: showPacketType, setter: setShowPacketType, key: 'showPacketType' },
+                                                    { label: 'Data Length', value: showDataLength, setter: setShowDataLength, key: 'showDataLength' },
+                                                    { label: 'Merge Repeats', value: mergeRepeats, setter: setMergeRepeats, key: 'mergeRepeats' },
+                                                    { label: 'Smooth Animation', value: smoothScroll, setter: setSmoothScroll, key: 'smoothScroll' },
+                                                ].map(item => (
+                                                    <label key={item.key} className="flex items-center justify-between cursor-pointer group">
+                                                        <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">{item.label}</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.value}
+                                                            onChange={(e) => { item.setter(e.target.checked); saveUIState({ [item.key]: e.target.checked }); }}
+                                                            className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
+                                                        />
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* UI Settings */}
+                                        <div className="mb-6 px-1 pt-2">
+                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb]">
+                                                <span>UI Settings</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] text-[#cccccc]">Font Size:</span>
+                                                    <select
+                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1 w-24 outline-none"
+                                                        value={fontSize}
+                                                        onChange={(e) => { const val = Number(e.target.value); setFontSize(val); saveUIState({ fontSize: val }); }}
+                                                    >
+                                                        {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s}>{s}px</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-[#cccccc]">Font Family:</span>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                                            <input type="checkbox" checked={showAllFonts} onChange={(e) => setShowAllFonts(e.target.checked)} className="w-3 h-3 rounded bg-[#1e1e1e] text-[#007acc]" />
+                                                            <span className="text-[10px] text-[#888]">All Fonts</span>
+                                                        </label>
+                                                    </div>
+                                                    <select
+                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1.5 w-full outline-none"
+                                                        value={fontFamily}
+                                                        onChange={(e) => { setFontFamily(e.target.value as any); saveUIState({ fontFamily: e.target.value as any }); }}
+                                                    >
+                                                        <optgroup label="Default">
+                                                            {defaultFonts.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                                                        </optgroup>
+                                                        {showAllFonts && (
+                                                            <optgroup label="System">
+                                                                {availableFonts.map(f => <option key={f.fullName} value={f.fullName}>{f.fullName}</option>)}
+                                                            </optgroup>
+                                                        )}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-[#3c3c3c]">
+                                            <button
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors"
+                                                onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}
+                                            >
+                                                <Download size={14} />
+                                                <span>Export Log</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
+                        <button
+                            className={`p-1 rounded ${autoScroll ? 'text-[#4ec9b0] bg-[#1e1e1e]' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                            onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}
+                        >
+                            <ArrowDownToLine size={14} />
+                        </button>
+                        <button className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696]" onClick={handleClearLogs}>
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Logs Area */}
+            {/* Log Area */}
             <div
+                className="flex-1 overflow-auto p-4"
+                style={{
+                    fontSize: `${fontSize}px`,
+                    fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : `"${fontFamily}", sans-serif`,
+                    lineHeight: '1.6'
+                }}
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-4 py-2 font-mono"
-                style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : fontFamily }}
             >
-                {filteredLogs.map((log, i) => {
-                    const isApp = log.topic === 'virtual';
-                    const colorClass = isApp ? 'text-blue-400' : 'text-green-400';
-                    const prefix = isApp ? 'APP' : 'DEV';
-
-                    return (
-                        <div key={log.id} className="group relative py-0.5 flex items-start gap-3 hover:bg-[var(--vscode-hover-bg)] rounded px-1 -mx-1 transition-colors">
-                            {showTimestamp && (
-                                <span className="opacity-40 shrink-0 w-[80px] text-[0.85em] pt-0.5">
-                                    {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                            )}
-                            <span className={`shrink-0 w-8 font-bold font-mono text-center flex items-center justify-center rounded border border-current scale-90 ${colorClass} opacity-80`} style={{ fontSize: '10px', height: '16px' }}>
-                                {prefix}
-                            </span>
-                            <div className="flex-1 overflow-hidden">
-                                <span className={`whitespace-pre-wrap ${viewMode === 'hex' ? 'break-all' : ''}`}>
-                                    {formatData(log.data, viewMode, encoding)}
-                                </span>
-                                {log.repeatCount && log.repeatCount > 1 && (
-                                    <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-[var(--vscode-active-bg)] text-[var(--vscode-active-fg)] rounded-full opacity-80">
-                                        x{log.repeatCount}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
+                {filteredLogs.length === 0 && (
+                    <div className="flex items-center justify-center h-full text-[#666]">
+                        <p>No data</p>
+                    </div>
+                )}
+                <AnimatePresence initial={false}>
+                    {filteredLogs.slice(-60).map((log) => {
+                        const isNewLog = log.timestamp > mountTimeRef.current;
+                        return (
+                            <LogItem
+                                key={log.id}
+                                log={log}
+                                isNewLog={isNewLog}
+                                effectiveSmooth={effectiveSmooth}
+                                viewMode={viewMode}
+                                encoding={encoding}
+                                showTimestamp={showTimestamp}
+                                showPacketType={showPacketType}
+                                showDataLength={showDataLength}
+                                config={config}
+                                onContextMenu={handleLogContextMenu}
+                                formatData={formatData}
+                                formatTimestamp={formatTimestamp}
+                                getDataLengthText={getDataLengthText}
+                                themeConfig={themeConfig}
+                            />
+                        );
+                    })}
+                </AnimatePresence>
+                <div ref={(el) => { if (el && autoScroll) el.scrollIntoView({ behavior: 'auto' }); }} />
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-[var(--vscode-border)] bg-[var(--vscode-bg)] shrink-0 p-2">
-                <div className="flex items-center gap-2 mb-1.5">
-                    <div className="flex items-center gap-1 bg-[#2d2d2e] rounded-sm px-1 py-0.5 select-none shrink-0 border border-white/5">
-                        <button
-                            onClick={() => setSendTarget('physical')}
-                            className={`px-2 py-0.5 text-[10px] font-medium rounded-sm transition-all duration-200 ${sendTarget === 'physical' ? 'bg-[#007acc] text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}
-                        >
-                            To Device
-                        </button>
-                        <button
-                            onClick={() => setSendTarget('virtual')}
-                            className={`px-2 py-0.5 text-[10px] font-medium rounded-sm transition-all duration-200 ${sendTarget === 'virtual' ? 'bg-[#007acc] text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}
-                        >
-                            To App
-                        </button>
-                    </div>
+            <div className="bg-[#1e1e1e] border-t border-[#2b2b2b]">
+                <div className="flex items-center bg-[#2d2d2e]/30 px-3 py-1.5 border-y border-white/5 w-full gap-2">
+                    <button
+                        onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }}
+                        className={`flex-1 py-1.5 text-[11px] font-bold transition-all duration-300 flex items-center justify-center gap-2 rounded-md ${sendTarget === 'virtual' ? 'bg-[#007acc] text-white shadow-[0_2px_8px_rgba(0,122,204,0.3)]' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <span className="text-[9px] opacity-70 font-black tracking-widest">[虚拟串口]</span>
+                        <span>{(config as MonitorSessionConfig).virtualSerialPort}</span>
+                    </button>
+                    <button
+                        onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }}
+                        className={`flex-1 py-1.5 text-[11px] font-bold transition-all duration-300 flex items-center justify-center gap-2 rounded-md ${sendTarget === 'physical' ? 'bg-[#4ec9b0] text-[#0a2e26] shadow-[0_2px_8px_rgba(78,201,176,0.3)]' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <span className="text-[9px] opacity-70 font-black tracking-widest">[物理串口]</span>
+                        <span>{(config as MonitorSessionConfig).connection?.path || '未连接'}</span>
+                    </button>
                 </div>
-
                 <SerialInput
                     key={session.id}
                     onSend={handleSend}
@@ -230,9 +642,31 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
                     initialLineEnding={uiState.lineEnding || '\r\n'}
                     onStateChange={handleInputStateChange}
                     isConnected={isConnected}
-                    onConnectRequest={() => { }}
+                    fontSize={fontSize}
+                    fontFamily={fontFamily}
+                    onConnectRequest={() => onShowSettings?.('monitor')}
                 />
             </div>
+
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={() => setContextMenu(null)}
+                    items={[
+                        { label: 'Copy', icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) },
+                        { label: 'Add to Command', icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }
+                    ]}
+                />
+            )}
+            {showCommandEditor && (
+                <CommandEditorDialog
+                    item={{ id: 'new', type: 'command', ...showCommandEditor }}
+                    onClose={() => setShowCommandEditor(null)}
+                    onSave={handleSaveCommand}
+                    existingNames={commands.filter(c => !c.parentId).map(c => c.name)}
+                />
+            )}
         </div>
     );
 };
