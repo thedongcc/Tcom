@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加标签页持久化特性
 - 添加串口监测节点和其标签页
 - 增加虚拟串口识别支持
+- 增加mqtt订阅消息筛选功能
+  增加侧边栏菜单宽度持久化功能
+  增加侧边栏菜单边缘双击恢复默认宽度功能
+- 增加虚拟串口启用状态检测机制
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -34,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 改善串口监测标签页中的样式
 - 修复流量统计逻辑
 - 修复mqtt点击连接过快问题
+- 修改部分组件的图标、样式
+- 修复重启后激活的session改变的问题
+- 优化4种消息样式并写成规范
+- 修复侧边栏图标位移问题
 
 ### Removed
 - 取消设置中的check update功能

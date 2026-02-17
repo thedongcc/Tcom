@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { CommandEntity, CommandGroup, CommandItem } from '../types/command';
 import { useHistory } from '../hooks/useHistory';
+import { useConfirm } from './ConfirmContext';
 
 const STORAGE_KEY = 'tcom-commands';
 
@@ -25,6 +26,7 @@ interface CommandContextType {
 const CommandContext = createContext<CommandContextType | undefined>(undefined);
 
 export const CommandProvider = ({ children }: { children: ReactNode }) => {
+    const { confirm } = useConfirm();
     // using useHistory for Undo/Redo support
     const { state: commands, set: setCommands, undo, redo, canUndo, canRedo, reset } = useHistory<CommandEntity[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -163,11 +165,17 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
         });
     }, [setCommands]);
 
-    const clearAll = useCallback(() => {
-        if (confirm('Are you sure you want to clear all commands?')) {
+    const clearAll = useCallback(async () => {
+        const ok = await confirm({
+            title: '清空指令',
+            message: '确定要清空所有指令吗？此操作不可撤销。',
+            type: 'danger',
+            confirmText: '清空全部'
+        });
+        if (ok) {
             setCommands([]);
         }
-    }, [setCommands]);
+    }, [confirm, setCommands]);
 
     const setAllCommands = useCallback((newCommands: CommandEntity[]) => {
         setCommands(newCommands);
@@ -185,11 +193,19 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
                 try {
                     const imported = JSON.parse(event.target?.result as string);
                     if (Array.isArray(imported)) {
-                        if (confirm('Merge with existing commands? Cancel to Replace.')) {
-                            setCommands(prev => [...prev, ...imported]);
-                        } else {
-                            setCommands(imported);
-                        }
+                        confirm({
+                            title: '导入指令',
+                            message: '是否将导入的指令合并到现有列表中？点击取消将替换现有指令。',
+                            type: 'info',
+                            confirmText: '合并',
+                            cancelText: '替换'
+                        }).then(ok => {
+                            if (ok) {
+                                setCommands(prev => [...prev, ...imported]);
+                            } else {
+                                setCommands(imported);
+                            }
+                        });
                     } else {
                         alert('Invalid format');
                     }

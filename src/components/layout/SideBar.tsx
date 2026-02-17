@@ -22,21 +22,29 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
     const activePlugin = getPlugin(activeView);
 
     // Resizing State
-    const [width, setWidth] = useState(250);
+    const [width, setWidth] = useState(() => {
+        const saved = localStorage.getItem('sidebar-width');
+        return saved ? parseInt(saved, 10) : 250;
+    });
+    const widthRef = useRef(width);
     const isResizing = useRef(false);
 
+    // Sync ref with state
     useEffect(() => {
-        const savedWidth = localStorage.getItem('sidebar-width');
-        if (savedWidth) {
-            setWidth(parseInt(savedWidth, 10));
-        }
-    }, []);
+        widthRef.current = width;
+    }, [width]);
 
+    // Effect to sync storage when resize ends or explicit change occurs (e.g. double click)
     useEffect(() => {
         if (!isResizing.current) {
             localStorage.setItem('sidebar-width', width.toString());
         }
     }, [width]);
+
+    const updateWidth = (newWidth: number) => {
+        setWidth(newWidth);
+        widthRef.current = newWidth;
+    };
 
     const startResizing = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -48,13 +56,9 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
 
     const handleMouseMove = (e: MouseEvent) => {
         if (!isResizing.current) return;
-        // Sidebar is on the left, so width is just clientX - activityBarWidth (48) ??
-        // Actually Layout is Flex Row: ActivityBar (48) | SideBar (Width) | Editor
-        // So mouse position relative to window left is: 48 + Width.
-        // Thus Width = mouseX - 48.
         const newWidth = e.clientX - 48;
         if (newWidth > 150 && newWidth < 600) {
-            setWidth(newWidth);
+            updateWidth(newWidth);
         }
     };
 
@@ -63,8 +67,12 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'default';
-        // Save final width
-        localStorage.setItem('sidebar-width', width.toString());
+        // Trigger one final storage sync now that isResizing is false
+        localStorage.setItem('sidebar-width', widthRef.current.toString());
+    };
+
+    const handleDoubleClick = () => {
+        updateWidth(250);
     };
 
     return (
@@ -98,6 +106,7 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
                 className="absolute top-0 right-0 w-[4px] h-full cursor-col-resize hover:bg-[var(--vscode-accent)] opacity-0 hover:opacity-100 transition-opacity z-10"
                 style={{ right: '-2px' }}
                 onMouseDown={startResizing}
+                onDoubleClick={handleDoubleClick}
             />
         </div>
     );

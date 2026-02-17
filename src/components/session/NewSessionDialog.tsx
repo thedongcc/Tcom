@@ -41,27 +41,32 @@ export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDial
     return (
         <div
             ref={ref}
-            className="fixed z-50 w-64 bg-[#252526] border border-[var(--vscode-widget-border)] shadow-xl rounded-md flex flex-col text-[var(--vscode-fg)] animate-fade-in"
+            className="fixed z-[1000] w-72 bg-[#252526] border border-[#3c3c3c] shadow-2xl rounded-md flex flex-col text-[var(--vscode-fg)] animate-in fade-in zoom-in-95 duration-200"
             style={{ left: position.x, top: position.y }}
         >
-            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--vscode-border)] bg-[#2d2d2d]">
-                <span className="text-xs font-bold uppercase tracking-wide">New Session</span>
-                <X size={14} className="cursor-pointer hover:text-white" onClick={onClose} />
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">New Session</span>
+                <button
+                    onClick={onClose}
+                    className="text-[#969696] hover:text-white transition-colors"
+                >
+                    <X size={14} />
+                </button>
             </div>
 
-            <div className="flex flex-col p-1 max-h-[300px] overflow-y-auto">
+            <div className="flex flex-col p-1.5 max-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
                 {OPTIONS.map(opt => (
                     <div
                         key={opt.type}
-                        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[var(--vscode-list-hover)] rounded-sm group"
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[#094771] rounded-sm group transition-colors"
                         onClick={() => onSelect(opt.type)}
                     >
-                        <div className="text-[var(--vscode-foreground)] opacity-70 group-hover:opacity-100">
+                        <div className="text-[var(--vscode-foreground)] opacity-70 group-hover:opacity-100 transition-opacity">
                             <opt.icon size={16} />
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[13px] font-medium">{opt.label}</span>
-                            <span className="text-[10px] opacity-60">{opt.description}</span>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[13px] font-medium leading-none">{opt.label}</span>
+                            <span className="text-[10px] opacity-50 mt-1 truncate">{opt.description}</span>
                         </div>
                     </div>
                 ))}

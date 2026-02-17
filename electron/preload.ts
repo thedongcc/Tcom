@@ -148,6 +148,15 @@ contextBridge.exposeInMainWorld('monitorAPI', {
     };
     ipcRenderer.on('monitor:closed', listener);
     return () => ipcRenderer.off('monitor:closed', listener);
+  },
+  onPartnerStatus: (sessionId: string, callback: (connected: boolean) => void) => {
+    const listener = (_: any, args: { sessionId: string, connected: boolean }) => {
+      if (args.sessionId === sessionId) {
+        callback(args.connected);
+      }
+    };
+    ipcRenderer.on('monitor:partner-status', listener);
+    return () => ipcRenderer.off('monitor:partner-status', listener);
   }
 });
 

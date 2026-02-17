@@ -32,7 +32,7 @@ interface ActivityItemProps {
 
 const ActivityItem = ({ icon, active, onClick, className, onContextMenu }: ActivityItemProps) => (
     <div
-        className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-white transition-colors ${active ? 'text-white border-l-2 border-[var(--vscode-accent)]' : 'text-[var(--vscode-activitybar-inactive-fg)]'} ${className}`}
+        className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-white transition-colors border-l-4 ${active ? 'text-white border-[var(--vscode-accent)]' : 'text-[var(--vscode-activitybar-inactive-fg)] border-transparent'} ${className}`}
         onClick={onClick}
         onContextMenu={onContextMenu}
     >

@@ -59,7 +59,7 @@ export const SessionListItem = ({
             style={style}
             {...attributes}
             {...listeners}
-            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center gap-2 group border-l-2 ${isActive ? 'border-[var(--vscode-accent)] bg-[var(--vscode-list-active)]' : 'border-transparent'}`}
+            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center gap-2 group border-l-4 ${isActive ? 'border-[var(--vscode-accent)] bg-[var(--vscode-list-active)]' : 'border-transparent'}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
             title="Click to open, Right-click for options. Drag to reorder."

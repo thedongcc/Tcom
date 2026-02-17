@@ -286,6 +286,10 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                                 key={session.id}
                                 session={session}
                                 onShowSettings={onShowSettings}
+                                onConnectRequest={() => {
+                                    sessionManager.setActiveSessionId(session.id);
+                                    return sessionManager.connectSession(session.id);
+                                }}
                             />;
                         }
                         return <SerialMonitor

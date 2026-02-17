@@ -81,12 +81,12 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
             onKeyDown={handleKeyDown}
             onClick={onClose} // Click backdrop to close
         >
             <div
-                className="bg-[#252526] border border-[#3c3c3c] shadow-xl w-[600px] flex flex-col rounded-sm"
+                className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[600px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                 tabIndex={-1}
                 style={{ outline: 'none' }}
                 onClick={(e) => {
@@ -94,18 +94,18 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                     e.stopPropagation();
                 }}
             >
-                <div className="flex items-center justify-between p-2 border-b border-[#3c3c3c]">
-                    <span className="text-xs font-bold text-[#cccccc] uppercase">Edit {isCommand ? 'Command' : 'Group'}</span>
-                    <button onClick={onClose} className="text-[#969696] hover:text-white">
-                        <X size={16} />
+                <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
+                    <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">Edit {isCommand ? 'Command' : 'Group'}</span>
+                    <button onClick={onClose} className="text-[#969696] hover:text-white transition-colors">
+                        <X size={14} />
                     </button>
                 </div>
 
-                <div className="p-4 flex flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">Name</label>
+                <div className="p-5 flex flex-col gap-5 bg-[#1e1e1e]">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">Name</label>
                         <input
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-2 py-1 outline-none focus:border-[var(--vscode-focusBorder)] text-xs"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--vscode-focusBorder)] text-[13px] transition-all"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoFocus
@@ -113,36 +113,38 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                     </div>
 
                     {isCommand && commandItem && (
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[11px] text-[#969696]">Content</label>
-                            <SerialInput
-                                onSend={() => { }} // We don't send from editor
-                                initialContent={commandItem.payload}
-                                initialHTML={commandItem.html}
-                                initialTokens={commandItem.tokens}
-                                initialMode={commandItem.mode}
-                                initialLineEnding={commandItem.lineEnding}
-                                onStateChange={(state) => {
-                                    inputStateRef.current = state;
-                                }}
-                                hideExtras
-                            />
+                        <div className="flex flex-col gap-1.5 pt-1">
+                            <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">Content</label>
+                            <div className="border border-[#3c3c3c] rounded-sm bg-[#252526] p-1 shadow-inner">
+                                <SerialInput
+                                    onSend={() => { }} // We don't send from editor
+                                    initialContent={commandItem.payload}
+                                    initialHTML={commandItem.html}
+                                    initialTokens={commandItem.tokens}
+                                    initialMode={commandItem.mode}
+                                    initialLineEnding={commandItem.lineEnding}
+                                    onStateChange={(state) => {
+                                        inputStateRef.current = state;
+                                    }}
+                                    hideExtras
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <div className="p-2 border-t border-[#3c3c3c] flex justify-end gap-2">
+                <div className="p-3 border-t border-[#3c3c3c] flex justify-end gap-2 bg-[#2d2d2d]">
                     <button
-                        className="px-3 py-1 text-xs text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm"
+                        className="px-4 py-1.5 text-xs text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm transition-colors"
                         onClick={onClose}
                     >
                         Cancel
                     </button>
                     <button
-                        className="px-3 py-1 text-xs text-white bg-[#007acc] hover:bg-[#0098ff] rounded-sm"
+                        className="px-4 py-1.5 text-xs text-white bg-[#0e639c] hover:bg-[#1177bb] rounded-sm font-medium transition-all shadow-md active:scale-95"
                         onClick={handleSave}
                     >
-                        Save
+                        Save Changes
                     </button>
                 </div>
             </div>

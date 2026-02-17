@@ -265,21 +265,20 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                 </div>
 
                 <div className="p-4 flex flex-col gap-4 min-h-0">
-                    {/* Add Topic */}
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex flex-col gap-2 shrink-0">
                         <input
-                            className="flex-1 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
+                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
                             placeholder="Add topic code/+/status..."
                             value={newTopicPath}
                             onChange={(e) => setNewTopicPath(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
                         />
                         <button
-                            className="px-3 bg-[var(--vscode-button-bg)] hover:bg-[var(--vscode-button-hover-bg)] text-white text-[12px] rounded-sm transition-colors flex items-center gap-1"
+                            className="w-full py-1.5 bg-[var(--vscode-button-bg)] hover:bg-[var(--vscode-button-hover-bg)] text-white text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
                             onClick={handleAddTopic}
                         >
                             <Plus size={14} />
-                            Add
+                            Add Topic
                         </button>
                     </div>
 
@@ -316,7 +315,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     <button
                                         className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[#10b981]' : 'bg-[#3c3c3c]'}`}
                                         onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}
-                                        title={topic.subscribed ? 'Subscribed' : 'Unsubscribed'}
+                                        title={topic.subscribed ? '已订阅并显示在监视器' : '暂停订阅并从监视器隐藏'}
                                     >
                                         <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${topic.subscribed ? 'translate-x-4' : 'translate-x-0'}`} />
                                     </button>

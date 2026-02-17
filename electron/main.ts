@@ -251,7 +251,8 @@ class SerialService {
 class MonitorService {
   private mainWindow: BrowserWindow;
   // Map<sessionId, { internal: SerialPort, physical: SerialPort }>
-  private sessions: Map<string, { internal: any; physical: any }> = new Map();
+  // Map<sessionId, { internal: SerialPort, physical: SerialPort, pollTimer?: NodeJS.Timeout }>
+  private sessions: Map<string, { internal: any; physical: any; pollTimer?: NodeJS.Timeout }> = new Map();
 
   constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
@@ -293,21 +294,39 @@ class MonitorService {
         autoOpen: false
       });
 
-      const openPort = (port: any, label: string) => new Promise((resolve, reject) => {
+      const setupEvents = (source: any, target: any, label: string, sourceType: 'TX' | 'RX') => {
+        source.on('data', (data: any) => {
+          if (target && target.isOpen) {
+            target.write(data);
+          }
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('monitor:data', { sessionId, type: sourceType, data });
+          }
+        });
+        source.on('error', (err: any) => {
+          console.error(`[Monitor] ${label} Error:`, err);
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${label}: ${err.message}` });
+          }
+        });
+        source.on('close', () => {
+          console.log(`[Monitor] ${label} Closed`);
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('monitor:closed', { sessionId, origin: label });
+          }
+        });
+      };
+
+      const openPort = (port: any, label: string, partner: any, sourceType: 'TX' | 'RX') => new Promise((resolve, reject) => {
+        // PRE-BIND events before opening to ensure no data is missed at start
+        setupEvents(port, partner, label, sourceType);
+
         port.open((err: any) => {
           if (err) {
-            // Retry with \\.\ prefix if file not found (common on windows for some drivers/high ports)
+            // Retry with \\.\ prefix if file not found (common on windows)
             if (process.platform === 'win32' && (err.message.includes('File not found') || err.message.includes('Access denied'))) {
               const retryPath = port.path.startsWith('\\\\.\\') ? port.path : `\\\\.\\${port.path}`;
               console.log(`[Monitor] Retrying open ${label} with path ${retryPath}`);
-              // Re-instantiate with new path? No, SP instance path is fixed? 
-              // SerialPort path is read-only usually. We need new instance.
-              // But we can just fail here and let outer loop handle? No, we need to handle it inside openPort wrapper?
-              // Easier to just try creating a second instance here if first failed?
-              // Or better: Checking path before creating SP instance locally in start()?
-              // But start() creates instances before calling openPort. 
-
-              // Let's rely on re-instantiating.
               try {
                 const SP = getSerialPort();
                 const retryPort = new SP({
@@ -315,13 +334,12 @@ class MonitorService {
                   baudRate: port.settings.baudRate,
                   autoOpen: false
                 });
+                // Re-bind events to the new instance
+                setupEvents(retryPort, partner, label, sourceType);
                 retryPort.open((retryErr: any) => {
                   if (retryErr) {
                     reject(new Error(`Failed to open ${label} (${port.path}): ${err.message} (Retry: ${retryErr.message})`));
                   } else {
-                    // Swap the instance in calling scope? 
-                    // We can't easily swap `internal`/`physical` variables here without changing structure.
-                    // So we must return the opened port instance!
                     resolve(retryPort);
                   }
                 });
@@ -337,58 +355,35 @@ class MonitorService {
         });
       });
 
-      // We need to capture the opened instances (might be different due to retry)
+      // We need to capture the opened instances
       const [internalOpened, physicalOpened] = await Promise.all([
-        openPort(internal, 'Internal/Virtual'),
-        openPort(physical, 'Physical')
+        openPort(internal, 'Internal/Virtual', physical, 'TX'),
+        openPort(physical, 'Physical', internal, 'RX')
       ]);
 
-      // Update session with potentially new instances
+      // Update session with correct instances
+      // 4. Start status polling for virtual port (to detect if partner software is open)
+      let lastPartnerStatus = false;
+      const pollTimer = setInterval(async () => {
+        try {
+          if (internalOpened && (internalOpened as any).isOpen) {
+            const signals = await (internalOpened as any).getControlSignals();
+            // Expanded signal check: DSR, CTS, or DCD (Carrier Detect)
+            // Different drivers/configurations pull different pins
+            const isPartnerOpen = !!(signals.carrierDetect || signals.dsr || signals.cts);
+            if (isPartnerOpen !== lastPartnerStatus) {
+              lastPartnerStatus = isPartnerOpen;
+              if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                this.mainWindow.webContents.send('monitor:partner-status', { sessionId, connected: isPartnerOpen });
+              }
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }, 1000);
+
+      // Update session with correct instances and timer
       // @ts-ignore
-      this.sessions.set(sessionId, { internal: internalOpened, physical: physicalOpened });
-
-      // Re-bind events to the ACTUALLY opened ports
-      const bindEvents = (source: any, target: any, label: string, sourceType: 'TX' | 'RX') => {
-        source.on('data', (data: any) => {
-          if (target.isOpen) {
-            target.write(data);
-          }
-          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            // console.log(`[Monitor] Sending ${sourceType} data bytes:`, data.length); 
-            this.mainWindow.webContents.send('monitor:data', { sessionId, type: sourceType, data });
-          } else {
-            console.warn('[Monitor] MainWindow destroyed or missing, cannot send data');
-          }
-        });
-        source.on('error', (err: any) => handleError(label, err));
-        source.on('close', () => handleClose(label));
-      };
-
-      // Clear old listeners if any (new instances won't have them, old ones are closed/gc'd)
-      // But we need to make sure we use the NEW instances for binding.
-      const internalFinal = internalOpened as any;
-      const physicalFinal = physicalOpened as any;
-
-      // Error handling
-      const handleError = (origin: string, err: any) => {
-        console.error(`[Monitor] ${origin} Error:`, err);
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${origin}: ${err.message}` });
-        }
-      };
-
-      // Close handling
-      const handleClose = (origin: string) => {
-        console.log(`[Monitor] ${origin} Closed`);
-        // If one closes, maybe close the other? Or just notify?
-        // Usually if physical unplugs, we might want to stop.
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          this.mainWindow.webContents.send('monitor:closed', { sessionId, origin });
-        }
-      };
-
-      bindEvents(internalFinal, physicalFinal, 'Internal', 'TX');
-      bindEvents(physicalFinal, internalFinal, 'Physical', 'RX');
+      this.sessions.set(sessionId, { internal: internalOpened, physical: physicalOpened, pollTimer });
 
       return { success: true };
 
@@ -402,6 +397,9 @@ class MonitorService {
 
   async stop(sessionId: string) {
     const session = this.sessions.get(sessionId);
+    if (session?.pollTimer) {
+      clearInterval(session.pollTimer);
+    }
     if (!session) return { success: true };
 
     const closePort = (port: any) => new Promise(resolve => {
@@ -440,14 +438,34 @@ class MonitorService {
       return { success: false, error: 'Target port not open' };
     }
 
-    return new Promise(resolve => {
+    return new Promise(async (resolve) => {
       const payload = typeof data === 'string' ? data : Buffer.from(data);
-      port.write(payload, (err: any) => {
+
+      // Use a timeout to prevent hanging on blocked virtual ports
+      let timeoutId = setTimeout(async () => {
+        let extraInfo = "";
+        if (target === 'virtual') {
+          extraInfo = " (Virtual port buffer full/Partner not responding)";
+        }
+        console.error(`[Monitor] Write timeout${extraInfo}`);
+        resolve({ success: false, error: `Write timed out${extraInfo}` });
+      }, 1000);
+
+      port.write(payload, async (err: any) => {
+        clearTimeout(timeoutId);
         if (err) {
-          console.error(`[Monitor] Write error:`, err);
-          resolve({ success: false, error: err.message });
+          let errorMsg = err.message;
+          if (target === 'virtual') {
+            try {
+              const signals = await port.getControlSignals();
+              if (!signals.carrierDetect && !signals.dsr && !signals.cts) {
+                errorMsg = "Write failed: Partner software (external port) is not open. com0com buffers are full.";
+              }
+            } catch (e) { /* ignore */ }
+          }
+          console.error(`[Monitor] Write error:`, errorMsg);
+          resolve({ success: false, error: errorMsg });
         } else {
-          console.log(`[Monitor] Write success`);
           resolve({ success: true });
         }
       });

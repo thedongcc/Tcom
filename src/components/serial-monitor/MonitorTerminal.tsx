@@ -26,9 +26,106 @@ import { SessionState, MonitorSessionConfig } from '../../types/session';
 interface MonitorTerminalProps {
     session: SessionState;
     onShowSettings?: (view: string) => void;
+    onConnectRequest?: () => Promise<boolean>;
 }
 
-export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProps) => {
+// Memoized Log Item Component - Defined OUTSIDE to maintain stable component identity
+const LogItem = React.memo(({
+    log,
+    isNewLog,
+    effectiveSmooth,
+    viewMode,
+    encoding,
+    showTimestamp,
+    showPacketType,
+    showDataLength,
+    virtualSerialPort,
+    physicalPortPath,
+    onContextMenu,
+    formatData,
+    formatTimestamp,
+    getDataLengthText,
+    timestampFormat
+}: any) => {
+    if (log.type === 'INFO' || log.type === 'ERROR') {
+        const content = formatData(log.data, 'text', encoding);
+        let style = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+        if (log.type === 'ERROR') style = "bg-red-900/20 text-red-400 border-red-500/30";
+        else if (content.includes('Started') || content.includes('Restored')) style = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+        return (
+            <div className="flex justify-center my-2">
+                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${style}`}>
+                    {content}
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <motion.div
+            layout={effectiveSmooth ? "position" : undefined}
+            initial={effectiveSmooth && isNewLog ? { opacity: 0, x: -10 } : false}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.15 }}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
+            style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'rgba(0, 122, 204, 0.25)' } as any}
+            onContextMenu={(e) => onContextMenu(e, log)}
+        >
+            {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                <div className="shrink-0 flex items-center h-[1.6em] gap-1.5">
+                    {showTimestamp && (
+                        <span className="text-[#999] font-mono opacity-90">
+                            [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS')}]
+                        </span>
+                    )}
+                    {log.repeatCount && log.repeatCount > 1 && (
+                        <span className="h-[18px] flex items-center justify-center text-[11px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px]">
+                            x{log.repeatCount}
+                        </span>
+                    )}
+                </div>
+            )}
+            <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
+                {showPacketType && (
+                    <div className={`h-[18px] flex items-center justify-center font-bold font-mono px-2 rounded-[3px] text-[10px] border shadow-sm
+                    ${log.topic === 'virtual' ? 'bg-[#007acc]/20 text-[#4daafc] border-[#007acc]/30' : 'bg-[#4ec9b0]/10 text-[#4ec9b0] border-[#4ec9b0]/30'}`}>
+                        {log.type === 'TX' && log.crcStatus === 'none' ? (
+                            <span className="flex items-center gap-1">
+                                <span className="font-extrabold text-[#79c0ff]">Tcom</span>
+                                <span className="opacity-40 text-[8px]">→</span>
+                                <span className="opacity-90">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
+                            </span>
+                        ) : (
+                            log.topic === 'virtual' ? (
+                                <span className="flex items-center gap-1">
+                                    <span className="opacity-70">{virtualSerialPort}</span>
+                                    <span className="opacity-40 text-[8px]">→</span>
+                                    <span className="font-extrabold">{physicalPortPath}</span>
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1">
+                                    <span className="font-extrabold">{physicalPortPath}</span>
+                                    <span className="opacity-40 text-[8px]">→</span>
+                                    <span className="opacity-70">{virtualSerialPort}</span>
+                                </span>
+                            )
+                        )}
+                    </div>
+                )}
+                {showDataLength && (
+                    <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-white/10 bg-white/5 text-[#aaaaaa]">
+                        {getDataLengthText(log.data)}
+                    </span>
+                )}
+            </div>
+            <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
+                {formatData(log.data, viewMode, encoding)}
+            </span>
+        </motion.div>
+    );
+});
+
+export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: MonitorTerminalProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const sessionManager = useSession();
@@ -56,6 +153,7 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
     // Font Selection Logic
     const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
+    const [partnerConnected, setPartnerConnected] = useState(true);
 
     const defaultFonts = [
         { label: 'Monospace (Default)', value: 'mono' },
@@ -66,6 +164,14 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
         { label: 'Segoe UI', value: 'Segoe UI' },
         { label: 'Inter', value: 'Inter' },
     ];
+
+    useEffect(() => {
+        if (!isConnected || !(window as any).monitorAPI) return;
+        const cleanup = (window as any).monitorAPI.onPartnerStatus(session.id, (connected: boolean) => {
+            setPartnerConnected(connected);
+        });
+        return cleanup;
+    }, [isConnected, session.id]);
 
     useEffect(() => {
         if (showAllFonts) {
@@ -268,88 +374,6 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
         addCommand({ ...updates, parentId: undefined });
         setShowCommandEditor(null);
     };
-
-    // Memoized Log Item Component
-    const LogItem = useMemo(() => React.memo(({ log, isNewLog, effectiveSmooth, viewMode, encoding, showTimestamp, showPacketType, showDataLength, config, onContextMenu, formatData, formatTimestamp, getDataLengthText, themeConfig }: any) => {
-        if (log.type === 'INFO' || log.type === 'ERROR') {
-            const content = formatData(log.data, 'text', encoding);
-            let style = "bg-gray-800/40 text-gray-400 border-gray-600/30";
-            if (log.type === 'ERROR') style = "bg-red-900/20 text-red-400 border-red-500/30";
-            else if (content.includes('Started') || content.includes('Restored')) style = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
-            return (
-                <div className="flex justify-center my-2">
-                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${style}`}>
-                        {content}
-                    </span>
-                </div>
-            );
-        }
-
-        const monitorConfig = config as MonitorSessionConfig;
-
-        return (
-            <motion.div
-                layout={effectiveSmooth ? "position" : undefined}
-                initial={effectiveSmooth && isNewLog ? { opacity: 0, x: -10 } : false}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.15 }}
-                className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
-                style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'rgba(0, 122, 204, 0.25)' } as any}
-                onContextMenu={(e) => onContextMenu(e, log)}
-            >
-                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                    <div className="shrink-0 flex items-center h-[1.6em] gap-1.5">
-                        {showTimestamp && (
-                            <span className="text-[#999] font-mono opacity-90">
-                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS')}]
-                            </span>
-                        )}
-                        {log.repeatCount && log.repeatCount > 1 && (
-                            <span className="h-[18px] flex items-center justify-center text-[11px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px]">
-                                x{log.repeatCount}
-                            </span>
-                        )}
-                    </div>
-                )}
-                <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
-                    {showPacketType && (
-                        <div className={`h-[18px] flex items-center justify-center font-bold font-mono px-2 rounded-[3px] text-[10px] border shadow-sm
-                        ${log.topic === 'virtual' ? 'bg-[#007acc]/20 text-[#4daafc] border-[#007acc]/30' : 'bg-[#4ec9b0]/10 text-[#4ec9b0] border-[#4ec9b0]/30'}`}>
-                            {log.type === 'TX' && log.crcStatus === 'none' ? (
-                                <span className="flex items-center gap-1">
-                                    <span className="font-extrabold text-[#79c0ff]">Tcom</span>
-                                    <span className="opacity-40 text-[8px]">→</span>
-                                    <span className="opacity-90">{log.topic === 'virtual' ? monitorConfig.virtualSerialPort : (monitorConfig.connection?.path || 'DEV')}</span>
-                                </span>
-                            ) : (
-                                log.topic === 'virtual' ? (
-                                    <span className="flex items-center gap-1">
-                                        <span className="opacity-70">{monitorConfig.virtualSerialPort}</span>
-                                        <span className="opacity-40 text-[8px]">→</span>
-                                        <span className="font-extrabold">{monitorConfig.connection?.path || 'DEV'}</span>
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-1">
-                                        <span className="font-extrabold">{monitorConfig.connection?.path || 'DEV'}</span>
-                                        <span className="opacity-40 text-[8px]">→</span>
-                                        <span className="opacity-70">{monitorConfig.virtualSerialPort}</span>
-                                    </span>
-                                )
-                            )}
-                        </div>
-                    )}
-                    {showDataLength && (
-                        <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-white/10 bg-white/5 text-[#aaaaaa]">
-                            {getDataLengthText(log.data)}
-                        </span>
-                    )}
-                </div>
-                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
-                    {formatData(log.data, viewMode, encoding)}
-                </span>
-            </motion.div>
-        );
-    }), [effectiveSmooth, viewMode, encoding, showTimestamp, showPacketType, showDataLength, config, formatData, getDataLengthText, themeConfig.timestampFormat]);
 
     return (
         <div
@@ -572,6 +596,32 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
                 </div>
             </div>
 
+            {/* Partner Status Warning */}
+            <AnimatePresence>
+                {isConnected && !partnerConnected && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-amber-600/20 border-b border-amber-600/30 overflow-hidden shrink-0"
+                    >
+                        <div className="px-4 py-2 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 text-amber-400 text-xs">
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                <span className="font-bold">Virtual Port Offline:</span>
+                                <span className="opacity-90">对端程序尚未打开端口 <span className="text-white underline">{(config as MonitorSessionConfig).virtualSerialPort}</span>。发送的数据将积压在驱动中，并在对端打开后瞬间弹出。</span>
+                            </div>
+                            <button
+                                className="px-2 py-1 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 text-[10px] rounded transition-colors"
+                                onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }}
+                            >
+                                Switch to Physical
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Log Area */}
             <div
                 className="flex-1 overflow-auto p-4"
@@ -588,7 +638,7 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
                     </div>
                 )}
                 <AnimatePresence initial={false}>
-                    {filteredLogs.slice(-60).map((log) => {
+                    {filteredLogs.slice(-400).map((log) => {
                         const isNewLog = log.timestamp > mountTimeRef.current;
                         return (
                             <LogItem
@@ -601,12 +651,13 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
                                 showTimestamp={showTimestamp}
                                 showPacketType={showPacketType}
                                 showDataLength={showDataLength}
-                                config={config}
+                                virtualSerialPort={(config as MonitorSessionConfig).virtualSerialPort}
+                                physicalPortPath={(config as MonitorSessionConfig).connection?.path || 'DEV'}
                                 onContextMenu={handleLogContextMenu}
                                 formatData={formatData}
                                 formatTimestamp={formatTimestamp}
                                 getDataLengthText={getDataLengthText}
-                                themeConfig={themeConfig}
+                                timestampFormat={themeConfig.timestampFormat}
                             />
                         );
                     })}
@@ -644,7 +695,12 @@ export const MonitorTerminal = ({ session, onShowSettings }: MonitorTerminalProp
                     isConnected={isConnected}
                     fontSize={fontSize}
                     fontFamily={fontFamily}
-                    onConnectRequest={() => onShowSettings?.('monitor')}
+                    onConnectRequest={async () => {
+                        const success = await onConnectRequest?.();
+                        if (success === false) {
+                            onShowSettings?.('serial');
+                        }
+                    }}
                 />
             </div>
 

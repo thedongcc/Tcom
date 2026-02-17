@@ -172,6 +172,13 @@ export const useSessionManager = () => {
         updateSessionConfig(sessionId, { uiState: { ...currentUI, ...uiStateUpdates } } as any);
     }, [updateSessionConfig]);
 
+    // --- Persistence for Active Session ---
+    useEffect(() => {
+        if (activeSessionId && workspacePath) {
+            localStorage.setItem(`active-session-${workspacePath}`, activeSessionId);
+        }
+    }, [activeSessionId, workspacePath]);
+
     const findSetupcPath = useCallback(() => {
         const monitorSession = sessionsRef.current.find(s => s.config.type === 'monitor');
         if (monitorSession) return (monitorSession.config as MonitorSessionConfig).setupcPath;
@@ -353,6 +360,11 @@ export const useSessionManager = () => {
             const sessionsData = await window.workspaceAPI.listSessions(path);
             if (sessionsData.success) {
                 setSavedSessions(sessionsData.data);
+                // Restore active session ID for this workspace
+                const savedActiveId = localStorage.getItem(`active-session-${path}`);
+                if (savedActiveId) {
+                    setActiveSessionId(savedActiveId);
+                }
             }
         }
     }, []);
@@ -466,9 +478,9 @@ export const useSessionManager = () => {
             return changed ? newSessions : prev;
         });
 
-        // Activate the last one if any were provided
+        // Activate the last one if any were provided and no session is currently active
         if (configs.length > 0) {
-            setActiveSessionId(configs[configs.length - 1].id);
+            setActiveSessionId(prev => prev || configs[configs.length - 1].id);
         }
     }, []);
 

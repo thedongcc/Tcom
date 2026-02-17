@@ -1,9 +1,10 @@
 import { MqttSessionConfig, LogEntry } from '../../types/session';
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Send, Trash2, ArrowDownToLine, Menu, X, ChevronDown, Download, Settings, RefreshCw, Check, Filter } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
 import { AnimatePresence, motion } from 'framer-motion';
+import { mqttTopicMatch } from '../../utils/mqttUtils';
 
 interface MqttMonitorProps {
     session: {
@@ -249,11 +250,30 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     }, 0);
 
     // Filter Logs for Display
-    const filteredLogs = logs.filter(log => {
-        if (filterMode === 'tx') return log.type === 'TX';
-        if (filterMode === 'rx') return log.type === 'RX';
-        return true;
-    });
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            // 1. Basic Type Filter (TX/RX)
+            if (filterMode === 'tx' && log.type !== 'TX') return false;
+            if (filterMode === 'rx' && log.type !== 'RX') return false;
+
+            // 2. MQTT Topic Filter (Only for RX/TX with topics)
+            if (log.topic && (log.type === 'RX' || log.type === 'TX')) {
+                const topicConfigs = config.topics || [];
+                if (topicConfigs.length > 0) {
+                    // Find all matching patterns in subscription list
+                    const matches = topicConfigs.filter(t => mqttTopicMatch(t.path, log.topic!));
+
+                    if (matches.length > 0) {
+                        // If there are matches, it must match at least one ENABLED subscription
+                        return matches.some(m => m.subscribed);
+                    }
+                    // If no match in list, show it (allow discovering new topics)
+                }
+            }
+
+            return true;
+        });
+    }, [logs, filterMode, config.topics]);
 
     // JSON Highlighter Helper
     const renderPayload = (data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { DndContext, useSensor, useSensors, PointerSensor, DragEndEvent } from '@dnd-kit/core';
 import { graphService, GraphNode as IGraphNode, GraphEdge as IGraphEdge } from '../../services/GraphService';
 import { GraphNode } from './GraphNode';
+import { useConfirm } from '../../context/ConfirmContext';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLayout } from './GraphStyles';
 import { Plus, Trash2, Layout, ZoomIn, ZoomOut, Link, Network } from 'lucide-react';
@@ -11,6 +12,7 @@ interface GraphEditorProps {
 }
 
 export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
+    const { confirm } = useConfirm();
     // Local state for UI responsiveness, synced with Service
     const [nodes, setNodes] = useState<IGraphNode[]>([]);
     const [edges, setEdges] = useState<IGraphEdge[]>([]);
@@ -220,8 +222,14 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
         tempEdgeRef.current = null;
     };
 
-    const clearGraph = () => {
-        if (confirm('确定要清空整个图形吗？')) {
+    const clearGraph = async () => {
+        const ok = await confirm({
+            title: '清空图形',
+            message: '确定要清空整个图形吗？所有节点和连接都将丢失。',
+            type: 'danger',
+            confirmText: '继续清空'
+        });
+        if (ok) {
             graphService.updateGraph([], []);
         }
     };

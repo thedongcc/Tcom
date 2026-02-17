@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Play, Square, Settings, FileText, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
+import { RefreshCw, Play, Square, Settings, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { MonitorSessionConfig } from '../../types/session';
 import { Com0Com, PairInfo } from '../../utils/com0com';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface MonitorConfigPanelProps {
     session: any;
@@ -10,6 +11,7 @@ interface MonitorConfigPanelProps {
 }
 
 export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPanelProps) => {
+    const { confirm } = useConfirm();
     const { config, isConnected, isConnecting } = session;
     const monitorConfig = config as MonitorSessionConfig;
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = sessionManager;
@@ -119,8 +121,8 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
     // Helper to calculate next available COMs
     const suggestNextPair = () => {
-        let i = 11;
-        while (usedPorts.has(`COM${i}`) || usedPorts.has(`COM${i + 1}`) || physicalPorts.includes(`COM${i}`) || physicalPorts.includes(`COM${i + 1}`)) i += 2;
+        let i = 1;
+        while (usedPorts.has(`COM${i}`) || usedPorts.has(`COM${i + 1}`) || physicalPorts.includes(`COM${i}`) || physicalPorts.includes(`COM${i + 1}`)) i++;
         setNewPairExt(`COM${i}`);
         setNewPairInt(`COM${i + 1}`);
     };
@@ -128,10 +130,16 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     // Available virtual ports for SELECTION (only External ports of existing pairs)
     // We assume PortA is external usually, or allow user to pick either?
     // Let's users pick either side of a pair.
+    // DEDUPLICATE: Prevent duplicate keys if mirroring pairs exist or system reports same port twice.
     const availablePairOptions = existingPairs.flatMap(p => [
         { value: p.portA, label: `${p.portA} (paired with ${p.portB})` },
         { value: p.portB, label: `${p.portB} (paired with ${p.portA})` }
-    ]);
+    ]).reduce((acc, current) => {
+        if (!acc.find(item => item.value === current.value)) {
+            acc.push(current);
+        }
+        return acc;
+    }, [] as { value: string, label: string }[]);
 
     const handleToggleConnection = async () => {
         if (isConnected) {
@@ -200,61 +208,85 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                 </div>
 
                 {/* Virtual Pair Management */}
-                <div className="flex flex-col gap-1 border border-[#3c3c3c] p-2 bg-[#2d2d2d]">
-                    <label className="text-[11px] text-[#969696] flex justify-between items-center mb-1">
-                        Virtual Pairs
-                        <div className="flex gap-1">
-                            <button onClick={() => { suggestNextPair(); }} className="hover:text-white" title="Suggest Next Pair"><FileText size={10} /></button>
-                            <button onClick={refreshPairs} title="Refresh"><RefreshCw size={10} /></button>
+                <div className="flex flex-col gap-1 border border-[#3c3c3c] p-2 bg-[#2d2d2d] rounded-sm">
+                    <div className="text-[11px] text-[#969696] flex justify-between items-center mb-1 font-medium">
+                        <span>Virtual Pairs</span>
+                        <div className="flex gap-1 items-center">
+                            <button
+                                onClick={(e) => { e.preventDefault(); suggestNextPair(); }}
+                                className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-white transition-colors"
+                                title="Suggest Next Pair"
+                            >
+                                <Wand2 size={13} />
+                            </button>
+                            <button
+                                onClick={(e) => { e.preventDefault(); refreshPairs(); }}
+                                className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-white transition-colors"
+                                title="Refresh"
+                            >
+                                <RefreshCw size={13} />
+                            </button>
                         </div>
-                    </label>
+                    </div>
 
                     {!isConnected && (
-                        <div className="flex gap-1 mb-2 items-center">
-                            <select
-                                className="w-20 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none"
-                                value={newPairExt}
-                                onChange={e => setNewPairExt(e.target.value)}
+                        <div className="flex flex-col gap-2 mb-2">
+                            <div className="flex gap-1 items-center">
+                                <select
+                                    className="flex-1 min-w-0 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none"
+                                    value={newPairExt}
+                                    onChange={e => setNewPairExt(e.target.value)}
+                                >
+                                    {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
+                                        <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com)}>
+                                            {com}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
+                                <select
+                                    className="flex-1 min-w-0 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none"
+                                    value={newPairInt}
+                                    onChange={e => setNewPairInt(e.target.value)}
+                                >
+                                    {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
+                                        <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt}>
+                                            {com}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button
+                                onClick={createNewPair}
+                                disabled={isCreatingPair}
+                                className="w-full bg-[#0e639c] text-white px-3 py-1.5 text-[12px] rounded-sm hover:bg-[#1177bb] transition-colors"
                             >
-                                {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
-                                    <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com)}>
-                                        {com}
-                                    </option>
-                                ))}
-                            </select>
-                            <ArrowRightLeft size={10} className="text-[#969696]" />
-                            <select
-                                className="w-20 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none"
-                                value={newPairInt}
-                                onChange={e => setNewPairInt(e.target.value)}
-                            >
-                                {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
-                                    <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt}>
-                                        {com}
-                                    </option>
-                                ))}
-                            </select>
-                            <button onClick={createNewPair} disabled={isCreatingPair} className="bg-[#0e639c] text-white px-2 py-1 text-[11px] rounded hover:bg-[#1177bb]">
-                                {isCreatingPair ? '...' : 'Create'}
+                                {isCreatingPair ? 'Creating...' : 'Create Virtual Pair'}
                             </button>
                         </div>
                     )}
 
                     <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
                         {existingPairs.map(pair => (
-                            <div key={pair.id} className="flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1 rounded">
+                            <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1 relative">
                                 <span className="text-[#cccccc]">{pair.portA} <ArrowRightLeft size={10} className="inline mx-1" /> {pair.portB}</span>
                                 {!isConnected && (
                                     <button
-                                        className="text-[#cccccc] hover:text-[var(--vscode-errorForeground)]"
+                                        className="p-1 rounded hover:bg-[#4a4a4a] text-[#666] hover:text-[#f48771] transition-colors"
                                         onClick={async () => {
-                                            if (confirm(`Delete pair ${pair.portA} <-> ${pair.portB}?`)) {
+                                            const ok = await confirm({
+                                                title: '删除虚拟串口对',
+                                                message: `确定要删除此对虚拟串口吗？\n${pair.portA} <-> ${pair.portB}\n注意：如果有其他软件正在占用这些端口，删除可能会导致系统提示重启。`,
+                                                type: 'danger',
+                                                confirmText: '确认删除'
+                                            });
+                                            if (ok) {
                                                 await Com0Com.removePair(monitorConfig.setupcPath!, pair.id);
                                                 refreshPairs();
                                             }
                                         }}
                                     >
-                                        <Trash2 size={12} />
+                                        <Trash2 size={13} />
                                     </button>
                                 )}
                             </div>
@@ -264,58 +296,53 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                 </div>
 
                 {/* Select Virtual Port (from existing pairs) */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696]">Monitor External Port (App connects here)</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                        value={monitorConfig.virtualSerialPort || ''}
-                        onChange={(e) => {
-                            const port = e.target.value;
-                            updateConfig({ virtualSerialPort: port });
-                            // Auto-find internal port
-                            const pair = existingPairs.find(p => p.portA === port || p.portB === port);
-                            if (pair) {
-                                const internal = pair.portA === port ? pair.portB : pair.portA;
-                                updateConfig({ pairedPort: internal });
-                            }
-                        }}
-                        disabled={isConnected}
-                    >
-                        <option value="" disabled>Select Port</option>
-                        {/* Prefer Setupc Pairs info if available */}
-                        {availablePairOptions.length > 0 ? (
-                            availablePairOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))
-                        ) : (
-                            /* Fallback to Registry com0com ports */
-                            ports.filter(p => p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual')).map(port => (
-                                <option key={port.path} value={port.path}>
-                                    {port.friendlyName
-                                        ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
-                                        : port.path}
-                                </option>
-                            ))
-                        )}
-                    </select>
-                    <label className="text-[11px] text-[#969696] mt-2">Internal Bridge Port (Paired with External)</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                        value={monitorConfig.pairedPort || ''}
-                        onChange={(e) => {
-                            updateConfig({ pairedPort: e.target.value });
-                        }}
-                        disabled={isConnected}
-                    >
-                        <option value="" disabled>Select Internal Port</option>
-                        {ports.map(port => (
-                            <option key={port.path} value={port.path}>
-                                {port.friendlyName
-                                    ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
-                                    : port.path}
-                            </option>
-                        ))}
-                    </select>
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[11px] text-[#969696]">Monitor External Port (App connects here)</label>
+                        <select
+                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
+                            value={monitorConfig.virtualSerialPort || ''}
+                            onChange={(e) => {
+                                const port = e.target.value;
+                                updateConfig({ virtualSerialPort: port });
+                                // Auto-find internal port
+                                const pair = existingPairs.find(p => p.portA === port || p.portB === port);
+                                if (pair) {
+                                    const internal = pair.portA === port ? pair.portB : pair.portA;
+                                    updateConfig({ pairedPort: internal });
+                                }
+                            }}
+                            disabled={isConnected}
+                        >
+                            <option value="" disabled>Select Port</option>
+                            {availablePairOptions.length > 0 ? (
+                                availablePairOptions.map(opt => (
+                                    <option key={`v-pair-${opt.value}`} value={opt.value}>{opt.label}</option>
+                                ))
+                            ) : (
+                                // Fallback: try to guess com0com ports from all serial ports
+                                ports.filter(p => p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual'))
+                                    .reduce((acc, p) => {
+                                        if (!acc.find(item => item.path === p.path)) acc.push(p);
+                                        return acc;
+                                    }, [] as typeof ports)
+                                    .map(port => (
+                                        <option key={`v-fallback-${port.path}`} value={port.path}>
+                                            {port.friendlyName
+                                                ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
+                                                : port.path}
+                                        </option>
+                                    ))
+                            )}
+                        </select>
+                    </div>
+
+                    {monitorConfig.pairedPort && (
+                        <div className="px-2 py-1.5 bg-[#252526] border border-[#3c3c3c] rounded-sm flex items-center justify-between">
+                            <span className="text-[11px] text-[#969696]">Internal Bridge Port:</span>
+                            <span className="text-[12px] font-mono text-[#10b981] font-bold">{monitorConfig.pairedPort}</span>
+                        </div>
+                    )}
                 </div>
 
 
@@ -339,8 +366,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                         disabled={isConnected}
                     >
                         <option value="" disabled>Select Port</option>
-                        {ports.map(port => (
-                            <option key={port.path} value={port.path}>
+                        {ports.reduce((acc, p) => {
+                            if (!acc.find(item => item.path === p.path)) acc.push(p);
+                            return acc;
+                        }, [] as typeof ports).map(port => (
+                            <option key={`p-port-${port.path}`} value={port.path}>
                                 {port.friendlyName
                                     ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
                                     : port.path}
@@ -349,16 +379,16 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                     </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696] flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            checked={monitorConfig.autoDestroyPair ?? false}
-                            onChange={(e) => updateConfig({ autoDestroyPair: e.target.checked })}
-                            disabled={isConnected}
-                        />
-                        Auto-destroy Pair on Stop
-                    </label>
+                <div className="flex flex-col gap-1 py-1">
+                    <div
+                        className={`flex items-center justify-between cursor-pointer group ${isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={() => !isConnected && updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
+                    >
+                        <span className="text-[11px] text-[#969696] group-hover:text-[#cccccc] transition-colors">Auto-destroy Pair on Stop</span>
+                        <div className={`w-8 h-4 rounded-full flex items-center shrink-0 transition-colors px-0.5 ${monitorConfig.autoDestroyPair ? 'bg-[#10b981]' : 'bg-[#3c3c3c]'}`}>
+                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${monitorConfig.autoDestroyPair ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Baud Rate & Params for Physical Port */}

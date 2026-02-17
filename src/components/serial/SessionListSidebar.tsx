@@ -7,6 +7,7 @@ import { SessionType } from '../../types/session';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SessionListItem } from './SessionListItem';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface SessionListSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -14,6 +15,7 @@ interface SessionListSidebarProps {
 }
 
 export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionListSidebarProps) => {
+    const { confirm } = useConfirm();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, sessionId: string } | null>(null);
@@ -242,27 +244,38 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Context Menu */}
             {contextMenu && (
                 <div
-                    className="fixed z-50 bg-[var(--vscode-bg)] border border-[var(--vscode-widget-border)] shadow-lg rounded py-1 w-[120px]"
+                    className="fixed z-[5000] bg-[#252526] border border-[#454545] shadow-2xl rounded-sm py-1 w-[160px] animate-in fade-in zoom-in-95 duration-100"
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                 >
                     <div
-                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--vscode-list-hover)] hover:text-white cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[#094771] hover:text-white cursor-pointer transition-colors group"
                         onClick={() => {
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
                             if (session) startEditing(session);
                         }}
                     >
+                        <Edit2 size={13} className="opacity-60 group-hover:opacity-100" />
                         Rename
                     </div>
+                    <div className="h-[1px] bg-[#3c3c3c] my-1 mx-1" />
                     <div
-                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--vscode-list-hover)] hover:text-white cursor-pointer text-red-400"
-                        onClick={() => {
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[#a1260d] hover:text-white cursor-pointer text-red-400 transition-colors group"
+                        onClick={async () => {
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
-                            if (session && confirm(`Delete session '${session.name}'?`)) {
-                                sessionManager.deleteSession(session.id);
+                            if (session) {
+                                const ok = await confirm({
+                                    title: '删除会话',
+                                    message: `确定要删除会话 '${session.name}' 吗？\n此操作将永久移除该会话的所有配置。`,
+                                    type: 'danger',
+                                    confirmText: '删除会话'
+                                });
+                                if (ok) {
+                                    sessionManager.deleteSession(session.id);
+                                }
                             }
                         }}
                     >
+                        <Trash2 size={13} className="opacity-60 group-hover:opacity-100" />
                         Delete
                     </div>
                 </div>

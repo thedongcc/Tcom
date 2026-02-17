@@ -15,12 +15,23 @@ import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 
 export const Layout = ({ children }: { children?: ReactNode }) => {
-    const [activeView, setActiveView] = useState('explorer');
+    const [activeView, setActiveView] = useState(() => {
+        return localStorage.getItem('layout-active-view') || 'explorer';
+    });
     const sessionManager = useSessionManager();
     const editorLayout = useEditorLayout();
     const { showUpdateDialog, setShowUpdateDialog } = useAutoUpdate();
     // Track restored IDs to avoid infinite loops when savedSessions updates during restoration
     const restoredIdsRef = useRef<Set<string>>(new Set());
+
+    // Persist activeView
+    useEffect(() => {
+        if (sessionManager.workspacePath) {
+            localStorage.setItem(`layout-active-view-${sessionManager.workspacePath}`, activeView);
+        } else {
+            localStorage.setItem('layout-active-view', activeView);
+        }
+    }, [activeView, sessionManager.workspacePath]);
 
     // Persist layout based on workspace
     useEffect(() => {
@@ -28,6 +39,10 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
             editorLayout.setPersistenceKey(sessionManager.workspacePath);
             // Reset restoration set when switching workspaces
             restoredIdsRef.current.clear();
+
+            // Load view for this specific workspace
+            const savedView = localStorage.getItem(`layout-active-view-${sessionManager.workspacePath}`);
+            if (savedView) setActiveView(savedView);
         }
     }, [sessionManager.workspacePath]);
 
