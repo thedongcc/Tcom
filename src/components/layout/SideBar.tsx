@@ -7,6 +7,7 @@ import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { CommandListSidebar } from '../commands/CommandListSidebar';
 import { usePluginManager } from '../../context/PluginContext';
 import { ExtensionsSidebar } from '../extensions/ExtensionsSidebar';
+import { useI18n } from '../../context/I18nContext';
 
 interface SideBarProps {
     activeView: string;
@@ -20,6 +21,7 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
 
     const { getPlugin } = usePluginManager();
     const activePlugin = getPlugin(activeView);
+    const { t } = useI18n();
 
     // Resizing State
     const [width, setWidth] = useState(() => {
@@ -81,7 +83,7 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
             style={{ width: `${width}px`, backgroundColor: 'var(--vscode-sidebar)' }}
         >
             <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--vscode-fg)] tracking-wide uppercase shrink-0">
-                <span className="truncate">{activePlugin ? activePlugin.name : activeView === 'explorer' ? 'SESSIONS' : activeView === 'serial' ? 'CONFIGURATION' : activeView === 'commands' ? 'COMMANDS' : activeView}</span>
+                <span className="truncate">{activePlugin ? activePlugin.name : activeView === 'explorer' ? t('sidebar.sessions') : activeView === 'serial' ? t('sidebar.configuration') : activeView === 'commands' ? t('sidebar.commands') : activeView}</span>
                 <MoreHorizontal size={14} className="cursor-pointer hover:text-white" />
             </div>
 

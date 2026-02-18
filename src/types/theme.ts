@@ -1,5 +1,10 @@
+import type { ThemeDefinition } from '../themes';
+
+// ThemeMode 保留为字符串联合类型以兼容现有代码，同时支持自定义主题 id
+export type ThemeMode = 'dark' | 'light' | 'hc' | 'one-dark-vivid' | (string & {});
+
 export interface ThemeColors {
-    // Log Area
+    // 日志区域
     rxTextColor: string;
     txTextColor: string;
     rxLabelColor: string;
@@ -8,24 +13,21 @@ export interface ThemeColors {
     errorColor: string;
     timestampColor: string;
     rxBgColor: string;
-    txBgColor: string;
 
-    // Input Area
+    // 输入区域
     inputBgColor: string;
     inputTextColor: string;
 
-    // Tokens
+    // 令牌标记
     crcTokenColor: string;
     flagTokenColor: string;
 
-    // Global
+    // 全局/强调
     accentColor: string;
 }
 
 export interface ThemeImages {
-    rxBackground?: string; // Data URL or URL
-    txBackground?: string;
-    inputBackground?: string;
+    rxBackground?: string; // Data URL 或 URL
 }
 
 export interface ThemeTypography {
@@ -34,16 +36,29 @@ export interface ThemeTypography {
     lineHeight: number;
 }
 
+export interface UIConfig {
+    sidebarPosition: 'left' | 'right';
+    showStatusBar: boolean;
+    activityBarVisible: boolean;
+    sideBarVisible: boolean;
+    activeActivityItem: string;
+}
+
 export interface ThemeConfig {
-    name: string;
+    theme: ThemeMode;
+    /** 用户自定义主题列表 */
+    customThemes: ThemeDefinition[];
     colors: ThemeColors;
     images: ThemeImages;
     typography: ThemeTypography;
-    timestampFormat: string; // e.g. "HH:mm:ss.SSS"
+    timestampFormat: string; // 例如 "HH:mm:ss.SSS"
+    language: 'zh-CN' | 'en-US';
+    ui: UIConfig;
 }
 
 export const DEFAULT_THEME: ThemeConfig = {
-    name: 'Default Dark',
+    theme: 'dark',
+    customThemes: [],
     colors: {
         rxTextColor: '#cccccc',
         txTextColor: '#ce9178',
@@ -52,12 +67,11 @@ export const DEFAULT_THEME: ThemeConfig = {
         infoColor: '#9cdcfe',
         errorColor: '#f48771',
         timestampColor: '#569cd6',
-        rxBgColor: '#1e1e1e', // Monitor BG
-        txBgColor: '#1e1e1e', // Unused if Monitor covers all? Monitor has one BG. Input has one BG.
+        rxBgColor: '#1e1e1e',
         inputBgColor: '#1e1e1e',
         inputTextColor: '#d4d4d4',
-        crcTokenColor: '#4ec9b0', // VSCode Class color
-        flagTokenColor: '#c586c0', // VSCode Control color
+        crcTokenColor: '#4ec9b0',
+        flagTokenColor: '#c586c0',
         accentColor: '#007acc'
     },
     images: {},
@@ -66,5 +80,16 @@ export const DEFAULT_THEME: ThemeConfig = {
         fontSize: 13,
         lineHeight: 1.5
     },
-    timestampFormat: 'HH:mm:ss.SSS'
+    timestampFormat: 'HH:mm:ss.SSS',
+    language: 'zh-CN',
+    ui: {
+        sidebarPosition: 'left',
+        showStatusBar: true,
+        activityBarVisible: true,
+        sideBarVisible: true,
+        activeActivityItem: 'explorer'
+    }
 };
+
+// 重新导出 ThemeDefinition 方便其他模块使用
+export type { ThemeDefinition };

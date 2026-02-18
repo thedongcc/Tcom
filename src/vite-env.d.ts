@@ -54,6 +54,7 @@ declare global {
             exec: (command: string) => Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string }>;
             installDriver: () => Promise<{ success: boolean; path?: string; error?: string }>;
             setFriendlyName: (port: string, name: string) => Promise<{ success: boolean; error?: string }>;
+            isAdmin: () => Promise<boolean>;
         }
         monitorAPI: {
             start: (sessionId: string, config: any) => Promise<{ success: boolean; error?: string }>;

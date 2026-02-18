@@ -1,14 +1,14 @@
 import { Layout } from './components/layout/Layout'
-import { ThemeProvider } from './context/ThemeContext'
 import { SettingsProvider } from './context/SettingsContext'
+import { I18nProvider } from './context/I18nContext'
 import { ToastProvider } from './context/ToastContext'
 import { CommandProvider } from './context/CommandContext'
 import { ConfirmProvider } from './context/ConfirmContext'
 
 function App() {
   return (
-    <ThemeProvider>
-      <SettingsProvider>
+    <SettingsProvider>
+      <I18nProvider>
         <ToastProvider>
           <ConfirmProvider>
             <CommandProvider>
@@ -40,8 +40,8 @@ function App() {
             </CommandProvider>
           </ConfirmProvider>
         </ToastProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+      </I18nProvider>
+    </SettingsProvider>
   )
 }
 

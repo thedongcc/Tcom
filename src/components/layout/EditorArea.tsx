@@ -1,4 +1,5 @@
 import React, { type ReactNode, useState } from 'react';
+import { useI18n } from '../../context/I18nContext';
 import { X, LayoutTemplate, Plus, Columns } from 'lucide-react';
 // Use legacy matching imports to ensure compatibility with user's environment
 import { Group, Panel, Separator } from 'react-resizable-panels';
@@ -170,6 +171,7 @@ interface GroupPanelProps {
 
 const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, onShowSettings, activeDragId, dropIndicator }: GroupPanelProps) => {
     const { setActiveGroupId, openSession, closeView, splitGroup } = layoutActions;
+    const { t } = useI18n();
 
     return (
         <div className="flex flex-col h-full w-full relative group min-w-0" onClick={() => {
@@ -259,7 +261,7 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                 {node.activeViewId ? (
                     (() => {
                         const session = sessions.find(s => s.id === node.activeViewId);
-                        if (!session) return <div className="p-4 text-center text-gray-500">Session not found</div>;
+                        if (!session) return <div className="p-4 text-center text-gray-500">{t('editor.sessionNotFound')}</div>;
 
                         if (session.config.type === 'settings') {
                             return <div key={session.id} className="absolute inset-0"><SettingsEditor /></div>;
@@ -309,8 +311,8 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 select-none pointer-events-none text-center p-4">
                         <LayoutTemplate size={64} className="mb-4 text-[var(--vscode-fg)] opacity-50" />
-                        <p className="text-lg font-medium text-[var(--vscode-fg)]">No Editor Open</p>
-                        <p className="text-sm text-[#888] mt-2 max-w-[300px]">Select a session from the sidebar or create a new one to get started.</p>
+                        <p className="text-lg font-medium text-[var(--vscode-fg)]">{t('editor.noEditorOpen')}</p>
+                        <p className="text-sm text-[#888] mt-2 max-w-[300px]">{t('editor.noEditorDesc')}</p>
                     </div>
                 )}
             </div>
@@ -389,6 +391,7 @@ interface EditorAreaProps {
 
 export const EditorArea = ({ children, sessionManager, editorLayout, onShowSettings }: EditorAreaProps) => {
     const { layout, activeGroupId, moveView, splitDrop } = editorLayout;
+    const { t } = useI18n();
 
     // NOTE: We need sessions to find labels
     const { sessions } = sessionManager;
@@ -603,7 +606,7 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
                     />
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-gray-500">
-                        No Editors Open
+                        {t('editor.noEditorOpen')}
                     </div>
                 )}
 

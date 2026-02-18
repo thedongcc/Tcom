@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Play, Square, Settings, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
+import { RefreshCw, Play, Square, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com, PairInfo } from '../../utils/com0com';
@@ -7,6 +7,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
+import { useI18n } from '../../context/I18nContext';
 
 interface MonitorConfigPanelProps {
     session: any;
@@ -16,9 +17,10 @@ interface MonitorConfigPanelProps {
 export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPanelProps) => {
     const { confirm } = useConfirm();
     const { showToast } = useToast();
+    const { t } = useI18n();
     const { config, isConnected, isConnecting } = session;
     const monitorConfig = config as MonitorSessionConfig;
-    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = sessionManager;
+    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports, isAdmin, monitorEnabled, toggleMonitor } = sessionManager;
 
     const [isCreatingPair, setIsCreatingPair] = useState(false);
     const [newPairExt, setNewPairExt] = useState('COM11');
@@ -32,66 +34,85 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     }, [session.id, updateSessionConfig]);
 
     const refreshPairs = useCallback(async () => {
-        if (!monitorConfig.setupcPath) return; // Silent return if not set
+        if (!monitorConfig.setupcPath || !monitorEnabled || !isAdmin) {
+            setExistingPairs([]);
+            return;
+        }
         setListPairsError(null);
         try {
             const pairs = await Com0Com.listPairs(monitorConfig.setupcPath);
             setExistingPairs(pairs);
 
-            // If current selected virtual port is not in pairs, clear it? 
-            // Or maybe it was just deleted.
-            // But if we have a selected port, check if we know its pair.
-            if (monitorConfig.virtualSerialPort) {
-                const pair = pairs.find(p => p.portA === monitorConfig.virtualSerialPort || p.portB === monitorConfig.virtualSerialPort);
-                if (pair) {
-                    const internal = pair.portA === monitorConfig.virtualSerialPort ? pair.portB : pair.portA;
-                    if (monitorConfig.pairedPort !== internal) {
-                        updateConfig({ pairedPort: internal });
-                    }
-                } else if (monitorConfig.pairedPort) {
-                    // Pair gone? We don't auto-clear pairedPort to allow manual override 
-                    // unless we are sure. But user complains about "No pairs found" locking them out?
-                    // Actually manual override is now possible via select.
+            // Cascade Cleanup & Auto-Selection Logic
+            let currentVirtual = monitorConfig.virtualSerialPort;
+            let currentPaired = monitorConfig.pairedPort;
+
+            // Check if existing selection is still valid
+            if (currentVirtual) {
+                const stillExists = pairs.some(p => p.portA === currentVirtual || p.portB === currentVirtual);
+                if (!stillExists) {
+                    currentVirtual = '';
+                    currentPaired = '';
                 }
             }
 
+            // Auto-selection if nothing is selected but pairs exist
+            if (!currentVirtual && pairs.length > 0) {
+                // Number-first strategy: sort by COM number and pick smallest as External
+                const firstPair = pairs[0];
+                const getComNum = (p: string) => parseInt(p.replace('COM', '')) || 999;
+                const numA = getComNum(firstPair.portA);
+                const numB = getComNum(firstPair.portB);
+
+                if (numA <= numB) {
+                    currentVirtual = firstPair.portA;
+                    currentPaired = firstPair.portB;
+                } else {
+                    currentVirtual = firstPair.portB;
+                    currentPaired = firstPair.portA;
+                }
+            }
+
+            // Update config if changed (Deduplicated by check)
+            if (currentVirtual !== monitorConfig.virtualSerialPort || currentPaired !== monitorConfig.pairedPort) {
+                updateConfig({
+                    virtualSerialPort: currentVirtual,
+                    pairedPort: currentPaired
+                });
+            } else if (currentVirtual) {
+                // Ensure internal sync even if virtual stays same
+                const pair = pairs.find(p => p.portA === currentVirtual || p.portB === currentVirtual);
+                if (pair) {
+                    const internal = pair.portA === currentVirtual ? pair.portB : pair.portA;
+                    if (monitorConfig.pairedPort !== internal) {
+                        updateConfig({ pairedPort: internal });
+                    }
+                }
+            }
         } catch (e: any) {
             console.error('Failed to list pairs', e);
             setListPairsError(e.message || String(e));
             setExistingPairs([]);
         }
-    }, [monitorConfig.setupcPath, monitorConfig.virtualSerialPort, monitorConfig.pairedPort, updateConfig]);
+    }, [monitorConfig.setupcPath, monitorConfig.virtualSerialPort, monitorConfig.pairedPort, updateConfig, monitorEnabled, isAdmin]);
 
     useEffect(() => {
-        refreshPairs();
-    }, [refreshPairs]);
+        // Load pairs when setup path, enabled status, or admin status changes
+        if (monitorConfig.setupcPath && monitorEnabled && isAdmin) {
+            refreshPairs();
+        } else if (!monitorEnabled || !isAdmin) {
+            setExistingPairs([]);
+        }
+    }, [monitorConfig.setupcPath, monitorEnabled, isAdmin, refreshPairs]);
 
-    // Auto-destroy logic on UNMOUNT (Close)
     useEffect(() => {
         return () => {
-            // Cleanup check
-            // We need to read the LATEST config because closure might capture old one.
-            // But unmount effect only runs once.
-            // We can't access "future" state.
-            // React refs are good for this.
+            // Cleanup check on unmount
         };
     }, []);
 
-    // Use ref to track config for cleanup
-    const configRef = useState(monitorConfig)[0]; // Logic flaw: this state doesn't update in ref.
-    // Better:
+    const configRef = useState(monitorConfig)[0];
     const configRefReal = { current: monitorConfig };
-    // Wait, ref object needs to be stable across renders but hold latest value.
-    // Actually, we can just use a separate useEffect that depends on nothing but returns a cleanup function 
-    // that assumes the component is unmounting. But standard useEffect cleanup runs on re-renders too if deps change.
-    // If we want "On App Close" or "On Session Close", it's handled by the parent (SessionManager) usually.
-    // BUT the user said "Auto-destroy Virtual Pair on Close".
-    // If "Close" means "Clicking Stop Monitor", we handle it in handleToggleConnection.
-    // If "Close" means "Closing the tab/app", we need specific handling.
-    // Let's implement it in handleToggleConnection (Stop) first, and maybe useSessionManager has a destroy hook.
-
-    // For tab close, session manager should handle cleanup if it knows about resources. 
-    // Let's focus on "Stop" button first as that's "Close connection".
 
     const createNewPair = async () => {
         if (!processPairCreation) return;
@@ -100,8 +121,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
             const res = await Com0Com.createPair(monitorConfig.setupcPath!, newPairExt, newPairInt);
             if (res.success) {
                 await refreshPairs();
-                // Select it automatically?
-                updateConfig({ virtualSerialPort: newPairExt });
+                // Select the newly created pair
+                updateConfig({
+                    virtualSerialPort: newPairExt,
+                    pairedPort: newPairInt
+                });
                 setIsCreatingPair(false);
             } else {
                 alert(`Creation failed: ${res.error}`);
@@ -129,12 +153,9 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     };
 
     // Available virtual ports for SELECTION (only External ports of existing pairs)
-    // We assume PortA is external usually, or allow user to pick either?
-    // Let's users pick either side of a pair.
-    // DEDUPLICATE: Prevent duplicate keys if mirroring pairs exist or system reports same port twice.
     const availablePairOptions = existingPairs.flatMap(p => [
-        { value: p.portA, label: `${p.portA} (paired with ${p.portB})` },
-        { value: p.portB, label: `${p.portB} (paired with ${p.portA})` }
+        { value: p.portA, label: `${p.portA} ${t('monitor.pairedWith', { port: p.portB })}` },
+        { value: p.portB, label: `${p.portB} ${t('monitor.pairedWith', { port: p.portA })}` }
     ]).reduce((acc, current) => {
         if (!acc.find(item => item.value === current.value)) {
             acc.push(current);
@@ -147,13 +168,14 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
             disconnectSession(session.id);
             // Auto-destroy check
             if (monitorConfig.autoDestroyPair && monitorConfig.virtualSerialPort && monitorConfig.pairedPort) {
-                // We need the pair ID to delete it.
                 const pair = existingPairs.find(p => (p.portA === monitorConfig.virtualSerialPort && p.portB === monitorConfig.pairedPort) || (p.portB === monitorConfig.virtualSerialPort && p.portA === monitorConfig.pairedPort));
                 if (pair && pair.id) {
-                    console.log('Auto-destroying pair', pair.id);
-                    await Com0Com.removePair(monitorConfig.setupcPath!, pair.id);
-                    refreshPairs();
-                    updateConfig({ virtualSerialPort: '', pairedPort: '' });
+                    if (isAdmin && monitorEnabled) {
+                        console.log('Auto-destroying pair', pair.id);
+                        await Com0Com.removePair(monitorConfig.setupcPath!, pair.id);
+                        refreshPairs();
+                        updateConfig({ virtualSerialPort: '', pairedPort: '' });
+                    }
                 }
             }
         } else {
@@ -162,6 +184,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                 alert("Please select a valid virtual pair and physical port.");
                 return;
             }
+            if (!isAdmin || !monitorEnabled) return;
             connectSession(session.id);
         }
     };
@@ -169,300 +192,363 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     return (
         <div className="flex flex-col h-full bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)]">
             <div className="px-4 py-2 border-b border-[var(--vscode-border)] bg-[#252526] text-[11px] font-bold text-[#cccccc] uppercase tracking-wide">
-                <span>Monitor Settings</span>
+                <span>{t('monitor.settings')}</span>
             </div>
 
             <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto">
-                {/* setupc.exe Path */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696]">setupc.exe Path</label>
-                    <div className="flex gap-1">
-                        <input
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                            value={setupcPath}
-                            onChange={(e) => {
-                                setSetupcPath(e.target.value);
-                                updateConfig({ setupcPath: e.target.value });
-                            }}
-                            disabled={isConnected}
-                        />
-                        <button
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-1 px-2 hover:bg-[#4a4a4a]"
-                            onClick={async () => {
-                                try {
-                                    const result = await window.workspaceAPI.openFolder();
-                                    if (result.success && result.path) {
-                                        const exePath = result.path.endsWith('\\')
-                                            ? `${result.path}setupc.exe`
-                                            : `${result.path}\\setupc.exe`;
-                                        setSetupcPath(exePath);
-                                        updateConfig({ setupcPath: exePath });
-                                    }
-                                } catch (e) {
-                                    console.error(e);
-                                }
-                            }}
-                        >
-                            <FolderOpen size={14} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Virtual Pair Management */}
-                <div className="flex flex-col gap-1 border border-[#3c3c3c] p-2 bg-[#2d2d2d] rounded-sm">
-                    <div className="text-[11px] text-[#969696] flex justify-between items-center mb-1 font-medium">
-                        <span>Virtual Pairs</span>
-                        <div className="flex gap-1 items-center">
-                            <button
-                                onClick={(e) => { e.preventDefault(); suggestNextPair(); }}
-                                className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-white transition-colors"
-                                title="Suggest Next Pair"
-                            >
-                                <Wand2 size={13} />
-                            </button>
-                            <button
-                                onClick={(e) => { e.preventDefault(); refreshPairs(); }}
-                                className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-white transition-colors"
-                                title="Refresh"
-                            >
-                                <RefreshCw size={13} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 mb-2">
-                        <div className={`flex gap-1 items-center ${isConnected ? 'opacity-50' : ''}`}>
-                            <CustomSelect
-                                items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                    label: com,
-                                    value: com,
-                                    disabled: usedPorts.has(com) || physicalPorts.includes(com)
-                                }))}
-                                value={newPairExt}
-                                onChange={val => setNewPairExt(val)}
-                                disabled={isConnected}
-                            />
-                            <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
-                            <CustomSelect
-                                items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                    label: com,
-                                    value: com,
-                                    disabled: usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt
-                                }))}
-                                value={newPairInt}
-                                onChange={val => setNewPairInt(val)}
-                                disabled={isConnected}
-                            />
-                        </div>
-                        <button
-                            onClick={() => {
-                                if (isConnected) {
-                                    showToast('请先停止监控后再创建虚拟串口对', 'info');
-                                    return;
-                                }
-                                createNewPair();
-                            }}
-                            disabled={isCreatingPair}
-                            className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${isConnected
-                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#0e639c] text-white hover:bg-[#1177bb]'
-                                }`}
-                        >
-                            {isCreatingPair ? 'Creating...' : 'Create Virtual Pair'}
-                        </button>
-                    </div>
-
-                    <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                        {existingPairs.map(pair => (
-                            <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1.5 relative hover:bg-[#444444] transition-colors rounded-sm mb-1 last:mb-0">
-                                <div className="grid grid-cols-[45px_20px_45px] items-center font-mono">
-                                    <span className="text-[#cccccc]">{pair.portA}</span>
-                                    <ArrowRightLeft size={10} className="text-[#808080]" />
-                                    <span className="text-[#cccccc]">{pair.portB}</span>
-                                </div>
-                                <button
-                                    disabled={isConnected}
-                                    className={`p-1 rounded transition-colors ${isConnected
-                                        ? 'text-gray-600 cursor-not-allowed'
-                                        : 'text-[#666] hover:text-[#f48771] hover:bg-[#4a4a4a]'
-                                        }`}
-                                    onClick={async () => {
-                                        if (isConnected) return;
-                                        const ok = await confirm({
-                                            title: '删除虚拟串口对',
-                                            message: `确定要删除此对虚拟串口吗？\n${pair.portA} <-> ${pair.portB}\n注意：如果有其他软件正在占用这些端口，删除可能会导致系统提示重启。`,
-                                            type: 'danger',
-                                            confirmText: '确认删除'
-                                        });
-                                        if (ok) {
-                                            await Com0Com.removePair(monitorConfig.setupcPath!, pair.id);
-                                            refreshPairs();
-                                        }
-                                    }}
-                                >
-                                    <Trash2 size={13} />
-                                </button>
-                            </div>
-                        ))}
-                        {existingPairs.length === 0 && <span className="text-[11px] text-[#808080] italic">No pairs found</span>}
-                    </div>
-                </div>
-
-                {/* Select Virtual Port (from existing pairs) */}
-                <div className="flex flex-col gap-2">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">Monitor External Port (App connects here)</label>
-                        <CustomSelect
-                            items={availablePairOptions.length > 0 ? availablePairOptions.map(opt => ({
-                                label: opt.label,
-                                value: opt.value,
-                                // Virtual ports from com0com are usually available unless opened by app
-                                busy: ports.find(p => p.path === opt.value)?.busy
-                            })) : (
-                                ports.filter(p => p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual'))
-                                    .reduce((acc, p) => {
-                                        if (!acc.find(item => item.path === p.path)) acc.push(p);
-                                        return acc;
-                                    }, [] as typeof ports)
-                                    .map(port => ({
-                                        label: port.friendlyName
-                                            ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
-                                            : port.path,
-                                        value: port.path,
-                                        busy: port.busy
-                                    }))
-                            )}
-                            value={monitorConfig.virtualSerialPort || ''}
-                            onChange={(port) => {
-                                updateConfig({ virtualSerialPort: port });
-                                const pair = existingPairs.find(p => p.portA === port || p.portB === port);
-                                if (pair) {
-                                    const internal = pair.portA === port ? pair.portB : pair.portA;
-                                    updateConfig({ pairedPort: internal });
-                                }
-                            }}
-                            disabled={isConnected}
-                            placeholder="Select Port"
-                            showStatus={true}
+                {/* Global Monitor Enable Switch */}
+                <div className="border border-[#3c3c3c] p-2 bg-[#2d2d2d] rounded-sm">
+                    <div
+                        onClickCapture={(e) => {
+                            if (isAdmin && isConnected) {
+                                showToast(t('monitor.stopFirst'), 'warning');
+                            }
+                        }}
+                    >
+                        <Switch
+                            label={t('monitor.enableVirtualMonitor')}
+                            checked={monitorEnabled}
+                            onChange={(checked) => toggleMonitor(checked)}
+                            disabled={!isAdmin || isConnected}
                         />
                     </div>
-
-                    {monitorConfig.pairedPort && (
-                        <div className="px-2 py-1.5 bg-[#252526] border border-[#3c3c3c] rounded-sm flex items-center justify-between">
-                            <span className="text-[11px] text-[#969696]">Internal Bridge Port:</span>
-                            <span className="text-[12px] font-mono text-[#10b981] font-bold">{monitorConfig.pairedPort}</span>
+                    {!isAdmin && (
+                        <div className="mt-2 p-2 bg-red-900/30 border border-red-500/50 rounded-sm">
+                            <p className="text-[11px] text-[#f48771]">
+                                {t('monitor.adminRequired')}
+                            </p>
                         </div>
                     )}
                 </div>
 
+                <div className={`${(!monitorEnabled || !isAdmin) ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''} flex flex-col gap-3 transition-all duration-300`}>
 
-                {/* Physical Port */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696] flex justify-between">
-                        Physical Port (Device)
-                        <button onClick={listPorts} className="hover:text-white" title="Refresh Ports">
-                            <RefreshCw size={12} />
-                        </button>
-                    </label>
-                    <CustomSelect
-                        items={ports.reduce((acc, p) => {
-                            if (!acc.find(item => item.path === p.path)) acc.push(p);
-                            return acc;
-                        }, [] as typeof ports).map(port => ({
-                            label: port.friendlyName
-                                ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
-                                : port.path,
-                            value: port.path,
-                            busy: port.busy,
-                            description: port.manufacturer ? `Manufacturer: ${port.manufacturer}` : undefined
-                        }))}
-                        value={monitorConfig.physicalSerialPort || ''}
-                        onChange={(val) => {
-                            updateConfig({
-                                physicalSerialPort: val,
-                                connection: { ...monitorConfig.connection, path: val }
-                            });
-                        }}
-                        disabled={isConnected}
-                        placeholder="Select Port"
-                        showStatus={true}
-                    />
-                </div>
+                    {/* setupc.exe Path */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[11px] text-[#969696]">{t('monitor.setupcPath')}</label>
+                        <div
+                            className="flex gap-1"
+                            onClickCapture={(e) => {
+                                if (isConnected) {
+                                    showToast(t('monitor.stopFirst'), 'warning');
+                                }
+                            }}
+                        >
+                            <input
+                                className={`w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)] ${isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                value={setupcPath}
+                                onChange={(e) => {
+                                    setSetupcPath(e.target.value);
+                                    updateConfig({ setupcPath: e.target.value });
+                                }}
+                                disabled={isConnected}
+                            />
+                            <button
+                                className={`bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-1 px-2 transition-colors ${isConnected ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#4a4a4a]'}`}
+                                onClick={async () => {
+                                    if (isConnected) return;
+                                    try {
+                                        const result = await window.workspaceAPI.openFolder();
+                                        if (result.success && result.path) {
+                                            const exePath = result.path.endsWith('\\')
+                                                ? `${result.path}setupc.exe`
+                                                : `${result.path}\\setupc.exe`;
+                                            setSetupcPath(exePath);
+                                            updateConfig({ setupcPath: exePath });
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }}
+                                disabled={isConnected}
+                            >
+                                <FolderOpen size={14} />
+                            </button>
+                        </div>
+                    </div>
 
-                <div className="py-1">
-                    <Switch
-                        label="Auto-destroy Pair on Stop"
-                        checked={monitorConfig.autoDestroyPair}
-                        onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
-                        disabled={isConnected}
-                    />
-                </div>
+                    {/* Virtual Pair Management */}
+                    <div className="flex flex-col gap-1 border border-[#3c3c3c] p-2 bg-[#2d2d2d] rounded-sm">
+                        <div className="text-[11px] text-[#969696] flex justify-between items-center mb-1 font-medium">
+                            <span>{t('monitor.virtualPairs')}</span>
+                            <div
+                                className="flex gap-1 items-center"
+                                onClickCapture={(e) => {
+                                    if (isConnected) {
+                                        showToast(t('monitor.stopFirst'), 'warning');
+                                    }
+                                }}
+                            >
+                                <button
+                                    onClick={(e) => { e.preventDefault(); if (!isConnected) suggestNextPair(); }}
+                                    className={`p-1 rounded text-[#969696] transition-colors ${isConnected ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#3c3c3c] hover:text-white'}`}
+                                    title={t('monitor.suggestNextPair')}
+                                    disabled={isConnected}
+                                >
+                                    <Wand2 size={13} />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.preventDefault(); if (!isConnected) refreshPairs(); }}
+                                    className={`p-1 rounded text-[#969696] transition-colors ${isConnected ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#3c3c3c] hover:text-white'}`}
+                                    title={t('monitor.refresh')}
+                                    disabled={isConnected}
+                                >
+                                    <RefreshCw size={13} />
+                                </button>
+                            </div>
+                        </div>
 
-                {/* Baud Rate & Params for Physical Port */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696]">Baud Rate (Physical)</label>
-                    <CustomSelect
-                        items={COMMON_BAUD_RATES.map(rate => ({
-                            label: String(rate),
-                            value: String(rate)
-                        }))}
-                        value={String(monitorConfig.connection?.baudRate || 115200)}
-                        onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, baudRate: Number(val) || 115200 } })}
-                        disabled={isConnected}
-                        allowCustom={true}
-                        placeholder="Baudrate"
-                    />
-                </div>
+                        <div className="flex flex-col gap-2 mb-2">
+                            <div className={`flex gap-1 items-center ${isConnected ? 'opacity-50' : ''}`}>
+                                <CustomSelect
+                                    items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
+                                        label: com,
+                                        value: com,
+                                        disabled: usedPorts.has(com) || physicalPorts.includes(com)
+                                    }))}
+                                    value={newPairExt}
+                                    onChange={val => setNewPairExt(val)}
+                                    disabled={isConnected}
+                                />
+                                <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
+                                <CustomSelect
+                                    items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
+                                        label: com,
+                                        value: com,
+                                        disabled: usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt
+                                    }))}
+                                    value={newPairInt}
+                                    onChange={val => setNewPairInt(val)}
+                                    disabled={isConnected}
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (isConnected) {
+                                        showToast(t('monitor.stopFirstCreate'), 'info');
+                                        return;
+                                    }
+                                    createNewPair();
+                                }}
+                                disabled={isCreatingPair || !isAdmin || !monitorEnabled}
+                                className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${isConnected || !isAdmin || !monitorEnabled
+                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#0e639c] text-white hover:bg-[#1177bb]'
+                                    }`}
+                            >
+                                {isCreatingPair ? t('monitor.creating') : t('monitor.createVirtualPair')}
+                            </button>
+                        </div>
 
-                <div className="flex gap-2">
-                    <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[#969696]">Data Bits</label>
+                        <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                            {existingPairs.map(pair => (
+                                <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1.5 relative hover:bg-[#444444] transition-colors rounded-sm mb-1 last:mb-0">
+                                    <div className="grid grid-cols-[45px_20px_45px] items-center font-mono">
+                                        <span className="text-[#cccccc]">{pair.portA}</span>
+                                        <ArrowRightLeft size={10} className="text-[#808080]" />
+                                        <span className="text-[#cccccc]">{pair.portB}</span>
+                                    </div>
+                                    <button
+                                        disabled={isConnected}
+                                        className={`p-1 rounded transition-colors ${isConnected
+                                            ? 'text-gray-600 cursor-not-allowed'
+                                            : 'text-[#666] hover:text-[#f48771] hover:bg-[#4a4a4a]'
+                                            }`}
+                                        onClick={async () => {
+                                            if (isConnected) return;
+                                            const ok = await confirm({
+                                                title: t('monitor.deletePairTitle'),
+                                                message: t('monitor.deletePairMessage', { portA: pair.portA, portB: pair.portB }),
+                                                type: 'danger',
+                                                confirmText: t('monitor.deletePairConfirm')
+                                            });
+                                            if (ok) {
+                                                await Com0Com.removePair(monitorConfig.setupcPath!, pair.id);
+                                                refreshPairs();
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                            {existingPairs.length === 0 && (
+                                <span className="text-[11px] text-[#808080] italic">
+                                    {!monitorEnabled ? t('monitor.monitorDisabled') : (!isAdmin ? t('monitor.adminPermRequired') : t('monitor.noPairsFound'))}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Select Virtual Port (from existing pairs) */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[11px] text-[#969696]">{t('monitor.externalPort')}</label>
+                            <CustomSelect
+                                items={availablePairOptions.length > 0 ? availablePairOptions.map(opt => ({
+                                    label: opt.label,
+                                    value: opt.value,
+                                    busy: ports.find(p => p.path === opt.value)?.busy
+                                })) : (
+                                    ports.filter(p => p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual'))
+                                        .reduce((acc, p) => {
+                                            if (!acc.find(item => item.path === p.path)) acc.push(p);
+                                            return acc;
+                                        }, [] as typeof ports)
+                                        .map(port => ({
+                                            label: port.friendlyName
+                                                ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
+                                                : port.path,
+                                            value: port.path,
+                                            busy: port.busy
+                                        }))
+                                )}
+                                value={monitorConfig.virtualSerialPort || ''}
+                                onChange={(port) => {
+                                    updateConfig({ virtualSerialPort: port });
+                                    const pair = existingPairs.find(p => p.portA === port || p.portB === port);
+                                    if (pair) {
+                                        const internal = pair.portA === port ? pair.portB : pair.portA;
+                                        updateConfig({ pairedPort: internal });
+                                    }
+                                }}
+                                disabled={isConnected}
+                                placeholder={t('monitor.selectPort')}
+                                showStatus={true}
+                            />
+                        </div>
+
+                        {monitorConfig.pairedPort && (
+                            <div className="px-2 py-1.5 bg-[#252526] border border-[#3c3c3c] rounded-sm flex items-center justify-between">
+                                <span className="text-[11px] text-[#969696]">{t('monitor.internalBridgePort')}</span>
+                                <span className="text-[12px] font-mono text-[#10b981] font-bold">{monitorConfig.pairedPort}</span>
+                            </div>
+                        )}
+                    </div>
+
+
+                    {/* Physical Port */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[11px] text-[#969696] flex justify-between">
+                            {t('monitor.physicalPort')}
+                            <button onClick={listPorts} className="hover:text-white" title={t('monitor.refreshPorts')}>
+                                <RefreshCw size={12} />
+                            </button>
+                        </label>
                         <CustomSelect
-                            items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
-                            value={String(monitorConfig.connection?.dataBits || 8)}
-                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(val) as any } })}
+                            items={ports.reduce((acc, p) => {
+                                if (!acc.find(item => item.path === p.path)) acc.push(p);
+                                return acc;
+                            }, [] as typeof ports).map(port => ({
+                                label: port.friendlyName
+                                    ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
+                                    : port.path,
+                                value: port.path,
+                                busy: port.busy,
+                                description: port.manufacturer ? `Manufacturer: ${port.manufacturer}` : undefined
+                            }))}
+                            value={monitorConfig.physicalSerialPort || ''}
+                            onChange={(val) => {
+                                updateConfig({
+                                    physicalSerialPort: val,
+                                    connection: { ...monitorConfig.connection, path: val }
+                                });
+                            }}
+                            disabled={isConnected}
+                            placeholder={t('monitor.selectPort')}
+                            showStatus={true}
+                        />
+                    </div>
+
+                    <div className="py-1">
+                        <Switch
+                            label={t('monitor.autoDestroyPair')}
+                            checked={monitorConfig.autoDestroyPair}
+                            onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
                             disabled={isConnected}
                         />
                     </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[#969696]">Stop Bits</label>
+
+                    {/* Baud Rate & Params for Physical Port */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[11px] text-[#969696]">{t('monitor.baudRate')}</label>
                         <CustomSelect
-                            items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
-                            value={String(monitorConfig.connection?.stopBits || 1)}
-                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(val) as any } })}
+                            items={COMMON_BAUD_RATES.map(rate => ({
+                                label: String(rate),
+                                value: String(rate)
+                            }))}
+                            value={String(monitorConfig.connection?.baudRate || 115200)}
+                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, baudRate: Number(val) || 115200 } })}
+                            disabled={isConnected}
+                            allowCustom={true}
+                            placeholder={t('monitor.baudRate')}
+                        />
+                    </div>
+
+                    <div className="flex gap-2">
+                        <div className="flex flex-col gap-1 flex-1">
+                            <label className="text-[11px] text-[#969696]">{t('monitor.dataBits')}</label>
+                            <CustomSelect
+                                items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
+                                value={String(monitorConfig.connection?.dataBits || 8)}
+                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(val) as any } })}
+                                disabled={isConnected}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1 flex-1">
+                            <label className="text-[11px] text-[#969696]">{t('monitor.stopBits')}</label>
+                            <CustomSelect
+                                items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
+                                value={String(monitorConfig.connection?.stopBits || 1)}
+                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(val) as any } })}
+                                disabled={isConnected}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[11px] text-[#969696]">{t('monitor.parity')}</label>
+                        <CustomSelect
+                            items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
+                                label: p.charAt(0).toUpperCase() + p.slice(1),
+                                value: p
+                            }))}
+                            value={monitorConfig.connection?.parity || 'none'}
+                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as any } })}
                             disabled={isConnected}
                         />
                     </div>
+
                 </div>
 
-                <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[#969696]">Parity</label>
-                    <CustomSelect
-                        items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
-                            label: p.charAt(0).toUpperCase() + p.slice(1),
-                            value: p
-                        }))}
-                        value={monitorConfig.connection?.parity || 'none'}
-                        onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as any } })}
-                        disabled={isConnected}
-                    />
-                </div>
-
-                {/* Connect Button */}
-                <div className="space-y-2 mt-auto pt-2">
+                <div className="space-y-2 mt-auto pt-4 border-t border-[#3c3c3c]">
                     <button
-                        className={`w-full py-1.5 px-3 text-white text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
+                        className={`w-full py-2 px-3 text-white text-[13px] font-bold rounded-sm transition-all flex items-center justify-center gap-2 ${isConnected
                             ? 'bg-[#a1260d] hover:bg-[#c93f24]'
-                            : 'bg-[#0e639c] hover:bg-[#1177bb] disabled:opacity-50 disabled:cursor-not-allowed'
+                            : (isAdmin && monitorEnabled ? 'bg-[#0e639c] hover:bg-[#1177bb]' : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50')
                             }`}
-                        disabled={(!monitorConfig.virtualSerialPort || !monitorConfig.physicalSerialPort) && !isConnected}
+                        disabled={(isConnecting || !monitorEnabled || !isAdmin) && !isConnected}
                         onClick={handleToggleConnection}
                     >
-                        {isConnected ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-                        {isConnected ? 'Stop Monitor' : 'Start Monitor'}
+                        {isConnecting ? (
+                            <RefreshCw size={14} className="animate-spin" />
+                        ) : isConnected ? (
+                            <Square size={14} fill="currentColor" />
+                        ) : (
+                            <Play size={14} fill="currentColor" />
+                        )}
+                        {isConnecting ? t('monitor.starting') : isConnected ? t('monitor.stopMonitor') : t('monitor.startMonitor')}
                     </button>
+                    {!isAdmin ? (
+                        <p className="text-[10px] text-center text-[#f48771] border border-red-500/30 p-1.5 bg-red-900/10 rounded-sm">
+                            {t('monitor.adminRequiredStart')}
+                        </p>
+                    ) : !monitorEnabled && (
+                        <p className="text-[10px] text-center text-[#969696] border border-white/10 p-1.5 bg-white/5 rounded-sm">
+                            {t('monitor.enableFirst')}
+                        </p>
+                    )}
                 </div>
-
             </div>
         </div>
     );

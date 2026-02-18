@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Cpu, MemoryStick, RefreshCw, Github, ArrowDownCircle } from 'lucide-react';
+import { useI18n } from '../../context/I18nContext';
 
 export const StatusBar = () => {
     const [version, setVersion] = useState('');
     const [cpu, setCpu] = useState(0);
     const [memUsed, setMemUsed] = useState(0);
     const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+    const { t } = useI18n();
 
     // Get version on mount
     useEffect(() => {
@@ -28,24 +30,24 @@ export const StatusBar = () => {
     // Listen for update status
     useEffect(() => {
         const cleanup = window.updateAPI?.onStatus((data) => {
-            if (data.type === 'checking') setUpdateStatus('Checking...');
-            else if (data.type === 'available') setUpdateStatus(`v${data.version} available!`);
+            if (data.type === 'checking') setUpdateStatus(t('statusBar.checking'));
+            else if (data.type === 'available') setUpdateStatus(`v${data.version} ${t('statusBar.available')}`);
             else if (data.type === 'not-available') {
-                setUpdateStatus('Up to date');
+                setUpdateStatus(t('statusBar.upToDate'));
                 setTimeout(() => setUpdateStatus(null), 3000);
             }
-            else if (data.type === 'downloaded') setUpdateStatus('Ready to install');
+            else if (data.type === 'downloaded') setUpdateStatus(t('statusBar.readyToInstall'));
             else if (data.type === 'error') {
-                setUpdateStatus('Update failed');
+                setUpdateStatus(t('statusBar.updateFailed'));
                 setTimeout(() => setUpdateStatus(null), 3000);
             }
         });
         return () => cleanup?.();
-    }, []);
+    }, [t]);
 
     const handleCheckUpdate = () => {
-        setUpdateStatus('Checking...');
-        window.updateAPI?.check().catch(() => setUpdateStatus('Check failed'));
+        setUpdateStatus(t('statusBar.checking'));
+        window.updateAPI?.check().catch(() => setUpdateStatus(t('statusBar.checkFailed')));
     };
 
     const openGitHub = () => {
@@ -81,7 +83,7 @@ export const StatusBar = () => {
                 <div
                     className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--vscode-hover)] cursor-pointer transition-colors"
                     onClick={handleCheckUpdate}
-                    title="Check for updates"
+                    title={t('statusBar.checkUpdate')}
                 >
                     {updateStatus ? (
                         <>
@@ -91,7 +93,7 @@ export const StatusBar = () => {
                     ) : (
                         <>
                             <RefreshCw size={10} className="opacity-60" />
-                            <span className="opacity-80">Check Update</span>
+                            <span className="opacity-80">{t('statusBar.checkUpdate')}</span>
                         </>
                     )}
                 </div>

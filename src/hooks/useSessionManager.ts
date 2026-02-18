@@ -4,6 +4,7 @@ import { SerialPortInfo } from '../vite-env';
 import { applyTXCRC, validateRXCRC } from '../utils/crc';
 import { formatPortInfo } from '../utils/format';
 import { Com0Com } from '../utils/com0com';
+import { generateUniqueName } from '../utils/naming';
 
 const MAX_LOGS = 1000;
 
@@ -15,6 +16,10 @@ export const useSessionManager = () => {
     const [workspacePath, setWorkspacePath] = useState<string | null>(null);
     const workspacePathRef = useRef<string | null>(null);
     const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [monitorEnabled, setMonitorEnabled] = useState(() => {
+        return localStorage.getItem('tcom-monitor-enabled') !== 'false'; // Default to true
+    });
 
     // --- References for stable callbacks ---
     const sessionsRef = useRef<SessionState[]>([]);
@@ -26,6 +31,12 @@ export const useSessionManager = () => {
     const registeredSessions = useRef<Set<string>>(new Set());
     const cleanupRefs = useRef(new Map<string, (() => void)[]>());
     const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+    const monitorEnabledRef = useRef(monitorEnabled);
+    const isAdminRef = useRef(isAdmin);
+
+    useEffect(() => { monitorEnabledRef.current = monitorEnabled; }, [monitorEnabled]);
+    useEffect(() => { isAdminRef.current = isAdmin; }, [isAdmin]);
 
     // --- Helper to update specific session state ---
     const updateSession = useCallback((sessionId: string, updater: (prev: SessionState) => Partial<SessionState>) => {
@@ -183,11 +194,11 @@ export const useSessionManager = () => {
     const listPorts = useCallback(async () => {
         let allPorts: SerialPortInfo[] = [];
         if ((window as any).serialAPI) {
-            const res = await (window as any).serialAPI.listPorts();
+            const res = await (window as any).serialAPI.listPorts({ includeCom0ComNames: monitorEnabledRef.current });
             if (res.success) allPorts = res.ports;
         }
         const setupcPath = findSetupcPath();
-        if (setupcPath) {
+        if (monitorEnabledRef.current && setupcPath) {
             try {
                 const pairs = await Com0Com.listPairs(setupcPath);
                 pairs.forEach(pair => {
@@ -249,6 +260,14 @@ export const useSessionManager = () => {
         }
 
         if (session.config.type === 'monitor') {
+            if (!monitorEnabledRef.current) {
+                addLog(sessionId, 'ERROR', '虚拟串口监控功能已禁用，请在设置中开启');
+                return false;
+            }
+            if (!isAdminRef.current) {
+                addLog(sessionId, 'ERROR', '启动虚拟串口监控需要管理员权限，请以管理员身份重启软件');
+                return false;
+            }
             const monitorConfig = session.config as MonitorSessionConfig;
             updateSession(sessionId, () => ({ isConnecting: true }));
             let actualPort = monitorConfig.pairedPort;
@@ -436,16 +455,17 @@ export const useSessionManager = () => {
         const newId = Date.now().toString();
         let baseConfig: any = { id: newId, type, autoConnect: false, ...config };
 
+        const existingNames = savedSessionsRef.current.map(s => s.name);
         if (type === 'serial') {
-            baseConfig.name = `Serial ${savedSessionsRef.current.filter(s => s.type === 'serial').length + 1}`;
+            baseConfig.name = generateUniqueName(existingNames, 'Serial');
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
             baseConfig.txCRC = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
             baseConfig.rxCRC = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: -1 };
         } else if (type === 'mqtt') {
-            baseConfig.name = `MQTT ${savedSessionsRef.current.filter(s => s.type === 'mqtt').length + 1}`;
+            baseConfig.name = generateUniqueName(existingNames, 'MQTT');
             baseConfig.host = 'broker.emqx.io'; baseConfig.port = 1883; baseConfig.clientId = `client-${Math.random().toString(16).slice(2, 8)}`;
         } else if (type === 'monitor') {
-            baseConfig.name = `Monitor ${savedSessionsRef.current.filter(s => s.type === 'monitor').length + 1}`;
+            baseConfig.name = generateUniqueName(existingNames, 'Monitor');
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
             baseConfig.setupcPath = 'C:\\Program Files (x86)\\com0com\\setupc.exe';
         }
@@ -480,7 +500,9 @@ export const useSessionManager = () => {
         const source = sessionsRef.current.find(s => s.id === sourceId);
         if (!source) return null;
         const newId = Date.now().toString();
-        const newConfig = { ...source.config, id: newId, name: `${source.config.name} (Copy)` };
+        const existingNames = savedSessionsRef.current.map(s => s.name);
+        const newName = generateUniqueName(existingNames, source.config.name, 'Copy');
+        const newConfig = { ...source.config, id: newId, name: newName };
         setSessions(prev => [...prev, { id: newId, config: newConfig as any, isConnected: false, isConnecting: false, logs: [] }]);
         setSavedSessions(prev => [...prev, newConfig as any]);
         if (workspacePathRef.current) await window.workspaceAPI?.saveSession(workspacePathRef.current, newConfig as any);
@@ -527,6 +549,10 @@ export const useSessionManager = () => {
         listPorts();
         const interval = setInterval(listPorts, 2000);
         const initWs = async () => {
+            if (window.com0comAPI?.isAdmin) {
+                const admin = await window.com0comAPI.isAdmin();
+                setIsAdmin(admin);
+            }
             if (!window.workspaceAPI) return;
             const lastWs = await window.workspaceAPI.getLastWorkspace();
             if (lastWs.success && lastWs.path) await openWorkspace(lastWs.path);
@@ -534,6 +560,22 @@ export const useSessionManager = () => {
         initWs();
         return () => clearInterval(interval);
     }, [listPorts, openWorkspace]);
+
+    const toggleMonitor = useCallback((enabled: boolean) => {
+        // Strict permission check
+        if (enabled && !isAdminRef.current) {
+            enabled = false;
+        }
+
+        setMonitorEnabled(enabled);
+        localStorage.setItem('tcom-monitor-enabled', String(enabled));
+        if (enabled) {
+            listPorts();
+        } else {
+            // Remove com0com ports from list when disabled
+            setPorts(prev => prev.filter(p => p.manufacturer !== 'com0com' && !p.friendlyName?.includes('Virtual')));
+        }
+    }, [listPorts]);
 
     useEffect(() => {
         if (!window.serialAPI) return;
@@ -563,11 +605,13 @@ export const useSessionManager = () => {
         createSession, duplicateSession, closeSession, connectSession, disconnectSession,
         writeToSession, writeToMonitor, updateSessionConfig, updateUIState, clearLogs, publishMqtt,
         listPorts, saveSession, deleteSession, openSavedSession, openSavedSessions, openWorkspace, closeWorkspace, browseAndOpenWorkspace,
-        reorderSessions: async (order: SessionConfig[]) => setSavedSessions(order)
+        reorderSessions: async (order: SessionConfig[]) => setSavedSessions(order),
+        isAdmin, monitorEnabled, toggleMonitor
     }), [
         sessions, activeSessionId, savedSessions, ports, workspacePath, recentWorkspaces,
         createSession, duplicateSession, closeSession, connectSession, disconnectSession,
         writeToSession, writeToMonitor, updateSessionConfig, updateUIState, clearLogs, publishMqtt,
-        listPorts, saveSession, deleteSession, openSavedSession, openSavedSessions, openWorkspace, closeWorkspace, browseAndOpenWorkspace
+        listPorts, saveSession, deleteSession, openSavedSession, openSavedSessions, openWorkspace, closeWorkspace, browseAndOpenWorkspace,
+        isAdmin, monitorEnabled, toggleMonitor
     ]);
 };

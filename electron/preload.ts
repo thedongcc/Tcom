@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 })
 
 contextBridge.exposeInMainWorld('serialAPI', {
-  listPorts: () => ipcRenderer.invoke('serial:list-ports'),
+  listPorts: (options?: any) => ipcRenderer.invoke('serial:list-ports', options),
   open: (connectionId: string, options: any) => ipcRenderer.invoke('serial:open', { connectionId, options }),
   close: (connectionId: string) => ipcRenderer.invoke('serial:close', { connectionId }),
   write: (connectionId: string, data: string | number[] | Uint8Array) => ipcRenderer.invoke('serial:write', { connectionId, data }),
@@ -115,7 +115,8 @@ contextBridge.exposeInMainWorld('workspaceAPI', {
 contextBridge.exposeInMainWorld('com0comAPI', {
   exec: (command: string) => ipcRenderer.invoke('com0com:exec', command),
   installDriver: () => ipcRenderer.invoke('com0com:install'),
-  setFriendlyName: (port: string, name: string) => ipcRenderer.invoke('com0com:name', { port, name })
+  setFriendlyName: (port: string, name: string) => ipcRenderer.invoke('com0com:name', { port, name }),
+  isAdmin: () => ipcRenderer.invoke('app:is-admin')
 });
 
 contextBridge.exposeInMainWorld('monitorAPI', {
@@ -178,6 +179,7 @@ contextBridge.exposeInMainWorld('updateAPI', {
   install: () => ipcRenderer.invoke('update:install'),
   getVersion: () => ipcRenderer.invoke('app:version'),
   getStats: () => ipcRenderer.invoke('system:stats'),
+  listFonts: () => ipcRenderer.invoke('app:list-fonts'),
   onStatus: (callback: (data: any) => void) => {
 
     const listener = (_: any, data: any) => callback(data);

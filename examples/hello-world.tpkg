@@ -1,0 +1,9 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "示例插件：演示 Tcom 插件 API 的基本用法",
+  "author": "Tcom Team",
+  "homepage": "https://github.com/thedongcc/Tcom",
+  "code": "module.exports = { activate(ctx) { let count = 0; const saved = ctx.storage.get('count'); if (saved !== null) count = saved; ctx.commands.register('hello-world.greet', '打招呼', () => { count++; ctx.storage.set('count', count); ctx.ui.showToast('Hello, Tcom! (第 ' + count + ' 次)', 'success', 3000); }); ctx.commands.register('hello-world.sessions', '查看会话', () => { const sessions = ctx.sessions.getAll(); const active = ctx.sessions.getActive(); const msg = sessions.length === 0 ? '当前无会话' : '共 ' + sessions.length + ' 个会话，当前：' + (active ? active.name : '无'); ctx.ui.showToast(msg, 'info', 4000); }); ctx.ui.showToast('Hello World 插件已加载！', 'success', 2000); }, deactivate(ctx) { ctx.ui.showToast('Hello World 插件已停用', 'info', 2000); } }"
+}

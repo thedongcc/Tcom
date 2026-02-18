@@ -8,6 +8,7 @@ import { mqttTopicMatch } from '../../utils/mqttUtils';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
+import { useI18n } from '../../context/I18nContext';
 
 interface MqttMonitorProps {
     session: {
@@ -37,6 +38,7 @@ const defaultFonts = [
 export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs, onConnectRequest }: MqttMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
+    const { t } = useI18n();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
     const mountTimeRef = useRef(Date.now());
@@ -245,14 +247,14 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             }
         }
         if (!topic) {
-            showToast('Topic is required', 'error');
+            showToast(t('toast.topicRequired'), 'error');
             return;
         }
         let data: string | Uint8Array = payload;
         if (publishFormat === 'hex') {
             const cleanHex = payload.replace(/\s+/g, '');
             if (cleanHex.length % 2 !== 0) {
-                showToast('Invalid Hex String', 'error');
+                showToast(t('toast.invalidHex'), 'error');
                 return;
             }
             data = new Uint8Array(cleanHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
@@ -364,26 +366,26 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                         >
                             <Menu size={16} />
-                            <span className="text-[11px] font-medium">Options</span>
+                            <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                         </button>
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                 <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                    <div className="text-[12px] text-[#cccccc] font-bold mb-4 pb-1 border-b border-[#3c3c3c]">Log Settings</div>
+                                    <div className="text-[12px] text-[#cccccc] font-bold mb-4 pb-1 border-b border-[#3c3c3c]">{t('monitor.logSettings')}</div>
                                     <div className="space-y-4 px-1">
                                         <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Display</div>
-                                            <Switch label="Smooth Animation" checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
-                                            <Switch label="Timestamp" checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
-                                            <Switch label="Data Length" checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
-                                            <Switch label="Merge Repeats" checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
+                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
+                                            <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
+                                            <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
+                                            <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
+                                            <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
 
                                             <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
-                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Typography</div>
+                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#aaaaaa]">Font Family:</span>
+                                                        <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
                                                         <label className="flex items-center gap-1.5 cursor-pointer group">
                                                             <input
                                                                 type="checkbox"
@@ -391,7 +393,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                                 checked={showAllFonts}
                                                                 onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
                                                             />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">System Fonts</span>
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">{t('monitor.systemFonts')}</span>
                                                         </label>
                                                     </div>
                                                     <CustomSelect
@@ -404,7 +406,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">Font Size:</span>
+                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -418,7 +420,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         </div>
                                         <div className="pt-2 border-t border-[#3c3c3c]">
                                             <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] text-white text-[11px] rounded hover:bg-[#0062a3] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
-                                                <Download size={14} /> Export Log
+                                                <Download size={14} /> {t('monitor.exportLog')}
                                             </button>
                                         </div>
                                     </div>
@@ -538,7 +540,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </div>
                     <textarea className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] p-1.5 text-[11px] font-mono outline-none resize-none" value={payload} onChange={e => setPayload(e.target.value)} />
                     <button className={`w-14 flex flex-col items-center justify-center rounded transition-colors ${isConnected ? 'bg-[#0e639c] text-white' : 'bg-[#2d2d2d] text-[#666]'}`} onClick={handleSend} disabled={session.isConnecting}>
-                        <Send size={14} /> <span className="text-[9px]">{isConnected ? 'Send' : 'Connect'}</span>
+                        <Send size={14} /> <span className="text-[9px]">{isConnected ? t('mqtt.command') : t('mqtt.connect')}</span>
                     </button>
                 </div>
             </div>

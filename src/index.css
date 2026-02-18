@@ -30,6 +30,7 @@ div[data-direction="vertical"]:hover {
   --vscode-fg: #cccccc;
   --vscode-input-bg: #3c3c3c;
   --vscode-input-fg: #cccccc;
+  --vscode-input-border: #3c3c3c;
   --vscode-input-placeholder: #a6a6a6;
   --vscode-hover: #2a2d2e;
   --vscode-selection: #094771;
@@ -37,6 +38,18 @@ div[data-direction="vertical"]:hover {
   --vscode-focusBorder: #007acc;
   --vscode-list-hover: #2a2d2e;
   --vscode-list-active: #37373d;
+
+  /* Editor - Dark */
+  --vscode-editor-background: #1e1e1e;
+
+  /* Checkbox - Dark */
+  --vscode-checkbox-background: #007acc;
+  --vscode-checkbox-border: #007acc;
+  --vscode-checkbox-foreground: #ffffff;
+
+  /* Settings - Dark */
+  --vscode-settings-header-bg: #252526;
+  --vscode-settings-row-hover-bg: #2a2d2e;
 
   /* Scrollbar - Dark */
   --vscode-scrollbar-shadow: #000000;
@@ -66,154 +79,15 @@ div[data-direction="vertical"]:hover {
   --font-mono: 'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Segou UI Mono', 'Consolas', 'Courier New', monospace;
 }
 
-.theme-light {
-  /* Light+ */
-  --vscode-bg: #ffffff;
-  --vscode-sidebar: #f3f3f3;
-  --vscode-activitybar: #2c2c2c;
-  --vscode-statusbar: #e8e8e8;
-  --vscode-titlebar: #dddddd;
-  --vscode-panel: #ffffff;
-  --vscode-border: #e4e4e4;
-  --vscode-fg: #333333;
-  --vscode-input-bg: #ffffff;
-  --vscode-input-fg: #333333;
-  --vscode-input-placeholder: #a6a6a6;
-  --vscode-hover: #e8e8e8;
-  --vscode-selection: #add6ff;
-  --vscode-accent: #007acc;
-  --vscode-focusBorder: #0090f1;
-  --vscode-list-hover: #e8e8e8;
-  --vscode-list-active: #e4e6f1;
 
-  /* Scrollbar - Light */
-  --vscode-scrollbar-shadow: #dddddd;
-  --vscode-scrollbar-slider: #64646466;
-  --vscode-scrollbar-slider-hover: #646464bb;
-  --vscode-scrollbar-slider-active: #00000099;
+/* 主题 CSS 变量由 JS 动态注入到 :root（见 src/themes/index.ts applyTheme）*/
+/* :root 中的 Dark 主题变量作为默认值，防止 JS 加载前页面闪烁 */
 
-  /* Additional Widgets - Light */
-  --vscode-editor-widget-bg: #f3f3f3;
-  --vscode-widget-border: #e4e4e4;
-
-  /* Buttons & Links - Light */
-  --vscode-button-bg: #007acc;
-  --vscode-button-fg: #ffffff;
-  --vscode-button-hover-bg: #0062a3;
-  --vscode-button-secondary-bg: #e4e4e4;
-  --vscode-button-secondary-hover-bg: #d4d4d4;
-  --vscode-textLink-foreground: #006ab1;
-
-  --vscode-activitybar-inactive-fg: #858585;
-  /* Keep dark style due to dark bar */
-
-  /* Menu - Light */
-  --vscode-menu-bg: #ffffff;
-  --vscode-menu-fg: #333333;
-  --vscode-menu-border: #cecece;
-}
-
-.theme-hc {
-  /* High Contrast */
-  --vscode-bg: #000000;
-  --vscode-sidebar: #000000;
-  --vscode-activitybar: #000000;
-  --vscode-statusbar: #000000;
-  --vscode-titlebar: #000000;
-  --vscode-panel: #000000;
-  --vscode-border: #ffffff;
-  /* Contrast border */
-  --vscode-fg: #ffffff;
-  --vscode-input-bg: #000000;
-  --vscode-input-fg: #ffffff;
-  --vscode-input-placeholder: #a6a6a6;
-  --vscode-hover: #1f1f1f;
-  /* Or outline */
-  --vscode-selection: #f38518;
-  --vscode-accent: #f38518;
-  --vscode-focusBorder: #f38518;
-  --vscode-list-hover: #1f1f1f;
-  /* HC typically uses borders on hover */
-  --vscode-list-active: #000000;
-
-  /* Scrollbar - HC */
-  --vscode-scrollbar-shadow: transparent;
-  --vscode-scrollbar-slider: #ffffff;
-  --vscode-scrollbar-slider-hover: #ffffff;
-  --vscode-scrollbar-slider-active: #ffffff;
-
-  /* Additional Widgets - HC */
-  --vscode-editor-widget-bg: #000000;
-  --vscode-widget-border: #ffffff;
-
-  /* Buttons & Links - HC */
-  --vscode-button-bg: transparent;
-  --vscode-button-fg: #ffffff;
-  --vscode-button-hover-bg: transparent;
-  --vscode-button-secondary-bg: transparent;
-  --vscode-button-secondary-hover-bg: transparent;
-  --vscode-textLink-foreground: #3794ff;
-
-  --vscode-activitybar-inactive-fg: #ffffff;
-  /* HC uses white usually with opacity or border */
-
-  /* Menu - HC */
-  --vscode-menu-bg: #000000;
-  --vscode-menu-fg: #ffffff;
-  --vscode-menu-border: #ffffff;
-}
-
-.theme-one-dark-vivid {
-  /* One Dark Vivid */
-  --vscode-bg: #282c34;
-  --vscode-sidebar: #21252b;
-  --vscode-activitybar: #21252b;
-  --vscode-statusbar: #21252b;
-  --vscode-titlebar: #21252b;
-  --vscode-panel: #282c34;
-  --vscode-border: #181a1f;
-  --vscode-fg: #abb2bf;
-  --vscode-input-bg: #282c34;
-  --vscode-input-fg: #abb2bf;
-  --vscode-input-placeholder: #5c6370;
-  --vscode-hover: #2c313a;
-  --vscode-selection: #3e4451;
-  --vscode-accent: #61afef;
-  /* Blue */
-  --vscode-focusBorder: #61afef;
-  --vscode-list-hover: #2c313a;
-  --vscode-list-active: #2c313a;
-
-  /* Scrollbar - One Dark */
-  --vscode-scrollbar-shadow: #000000;
-  --vscode-scrollbar-slider: #4e566680;
-  --vscode-scrollbar-slider-hover: #5a6375aa;
-  --vscode-scrollbar-slider-active: #747d9180;
-
-  /* Additional Widgets - One Dark */
-  --vscode-editor-widget-bg: #21252b;
-  --vscode-widget-border: #181a1f;
-
-  /* Buttons & Links - One Dark */
-  --vscode-button-bg: #61afef;
-  --vscode-button-fg: #282c34;
-  --vscode-button-hover-bg: #528bff;
-  --vscode-button-secondary-bg: #3e4451;
-  --vscode-button-secondary-hover-bg: #4b5263;
-  --vscode-textLink-foreground: #61afef;
-
-  --vscode-activitybar-inactive-fg: #5c6370;
-
-  /* Menu - One Dark */
-  --vscode-menu-bg: #282c34;
-  --vscode-menu-fg: #abb2bf;
-  --vscode-menu-border: #181a1f;
-}
 
 body {
   background-color: var(--vscode-bg);
   color: var(--vscode-fg);
-  font-family: 'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--st-font-family, 'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
   overflow: hidden;
   /* Prevent body scroll, handle in components */
 }

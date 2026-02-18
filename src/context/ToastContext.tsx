@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Toast, ToastType } from '../components/common/Toast';
+import { useI18n } from './I18nContext';
 
 interface ToastContextType {
     showToast: (message: string, type?: ToastType, duration?: number) => void;
@@ -18,6 +19,7 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const { t } = useI18n();
 
     const removeToast = useCallback((id: string) => {
         setToasts(prev => prev.filter(t => t.id !== id));
@@ -93,7 +95,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const handleCopy = () => {
             const selection = window.getSelection();
             if (selection && selection.toString().length > 0) {
-                showToast('已复制到剪贴板', 'success', 800);
+                showToast(t('toast.copied'), 'success', 800);
             }
         };
 
@@ -103,7 +105,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const isEditable = target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(target.tagName);
 
             if (isEditable) {
-                showToast('已粘贴', 'success', 800);
+                showToast(t('toast.pasted'), 'success', 800);
             }
         };
 
@@ -117,7 +119,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 // or check clipboard directly if possible (though limited in browsers)
                 navigator.clipboard.readText().then(text => {
                     if (!text) {
-                        showToast('无可粘贴的内容', 'warning', 800);
+                        showToast(t('toast.nothingToPaste'), 'warning', 800);
                     }
                 }).catch(() => {
                     // Privacy settings might block readText

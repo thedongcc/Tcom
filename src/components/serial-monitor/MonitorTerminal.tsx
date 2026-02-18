@@ -28,6 +28,7 @@ import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { ContextMenu } from '../common/ContextMenu';
 import { SessionState, MonitorSessionConfig, LogEntry } from '../../types/session';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
+import { useI18n } from '../../context/I18nContext';
 
 interface MonitorTerminalProps {
     session: SessionState;
@@ -179,6 +180,7 @@ const LogItem = React.memo(({
 export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: MonitorTerminalProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
+    const { t } = useI18n();
     const sessionManager = useSession();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -308,7 +310,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const rxBytes = useMemo(() => logs.reduce((acc, log) => (log.type === 'RX' && log.topic === 'physical' && log.crcStatus === 'ok' ? acc + ((typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length) * (log.repeatCount || 1)) : acc), 0), [logs]);
 
     const handleSend = (data: string | Uint8Array, mode: 'text' | 'hex') => {
-        if (!isConnected) { showToast('Please connect first', 'error'); return; }
+        if (!isConnected) { showToast(t('toast.connectFirst'), 'error'); return; }
         let finalData = data;
         if (mode === 'hex' && typeof data === 'string') {
             const cleanHex = data.replace(/\s+/g, '');
@@ -331,7 +333,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const [showCommandEditor, setShowCommandEditor] = useState<any | null>(null);
 
     const handleLogContextMenu = useCallback((e: React.MouseEvent, log: any) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, log }); }, []);
-    const handleCopyLog = (log: any) => { navigator.clipboard.writeText(formatData(log.data, viewMode, encoding)); showToast('已复制', 'success', 1500); setContextMenu(null); };
+    const handleCopyLog = (log: any) => { navigator.clipboard.writeText(formatData(log.data, viewMode, encoding)); showToast(t('toast.copied'), 'success', 1500); setContextMenu(null); };
     const handleAddToCommand = (log: any) => { setShowCommandEditor({ name: generateUniqueName(commands, 'command', undefined), payload: formatData(log.data, viewMode, encoding), mode: viewMode === 'hex' ? 'hex' : 'text', tokens: {}, lineEnding: '' }); setContextMenu(null); };
 
     const handleInputStateChange = useCallback((state: any) => {
@@ -398,32 +400,32 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
                     <div className="relative">
                         <button className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
-                            <Menu size={16} /> <span className="text-[11px] font-medium">Options</span>
+                            <Menu size={16} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                         </button>
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                 <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
                                     <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
-                                        <div className="text-[12px] text-[#cccccc] font-bold">Monitor Settings</div>
+                                        <div className="text-[12px] text-[#cccccc] font-bold">{t('monitor.logSettings')}</div>
                                         <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
                                     </div>
                                     <div className="space-y-4 px-1">
                                         <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Display</div>
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2 hidden">Encoding</div>
+                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
+                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
                                             <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }} />
-                                            <Switch label="Timestamp" checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
-                                            <Switch label="Packet Type" checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
-                                            <Switch label="Data Length" checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
-                                            <Switch label="Merge Repeats" checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
-                                            <Switch label="Smooth Animation" checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
+                                            <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
+                                            <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
+                                            <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
+                                            <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
+                                            <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
 
                                             <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
-                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Typography</div>
+                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#aaaaaa]">Font Family:</span>
+                                                        <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
                                                         <label className="flex items-center gap-1.5 cursor-pointer group">
                                                             <input
                                                                 type="checkbox"
@@ -431,7 +433,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                                                 checked={showAllFonts}
                                                                 onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
                                                             />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">System Fonts</span>
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">{t('monitor.systemFonts')}</span>
                                                         </label>
                                                     </div>
                                                     <CustomSelect
@@ -444,7 +446,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">Font Size:</span>
+                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -459,7 +461,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
                                         <div className="pt-2 border-t border-[#3c3c3c]">
                                             <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] text-white text-[11px] rounded hover:bg-[#0062a3] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
-                                                <Download size={14} /> Export Log
+                                                <Download size={14} /> {t('monitor.exportLog')}
                                             </button>
                                         </div>
                                     </div>
@@ -481,8 +483,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                 {isConnected && !partnerConnected && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-amber-600/20 border-b border-amber-600/30">
                         <div className="px-4 py-2 flex items-center justify-between gap-3 text-amber-400 text-xs">
-                            <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>对端程序尚未打开端口 <span className="text-white underline">{(config as MonitorSessionConfig).virtualSerialPort}</span>。数据将积压。</span></div>
-                            <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }}>Switch Physical</button>
+                            <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort })}</span></div>
+                            <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }}>{t('monitor.switchPhysical')}</button>
                         </div>
                     </motion.div>
                 )}
@@ -519,13 +521,13 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
             <div className="bg-[#1e1e1e] border-t border-[#2b2b2b]">
                 <div className="flex items-center bg-[#2d2d2e]/30 px-3 py-1 border-y border-white/5 gap-2">
-                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded ${sendTarget === 'virtual' ? 'bg-[#007acc] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}>虚拟: {(config as MonitorSessionConfig).virtualSerialPort}</button>
-                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded ${sendTarget === 'physical' ? 'bg-[#4ec9b0] text-[#0a2e26] shadow-md' : 'text-gray-500 hover:text-gray-300'}`}>物理: {(config as MonitorSessionConfig).connection?.path || '未连接'}</button>
+                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[#007acc] text-white shadow-md' : 'bg-[#292929] text-gray-400 hover:text-gray-200 hover:bg-[#4a4a4a]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
+                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[#4ec9b0] text-[#0a2e26] shadow-md' : 'bg-[#292929] text-gray-400 hover:text-gray-200 hover:bg-[#4a4a4a]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
                 <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding || '\r\n'} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
             </div>
 
-            {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: 'Copy', icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: 'Add to Command', icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}
+            {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: t('common.copy'), icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: t('common.addCommand'), icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}
             {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', ...showCommandEditor }} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
         </div >
     );

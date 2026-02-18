@@ -1,8 +1,22 @@
-import { useState, useRef } from 'react';
-import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, Check, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
+import { useConfirm } from '../../context/ConfirmContext';
+import { useI18n } from '../../context/I18nContext';
+import { ThemeMode } from '../../types/theme';
+import { BUILT_IN_THEMES, BUILT_IN_THEME_IDS, importTheme as parseTheme, exportTheme } from '../../themes';
+import { CustomSelect } from '../common/CustomSelect';
 
-const ColorInput = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => {
+// ─── 颜色选择器 ───────────────────────────────────────────────────────────────
+const ColorInput = ({
+    label,
+    value,
+    onChange,
+}: {
+    label: string;
+    value: string;
+    onChange: (val: string) => void;
+}) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const openEyeDropper = async () => {
@@ -11,18 +25,18 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
             const eyeDropper = new (window as any).EyeDropper();
             const result = await eyeDropper.open();
             onChange(result.sRGBHex);
-        } catch (e) {
-            // User cancelled or error
+        } catch {
+            // 用户取消或出错
         }
     };
 
     return (
-        <div className="flex items-center justify-between py-2 border-b border-[var(--vscode-settings-row-hover-bg)] hover:bg-[var(--vscode-list-hover)] px-2 group">
+        <div className="flex items-center justify-between py-2 border-b border-[var(--vscode-settings-row-hover-bg)] last:border-0 hover:bg-[var(--vscode-list-hover)] px-3 group">
             <label className="text-[13px] text-[var(--vscode-fg)]">{label}</label>
             <div className="flex items-center gap-2">
-                {/* Visual Swatch / Trigger */}
+                {/* 颜色预览块 */}
                 <div
-                    className="w-5 h-5 rounded border border-[#3c3c3c] cursor-pointer shadow-sm relative overflow-hidden flex-shrink-0"
+                    className="w-5 h-5 rounded border border-[var(--vscode-input-border)] cursor-pointer shadow-sm relative overflow-hidden flex-shrink-0"
                     style={{ backgroundColor: value || '#000000' }}
                     onClick={() => inputRef.current?.click()}
                     title="Click to pick color"
@@ -30,29 +44,27 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
                     <input
                         ref={inputRef}
                         type="color"
-                        value={(value && value.length === 7) ? value : '#000000'}
+                        value={value && value.length === 7 ? value : '#000000'}
                         onChange={e => onChange(e.target.value)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full p-0 border-none"
                     />
                 </div>
 
-                {/* Eyedropper Button (if supported) */}
                 {'EyeDropper' in window && (
                     <button
                         onClick={openEyeDropper}
-                        className="p-1 text-[#969696] hover:text-[#cccccc] hover:bg-[#3c3c3c] rounded transition-colors"
+                        className="p-1 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
                         title="Pick color from screen"
                     >
                         <Pipette size={14} />
                     </button>
                 )}
 
-                {/* Text Input */}
                 <input
                     type="text"
                     value={value}
                     onChange={e => onChange(e.target.value)}
-                    className="w-20 bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-1 py-0.5 outline-none focus:border-[var(--vscode-focusBorder)] uppercase font-mono text-center"
+                    className="w-24 bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-0.5 outline-none focus:border-[var(--vscode-focusBorder)] uppercase font-mono"
                     spellCheck={false}
                 />
             </div>
@@ -60,33 +72,85 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
     );
 };
 
-const Group = ({ title, children }: { title: string, children: React.ReactNode }) => (
-    <div className="mb-6">
-        <h3 className="text-[11px] font-bold text-[var(--vscode-fg)] opacity-60 uppercase tracking-wider mb-2 px-2">{title}</h3>
-        <div className="flex flex-col">
+// ─── 分组容器 ─────────────────────────────────────────────────────────────────
+const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="mb-8">
+        <h3 className="text-[11px] font-bold text-[var(--vscode-fg)] opacity-50 uppercase tracking-widest mb-3 px-2 border-l-2 border-[var(--vscode-focusBorder)] ml-[-8px] pl-[6px]">
+            {title}
+        </h3>
+        <div className="flex flex-col bg-[var(--vscode-editor-background)] rounded border border-[var(--vscode-border)] overflow-hidden">
             {children}
         </div>
     </div>
 );
 
-export const SettingsEditor = () => {
-    const { config, updateColors, updateConfig, resetConfig, importConfig, exportConfig } = useSettings();
-    const [searchTerm, setSearchTerm] = useState('');
-    const fileInputRef = useRef<HTMLInputElement>(null);
+// ─── 普通设置行 ───────────────────────────────────────────────────────────────
+const SettingRow = ({
+    label,
+    description,
+    children,
+}: {
+    label: string;
+    description?: string;
+    children: React.ReactNode;
+}) => (
+    <div className="flex items-center justify-between py-3 border-b border-[var(--vscode-settings-row-hover-bg)] last:border-0 hover:bg-[var(--vscode-list-hover)] px-3">
+        <div className="flex flex-col flex-1 mr-4">
+            <label className="text-[13px] text-[var(--vscode-fg)] font-medium">{label}</label>
+            {description && (
+                <p className="text-[11px] text-[var(--vscode-input-placeholder)] mt-0.5">{description}</p>
+            )}
+        </div>
+        <div className="flex-shrink-0">{children}</div>
+    </div>
+);
 
+// ─── 复选框 ───────────────────────────────────────────────────────────────────
+const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+    <div
+        onClick={onChange}
+        className={`w-4 h-4 border flex items-center justify-center cursor-pointer transition-colors ${checked
+            ? 'bg-[var(--vscode-checkbox-background)] border-[var(--vscode-checkbox-border)]'
+            : 'bg-[var(--vscode-input-bg)] border-[var(--vscode-input-border)]'
+            }`}
+    >
+        {checked && <Check size={12} className="text-[var(--vscode-checkbox-foreground)]" />}
+    </div>
+);
+
+// ─── 主组件 ───────────────────────────────────────────────────────────────────
+export const SettingsEditor = () => {
+    const { config, updateColors, updateConfig, updateUI, setTheme, resetConfig, importConfig, exportConfig, addCustomTheme, removeCustomTheme } =
+        useSettings();
+    const { confirm } = useConfirm();
+    const { t } = useI18n();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [systemFonts, setSystemFonts] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const themeFileInputRef = useRef<HTMLInputElement>(null);
+
+    // 加载系统字体列表
+    useEffect(() => {
+        (window as any).updateAPI?.listFonts?.().then((res: any) => {
+            if (res?.success && Array.isArray(res.fonts)) {
+                setSystemFonts(res.fonts);
+            }
+        }).catch(() => { /* 忽略错误，使用预设列表 */ });
+    }, []);
+
+    // ── 文件导入 ──
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                if (ev.target?.result) {
-                    importConfig(ev.target.result as string);
-                }
+            reader.onload = ev => {
+                if (ev.target?.result) importConfig(ev.target.result as string);
             };
             reader.readAsText(file);
         }
     };
 
+    // ── 文件导出 ──
     const handleDownload = () => {
         const json = exportConfig();
         const blob = new Blob([json], { type: 'application/json' });
@@ -98,108 +162,422 @@ export const SettingsEditor = () => {
         URL.revokeObjectURL(url);
     };
 
+    // ── 重置确认 ──
+    const handleReset = async () => {
+        const ok = await confirm({
+            title: t('settings.resetTitle'),
+            message: t('settings.resetMessage'),
+            confirmText: t('settings.resetConfirm'),
+            cancelText: t('common.cancel'),
+            type: 'warning',
+        });
+        if (ok) resetConfig();
+    };
+
+    // ── 导入主题文件 ──
+    const handleImportTheme = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const json = ev.target?.result as string;
+            const theme = parseTheme(json);
+            if (theme) {
+                // 防止覆盖内置主题
+                if (BUILT_IN_THEME_IDS.has(theme.id)) {
+                    theme.id = `${theme.id}-custom-${Date.now()}`;
+                }
+                addCustomTheme(theme);
+                setTheme(theme.id);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
+
+    // ── 基于当前主题新建自定义主题 ──
+    const handleNewCustomTheme = () => {
+        const currentDef = [...BUILT_IN_THEMES, ...config.customThemes].find(t => t.id === config.theme);
+        const newId = `custom-${Date.now()}`;
+        const newTheme = {
+            id: newId,
+            name: `Custom (${currentDef?.name ?? config.theme})`,
+            type: (currentDef?.type ?? 'dark') as 'dark' | 'light',
+            colors: { ...(currentDef?.colors ?? {}) },
+        };
+        addCustomTheme(newTheme);
+        setTheme(newId);
+    };
+
+    // ── 导出当前主题为 JSON ──
+    const handleExportCurrentTheme = () => {
+        const currentDef = [...BUILT_IN_THEMES, ...config.customThemes].find(t => t.id === config.theme);
+        if (!currentDef) return;
+        const json = exportTheme(currentDef);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentDef.id}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // ── 删除自定义主题 ──
+    const handleDeleteCustomTheme = async (themeId: string) => {
+        const ok = await confirm({
+            title: '删除主题',
+            message: '确定要删除此自定义主题吗？',
+            confirmText: '删除',
+            cancelText: t('common.cancel'),
+            type: 'warning',
+        });
+        if (ok) removeCustomTheme(themeId);
+    };
+
+
+    // 通用样式
+    const inputCls =
+        'bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-0.5 outline-none focus:border-[var(--vscode-focusBorder)]';
+
+    // 预设字体列表（用于 Font Family 下拉框）
+    const fontFamilyPresets = [
+        { label: 'Consolas, Courier New (Default)', value: 'Consolas, "Courier New", monospace' },
+        { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
+        { label: 'Cascadia Code', value: '"Cascadia Code", monospace' },
+        { label: 'Fira Code', value: '"Fira Code", monospace' },
+        { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
+        { label: 'Courier New', value: '"Courier New", monospace' },
+        { label: 'Lucida Console', value: '"Lucida Console", monospace' },
+        { label: 'Microsoft YaHei UI', value: '"Microsoft YaHei UI", sans-serif' },
+        { label: 'Segoe UI', value: '"Segoe UI", sans-serif' },
+        // 系统字体（去重，排除已在预设中的字体名）
+        ...systemFonts
+            .filter(f => !['Consolas', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Source Code Pro',
+                'Courier New', 'Lucida Console', 'Microsoft YaHei UI', 'Segoe UI'].includes(f))
+            .map(f => ({ label: f, value: `"${f}"` }))
+    ];
+
+    // ── 颜色区块数据 ──
+    const colorSections: {
+        title: string;
+        colors: { label: string; value: string; onChange: (v: string) => void }[];
+    }[] = [
+            {
+                title: t('settings.groups.serialColors'),
+                colors: [
+                    { label: t('settings.colors.rxLabel'), value: config.colors.rxLabelColor, onChange: v => updateColors({ rxLabelColor: v }) },
+                    { label: t('settings.colors.txLabel'), value: config.colors.txLabelColor, onChange: v => updateColors({ txLabelColor: v }) },
+                    { label: t('settings.colors.rxText'), value: config.colors.rxTextColor, onChange: v => updateColors({ rxTextColor: v }) },
+                    { label: t('settings.colors.txText'), value: config.colors.txTextColor, onChange: v => updateColors({ txTextColor: v }) },
+                    { label: t('settings.colors.rxBg'), value: config.colors.rxBgColor, onChange: v => updateColors({ rxBgColor: v }) },
+                    { label: t('settings.colors.inputBg'), value: config.colors.inputBgColor, onChange: v => updateColors({ inputBgColor: v }) },
+                    { label: t('settings.colors.inputText'), value: config.colors.inputTextColor, onChange: v => updateColors({ inputTextColor: v }) },
+                    { label: t('settings.colors.timestamp'), value: config.colors.timestampColor, onChange: v => updateColors({ timestampColor: v }) },
+                    { label: t('settings.colors.info'), value: config.colors.infoColor, onChange: v => updateColors({ infoColor: v }) },
+                    { label: t('settings.colors.error'), value: config.colors.errorColor, onChange: v => updateColors({ errorColor: v }) },
+                ],
+            },
+            {
+                title: t('settings.groups.tokenColors'),
+                colors: [
+                    { label: t('settings.tokens.crc'), value: config.colors.crcTokenColor, onChange: v => updateColors({ crcTokenColor: v }) },
+                    { label: t('settings.tokens.flag'), value: config.colors.flagTokenColor, onChange: v => updateColors({ flagTokenColor: v }) },
+                    { label: t('settings.tokens.accent'), value: config.colors.accentColor, onChange: v => updateColors({ accentColor: v }) },
+                ],
+            },
+        ];
+
+    // ── 普通设置区块数据 ──
+    type SettingItem = { label: string; description?: string; render: () => React.ReactNode };
+    const settingSections: { title: string; items: SettingItem[] }[] = [
+        {
+            title: t('settings.groups.appearance'),
+            items: [
+                {
+                    label: t('settings.appearance.colorScheme'),
+                    description: t('settings.appearance.colorSchemeDesc'),
+                    render: () => (
+                        <div className="flex items-center gap-1 w-48">
+                            <CustomSelect
+                                items={[
+                                    ...BUILT_IN_THEMES.map(th => ({ label: th.name, value: th.id })),
+                                    ...config.customThemes.map(th => ({ label: th.name, value: th.id }))
+                                ]}
+                                value={config.theme}
+                                onChange={(val) => setTheme(val as ThemeMode)}
+                            />
+                        </div>
+                    ),
+                },
+                {
+                    label: t('settings.appearance.language'),
+                    description: t('settings.appearance.languageDesc'),
+                    render: () => (
+                        <div className="w-36">
+                            <CustomSelect
+                                items={[
+                                    { label: t('settings.appearance.languages.zh-CN'), value: 'zh-CN' },
+                                    { label: t('settings.appearance.languages.en-US'), value: 'en-US' },
+                                ]}
+                                value={config.language}
+                                onChange={(val) => updateConfig({ language: val as any })}
+                            />
+                        </div>
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.layout'),
+            items: [
+                {
+                    label: t('settings.layout.sidebarPosition'),
+                    description: t('settings.layout.sidebarPositionDesc'),
+                    render: () => (
+                        <div className="w-36">
+                            <CustomSelect
+                                items={[
+                                    { label: t('settings.layout.sidebarLeft'), value: 'left' },
+                                    { label: t('settings.layout.sidebarRight'), value: 'right' },
+                                ]}
+                                value={config.ui.sidebarPosition}
+                                onChange={(val) => updateUI({ sidebarPosition: val as any })}
+                            />
+                        </div>
+                    ),
+                },
+                {
+                    label: t('settings.layout.showStatusBar'),
+                    description: t('settings.layout.showStatusBarDesc'),
+                    render: () => (
+                        <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.typography'),
+            items: [
+                {
+                    label: t('settings.typography.fontFamily'),
+                    description: t('settings.typography.fontFamilyDesc'),
+                    render: () => (
+                        <div className="w-56">
+                            <CustomSelect
+                                items={fontFamilyPresets}
+                                value={config.typography.fontFamily}
+                                onChange={(val) => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: val } }))}
+                                allowCustom
+                            />
+                        </div>
+                    ),
+                },
+                {
+                    label: t('settings.typography.fontSize'),
+                    description: t('settings.typography.fontSizeDesc'),
+                    render: () => (
+                        <input
+                            type="number"
+                            value={config.typography.fontSize}
+                            onChange={e => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontSize: Number(e.target.value) } }))}
+                            className={`w-24 ${inputCls}`}
+                        />
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.logFormat'),
+            items: [
+                {
+                    label: t('settings.logFormat.timestampFormat'),
+                    description: t('settings.logFormat.timestampFormatDesc'),
+                    render: () => (
+                        <input
+                            type="text"
+                            placeholder="HH:mm:ss.SSS"
+                            value={config.timestampFormat}
+                            onChange={e => updateConfig({ timestampFormat: e.target.value })}
+                            className={`w-48 ${inputCls}`}
+                        />
+                    ),
+                },
+                {
+                    label: t('settings.logFormat.bgImage'),
+                    description: t('settings.logFormat.bgImageDesc'),
+                    render: () => (
+                        <div className="flex gap-2 items-center">
+                            <input
+                                type="text"
+                                placeholder={t('settings.logFormat.bgImagePlaceholder')}
+                                value={config.images.rxBackground || ''}
+                                onChange={e => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: e.target.value } }))}
+                                className={`w-48 ${inputCls}`}
+                            />
+                            {config.images.rxBackground && <ImageIcon size={18} className="text-[var(--vscode-input-placeholder)]" />}
+                        </div>
+                    ),
+                },
+            ],
+        },
+    ];
+
+    // ── 搜索过滤 ──
+    const lowerSearch = searchTerm.toLowerCase();
+
+    const filteredSettings = searchTerm
+        ? settingSections
+            .map(sec => {
+                if (sec.title.toLowerCase().includes(lowerSearch)) return sec;
+                const items = sec.items.filter(it => it.label.toLowerCase().includes(lowerSearch));
+                return items.length ? { ...sec, items } : null;
+            })
+            .filter(Boolean) as typeof settingSections
+        : settingSections;
+
+    const filteredColors = searchTerm
+        ? colorSections
+            .map(sec => {
+                if (sec.title.toLowerCase().includes(lowerSearch)) return sec;
+                const colors = sec.colors.filter(c => c.label.toLowerCase().includes(lowerSearch));
+                return colors.length ? { ...sec, colors } : null;
+            })
+            .filter(Boolean) as typeof colorSections
+        : colorSections;
+
+    const hasResults = filteredSettings.length > 0 || filteredColors.length > 0;
+
     return (
-        <div className="flex flex-col h-full bg-[var(--vscode-bg)]">
-            {/* Header */}
+        <div className="flex flex-col h-full bg-[var(--vscode-editor-background)]">
+            {/* 头部工具栏 */}
             <div className="h-[35px] flex items-center shrink-0 px-4 border-b border-[var(--vscode-border)] bg-[var(--vscode-editor-widget-bg)] justify-between">
-                <div className="flex items-center gap-2 text-[13px] text-[var(--vscode-fg)]">
-                    <span className="font-semibold">User Settings</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleDownload} className="p-1 text-[#969696] hover:text-[#cccccc]" title="Export Settings">
+                <span className="text-[13px] font-semibold text-[var(--vscode-fg)]">{t('settings.title')}</span>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={handleExportCurrentTheme}
+                        className="p-1.5 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title="导出当前主题为 JSON"
+                    >
                         <Download size={14} />
                     </button>
-                    <button onClick={() => fileInputRef.current?.click()} className="p-1 text-[#969696] hover:text-[#cccccc]" title="Import Settings">
+                    <button
+                        onClick={() => themeFileInputRef.current?.click()}
+                        className="p-1.5 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title="导入主题文件"
+                    >
+                        <Upload size={14} />
+                    </button>
+                    <input type="file" ref={themeFileInputRef} className="hidden" accept=".json" onChange={handleImportTheme} />
+                    <button
+                        onClick={handleNewCustomTheme}
+                        className="p-1.5 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title="基于当前主题新建自定义主题"
+                    >
+                        <Plus size={14} />
+                    </button>
+                    <div className="w-[1px] h-4 bg-[var(--vscode-border)] mx-1" />
+                    <button
+                        onClick={handleDownload}
+                        className="p-1.5 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title={t('settings.exportTooltip')}
+                    >
+                        <Download size={14} />
+                    </button>
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-1.5 text-[var(--vscode-input-placeholder)] hover:text-[var(--vscode-fg)] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title={t('settings.importTooltip')}
+                    >
                         <Upload size={14} />
                     </button>
                     <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
-                    <button onClick={resetConfig} className="p-1 text-[#969696] hover:text-[#cccccc]" title="Reset to Defaults">
+                    <div className="w-[1px] h-4 bg-[var(--vscode-border)] mx-1" />
+                    <button
+                        onClick={handleReset}
+                        className="p-1.5 text-[#f48771] hover:text-[#f8a190] hover:bg-[var(--vscode-list-hover)] rounded transition-colors"
+                        title={t('settings.resetTooltip')}
+                    >
                         <RotateCcw size={14} />
                     </button>
                 </div>
             </div>
 
-            {/* Search */}
-            <div className="p-4 border-b border-[var(--vscode-border)]">
-                <div className="relative">
-                    <Search className="absolute left-2 top-1.5 text-[#969696]" size={14} />
+            {/* 搜索栏 */}
+            <div className="p-6 bg-[var(--vscode-editor-background)]">
+                <div className="max-w-3xl mx-auto relative group">
+                    <Search
+                        className="absolute left-3 top-2.5 text-[var(--vscode-input-placeholder)] group-focus-within:text-[var(--vscode-focusBorder)]"
+                        size={16}
+                    />
                     <input
                         type="text"
-                        placeholder="Search settings..."
-                        className="w-full bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] pl-8 pr-2 py-1 text-[13px] outline-none focus:border-[var(--vscode-focusBorder)]"
+                        placeholder={t('settings.search')}
+                        className="w-full bg-[var(--vscode-settings-header-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] pl-10 pr-4 py-2 text-[13px] outline-none focus:border-[var(--vscode-focusBorder)] shadow-sm"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
-            {/* Content using default VSCode variable colors for UI, but controls specific vars for Serial Monitor */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-
-
-
-                <Group title="Serial Monitor Colors">
-                    <ColorInput label="Received Label (RX)" value={config.colors.rxLabelColor} onChange={v => updateColors({ rxLabelColor: v })} />
-                    <ColorInput label="Sent Label (TX)" value={config.colors.txLabelColor} onChange={v => updateColors({ txLabelColor: v })} />
-                    <ColorInput label="Received Text Color (RX)" value={config.colors.rxTextColor} onChange={v => updateColors({ rxTextColor: v })} />
-                    <ColorInput label="Sent Text Color (TX)" value={config.colors.txTextColor} onChange={v => updateColors({ txTextColor: v })} />
-                    <ColorInput label="Received Background (RX)" value={config.colors.rxBgColor} onChange={v => updateColors({ rxBgColor: v })} />
-                    <ColorInput label="Input Area Background" value={config.colors.inputBgColor} onChange={v => updateColors({ inputBgColor: v })} />
-                    <ColorInput label="Input Text Color" value={config.colors.inputTextColor} onChange={v => updateColors({ inputTextColor: v })} />
-                    <ColorInput label="Timestamp Color" value={config.colors.timestampColor} onChange={v => updateColors({ timestampColor: v })} />
-                    <ColorInput label="Info Text Color" value={config.colors.infoColor} onChange={v => updateColors({ infoColor: v })} />
-                    <ColorInput label="Error Text Color" value={config.colors.errorColor} onChange={v => updateColors({ errorColor: v })} />
-                </Group>
-
-                <Group title="Tokens">
-                    <ColorInput label="CRC Token Color" value={config.colors.crcTokenColor} onChange={v => updateColors({ crcTokenColor: v })} />
-                    <ColorInput label="Flag Token Color" value={config.colors.flagTokenColor} onChange={v => updateColors({ flagTokenColor: v })} />
-                    <ColorInput label="Accent / Highlight" value={config.colors.accentColor} onChange={v => updateColors({ accentColor: v })} />
-                </Group>
-
-                <Group title="Typography">
-                    <div className="py-2 px-2 border-b border-[var(--vscode-settings-row-hover-bg)]">
-                        <label className="block text-[13px] text-[var(--vscode-fg)] mb-1">Font Family</label>
-                        <input
-                            type="text"
-                            value={config.typography.fontFamily}
-                            onChange={e => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: e.target.value } }))}
-                            className="w-full bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-1 outline-none focus:border-[var(--vscode-focusBorder)]"
-                        />
-                    </div>
-                </Group>
-
-                <Group title="Background Images">
-                    <div className="py-2 px-2">
-                        <label className="block text-[13px] text-[var(--vscode-fg)] mb-1">RX Area Background URL</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="https://... or data:image/..."
-                                value={config.images.rxBackground || ''}
-                                onChange={e => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: e.target.value } }))}
-                                className="flex-1 bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-1 outline-none focus:border-[var(--vscode-focusBorder)]"
-                            />
-                            {config.images.rxBackground && <ImageIcon size={20} className="text-[#969696]" />}
+            {/* 配置内容区 */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="max-w-3xl mx-auto px-6 pb-20">
+                    {/* 无结果提示 */}
+                    {!hasResults && searchTerm && (
+                        <div className="text-center py-16 text-[var(--vscode-input-placeholder)] text-[13px]">
+                            {t('settings.noResults', { term: searchTerm })}
                         </div>
-                    </div>
-                </Group>
+                    )}
 
-                <Group title="Log Formatting">
-                    <div className="py-2 px-2">
-                        <label className="block text-[13px] text-[var(--vscode-fg)] mb-1">Timestamp Format</label>
-                        <input
-                            type="text"
-                            placeholder="HH:mm:ss.SSS"
-                            value={config.timestampFormat}
-                            onChange={e => updateConfig({ timestampFormat: e.target.value })}
-                            className="w-full bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-1 outline-none focus:border-[var(--vscode-focusBorder)]"
-                        />
-                        <p className="text-[11px] text-[#969696] mt-1">Format symbols: HH, mm, ss, SSS (Milliseconds)</p>
-                    </div>
-                </Group>
+                    {/* 普通设置区块 */}
+                    {filteredSettings.map((sec, i) => (
+                        <Group key={`s-${i}`} title={sec.title}>
+                            {sec.items.map((item, j) => (
+                                <SettingRow key={j} label={item.label} description={item.description}>
+                                    {item.render()}
+                                </SettingRow>
+                            ))}
+                        </Group>
+                    ))}
+
+                    {/* 自定义主题管理区块（无搜索时显示） */}
+                    {!searchTerm && config.customThemes.length > 0 && (
+                        <Group title={t('settings.groups.customThemes')}>
+                            {config.customThemes.map(theme => (
+                                <div key={theme.id} className="flex items-center justify-between py-2 px-3 border-b border-[var(--vscode-settings-row-hover-bg)] last:border-0 hover:bg-[var(--vscode-list-hover)] group">
+                                    <div className="flex items-center gap-2">
+                                        {config.theme === theme.id && <Check size={12} className="text-[var(--vscode-accent)]" />}
+                                        <span
+                                            className="text-[13px] text-[var(--vscode-fg)] cursor-pointer hover:text-[var(--vscode-accent)]"
+                                            onClick={() => setTheme(theme.id)}
+                                        >
+                                            {theme.name}
+                                        </span>
+                                        <span className="text-[11px] text-[var(--vscode-input-placeholder)] opacity-0 group-hover:opacity-100">{theme.id}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteCustomTheme(theme.id)}
+                                        className="p-1 text-[var(--vscode-input-placeholder)] hover:text-[#f48771] opacity-0 group-hover:opacity-100 transition-all"
+                                        title="删除此主题"
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            ))}
+                        </Group>
+                    )}
+
+                    {/* 颜色设置区块 */}
+                    {filteredColors.map((sec, i) => (
+                        <Group key={`c-${i}`} title={sec.title}>
+                            {sec.colors.map((c, j) => (
+                                <ColorInput key={j} label={c.label} value={c.value} onChange={c.onChange} />
+                            ))}
+                        </Group>
+                    ))}
+                </div>
             </div>
-
         </div>
     );
 };

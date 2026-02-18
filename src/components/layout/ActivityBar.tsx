@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useRef, useEffect, useMemo } from 'react';
 import { Files, Search, GitGraph, Box, Settings, Monitor, Check } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useSettings } from '../../context/SettingsContext';
 import { usePluginManager } from '../../context/PluginContext';
 import {
     DndContext,
@@ -79,7 +79,7 @@ const DEFAULT_ITEMS = [
 
 export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
     const { plugins } = usePluginManager();
-    const { theme, setTheme } = useTheme();
+    const { config, setTheme } = useSettings();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeSubmenu, setActiveSubmenu] = useState<'main' | 'themes'>('main');
     const menuRef = useRef<HTMLDivElement>(null);
@@ -287,28 +287,28 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                                         onClick={() => { setTheme('dark'); resetMenu(); }}
                                     >
                                         <span>Dark Modern</span>
-                                        {theme === 'dark' && <Check size={14} />}
+                                        {config.theme === 'dark' && <Check size={14} />}
                                     </div>
                                     <div
                                         className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
                                         onClick={() => { setTheme('light'); resetMenu(); }}
                                     >
                                         <span>Light Modern</span>
-                                        {theme === 'light' && <Check size={14} />}
+                                        {config.theme === 'light' && <Check size={14} />}
                                     </div>
                                     <div
                                         className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
                                         onClick={() => { setTheme('hc'); resetMenu(); }}
                                     >
                                         <span>High Contrast</span>
-                                        {theme === 'hc' && <Check size={14} />}
+                                        {config.theme === 'hc' && <Check size={14} />}
                                     </div>
                                     <div
                                         className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
                                         onClick={() => { setTheme('one-dark-vivid'); resetMenu(); }}
                                     >
                                         <span>One Dark Vivid</span>
-                                        {theme === 'one-dark-vivid' && <Check size={14} />}
+                                        {config.theme === 'one-dark-vivid' && <Check size={14} />}
                                     </div>
                                 </>
                             )}

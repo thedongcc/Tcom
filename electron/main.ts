@@ -61,7 +61,7 @@ class SerialService {
   }
 
   // List available ports
-  async listPorts() {
+  async listPorts(options?: { includeCom0ComNames?: boolean }) {
     try {
       const SP = getSerialPort();
       // @ts-ignore
@@ -75,23 +75,21 @@ class SerialService {
       }
 
       // Windows Registry Fallback (for com0com and others)
-      // Windows Registry Fallback (for com0com and others)
       if (process.platform === 'win32') {
         try {
           const { exec } = require('node:child_process');
 
           // 1. Get active COM ports map from Hardware DeviceMap
-          // \Device\com0com10 -> COM1
-          const activePorts = new Map<string, string>(); // PortName -> DevicePath
+          const activePorts = new Map<string, string>();
 
           await new Promise<void>((resolve) => {
-            exec('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', (err: any, stdout: string) => {
+            exec('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', { windowsHide: true }, (err: any, stdout: string) => {
               if (!err && stdout) {
                 const lines = stdout.split('\r\n');
                 lines.forEach(line => {
                   const parts = line.trim().split(/\s{4,}/);
                   if (parts.length >= 3) {
-                    const portName = parts[parts.length - 1]; // COM11
+                    const portName = parts[parts.length - 1];
                     if (portName && portName.startsWith('COM')) {
                       activePorts.set(portName, parts[0]);
                     }
@@ -102,41 +100,35 @@ class SerialService {
             });
           });
 
-          // 2. Get Friendly Names from Enum (Recursive)
-          // This is specifically to find names like "Tcom Virtual Port (COM11)"
+          // 2. Get Friendly Names from Enum (Recursive) - Only if requested
           const friendlyNames = new Map<string, string>();
-          await new Promise<void>((resolve) => {
-            exec('reg query HKLM\\SYSTEM\\CurrentControlSet\\Enum\\com0com /s', (err: any, stdout: string) => {
-              if (!err && stdout) {
-                // Parse logical blocks (naive but effective for reg query output)
-                const enumLines = stdout.split('\r\n');
-                enumLines.forEach(line => {
-                  const trimmed = line.trim();
-                  // Check if line contains FriendlyName
-                  if (trimmed.startsWith('FriendlyName') && trimmed.includes('REG_SZ')) {
-                    // FriendlyName    REG_SZ    Tcom Virtual Port (COM11)
-                    const parts = trimmed.split(/\s{4,}/); // Split by multiple spaces
-                    if (parts.length >= 3) {
-                      const name = parts[parts.length - 1]; // "Tcom Virtual Port (COM11)"
-                      // Extract COM port from end of string: "... (COM11)"
-                      const match = name.match(/\((COM\d+)\)$/);
-                      if (match) {
-                        friendlyNames.set(match[1], name);
+          if (options?.includeCom0ComNames) {
+            await new Promise<void>((resolve) => {
+              exec('reg query HKLM\\SYSTEM\\CurrentControlSet\\Enum\\com0com /s', { windowsHide: true }, (err: any, stdout: string) => {
+                if (!err && stdout) {
+                  const enumLines = stdout.split('\r\n');
+                  enumLines.forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('FriendlyName') && trimmed.includes('REG_SZ')) {
+                      const parts = trimmed.split(/\s{4,}/);
+                      if (parts.length >= 3) {
+                        const name = parts[parts.length - 1];
+                        const match = name.match(/\((COM\d+)\)$/);
+                        if (match) friendlyNames.set(match[1], name);
                       }
                     }
-                  }
-                });
-              }
-              resolve();
+                  });
+                }
+                resolve();
+              });
             });
-          });
+          }
 
           // 3. Merge into ports list
           activePorts.forEach((device, portName) => {
             const exists = ports.find((p: any) => p.path === portName);
             const friendly = friendlyNames.get(portName);
 
-            // Determine manufacturer from device path
             let manufacturer = undefined;
             if (device.toLowerCase().includes('com0com')) {
               manufacturer = 'com0com';
@@ -145,8 +137,6 @@ class SerialService {
             }
 
             if (exists) {
-              // Determine if we should update friendlyName?
-              // If we found a better friendly name (and it's not just the port name)
               if (friendly && (!exists.friendlyName || exists.friendlyName === portName || exists.friendlyName.includes('Serial Port'))) {
                 exists.friendlyName = friendly;
               }
@@ -159,19 +149,17 @@ class SerialService {
               });
             }
           });
-
         } catch (e) {
           console.warn('Registry lookup failed', e);
         }
       }
 
       // 4. Check busy status for each port
-      // We skip ports already opened by our own application (they are in this.ports)
       const openedPaths = new Set(Array.from(this.ports.values()).map(p => p.path));
 
       const portsWithStatus = await Promise.all(ports.map(async (port: any) => {
         if (openedPaths.has(port.path)) {
-          return { ...port, busy: false, status: 'available' }; // It's "available" to us because we own it
+          return { ...port, busy: false, status: 'available' };
         }
 
         return new Promise((resolve) => {
@@ -683,8 +671,9 @@ function createWindow() {
   monitorService = new MonitorService(win)
 
   // Register IPC Handlers
-  ipcMain.handle('serial:list-ports', async () => {
-    return serialService?.listPorts()
+  ipcMain.handle('serial:list-ports', async (_event, options) => {
+    if (!serialService) return { success: false, error: 'Serial service not initialized' };
+    return serialService.listPorts(options);
   })
 
   ipcMain.handle('serial:open', async (_event, { connectionId, options }) => {
@@ -1081,108 +1070,119 @@ function createWindow() {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
   })
 
+  // Check if current user has administrator privileges
+  ipcMain.handle('app:is-admin', async () => {
+    if (process.platform !== 'win32') return true;
+    return new Promise((resolve) => {
+      const { exec } = require('node:child_process');
+      // 'net session' command only succeeds if run as administrator
+      exec('net session', (err: any) => {
+        resolve(!err);
+      });
+    });
+  });
+
   // Com0Com Integration
   const { exec } = require('node:child_process');
 
   ipcMain.handle('com0com:exec', async (_event, command) => {
-    return new Promise((resolve) => {
-      // Only allow setupc commands for security (basic check)
-      // Allow full paths (e.g. "C:\...\setupc.exe") or just "setupc"
-      if (!command.toLowerCase().includes('setupc')) {
-        return resolve({ success: false, error: 'Unauthorized command' });
+    // Check admin privileges first for non-list commands
+    if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
+      const isAdmin = await new Promise((resolve) => {
+        const { exec: adminExec } = require('node:child_process');
+        adminExec('net session', (err: any) => resolve(!err));
+      });
+      if (!isAdmin) {
+        return { success: false, error: 'Administrator privileges required for this operation' };
       }
+    }
 
-      const execCommand = (cmd: string) => {
-        let cwd = undefined;
-        try {
-          // Try to extract directory from command to set as CWD
-          // Command might be quoted: "C:\path\to\setupc.exe" list
-          // Or simple: setupc list
-          let exePath = '';
-          if (cmd.startsWith('"')) {
-            const closeQuoteIndex = cmd.indexOf('"', 1);
-            if (closeQuoteIndex > 1) {
-              exePath = cmd.substring(1, closeQuoteIndex);
-            }
+    if (!command.toLowerCase().includes('setupc')) {
+      return { success: false, error: 'Unauthorized command' };
+    }
+
+    const runWithSpawn = (fullCmd: string) => {
+      return new Promise((resolve) => {
+        const { spawn } = require('node:child_process');
+
+        // Robust argument parsing
+        // Example: "C:\Path With Spaces\setupc.exe" list -> exe: ..., args: ["list"]
+        let exePath = '';
+        let argsString = '';
+
+        if (fullCmd.startsWith('"')) {
+          const closeQuoteIndex = fullCmd.indexOf('"', 1);
+          if (closeQuoteIndex > 1) {
+            exePath = fullCmd.substring(1, closeQuoteIndex);
+            argsString = fullCmd.substring(closeQuoteIndex + 1).trim();
+          }
+        } else {
+          const spaceIndex = fullCmd.indexOf(' ');
+          if (spaceIndex > 0) {
+            exePath = fullCmd.substring(0, spaceIndex);
+            argsString = fullCmd.substring(spaceIndex + 1).trim();
           } else {
-            const spaceIndex = cmd.indexOf(' ');
-            if (spaceIndex > 0) {
-              exePath = cmd.substring(0, spaceIndex);
-            } else {
-              exePath = cmd;
-            }
+            exePath = fullCmd;
           }
-
-          if (exePath && (exePath.includes('\\') || exePath.includes('/'))) {
-            cwd = path.dirname(exePath);
-          }
-        } catch (e) {
-          console.warn('[com0com] Failed to parse CWD:', e);
         }
 
-        console.log(`[com0com] Executing: ${cmd}`);
-        console.log(`[com0com] CWD: ${cwd || 'default'}`);
+        const args = argsString ? argsString.split(/\s+/) : [];
+        const cwd = exePath.includes('\\') || exePath.includes('/') ? path.dirname(exePath) : undefined;
 
-        exec(cmd, { cwd }, (error: any, stdout: string, stderr: string) => {
-          if (error) {
-            console.log(`[com0com] Command failed: ${cmd}`, error.message);
-            console.log(`[com0com] Stdout:`, stdout); // Log stdout too!
-            console.log(`[com0com] Stderr:`, stderr);
+        console.log(`[com0com] Spawning: ${exePath} in ${cwd || 'default'} with args:`, args);
 
-            // If it was the first try (just 'setupc'), and it failed, try the local path
-            if (cmd.startsWith('setupc') && !cmd.includes('\\') && !cmd.includes('/')) {
-              const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
-              console.log(`[com0com] Trying local path: ${localSetupc}`);
-              // Check if local exists before trying?
-              // Or just try executing it.
-              // We replace 'setupc' with "localPath"
+        const child = spawn(exePath, args, {
+          cwd,
+          shell: true, // Use shell to help resolver and UAC
+          windowsHide: true
+        });
 
-              // Use spawn properly with CWD
-              const { spawn } = require('node:child_process');
-              const dir = path.dirname(localSetupc);
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (d: any) => stdout += d.toString());
+        child.stderr.on('data', (d: any) => stderr += d.toString());
 
-              // Parse args from original command
-              // command is like "setupc install PortName=COM11 PortName=COM12"
-              // We need args: ["install", "PortName=COM11", "PortName=COM12"]
-              // Remove "setupc" prefix
-              const argsString = cmd.substring(6).trim();
-              const args = argsString.split(/\s+/);
+        child.on('error', (err: any) => {
+          console.error(`[com0com] Spawn error:`, err);
+          resolve({ success: false, error: err.message });
+        });
 
-              console.log(`[com0com] Spawning: ${localSetupc} in ${dir} with args:`, args);
-
-              const child = spawn(localSetupc, args, {
-                cwd: dir,
-                shell: true, // Needed? setupc is .exe. usually ok without if full path. but for UAC maybe?
-                // If shell: true, verify if we need to quote args. spawn handles array args well usually.
-              });
-
-              let out = '';
-              let errOut = '';
-
-              child.stdout.on('data', (d: any) => out += d.toString());
-              child.stderr.on('data', (d: any) => errOut += d.toString());
-
-              child.on('close', (code: number) => {
-                if (code === 0) {
-                  console.log(`[com0com] Spawn success`);
-                  resolve({ success: true, stdout: out });
-                } else {
-                  console.log(`[com0com] Spawn exited with ${code}`);
-                  resolve({ success: false, error: `Process exited with code ${code}`, stderr: errOut, stdout: out });
-                }
-              });
-            } else {
-              resolve({ success: false, error: error.message, stderr, stdout });
-            }
-          } else {
-            console.log(`[com0com] Success. Stdout len: ${stdout.length}`);
+        child.on('close', (code: number) => {
+          if (code === 0) {
             resolve({ success: true, stdout });
+          } else {
+            // Check if we need to fallback
+            if (exePath === 'setupc' || exePath === 'setupc.exe') {
+              const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
+              console.log(`[com0com] Global failed, trying local path: ${localSetupc}`);
+
+              // Second attempt with local path
+              const localChild = spawn(localSetupc, args, {
+                cwd: path.dirname(localSetupc),
+                shell: true,
+                windowsHide: true
+              });
+
+              let lStdout = '';
+              let lStderr = '';
+              localChild.stdout.on('data', (d: any) => lStdout += d.toString());
+              localChild.stderr.on('data', (d: any) => lStderr += d.toString());
+
+              localChild.on('close', (lCode: number) => {
+                if (lCode === 0) resolve({ success: true, stdout: lStdout });
+                else resolve({ success: false, error: `Process exited with code ${lCode}`, stderr: lStderr, stdout: lStdout });
+              });
+
+              localChild.on('error', (lErr: any) => resolve({ success: false, error: lErr.message }));
+            } else {
+              resolve({ success: false, error: `Process exited with code ${code}`, stderr, stdout });
+            }
           }
         });
-      };
+      });
+    };
 
-      execCommand(command);
-    });
+    return runWithSpawn(command);
   });
 
   // com0com:name - Set Friendly Name for a COM port
@@ -1250,6 +1250,17 @@ function createWindow() {
   });
 
   ipcMain.handle('com0com:install', async () => {
+    // Check admin privileges first
+    if (process.platform === 'win32') {
+      const isAdmin = await new Promise((resolve) => {
+        const { exec } = require('node:child_process');
+        exec('net session', (err: any) => resolve(!err));
+      });
+      if (!isAdmin) {
+        return { success: false, error: 'Administrator privileges required for installation' };
+      }
+    }
+
     const isDev = !!VITE_DEV_SERVER_URL;
     // In Dev: project_root/dist-electron/main.js -> project_root/resources/drivers/com0com_setup.exe
     // In Prod: resources/resources/drivers/... (nested resources due to extraResources)
@@ -1287,7 +1298,7 @@ function createWindow() {
       const { spawn } = require('node:child_process');
       // Use shell: true to help with UAC elevation and execution
       const child = spawn(installerPath, ['/S', `/D=${targetDir}`], {
-        windowsHide: false,
+        windowsHide: true,
         shell: true,
         cwd: path.dirname(installerPath)
       });
@@ -1456,6 +1467,8 @@ class TcpService {
 // Let's create a global reference
 let tcpService: any = null;
 
+
+// Start checking app version
 ipcMain.handle('tcp:start', async (_event, port: number) => {
   if (!tcpService) return { success: false, error: 'Service not initialized' };
   return tcpService.startServer(port);
@@ -1503,6 +1516,60 @@ ipcMain.handle('system:stats', async () => {
     memUsed: memUsedMB,
   };
 });
+
+// 枚举系统安装的字体（Windows）
+ipcMain.handle('app:list-fonts', async () => {
+  if (process.platform !== 'win32') {
+    // macOS/Linux: 返回空数组，前端使用预设列表
+    return { success: true, fonts: [] };
+  }
+  return new Promise((resolve) => {
+    const { spawn } = require('node:child_process');
+    // 通过 PowerShell 读取注册表中安装的字体名称
+    const psScript = `
+      $fonts = @()
+      $regPaths = @(
+        'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts',
+        'HKCU:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'
+      )
+      foreach ($regPath in $regPaths) {
+        if (Test-Path $regPath) {
+          $keys = Get-ItemProperty -Path $regPath
+          $keys.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } | ForEach-Object {
+            # 字体名称格式通常是 "FontName (TrueType)" 或 "FontName Bold (TrueType)"
+            $name = $_.Name -replace '\\s*\\(.*\\)\\s*$', '' -replace '\\s+$', ''
+            if ($name -and $name.Length -gt 0) {
+              $fonts += $name
+            }
+          }
+        }
+      }
+      # 去重并排序
+      $fonts | Sort-Object -Unique | ForEach-Object { Write-Output $_ }
+    `;
+    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], {
+      windowsHide: true
+    });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (d: any) => out += d.toString());
+    child.stderr.on('data', (d: any) => err += d.toString());
+    child.on('close', (code: number) => {
+      if (code === 0 && out.trim()) {
+        const fonts = out.split('\n')
+          .map((f: string) => f.trim())
+          .filter((f: string) => f.length > 0);
+        resolve({ success: true, fonts });
+      } else {
+        resolve({ success: false, fonts: [], error: err });
+      }
+    });
+    child.on('error', (e: any) => {
+      resolve({ success: false, fonts: [], error: e.message });
+    });
+  });
+});
+
 
 
 // Quit when all windows are closed, except on macOS. There, it's common

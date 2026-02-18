@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Maximize2, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
+import { useI18n } from '../../context/I18nContext';
 
 interface PanelProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -10,6 +11,7 @@ interface PanelProps {
 export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
     const { sessions, activeSessionId } = sessionManager;
     const activeSession = sessions.find(s => s.id === activeSessionId);
+    const { t } = useI18n();
 
     const logs = activeSession ? activeSession.logs : [];
     const isConnected = activeSession ? activeSession.isConnected : false;
@@ -33,7 +35,7 @@ export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
             <div className="flex items-center justify-between px-4 h-[35px] select-none">
                 <div className="flex items-center gap-6 h-full">
                     <div className="h-full flex items-center border-b border-[var(--vscode-accent)] text-[var(--vscode-fg)] font-medium text-[11px] uppercase tracking-wide cursor-pointer">
-                        Terminal
+                        {t('panel.terminal')}
                     </div>
                 </div>
 
@@ -47,9 +49,9 @@ export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
             {/* Panel Content */}
             <div className="flex-1 overflow-auto p-2 font-mono text-[13px] bg-[var(--vscode-bg)]" ref={scrollRef}>
                 <div className="text-[#969696] mb-2">
-                    {isConnected ? `[Connected to ${currentPort}]` : '[Disconnected]'}
+                    {isConnected ? t('panel.connectedTo', { port: currentPort }) : t('panel.disconnected')}
                 </div>
-                {logs.length === 0 && <div className="text-[#666] italic">No data received yet...</div>}
+                {logs.length === 0 && <div className="text-[#666] italic">{t('panel.noData')}</div>}
                 {logs.map((log, index) => (
                     <div key={index} className={`whitespace-pre-wrap break-all font-mono ${log.type === 'TX' ? 'text-[#ce9178]' :
                         log.type === 'RX' ? 'text-[#6a9955]' :

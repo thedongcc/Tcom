@@ -90,22 +90,26 @@ export const SessionListItem = ({
                 <div className="flex flex-col overflow-hidden flex-1">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                         <span className="truncate font-medium">{session.name}</span>
-                        {session.type === 'serial' && portInfo && (
-                            <div
-                                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
-                                title={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')}
-                            />
-                        )}
                     </div>
-                    <span className="text-[10px] text-[#858585] truncate">
-                        {session.type === 'serial'
-                            ? (portInfo
-                                ? formatPortInfo(portInfo)
-                                : (session as any).lastDescription || (session as any).connection?.path || 'No Port')
-                            : session.type === 'mqtt'
-                                ? ((session as any).host && (session as any).port ? `${(session as any).host}:${(session as any).port}` : 'Not Configured')
-                                : (session as any).brokerUrl || session.type}
-                    </span>
+                    <div className="flex items-center gap-1.5 overflow-hidden min-h-[16px]">
+                        {session.type === 'serial' && portInfo && (
+                            <span className="flex items-center justify-center flex-shrink-0 mb-[1.5px]">
+                                <span
+                                    className={`size-1.5 rounded-full ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
+                                    title={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')}
+                                />
+                            </span>
+                        )}
+                        <span className="text-[10px] text-[#858585] truncate font-mono opacity-80 leading-tight">
+                            {session.type === 'serial'
+                                ? (portInfo
+                                    ? formatPortInfo(portInfo)
+                                    : (session as any).lastDescription || (session as any).connection?.path || 'No Port')
+                                : session.type === 'mqtt'
+                                    ? ((session as any).host && (session as any).port ? `${(session as any).host}:${(session as any).port}` : 'Not Configured')
+                                    : (session as any).brokerUrl || session.type}
+                        </span>
+                    </div>
                 </div>
             )}
         </div>

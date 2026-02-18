@@ -1,6 +1,3 @@
-
-// No changes yet, need to view SerialInput.tsx
-// Placeholder to allow tool execution sequence
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';
@@ -17,6 +14,7 @@ import { formatPortInfo, formatTimestamp } from '../../utils/format';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
+import { useI18n } from '../../context/I18nContext';
 
 
 interface SerialMonitorProps {
@@ -32,6 +30,7 @@ interface SerialMonitorProps {
 export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig, onInputStateChange, onClearLogs, onConnectRequest }: SerialMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
+    const { t } = useI18n();
     const { logs, isConnected, config } = session;
     const currentPort = config.type === 'serial' ? config.connection.path : '';
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -355,7 +354,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         if (!log) return;
         const text = formatData(log.data, viewMode, encoding);
         navigator.clipboard.writeText(text);
-        showToast('已复制到剪贴板', 'success', 1500);
+        showToast(t('toast.copied'), 'success', 1500);
         setContextMenu(null);
     };
 
@@ -465,21 +464,21 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                 title="Options"
                             >
                                 <Menu size={16} />
-                                <span className="text-[11px] font-medium">Options</span>
+                                <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                             </button>
                             {showOptionsMenu && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                     <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
                                         <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
-                                            <div className="text-[12px] text-[#cccccc] font-bold">Log Settings</div>
+                                            <div className="text-[12px] text-[#cccccc] font-bold">{t('monitor.logSettings')}</div>
                                             <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
                                         </div>
 
                                         {/* Encoding Section */}
                                         <div className="mb-4 px-1">
                                             <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                                                <span>Encoding</span>
+                                                <span>{t('monitor.encoding')}</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
                                             <CustomSelect
@@ -496,36 +495,36 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         {/* Features Section */}
                                         <div className="mb-4 px-1">
                                             <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                                                <span>Log Features</span>
+                                                <span>{t('monitor.logFeatures')}</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
                                             <div className="space-y-2.5">
                                                 <Switch
-                                                    label="Show Timestamp"
+                                                    label={t('monitor.timestamp')}
                                                     checked={showTimestamp}
                                                     onChange={(checked) => { setShowTimestamp(checked); saveUIState({ showTimestamp: checked }); }}
                                                 />
 
                                                 <Switch
-                                                    label="Show Packet Type"
+                                                    label={t('monitor.packetType')}
                                                     checked={showPacketType}
                                                     onChange={(checked) => { setShowPacketType(checked); saveUIState({ showPacketType: checked }); }}
                                                 />
 
                                                 <Switch
-                                                    label="Show Data Length"
+                                                    label={t('monitor.dataLength')}
                                                     checked={showDataLength}
                                                     onChange={(checked) => { setShowDataLength(checked); saveUIState({ showDataLength: checked }); }}
                                                 />
 
                                                 <Switch
-                                                    label="Merge Repeats"
+                                                    label={t('monitor.mergeRepeats')}
                                                     checked={mergeRepeats}
                                                     onChange={(checked) => { setMergeRepeats(checked); saveUIState({ mergeRepeats: checked }); }}
                                                 />
 
                                                 <Switch
-                                                    label="Smooth Animation"
+                                                    label={t('monitor.smoothAnimation')}
                                                     checked={smoothScroll}
                                                     onChange={(checked) => { setSmoothScroll(checked); saveUIState({ smoothScroll: checked }); }}
                                                 />
@@ -534,7 +533,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 <div className="space-y-2 pt-1 border-t border-[#3c3c3c]/50 mt-1">
                                                     <div className="flex items-center gap-2 group/crc">
                                                         <Switch
-                                                            label="CRC Check (RX)"
+                                                            label={t('monitor.crcCheck')}
                                                             checked={crcEnabled}
                                                             onChange={toggleCRC}
                                                             className="flex-1"
@@ -551,7 +550,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     {showCRCPanel && (
                                                         <div className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">Algorithm:</span>
+                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.algorithm')}:</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: 'Modbus CRC16', value: 'modbus-crc16' },
@@ -564,7 +563,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">Start Offset:</span>
+                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.startOffset')}:</span>
                                                                 <input
                                                                     type="number"
                                                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1 focus:border-[var(--vscode-focusBorder)]"
@@ -573,7 +572,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">End Position:</span>
+                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.endPosition')}:</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: 'End of Packet', value: '0' },
@@ -594,13 +593,13 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         {/* Display Settings Section */}
                                         <div className="mb-6 px-1">
                                             <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                                                <span>Typography</span>
+                                                <span>{t('monitor.typography')}</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
                                             <div className="space-y-4">
                                                 {/* Font Size */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">Font Size:</span>
+                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -614,7 +613,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 {/* Font Family */}
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#aaaaaa]">Font Family:</span>
+                                                        <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
                                                         <label className="flex items-center gap-1.5 cursor-pointer group">
                                                             <input
                                                                 type="checkbox"
@@ -622,7 +621,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 checked={showAllFonts}
                                                                 onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
                                                             />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">System Fonts</span>
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">{t('monitor.systemFonts')}</span>
                                                         </label>
                                                     </div>
                                                     <CustomSelect
@@ -637,7 +636,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                                 {/* Chunk Timeout */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">Packet Timeout (ms):</span>
+                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.packetTimeout')}:</span>
                                                     <input
                                                         type="number"
                                                         className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--vscode-focusBorder)] transition-colors"
@@ -666,7 +665,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 }}
                                             >
                                                 <Download size={14} />
-                                                <span>Export Log</span>
+                                                <span>{t('monitor.exportLog')}</span>
                                             </button>
                                         </div>
                                     </div>

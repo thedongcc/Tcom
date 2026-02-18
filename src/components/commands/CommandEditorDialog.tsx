@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { CommandEntity, CommandItem } from '../../types/command';
 import { SerialInput } from '../serial/SerialInput';
 import { useToast } from '../../context/ToastContext';
+import { useI18n } from '../../context/I18nContext';
 
 interface Props {
     item: CommandEntity;
@@ -14,6 +15,7 @@ interface Props {
 export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Props) => {
     const [name, setName] = useState(item.name);
     const { showToast } = useToast();
+    const { t } = useI18n();
     // State to hold current input state from SerialInput
     const inputStateRef = useRef<{ content: string; html: string; tokens: any; mode: 'text' | 'hex'; lineEnding: any } | null>(null);
 
@@ -23,11 +25,11 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
 
     const handleSave = () => {
         if (!name.trim()) {
-            showToast('Name cannot be empty', 'warning');
+            showToast(t('toast.nameEmpty'), 'warning');
             return;
         }
         if (existingNames.includes(name.trim())) {
-            showToast(`Name "${name}" already exists in this group.`, 'warning');
+            showToast(t('toast.nameExists', { name }), 'warning');
             return;
         }
 
@@ -95,7 +97,7 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                 }}
             >
                 <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                    <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">Edit {isCommand ? 'Command' : 'Group'}</span>
+                    <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{t('command.editCommand')} {isCommand ? t('command.commandName') : 'Group'}</span>
                     <button onClick={onClose} className="text-[#969696] hover:text-white transition-colors">
                         <X size={14} />
                     </button>
@@ -103,7 +105,7 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
 
                 <div className="p-5 flex flex-col gap-5 bg-[#1e1e1e]">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">Name</label>
+                        <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">{t('command.commandName')}</label>
                         <input
                             className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--vscode-focusBorder)] text-[13px] transition-all"
                             value={name}
@@ -138,13 +140,13 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                         className="px-4 py-1.5 text-xs text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm transition-colors"
                         onClick={onClose}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                     <button
                         className="px-4 py-1.5 text-xs text-white bg-[#0e639c] hover:bg-[#1177bb] rounded-sm font-medium transition-all shadow-md active:scale-95"
                         onClick={handleSave}
                     >
-                        Save Changes
+                        {t('common.save')}
                     </button>
                 </div>
             </div>

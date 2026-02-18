@@ -1,106 +1,321 @@
+import { useRef, useState } from 'react';
 import { usePluginManager } from '../../context/PluginContext';
-import { Box, Play, Pause, Trash2, Download, Search } from 'lucide-react';
-import { Plugin } from '../../types/plugin';
+import { Box, Play, Pause, Trash2, Search, FolderOpen, ExternalLink, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { PLUGIN_REGISTRY } from '../../plugins/registry';
+import { useI18n } from '../../context/I18nContext';
 
 export const ExtensionsSidebar = () => {
-    const { plugins, activatePlugin, deactivatePlugin, uninstallPlugin, registerPlugin } = usePluginManager();
+    const { plugins, activatePlugin, deactivatePlugin, uninstallPlugin, registerPlugin, installFromJson } =
+        usePluginManager();
+    const { t } = useI18n();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [search, setSearch] = useState('');
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [installError, setInstallError] = useState<string | null>(null);
+    const [installedSection, setInstalledSection] = useState(true);
+    const [recommendedSection, setRecommendedSection] = useState(true);
 
-    // Compute status
+    // 计算状态
     const installedIds = new Set(plugins.map(p => p.plugin.id));
     const availablePlugins = PLUGIN_REGISTRY.filter(p => !installedIds.has(p.id));
 
+    // 搜索过滤
+    const lowerSearch = search.toLowerCase();
+    const filteredInstalled = plugins.filter(p =>
+        !lowerSearch ||
+        p.plugin.name.toLowerCase().includes(lowerSearch) ||
+        p.plugin.description?.toLowerCase().includes(lowerSearch)
+    );
+    const filteredAvailable = availablePlugins.filter(p =>
+        !lowerSearch ||
+        p.name.toLowerCase().includes(lowerSearch) ||
+        p.description?.toLowerCase().includes(lowerSearch)
+    );
+
+    // 从文件安装
+    const handleFileInstall = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const json = ev.target?.result as string;
+            const result = installFromJson(json);
+            if (!result.success) {
+                setInstallError(result.error ?? '安装失败');
+                setTimeout(() => setInstallError(null), 5000);
+            } else {
+                setInstallError(null);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
+
+    const SectionHeader = ({
+        title,
+        count,
+        expanded,
+        onToggle,
+    }: {
+        title: string;
+        count: number;
+        expanded: boolean;
+        onToggle: () => void;
+    }) => (
+        <button
+            onClick={onToggle}
+            className="w-full flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[var(--vscode-input-placeholder)] uppercase tracking-wide hover:text-[var(--vscode-fg)] transition-colors"
+        >
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {title}
+            <span className="ml-auto font-normal normal-case text-[10px] opacity-60">{count}</span>
+        </button>
+    );
+
+    const PluginCard = ({
+        id,
+        name,
+        version,
+        description,
+        author,
+        homepage,
+        icon: Icon,
+        isActive,
+        isExternal,
+        actions,
+    }: {
+        id: string;
+        name: string;
+        version: string;
+        description?: string;
+        author?: string;
+        homepage?: string;
+        icon?: React.ComponentType<{ size?: number; className?: string }>;
+        isActive?: boolean;
+        isExternal?: boolean;
+        actions: React.ReactNode;
+    }) => {
+        const isExpanded = expandedId === id;
+        return (
+            <div
+                className="px-4 py-3 hover:bg-[var(--vscode-list-hover)] group border-l-2 border-transparent hover:border-[var(--vscode-focusBorder)] transition-colors cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : id)}
+            >
+                <div className="flex gap-3">
+                    {/* 图标 */}
+                    <div className="pt-0.5 flex-shrink-0">
+                        {Icon
+                            ? <Icon size={36} className="text-[var(--vscode-fg)] opacity-70" />
+                            : <Box size={36} className="text-[var(--vscode-fg)] opacity-40" />
+                        }
+                    </div>
+
+                    {/* 信息 */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[13px] font-bold text-[var(--vscode-fg)] truncate pr-2">{name}</span>
+                            <div
+                                className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                {actions}
+                            </div>
+                        </div>
+                        <div className="text-[12px] text-[var(--vscode-input-placeholder)] truncate mb-1">{description}</div>
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--vscode-input-placeholder)]">
+                            <span>{version}</span>
+                            {author && <><span>•</span><span>{author}</span></>}
+                            {isActive !== undefined && (
+                                <>
+                                    <span>•</span>
+                                    <span className={isActive ? 'text-[#4ec9b0]' : 'text-[var(--vscode-input-placeholder)]'}>
+                                        {isActive ? t('extensions.enabled') : t('extensions.disabled')}
+                                    </span>
+                                </>
+                            )}
+                            {isExternal && (
+                                <>
+                                    <span>•</span>
+                                    <span className="text-[#ce9178]">{t('extensions.userInstalled')}</span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* 展开详情 */}
+                        {isExpanded && (
+                            <div className="mt-2 pt-2 border-t border-[var(--vscode-border)] space-y-1">
+                                <div className="text-[11px] text-[var(--vscode-fg)] opacity-70">ID: <code className="font-mono">{id}</code></div>
+                                {homepage && (
+                                    <a
+                                        href={homepage}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-1 text-[11px] text-[var(--vscode-accent)] hover:underline"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <ExternalLink size={11} />
+                                        {homepage}
+                                    </a>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="flex flex-col h-full bg-[#252526]">
-            {/* Search Header */}
-            <div className="p-2.5">
-                <div className="bg-[#3c3c3c] flex items-center px-2 py-1 rounded-sm border border-transparent focus-within:border-[var(--vscode-focusBorder)]">
-                    <Search size={14} className="text-[#969696] mr-2" />
+        <div className="flex flex-col h-full bg-[var(--vscode-sidebar)]">
+            {/* 搜索栏 */}
+            <div className="p-2.5 border-b border-[var(--vscode-border)]">
+                <div className="bg-[var(--vscode-input-bg)] flex items-center px-2 py-1 border border-[var(--vscode-input-border)] focus-within:border-[var(--vscode-focusBorder)] transition-colors">
+                    <Search size={14} className="text-[var(--vscode-input-placeholder)] mr-2 flex-shrink-0" />
                     <input
-                        className="bg-transparent border-none outline-none text-[13px] text-[#cccccc] w-full placeholder-[#969696]"
-                        placeholder="Search Extensions..."
+                        className="bg-transparent border-none outline-none text-[13px] text-[var(--vscode-input-fg)] w-full placeholder-[var(--vscode-input-placeholder)]"
+                        placeholder={t('extensions.searchPlaceholder')}
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
                     />
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            {/* 从文件安装按钮 */}
+            <div className="px-3 py-2 border-b border-[var(--vscode-border)]">
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-[12px] text-[var(--vscode-fg)] border border-[var(--vscode-border)] hover:bg-[var(--vscode-list-hover)] hover:border-[var(--vscode-focusBorder)] transition-colors"
+                >
+                    <FolderOpen size={13} />
+                    {t('extensions.installFromFile')}
+                </button>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".tpkg,.json"
+                    className="hidden"
+                    onChange={handleFileInstall}
+                />
 
-                {/* Installed Section */}
-                <div className="px-4 py-2 text-[11px] font-bold text-[#969696] uppercase tracking-wide">
-                    INSTALLED
-                </div>
-                <div>
-                    {plugins.map(({ plugin, isActive }) => (
-                        <div key={plugin.id} className="px-4 py-3 hover:bg-[#2a2d2e] group flex gap-3 border-l-2 border-transparent hover:border-l-2 hover:border-transparent">
-                            <div className="pt-0.5">
-                                {plugin.icon ? <plugin.icon size={36} className="text-[#cccccc]" /> : <Box size={36} className="text-[#cccccc]" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-0.5">
-                                    <span className="text-[13px] font-bold text-[#cccccc] truncate pr-2">{plugin.name}</span>
-                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                {/* 安装错误提示 */}
+                {installError && (
+                    <div className="mt-2 flex items-start gap-1.5 text-[11px] text-[#f48771] bg-[#5a1d1d] px-2 py-1.5 rounded">
+                        <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                        <span>{installError}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* 列表区域 */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+                {/* 已安装 */}
+                <SectionHeader
+                    title={t('extensions.installed')}
+                    count={filteredInstalled.length}
+                    expanded={installedSection}
+                    onToggle={() => setInstalledSection(v => !v)}
+                />
+                {installedSection && (
+                    <div>
+                        {filteredInstalled.map(({ plugin, isActive, isExternal }) => (
+                            <PluginCard
+                                key={plugin.id}
+                                id={plugin.id}
+                                name={plugin.name}
+                                version={plugin.version}
+                                description={plugin.description}
+                                author={(plugin as any).author}
+                                homepage={(plugin as any).homepage}
+                                icon={plugin.icon}
+                                isActive={isActive}
+                                isExternal={isExternal}
+                                actions={
+                                    <>
                                         {isActive ? (
-                                            <button onClick={() => deactivatePlugin(plugin.id)} title="Disable" className="p-1 hover:bg-[#3c3c3c] rounded text-[#cccccc]">
+                                            <button
+                                                onClick={() => deactivatePlugin(plugin.id)}
+                                                title={t('extensions.disable')}
+                                                className="p-1 hover:bg-[var(--vscode-list-hover)] rounded text-[var(--vscode-fg)] opacity-70 hover:opacity-100"
+                                            >
                                                 <Pause size={14} />
                                             </button>
                                         ) : (
-                                            <button onClick={() => activatePlugin(plugin.id)} title="Enable" className="p-1 hover:bg-[#3c3c3c] rounded text-[#cccccc]">
+                                            <button
+                                                onClick={() => activatePlugin(plugin.id)}
+                                                title={t('extensions.enable')}
+                                                className="p-1 hover:bg-[var(--vscode-list-hover)] rounded text-[var(--vscode-fg)] opacity-70 hover:opacity-100"
+                                            >
                                                 <Play size={14} />
                                             </button>
                                         )}
-                                        <button onClick={() => uninstallPlugin(plugin.id)} title="Uninstall" className="p-1 hover:bg-[#c53030] hover:text-white rounded text-[#cccccc]">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="text-[12px] text-[#969696] truncate mb-1">{plugin.description}</div>
-                                <div className="flex items-center gap-2 text-[11px] text-[#969696]">
-                                    <span>{plugin.version}</span>
-                                    <span>•</span>
-                                    <span className={isActive ? 'text-[#4ec9b0]' : 'text-[#969696]'}>{isActive ? 'Enabled' : 'Disabled'}</span>
-                                </div>
+                                        {isExternal && (
+                                            <button
+                                                onClick={() => uninstallPlugin(plugin.id)}
+                                                title={t('extensions.uninstall')}
+                                                className="p-1 hover:bg-[#c53030] hover:text-white rounded text-[var(--vscode-fg)] opacity-70 transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                        {filteredInstalled.length === 0 && (
+                            <div className="px-4 py-3 text-[13px] text-[var(--vscode-input-placeholder)] italic">
+                                {search ? t('extensions.noMatches') : t('extensions.noneInstalled')}
                             </div>
-                        </div>
-                    ))}
-                    {plugins.length === 0 && (
-                        <div className="px-4 py-2 text-[13px] text-[#969696] italic">No extensions installed.</div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
-                {/* Recommended / Available Section */}
-                {availablePlugins.length > 0 && (
+                {/* 推荐（内置可安装） */}
+                {filteredAvailable.length > 0 && (
                     <>
-                        <div className="px-4 py-2 mt-4 text-[11px] font-bold text-[#969696] uppercase tracking-wide">
-                            RECOMMENDED
-                        </div>
-                        <div>
-                            {availablePlugins.map(plugin => (
-                                <div key={plugin.id} className="px-4 py-3 hover:bg-[#2a2d2e] group flex gap-3">
-                                    <div className="pt-0.5">
-                                        {plugin.icon ? <plugin.icon size={36} className="text-[#cccccc]" /> : <Box size={36} className="text-[#cccccc]" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-0.5">
-                                            <span className="text-[13px] font-bold text-[#cccccc] truncate pr-2">{plugin.name}</span>
-                                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
-                                                <button
-                                                    onClick={() => registerPlugin(plugin)}
-                                                    className="px-2 py-0.5 bg-[#0e639c] hover:bg-[#1177bb] text-white text-[11px] rounded-sm flex items-center gap-1"
-                                                >
-                                                    Install
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="text-[12px] text-[#969696] truncate mb-1">{plugin.description}</div>
-                                        <div className="flex items-center gap-2 text-[11px] text-[#969696]">
-                                            <span>{plugin.version}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <SectionHeader
+                            title={t('extensions.recommended')}
+                            count={filteredAvailable.length}
+                            expanded={recommendedSection}
+                            onToggle={() => setRecommendedSection(v => !v)}
+                        />
+                        {recommendedSection && (
+                            <div>
+                                {filteredAvailable.map(plugin => (
+                                    <PluginCard
+                                        key={plugin.id}
+                                        id={plugin.id}
+                                        name={plugin.name}
+                                        version={plugin.version}
+                                        description={plugin.description}
+                                        icon={plugin.icon}
+                                        actions={
+                                            <button
+                                                onClick={() => registerPlugin(plugin)}
+                                                className="px-2 py-0.5 bg-[var(--vscode-button-bg,#0e639c)] hover:bg-[var(--vscode-button-hover-bg,#1177bb)] text-white text-[11px] flex items-center gap-1 transition-colors"
+                                            >
+                                                {t('extensions.install')}
+                                            </button>
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </>
                 )}
+            </div>
+
+            {/* 底部提示 */}
+            <div className="px-4 py-2 border-t border-[var(--vscode-border)] text-[10px] text-[var(--vscode-input-placeholder)]">
+                <a
+                    href="https://github.com/thedongcc/Tcom/blob/main/PLUGIN_API.md"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 hover:text-[var(--vscode-fg)] transition-colors"
+                >
+                    <ExternalLink size={10} />
+                    {t('extensions.devDocs')}
+                </a>
             </div>
         </div>
     );

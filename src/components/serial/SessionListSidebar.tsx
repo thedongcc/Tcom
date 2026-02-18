@@ -8,6 +8,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SessionListItem } from './SessionListItem';
 import { useConfirm } from '../../context/ConfirmContext';
+import { useToast } from '../../context/ToastContext';
+import { useI18n } from '../../context/I18nContext';
 
 interface SessionListSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -16,6 +18,8 @@ interface SessionListSidebarProps {
 
 export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionListSidebarProps) => {
     const { confirm } = useConfirm();
+    const { showToast } = useToast();
+    const { t } = useI18n();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, sessionId: string } | null>(null);
@@ -77,13 +81,23 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
     const saveEdit = () => {
         if (editingId) {
             const session = sessionManager.savedSessions.find(s => s.id === editingId);
-            if (session && editName.trim() !== '') {
-                const isOpen = sessionManager.sessions.some(s => s.id === editingId);
-                if (isOpen) {
-                    sessionManager.updateSessionConfig(editingId, { name: editName });
-                } else {
-                    const updatedConfig = { ...session, name: editName };
-                    sessionManager.saveSession(updatedConfig);
+            const trimmedName = editName.trim();
+            if (session && trimmedName !== '') {
+                // Uniqueness check
+                const isDuplicate = sessionManager.savedSessions.some(s => s.id !== editingId && s.name === trimmedName);
+                if (isDuplicate) {
+                    showToast(t('toast.sessionNameExists', { name: trimmedName }), 'error');
+                    return; // Don't close editing if duplicate
+                }
+
+                if (trimmedName !== session.name) {
+                    const isOpen = sessionManager.sessions.some(s => s.id === editingId);
+                    if (isOpen) {
+                        sessionManager.updateSessionConfig(editingId, { name: trimmedName });
+                    } else {
+                        const updatedConfig = { ...session, name: trimmedName };
+                        sessionManager.saveSession(updatedConfig);
+                    }
                 }
             }
             setEditingId(null);
@@ -116,7 +130,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             <div
                                 ref={recentButtonRef}
                                 className="cursor-pointer p-1 rounded hover:bg-[var(--vscode-list-hover)]"
-                                title="Recent Workspaces"
+                                title={t('session.recentWorkspaces')}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     const rect = recentButtonRef.current?.getBoundingClientRect();
@@ -128,7 +142,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             <div
                                 ref={addButtonRef}
                                 className="cursor-pointer p-1 rounded hover:bg-[var(--vscode-list-hover)]"
-                                title="New Session"
+                                title={t('session.newSession')}
                                 onClick={() => setShowNewSessionDialog(true)}
                             >
                                 <Plus size={14} className="opacity-70 hover:opacity-100" />
@@ -138,12 +152,12 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                 ) : (
                     <div className="flex flex-col items-center gap-2 py-4">
                         <FolderOpen size={32} className="opacity-30" />
-                        <span className="text-[11px] opacity-50 text-center">No workspace open</span>
+                        <span className="text-[11px] opacity-50 text-center">{t('session.noWorkspaceOpen')}</span>
                         <button
                             className="text-[12px] px-3 py-1.5 rounded bg-[var(--vscode-button-bg)] text-[var(--vscode-button-fg)] hover:bg-[var(--vscode-button-hover-bg)] cursor-pointer transition-colors"
                             onClick={() => sessionManager.browseAndOpenWorkspace()}
                         >
-                            Open Workspace
+                            {t('session.openWorkspace')}
                         </button>
                     </div>
                 )}
@@ -156,8 +170,8 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                     style={{ top: recentMenu.y, left: recentMenu.x }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="px-3 py-1.5 text-[11px] font-semibold opacity-50 select-none">
-                        RECENT WORKSPACES
+                    <div className="px-3 py-1.5 text-[11px] font-semibold opacity-50 select-none uppercase">
+                        {t('session.recentWorkspaces')}
                     </div>
                     {sessionManager.recentWorkspaces.map(ws => (
                         <div
@@ -184,7 +198,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             setRecentMenu(null);
                         }}
                     >
-                        Open Other...
+                        {t('session.openOther')}
                     </div>
                 </div>
             )}
@@ -193,7 +207,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             <div className="flex flex-col flex-1 overflow-y-auto" onClick={() => setEditingId(null)}>
                 {sessionManager.workspacePath && sessionManager.savedSessions.length === 0 && (
                     <div className="p-4 text-[11px] text-[#858585] italic text-center">
-                        No sessions yet.<br />Click '+' to create one.
+                        {t('session.noSessions')}
                     </div>
                 )}
                 <DndContext
@@ -256,7 +270,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         }}
                     >
                         <Edit2 size={13} className="opacity-60 group-hover:opacity-100" />
-                        Rename
+                        {t('common.edit')}
                     </div>
                     <div className="h-[1px] bg-[#3c3c3c] my-1 mx-1" />
                     <div
@@ -265,10 +279,10 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
                             if (session) {
                                 const ok = await confirm({
-                                    title: '删除会话',
-                                    message: `确定要删除会话 '${session.name}' 吗？\n此操作将永久移除该会话的所有配置。`,
+                                    title: t('session.deleteTitle'),
+                                    message: t('session.deleteConfirm', { name: session.name }),
                                     type: 'danger',
-                                    confirmText: '删除会话'
+                                    confirmText: t('common.delete')
                                 });
                                 if (ok) {
                                     // 1. Delete config and cleanup manager state
@@ -302,7 +316,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         }}
                     >
                         <Trash2 size={13} className="opacity-60 group-hover:opacity-100" />
-                        Delete
+                        {t('common.delete')}
                     </div>
                 </div>
             )}

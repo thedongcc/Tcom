@@ -1,6 +1,7 @@
 import { MqttSessionConfig, MqttTopicConfig } from '../../types/session';
 import { Plus, Trash2, Play, Square, ChevronDown, ChevronRight, Check, RefreshCw } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { useI18n } from '../../context/I18nContext';
 
 interface MqttConfigPanelProps {
     config: MqttSessionConfig;
@@ -20,6 +21,7 @@ const COLORS = [
 export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, onConnectToken, onDisconnectToken }: MqttConfigPanelProps) => {
     // Collapsible Connection Settings
     const isConnectionExpanded = config.uiState?.connectionExpanded !== undefined ? config.uiState.connectionExpanded : (!isConnected);
+    const { t } = useI18n();
 
     const toggleConnectionExpanded = () => {
         onUpdate({
@@ -72,14 +74,14 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                     onClick={toggleConnectionExpanded}
                 >
                     {isConnectionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    Broker Connection
+                    {t('mqtt.brokerConnection')}
                 </div>
 
                 {isConnectionExpanded && (
                     <div className="p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
                         {/* Host */}
                         <div className="flex flex-col gap-1 min-w-0">
-                            <label className="text-[11px] text-[#969696]">Host</label>
+                            <label className="text-[11px] text-[#969696]">{t('mqtt.broker')}</label>
                             <input
                                 className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
                                 placeholder="broker.emqx.io"
@@ -92,7 +94,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         {/* Protocol + Port + Path */}
                         <div className="flex gap-2">
                             <div className="flex flex-col gap-1 w-[80px] shrink-0">
-                                <label className="text-[11px] text-[#969696]">Protocol</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.protocol')}</label>
                                 <select
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
                                     value={config.protocol}
@@ -118,7 +120,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1 w-[70px] shrink-0">
-                                <label className="text-[11px] text-[#969696]">Port</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.port')}</label>
                                 <input
                                     type="number"
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
@@ -129,7 +131,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                             </div>
                             {(config.protocol === 'ws' || config.protocol === 'wss') && (
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                    <label className="text-[11px] text-[#969696]">Path</label>
+                                    <label className="text-[11px] text-[#969696]">{t('mqtt.path')}</label>
                                     <input
                                         className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
                                         placeholder="/mqtt"
@@ -143,7 +145,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
 
                         <div className="flex gap-2">
                             <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                <label className="text-[11px] text-[#969696]">Client ID</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.clientId')}</label>
                                 <div className="flex gap-1 w-full">
                                     <input
                                         className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] flex-1 min-w-0 disabled:opacity-50"
@@ -154,7 +156,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     <button
                                         className="px-2 bg-[var(--vscode-button-secondary-bg)] hover:bg-[var(--vscode-button-secondary-hover-bg)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
                                         onClick={() => onUpdate({ clientId: `client - ${Math.random().toString(16).substring(2, 8)} ` })}
-                                        title="Generate Random ID"
+                                        title={t('mqtt.generateId')}
                                         disabled={isLocked}
                                     >
                                         ↻
@@ -165,23 +167,23 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
 
                         <div className="flex gap-2">
                             <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                <label className="text-[11px] text-[#969696]">Username</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.username')}</label>
                                 <input
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
                                     value={config.username || ''}
                                     onChange={(e) => onUpdate({ username: e.target.value })}
-                                    placeholder="Optional"
+                                    placeholder={t('mqtt.optional')}
                                     disabled={isLocked}
                                 />
                             </div>
                             <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                <label className="text-[11px] text-[#969696]">Password</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.password')}</label>
                                 <input
                                     type="password"
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
                                     value={config.password || ''}
                                     onChange={(e) => onUpdate({ password: e.target.value })}
-                                    placeholder="Optional"
+                                    placeholder={t('mqtt.optional')}
                                     disabled={isLocked}
                                 />
                             </div>
@@ -190,7 +192,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         {/* Advanced: KeepAlive, Timeout, Clean, AutoReconnect */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1">
-                                <label className="text-[11px] text-[#969696]">Keep Alive (s)</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.keepAlive')}</label>
                                 <input
                                     type="number"
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
@@ -200,7 +202,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 />
                             </div>
                             <div className="flex flex-col gap-1">
-                                <label className="text-[11px] text-[#969696]">Timeout (s)</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.timeout')}</label>
                                 <input
                                     type="number"
                                     className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
@@ -220,7 +222,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     onChange={(e) => onUpdate({ cleanSession: e.target.checked })}
                                     disabled={isLocked}
                                 />
-                                <label className="text-[11px] text-[#969696]">Clean Session</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.cleanSession')}</label>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input
@@ -230,7 +232,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     onChange={(e) => onUpdate({ autoReconnect: e.target.checked })}
                                     disabled={isLocked}
                                 />
-                                <label className="text-[11px] text-[#969696]">Auto Reconnect</label>
+                                <label className="text-[11px] text-[#969696]">{t('mqtt.autoReconnect')}</label>
                             </div>
                         </div>
 
@@ -251,7 +253,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 ) : (
                                     <Play size={12} fill="currentColor" />
                                 )}
-                                {isConnecting ? 'Connecting...' : isConnected ? 'Disconnect' : 'Connect'}
+                                {isConnecting ? t('mqtt.connecting') : isConnected ? t('mqtt.disconnect') : t('mqtt.connect')}
                             </button>
                         </div>
                     </div>
@@ -261,14 +263,14 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
             {/* Subscriptions */}
             <div className="flex-1 flex flex-col min-h-0">
                 <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[#252526] sticky top-0 border-b border-[var(--vscode-border)] shrink-0">
-                    Subscriptions
+                    {t('mqtt.subscriptions')}
                 </div>
 
                 <div className="p-4 flex flex-col gap-4 min-h-0">
                     <div className="flex flex-col gap-2 shrink-0">
                         <input
                             className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
-                            placeholder="Add topic code/+/status..."
+                            placeholder={t('mqtt.addTopicPlaceholder')}
                             value={newTopicPath}
                             onChange={(e) => setNewTopicPath(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
@@ -278,14 +280,14 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                             onClick={handleAddTopic}
                         >
                             <Plus size={14} />
-                            Add Topic
+                            {t('mqtt.addTopic')}
                         </button>
                     </div>
 
                     {/* Topic List */}
                     <div className="flex flex-col gap-1 overflow-y-auto min-h-0 pr-1 custom-scrollbar">
                         {config.topics.length === 0 && (
-                            <div className="text-[#666] italic text-[11px] text-center py-4">No subscriptions added.</div>
+                            <div className="text-[#666] italic text-[11px] text-center py-4">{t('mqtt.noSubscriptions')}</div>
                         )}
                         {config.topics.map((topic) => (
                             <div

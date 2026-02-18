@@ -10,6 +10,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { SerialToken, SERIAL_TOKEN_CLICK_EVENT } from './SerialTokenExtension';
 import { SuggestionExtension, getSuggestionOptions } from './SuggestionExtension';
 import { useToast } from '../../context/ToastContext';
+import { useI18n } from '../../context/I18nContext';
 
 interface SerialInputProps {
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
@@ -42,6 +43,7 @@ export const SerialInput = ({
     hideExtras = false
 }: SerialInputProps) => {
     const { showToast } = useToast();
+    const { t } = useI18n();
     const [mode, setMode] = useState<'text' | 'hex'>(initialMode);
     const [lineEnding, setLineEnding] = useState<'' | '\n' | '\r' | '\r\n'>(initialLineEnding);
     const [isEmpty, setIsEmpty] = useState(true);
@@ -219,7 +221,7 @@ export const SerialInput = ({
             return;
         }
         if (!editor || editor.isEmpty) {
-            showToast('发送内容不能为空', 'warning');
+            showToast(t('toast.sendEmpty'), 'warning');
             return;
         }
 
@@ -336,7 +338,7 @@ export const SerialInput = ({
                                     }`}
                                 onClick={() => {
                                     if (!isTimerRunning && isEmpty) {
-                                        showToast('发送内容不能为空', 'warning');
+                                        showToast(t('toast.sendEmpty'), 'warning');
                                         return;
                                     }
                                     setIsTimerRunning(!isTimerRunning);

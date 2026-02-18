@@ -13,40 +13,32 @@ import { SessionConfig } from '../../types/session';
 import { PluginProvider } from '../../context/PluginContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
+import { useSettings } from '../../context/SettingsContext';
+import { useI18n } from '../../context/I18nContext';
 
 export const Layout = ({ children }: { children?: ReactNode }) => {
-    const [activeView, setActiveView] = useState(() => {
-        return localStorage.getItem('layout-active-view') || 'explorer';
-    });
+    const { config, updateUI } = useSettings();
+    const { t } = useI18n();
+    const activeView = config.ui.activeActivityItem;
+    const setActiveView = (view: string) => updateUI({ activeActivityItem: view });
+
     const sessionManager = useSessionManager();
     const editorLayout = useEditorLayout();
     const { showUpdateDialog, setShowUpdateDialog } = useAutoUpdate();
-    // Track restored IDs to avoid infinite loops when savedSessions updates during restoration
     const restoredIdsRef = useRef<Set<string>>(new Set());
 
-    // Persist activeView
-    useEffect(() => {
-        if (sessionManager.workspacePath) {
-            localStorage.setItem(`layout-active-view-${sessionManager.workspacePath}`, activeView);
-        } else {
-            localStorage.setItem('layout-active-view', activeView);
-        }
-    }, [activeView, sessionManager.workspacePath]);
+    // 侧边栏位置逻辑
+    const sidebarAtRight = config.ui.sidebarPosition === 'right';
 
-    // Persist layout based on workspace
+    // 基于工作区持久化布局
     useEffect(() => {
         if (sessionManager.workspacePath) {
             editorLayout.setPersistenceKey(sessionManager.workspacePath);
-            // Reset restoration set when switching workspaces
             restoredIdsRef.current.clear();
-
-            // Load view for this specific workspace
-            const savedView = localStorage.getItem(`layout-active-view-${sessionManager.workspacePath}`);
-            if (savedView) setActiveView(savedView);
         }
     }, [sessionManager.workspacePath]);
 
-    // Restore sessions based on layout
+    // 恢复会话
     useEffect(() => {
         if (!editorLayout.layout || !sessionManager.savedSessions.length) return;
 
@@ -66,7 +58,6 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
                                 toOpen.push(saved);
                             } else {
                                 console.warn('[Layout] Cleaning up dead session from layout:', viewId);
-                                // We keep the cleanup in a separate microtask or defer it
                                 setTimeout(() => editorLayout.closeView(node.id, viewId), 0);
                             }
                         }
@@ -80,26 +71,21 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
             traverse(editorLayout.layout);
 
             if (toOpen.length > 0) {
-                console.log(`[Layout] Batch opening ${toOpen.length} sessions`);
                 sessionManager.openSavedSessions(toOpen);
             }
         };
 
-        // Defer restoration to next tick to avoid flushSync warnings during initial render
         const timer = setTimeout(() => {
             restoreSessions();
         }, 0);
 
         return () => clearTimeout(timer);
-    }, [editorLayout.layout, sessionManager.savedSessions.length]); // Only depend on length change to start restoration
+    }, [editorLayout.layout, sessionManager.savedSessions.length]);
 
     const handleOpenSettings = async () => {
-        // Check if settings session exists
         let settingsSession = sessionManager.sessions.find(s => s.config.type === 'settings');
         if (!settingsSession) {
-            // Create new settings session
-            const newId = await sessionManager.createSession('settings');
-
+            const newId = await sessionManager.createSession('settings', { name: t('editor.settingsTabName') });
             if (newId) {
                 editorLayout.openSession(newId);
                 sessionManager.setActiveSessionId(newId);
@@ -108,7 +94,6 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
             editorLayout.openSession(settingsSession.id);
             sessionManager.setActiveSessionId(settingsSession.id);
         }
-
         setActiveView('settings');
     };
 
@@ -117,7 +102,7 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
             <PluginProvider>
                 <div className="flex flex-col h-screen w-full bg-[var(--vscode-bg)] text-[var(--vscode-fg)] overflow-hidden">
                     <TitleBar />
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className={`flex-1 flex overflow-hidden ${sidebarAtRight ? 'flex-row-reverse' : 'flex-row'}`}>
                         <ActivityBar
                             activeView={activeView}
                             onViewChange={setActiveView}
@@ -140,7 +125,7 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
                             </EditorArea>
                         </div>
                     </div>
-                    <StatusBar />
+                    {config.ui.showStatusBar && <StatusBar />}
                 </div>
                 {showUpdateDialog && <UpdateDialog onClose={() => setShowUpdateDialog(false)} />}
             </PluginProvider>

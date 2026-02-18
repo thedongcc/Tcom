@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1] - 2026-02-17
+## [0.0.1] - 2026-02-18
 ### Added
 - 串口接收区数据统计增加筛选功能
 - 修改mqtt监视器内容显示为聊天样式
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 添加自定义波特率支持
 - 新增自变化token类型auto
 - 增加监视区数据搜索功能
+- 增加中英文切换功能
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -52,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修复删除session后右侧标签还存在的问题
 - 简化串口发送区上方的token图标
 - 优化token设置菜单
+- 解决非管理员模式下的闪烁问题
+- 修复Monitor Settings中的开关逻辑冲突
+- 优化Virtual Pairs显示逻辑
+- 优化sessions中的串口节点显示效果
+- 完善设置菜单
 
 ### Removed
 - 取消设置中的check update功能
