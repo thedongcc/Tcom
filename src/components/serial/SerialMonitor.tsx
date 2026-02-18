@@ -14,6 +14,8 @@ import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatPortInfo, formatTimestamp } from '../../utils/format';
+import { CustomSelect } from '../common/CustomSelect';
+import { Switch } from '../common/Switch';
 
 
 interface SerialMonitorProps {
@@ -430,103 +432,71 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         </div>
 
                                         {/* Encoding Section */}
-                                        <div className="mb-5 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
+                                        <div className="mb-4 px-1">
+                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
                                                 <span>Encoding</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
-                                            <div className="relative">
-                                                <select
-                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1.5 hover:bg-[#454545] transition-colors appearance-none pr-8"
-                                                    value={encoding}
-                                                    onChange={(e) => { setEncoding(e.target.value as any); saveUIState({ encoding: e.target.value as any }); }}
-                                                >
-                                                    <option value="utf-8">UTF-8</option>
-                                                    <option value="gbk">GBK</option>
-                                                    <option value="ascii">ASCII</option>
-                                                </select>
-                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                    <ChevronDown size={12} />
-                                                </div>
-                                            </div>
+                                            <CustomSelect
+                                                items={[
+                                                    { label: 'UTF-8', value: 'utf-8' },
+                                                    { label: 'GBK', value: 'gbk' },
+                                                    { label: 'ASCII', value: 'ascii' }
+                                                ]}
+                                                value={encoding}
+                                                onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }}
+                                            />
                                         </div>
 
                                         {/* Features Section */}
-                                        <div className="mb-5 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
-                                                <span>Features</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                        <div className="mb-4 px-1">
+                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                <span>Log Features</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
-                                            <div className="space-y-3">
-                                                {/* Timestamp */}
-                                                <label className="flex items-center justify-between cursor-pointer group">
-                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Timestamp</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={showTimestamp}
-                                                        onChange={(e) => { setShowTimestamp(e.target.checked); saveUIState({ showTimestamp: e.target.checked }); }}
-                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                    />
-                                                </label>
+                                            <div className="space-y-2.5">
+                                                <Switch
+                                                    label="Show Timestamp"
+                                                    checked={showTimestamp}
+                                                    onChange={(checked) => { setShowTimestamp(checked); saveUIState({ showTimestamp: checked }); }}
+                                                />
 
-                                                {/* Packet Type */}
-                                                <label className="flex items-center justify-between cursor-pointer group">
-                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Packet Type</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={showPacketType}
-                                                        onChange={(e) => { setShowPacketType(e.target.checked); saveUIState({ showPacketType: e.target.checked }); }}
-                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                    />
-                                                </label>
+                                                <Switch
+                                                    label="Show Packet Type"
+                                                    checked={showPacketType}
+                                                    onChange={(checked) => { setShowPacketType(checked); saveUIState({ showPacketType: checked }); }}
+                                                />
 
-                                                {/* Data Length */}
-                                                <label className="flex items-center justify-between cursor-pointer group">
-                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Data Length</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={showDataLength}
-                                                        onChange={(e) => { setShowDataLength(e.target.checked); saveUIState({ showDataLength: e.target.checked }); }}
-                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                    />
-                                                </label>
+                                                <Switch
+                                                    label="Show Data Length"
+                                                    checked={showDataLength}
+                                                    onChange={(checked) => { setShowDataLength(checked); saveUIState({ showDataLength: checked }); }}
+                                                />
 
-                                                <label className="flex items-center justify-between cursor-pointer group">
-                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Merge Repeats</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={mergeRepeats}
-                                                        onChange={(e) => { setMergeRepeats(e.target.checked); saveUIState({ mergeRepeats: e.target.checked }); }}
-                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                    />
-                                                </label>
+                                                <Switch
+                                                    label="Merge Repeats"
+                                                    checked={mergeRepeats}
+                                                    onChange={(checked) => { setMergeRepeats(checked); saveUIState({ mergeRepeats: checked }); }}
+                                                />
 
-                                                {/* Smooth Scroll */}
-                                                <label className="flex items-center justify-between cursor-pointer group" title="开启会影响显示效果和数据速率">
-                                                    <span className="text-[11px] text-[#cccccc] group-hover:text-[#ffffff] transition-colors">Smooth Animation</span>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={smoothScroll}
-                                                        onChange={(e) => { setSmoothScroll(e.target.checked); saveUIState({ smoothScroll: e.target.checked }); }}
-                                                        className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                    />
-                                                </label>
+                                                <Switch
+                                                    label="Smooth Animation"
+                                                    checked={smoothScroll}
+                                                    onChange={(checked) => { setSmoothScroll(checked); saveUIState({ smoothScroll: checked }); }}
+                                                />
 
                                                 {/* CRC */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="flex items-center gap-2 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={crcEnabled}
-                                                                onChange={toggleCRC}
-                                                                className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                            />
-                                                            <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">CRC Check</span>
-                                                        </label>
+                                                <div className="space-y-2 pt-1 border-t border-[#3c3c3c]/50 mt-1">
+                                                    <div className="flex items-center gap-2 group/crc">
+                                                        <Switch
+                                                            label="CRC Check (RX)"
+                                                            checked={crcEnabled}
+                                                            onChange={toggleCRC}
+                                                            className="flex-1"
+                                                        />
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
-                                                            className={`p-1 rounded hover:bg-[#3c3c3c] text-[#969696] hover:text-white transition-colors ${showCRCPanel ? 'bg-[#3c3c3c] text-white' : ''}`}
+                                                            className={`p-1 rounded hover:bg-[#3c3c3c] text-[#969696] hover:text-white transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[#3c3c3c] text-white' : ''}`}
                                                             title="CRC Configuration"
                                                         >
                                                             <Settings size={12} />
@@ -534,46 +504,41 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     </div>
 
                                                     {showCRCPanel && (
-                                                        <div className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2 space-y-2 mt-1">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] text-[#cccccc]">Algorithm:</span>
-                                                                <select
-                                                                    className="bg-[#3c3c3c] border border-[#3c3c3c] text-[10px] text-[#cccccc] rounded-sm outline-none px-1 py-0.5"
+                                                        <div className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[10px] text-[#888888] font-medium">Algorithm:</span>
+                                                                <CustomSelect
+                                                                    items={[
+                                                                        { label: 'Modbus CRC16', value: 'modbus-crc16' },
+                                                                        { label: 'CCITT CRC16', value: 'ccitt-crc16' },
+                                                                        { label: 'CRC32', value: 'crc32' },
+                                                                        { label: 'None', value: 'none' }
+                                                                    ]}
                                                                     value={rxCRC.algorithm}
-                                                                    onChange={(e) => updateRxCRC({ algorithm: e.target.value as any })}
-                                                                >
-                                                                    <option value="modbus-crc16">Modbus CRC16</option>
-                                                                    <option value="ccitt-crc16">CCITT CRC16</option>
-                                                                    <option value="crc32">CRC32</option>
-                                                                    <option value="none">None</option>
-                                                                </select>
+                                                                    onChange={(val) => updateRxCRC({ algorithm: val as any })}
+                                                                />
                                                             </div>
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] text-[#cccccc]">Start Offset:</span>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[10px] text-[#888888] font-medium">Start Offset:</span>
                                                                 <input
                                                                     type="number"
-                                                                    className="bg-[#3c3c3c] border border-[#3c3c3c] text-[10px] text-[#cccccc] rounded-sm outline-none px-1.5 py-0.5 w-24"
+                                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1 focus:border-[var(--vscode-focusBorder)]"
                                                                     value={rxCRC.startIndex}
                                                                     onChange={(e) => updateRxCRC({ startIndex: parseInt(e.target.value) || 0 })}
                                                                 />
                                                             </div>
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10px] text-[#cccccc]">End Position:</span>
-                                                                <div className="relative">
-                                                                    <select
-                                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[10px] text-[#cccccc] rounded-sm outline-none px-1 py-0.5 w-24 appearance-none pr-5 hover:bg-[#454545] transition-colors"
-                                                                        value={rxCRC.endIndex}
-                                                                        onChange={(e) => updateRxCRC({ endIndex: parseInt(e.target.value) })}
-                                                                    >
-                                                                        <option value="0">End</option>
-                                                                        <option value="-1">-1</option>
-                                                                        <option value="-2">-2</option>
-                                                                        <option value="-3">-3</option>
-                                                                    </select>
-                                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                                        <ChevronDown size={10} />
-                                                                    </div>
-                                                                </div>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[10px] text-[#888888] font-medium">End Position:</span>
+                                                                <CustomSelect
+                                                                    items={[
+                                                                        { label: 'End of Packet', value: '0' },
+                                                                        { label: '-1 (Exclude last 1)', value: '-1' },
+                                                                        { label: '-2 (Exclude last 2)', value: '-2' },
+                                                                        { label: '-3 (Exclude last 3)', value: '-3' }
+                                                                    ]}
+                                                                    value={(rxCRC.endIndex ?? 0).toString()}
+                                                                    onChange={(val) => updateRxCRC({ endIndex: parseInt(val) })}
+                                                                />
                                                             </div>
                                                         </div>
                                                     )}
@@ -582,35 +547,29 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         </div>
 
                                         {/* Display Settings Section */}
-                                        <div className="mb-6 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
-                                                <span>UI Settings</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                        <div className="mb-6 px-1">
+                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                <span>Typography</span>
+                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
                                             </div>
                                             <div className="space-y-4">
                                                 {/* Font Size */}
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] text-[#cccccc]">Font Size:</span>
-                                                    <div className="relative">
-                                                        <select
-                                                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-24 appearance-none hover:bg-[#454545] transition-colors pr-6"
-                                                            value={fontSize}
-                                                            onChange={(e) => { const val = Number(e.target.value); setFontSize(val); saveUIState({ fontSize: val }); }}
-                                                        >
-                                                            {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => (
-                                                                <option key={size} value={size}>{size}px</option>
-                                                            ))}
-                                                        </select>
-                                                        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                            <ChevronDown size={11} />
-                                                        </div>
-                                                    </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[11px] text-[#aaaaaa]">Font Size:</span>
+                                                    <CustomSelect
+                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
+                                                            label: `${size}px`,
+                                                            value: size.toString()
+                                                        }))}
+                                                        value={fontSize.toString()}
+                                                        onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
+                                                    />
                                                 </div>
 
                                                 {/* Font Family */}
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#cccccc]">Font Family:</span>
+                                                        <span className="text-[11px] text-[#aaaaaa]">Font Family:</span>
                                                         <label className="flex items-center gap-1.5 cursor-pointer group">
                                                             <input
                                                                 type="checkbox"
@@ -618,54 +577,36 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 checked={showAllFonts}
                                                                 onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
                                                             />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">Show All System Fonts</span>
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">System Fonts</span>
                                                         </label>
                                                     </div>
-                                                    <div className="relative text-wrap">
-                                                        <select
-                                                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1.5 w-full appearance-none hover:bg-[#454545] transition-colors pr-8"
-                                                            value={fontFamily}
-                                                            onChange={(e) => { setFontFamily(e.target.value as any); saveUIState({ fontFamily: e.target.value as any }); }}
-                                                        >
-                                                            <optgroup label="Built-in / Recommended">
-                                                                {defaultFonts.map(f => (
-                                                                    <option key={f.value} value={f.value}>{f.label}</option>
-                                                                ))}
-                                                            </optgroup>
-                                                            {showAllFonts && availableFonts.length > 0 && (
-                                                                <optgroup label="System Fonts">
-                                                                    {availableFonts.map(f => (
-                                                                        <option key={f.postscriptName || f.fullName} value={f.fullName}>{f.fullName}</option>
-                                                                    ))}
-                                                                </optgroup>
-                                                            )}
-                                                        </select>
-                                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                            <ChevronDown size={12} />
-                                                        </div>
-                                                    </div>
+                                                    <CustomSelect
+                                                        items={[
+                                                            ...defaultFonts,
+                                                            ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
+                                                        ]}
+                                                        value={fontFamily}
+                                                        onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val as any }); }}
+                                                    />
                                                 </div>
 
                                                 {/* Chunk Timeout */}
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] text-[#cccccc]">Packet Timeout:</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-24 focus:border-[#007acc] transition-colors"
-                                                            value={uiState.chunkTimeout || 0}
-                                                            onChange={(e) => {
-                                                                const val = parseInt(e.target.value);
-                                                                const newTimeout = isNaN(val) ? 0 : Math.max(0, val);
-                                                                if (onUpdateConfig) {
-                                                                    const currentUIState = (config as any).uiState || {};
-                                                                    onUpdateConfig({ uiState: { ...currentUIState, chunkTimeout: newTimeout } } as any);
-                                                                }
-                                                            }}
-                                                            placeholder="0"
-                                                        />
-                                                        <span className="text-[10px] text-[#666666]">ms</span>
-                                                    </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[11px] text-[#aaaaaa]">Packet Timeout (ms):</span>
+                                                    <input
+                                                        type="number"
+                                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--vscode-focusBorder)] transition-colors"
+                                                        value={uiState.chunkTimeout || 0}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value);
+                                                            const newTimeout = isNaN(val) ? 0 : Math.max(0, val);
+                                                            if (onUpdateConfig) {
+                                                                const currentUIState = (config as any).uiState || {};
+                                                                onUpdateConfig({ uiState: { ...currentUIState, chunkTimeout: newTimeout } } as any);
+                                                            }
+                                                        }}
+                                                        placeholder="0 (Disabled)"
+                                                    />
                                                 </div>
                                             </div>
                                         </div>

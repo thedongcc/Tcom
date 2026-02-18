@@ -15,6 +15,8 @@ import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
 import { useCommandContext } from '../../context/CommandContext';
 import { useSession } from '../../context/SessionContext';
+import { CustomSelect } from '../common/CustomSelect';
+import { Switch } from '../common/Switch';
 import { formatTimestamp } from '../../utils/format';
 import { SerialInput } from '../serial/SerialInput';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -489,106 +491,106 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                             <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
                                         </div>
 
-                                        {/* Encoding */}
-                                        <div className="mb-5 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb]">
-                                                <span>Encoding</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
-                                            <div className="relative">
-                                                <select
-                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1.5 hover:bg-[#454545] transition-colors appearance-none pr-8 outline-none"
+                                        <div className="space-y-4 px-1">
+                                            {/* Encoding Section */}
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                    <span>Encoding</span>
+                                                    <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                                </div>
+                                                <CustomSelect
+                                                    items={[
+                                                        { label: 'UTF-8', value: 'utf-8' },
+                                                        { label: 'GBK', value: 'gbk' },
+                                                        { label: 'ASCII', value: 'ascii' }
+                                                    ]}
                                                     value={encoding}
-                                                    onChange={(e) => { setEncoding(e.target.value as any); saveUIState({ encoding: e.target.value as any }); }}
-                                                >
-                                                    <option value="utf-8">UTF-8</option>
-                                                    <option value="gbk">GBK</option>
-                                                    <option value="ascii">ASCII</option>
-                                                </select>
-                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                    <ChevronDown size={12} />
-                                                </div>
+                                                    onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }}
+                                                />
                                             </div>
-                                        </div>
 
-                                        {/* Features */}
-                                        <div className="mb-5 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb]">
-                                                <span>Features</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
-                                            <div className="space-y-3">
-                                                {[
-                                                    { label: 'Timestamp', value: showTimestamp, setter: setShowTimestamp, key: 'showTimestamp' },
-                                                    { label: 'Packet Type', value: showPacketType, setter: setShowPacketType, key: 'showPacketType' },
-                                                    { label: 'Data Length', value: showDataLength, setter: setShowDataLength, key: 'showDataLength' },
-                                                    { label: 'Merge Repeats', value: mergeRepeats, setter: setMergeRepeats, key: 'mergeRepeats' },
-                                                    { label: 'Smooth Animation', value: smoothScroll, setter: setSmoothScroll, key: 'smoothScroll' },
-                                                ].map(item => (
-                                                    <label key={item.key} className="flex items-center justify-between cursor-pointer group">
-                                                        <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">{item.label}</span>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={item.value}
-                                                            onChange={(e) => { item.setter(e.target.checked); saveUIState({ [item.key]: e.target.checked }); }}
-                                                            className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
-                                                        />
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* UI Settings */}
-                                        <div className="mb-6 px-1 pt-2">
-                                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-[#bbbbbb]">
-                                                <span>UI Settings</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] text-[#cccccc]">Font Size:</span>
-                                                    <select
-                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1 w-24 outline-none"
-                                                        value={fontSize}
-                                                        onChange={(e) => { const val = Number(e.target.value); setFontSize(val); saveUIState({ fontSize: val }); }}
-                                                    >
-                                                        {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(s => <option key={s} value={s}>{s}px</option>)}
-                                                    </select>
+                                            {/* Features Section */}
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                    <span>Log Features</span>
+                                                    <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
                                                 </div>
-                                                <div className="flex flex-col gap-2">
+                                                <Switch
+                                                    label="Timestamp"
+                                                    checked={showTimestamp}
+                                                    onChange={(val) => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }}
+                                                />
+                                                <Switch
+                                                    label="Packet Type"
+                                                    checked={showPacketType}
+                                                    onChange={(val) => { setShowPacketType(val); saveUIState({ showPacketType: val }); }}
+                                                />
+                                                <Switch
+                                                    label="Data Length"
+                                                    checked={showDataLength}
+                                                    onChange={(val) => { setShowDataLength(val); saveUIState({ showDataLength: val }); }}
+                                                />
+                                                <Switch
+                                                    label="Merge Repeats"
+                                                    checked={mergeRepeats}
+                                                    onChange={(val) => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }}
+                                                />
+                                                <Switch
+                                                    label="Smooth Animation"
+                                                    checked={smoothScroll}
+                                                    onChange={(val) => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }}
+                                                />
+                                            </div>
+
+                                            {/* UI Settings Section */}
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                    <span>Appearance</span>
+                                                    <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                                                </div>
+
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span className="text-[11px] text-[#808080]">Font Size</span>
+                                                    <CustomSelect
+                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(s => ({ label: `${s}px`, value: String(s) }))}
+                                                        value={String(fontSize)}
+                                                        onChange={(val) => { const v = Number(val); setFontSize(v); saveUIState({ fontSize: v }); }}
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-col gap-1.5 pt-1">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#cccccc]">Font Family:</span>
-                                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                                            <input type="checkbox" checked={showAllFonts} onChange={(e) => setShowAllFonts(e.target.checked)} className="w-3 h-3 rounded bg-[#1e1e1e] text-[#007acc]" />
-                                                            <span className="text-[10px] text-[#888]">All Fonts</span>
+                                                        <span className="text-[11px] text-[#808080]">Font Family</span>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer group">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={showAllFonts}
+                                                                onChange={(e) => setShowAllFonts(e.target.checked)}
+                                                                className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] cursor-pointer"
+                                                            />
+                                                            <span className="text-[10px] text-[#666] group-hover:text-[#999] transition-colors">Show All</span>
                                                         </label>
                                                     </div>
-                                                    <select
-                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] px-2 py-1.5 w-full outline-none"
+                                                    <CustomSelect
+                                                        items={[
+                                                            ...defaultFonts,
+                                                            ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
+                                                        ]}
                                                         value={fontFamily}
-                                                        onChange={(e) => { setFontFamily(e.target.value as any); saveUIState({ fontFamily: e.target.value as any }); }}
-                                                    >
-                                                        <optgroup label="Default">
-                                                            {defaultFonts.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                                                        </optgroup>
-                                                        {showAllFonts && (
-                                                            <optgroup label="System">
-                                                                {availableFonts.map(f => <option key={f.fullName} value={f.fullName}>{f.fullName}</option>)}
-                                                            </optgroup>
-                                                        )}
-                                                    </select>
+                                                        onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val }); }}
+                                                    />
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div className="pt-2 border-t border-[#3c3c3c]">
-                                            <button
-                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors"
-                                                onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}
-                                            >
-                                                <Download size={14} />
-                                                <span>Export Log</span>
-                                            </button>
+                                            <div className="pt-2 border-t border-[#3c3c3c]">
+                                                <button
+                                                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors shadow-sm"
+                                                    onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}
+                                                >
+                                                    <Download size={14} />
+                                                    <span>Export Log</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </>

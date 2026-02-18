@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, Play, Square } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
-import { SerialSessionConfig, MqttSessionConfig } from '../../types/session';
+import { SerialSessionConfig, MqttSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { MqttConfigPanel } from '../mqtt/MqttConfigPanel';
 import { MonitorConfigPanel } from '../serial-monitor/MonitorConfig';
 import { CustomSelect } from '../common/CustomSelect';
@@ -73,68 +73,61 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                         onChange={(val) => updateConnection({ path: val })}
                         disabled={isConnected}
                         placeholder="Select Port"
+                        showStatus={true}
                     />
                 </div>
 
                 {/* Baud Rate Selector */}
                 <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-[#969696]">Baud Rate</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                        value={connection.baudRate}
-                        onChange={(e) => updateConnection({ baudRate: Number(e.target.value) })}
+                    <CustomSelect
+                        items={COMMON_BAUD_RATES.map(rate => ({
+                            label: String(rate),
+                            value: String(rate)
+                        }))}
+                        value={String(connection.baudRate)}
+                        onChange={(val) => updateConnection({ baudRate: Number(val) || 115200 })}
                         disabled={isConnected}
-                    >
-                        {[9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600].map(rate => (
-                            <option key={rate} value={rate}>{rate}</option>
-                        ))}
-                    </select>
+                        allowCustom={true}
+                        placeholder="Baudrate"
+                    />
                 </div>
 
                 {/* Data Bits */}
                 <div className="flex gap-2">
                     <div className="flex flex-col gap-1 flex-1">
                         <label className="text-[11px] text-[#969696]">Data Bits</label>
-                        <select
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                            value={connection.dataBits}
-                            onChange={(e) => updateConnection({ dataBits: Number(e.target.value) as any })}
+                        <CustomSelect
+                            items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
+                            value={String(connection.dataBits)}
+                            onChange={(val) => updateConnection({ dataBits: Number(val) as any })}
                             disabled={isConnected}
-                        >
-                            {[5, 6, 7, 8].map(bit => (
-                                <option key={bit} value={bit}>{bit}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     <div className="flex flex-col gap-1 flex-1">
                         <label className="text-[11px] text-[#969696]">Stop Bits</label>
-                        <select
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                            value={connection.stopBits}
-                            onChange={(e) => updateConnection({ stopBits: Number(e.target.value) as any })}
+                        <CustomSelect
+                            items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
+                            value={String(connection.stopBits)}
+                            onChange={(val) => updateConnection({ stopBits: Number(val) as any })}
                             disabled={isConnected}
-                        >
-                            {[1, 1.5, 2].map(bit => (
-                                <option key={bit} value={bit}>{bit}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                 </div>
 
                 {/* Parity */}
                 <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-[#969696]">Parity</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
+                    <CustomSelect
+                        items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
+                            label: p.charAt(0).toUpperCase() + p.slice(1),
+                            value: p
+                        }))}
                         value={connection.parity}
-                        onChange={(e) => updateConnection({ parity: e.target.value as any })}
+                        onChange={(val) => updateConnection({ parity: val as any })}
                         disabled={isConnected}
-                    >
-                        {['none', 'even', 'odd', 'mark', 'space'].map(p => (
-                            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                        ))}
-                    </select>
+                    />
                 </div>
 
                 {/* Connect/Disconnect Button & Status */}

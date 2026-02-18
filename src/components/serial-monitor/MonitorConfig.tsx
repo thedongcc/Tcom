@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Play, Square, Settings, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
-import { MonitorSessionConfig } from '../../types/session';
+import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com, PairInfo } from '../../utils/com0com';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../common/CustomSelect';
+import { Switch } from '../common/Switch';
 
 interface MonitorConfigPanelProps {
     session: any;
@@ -231,31 +232,27 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     <div className="flex flex-col gap-2 mb-2">
                         <div className={`flex gap-1 items-center ${isConnected ? 'opacity-50' : ''}`}>
-                            <select
-                                className="flex-1 min-w-0 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none disabled:cursor-not-allowed"
+                            <CustomSelect
+                                items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
+                                    label: com,
+                                    value: com,
+                                    disabled: usedPorts.has(com) || physicalPorts.includes(com)
+                                }))}
                                 value={newPairExt}
-                                onChange={e => setNewPairExt(e.target.value)}
+                                onChange={val => setNewPairExt(val)}
                                 disabled={isConnected}
-                            >
-                                {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
-                                    <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com)}>
-                                        {com}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                             <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
-                            <select
-                                className="flex-1 min-w-0 bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none disabled:cursor-not-allowed"
+                            <CustomSelect
+                                items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
+                                    label: com,
+                                    value: com,
+                                    disabled: usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt
+                                }))}
                                 value={newPairInt}
-                                onChange={e => setNewPairInt(e.target.value)}
+                                onChange={val => setNewPairInt(val)}
                                 disabled={isConnected}
-                            >
-                                {Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => (
-                                    <option key={com} value={com} disabled={usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt}>
-                                        {com}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                         <button
                             onClick={() => {
@@ -277,8 +274,12 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
                         {existingPairs.map(pair => (
-                            <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1 relative">
-                                <span className="text-[#cccccc]">{pair.portA} <ArrowRightLeft size={10} className="inline mx-1" /> {pair.portB}</span>
+                            <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1.5 relative hover:bg-[#444444] transition-colors rounded-sm mb-1 last:mb-0">
+                                <div className="grid grid-cols-[45px_20px_45px] items-center font-mono">
+                                    <span className="text-[#cccccc]">{pair.portA}</span>
+                                    <ArrowRightLeft size={10} className="text-[#808080]" />
+                                    <span className="text-[#cccccc]">{pair.portB}</span>
+                                </div>
                                 <button
                                     disabled={isConnected}
                                     className={`p-1 rounded transition-colors ${isConnected
@@ -342,6 +343,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                             }}
                             disabled={isConnected}
                             placeholder="Select Port"
+                            showStatus={true}
                         />
                     </div>
 
@@ -383,77 +385,67 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                         }}
                         disabled={isConnected}
                         placeholder="Select Port"
+                        showStatus={true}
                     />
                 </div>
 
-                <div className="flex flex-col gap-1 py-1">
-                    <div
-                        className={`flex items-center justify-between cursor-pointer group ${isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={() => !isConnected && updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
-                    >
-                        <span className="text-[11px] text-[#969696] group-hover:text-[#cccccc] transition-colors">Auto-destroy Pair on Stop</span>
-                        <div className={`w-8 h-4 rounded-full flex items-center shrink-0 transition-colors px-0.5 ${monitorConfig.autoDestroyPair ? 'bg-[#10b981]' : 'bg-[#3c3c3c]'}`}>
-                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${monitorConfig.autoDestroyPair ? 'translate-x-4' : 'translate-x-0'}`} />
-                        </div>
-                    </div>
+                <div className="py-1">
+                    <Switch
+                        label="Auto-destroy Pair on Stop"
+                        checked={monitorConfig.autoDestroyPair}
+                        onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
+                        disabled={isConnected}
+                    />
                 </div>
 
                 {/* Baud Rate & Params for Physical Port */}
                 <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-[#969696]">Baud Rate (Physical)</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                        value={monitorConfig.connection?.baudRate || 115200}
-                        onChange={(e) => updateConfig({ connection: { ...monitorConfig.connection, baudRate: Number(e.target.value) } })}
+                    <CustomSelect
+                        items={COMMON_BAUD_RATES.map(rate => ({
+                            label: String(rate),
+                            value: String(rate)
+                        }))}
+                        value={String(monitorConfig.connection?.baudRate || 115200)}
+                        onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, baudRate: Number(val) || 115200 } })}
                         disabled={isConnected}
-                    >
-                        {[9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600].map(rate => (
-                            <option key={rate} value={rate}>{rate}</option>
-                        ))}
-                    </select>
+                        allowCustom={true}
+                        placeholder="Baudrate"
+                    />
                 </div>
 
                 <div className="flex gap-2">
                     <div className="flex flex-col gap-1 flex-1">
                         <label className="text-[11px] text-[#969696]">Data Bits</label>
-                        <select
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                            value={monitorConfig.connection?.dataBits || 8}
-                            onChange={(e) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(e.target.value) as any } })}
+                        <CustomSelect
+                            items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
+                            value={String(monitorConfig.connection?.dataBits || 8)}
+                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(val) as any } })}
                             disabled={isConnected}
-                        >
-                            {[5, 6, 7, 8].map(bit => (
-                                <option key={bit} value={bit}>{bit}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                     <div className="flex flex-col gap-1 flex-1">
                         <label className="text-[11px] text-[#969696]">Stop Bits</label>
-                        <select
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
-                            value={monitorConfig.connection?.stopBits || 1}
-                            onChange={(e) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(e.target.value) as any } })}
+                        <CustomSelect
+                            items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
+                            value={String(monitorConfig.connection?.stopBits || 1)}
+                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(val) as any } })}
                             disabled={isConnected}
-                        >
-                            {[1, 1.5, 2].map(bit => (
-                                <option key={bit} value={bit}>{bit}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-[#969696]">Parity</label>
-                    <select
-                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
+                    <CustomSelect
+                        items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
+                            label: p.charAt(0).toUpperCase() + p.slice(1),
+                            value: p
+                        }))}
                         value={monitorConfig.connection?.parity || 'none'}
-                        onChange={(e) => updateConfig({ connection: { ...monitorConfig.connection, parity: e.target.value as any } })}
+                        onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as any } })}
                         disabled={isConnected}
-                    >
-                        {['none', 'even', 'odd', 'mark', 'space'].map(p => (
-                            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                        ))}
-                    </select>
+                    />
                 </div>
 
                 {/* Connect Button */}

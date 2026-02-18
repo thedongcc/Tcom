@@ -5,6 +5,8 @@ import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import { mqttTopicMatch } from '../../utils/mqttUtils';
+import { CustomSelect } from '../common/CustomSelect';
+import { Switch } from '../common/Switch';
 
 interface MqttMonitorProps {
     session: {
@@ -352,7 +354,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </div>
 
                     {/* View Mode */}
-                    <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-[26px]">
+                    <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-7">
                         {(['text', 'hex', 'json'] as const).map(m => (
                             <button
                                 key={m}
@@ -378,127 +380,89 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                 <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                    <div className="flex items-center justify-between mb-2 pb-1 border-b border-[#3c3c3c]">
+                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
                                         <div className="text-[12px] text-[#cccccc] font-bold">Log Settings</div>
                                     </div>
-                                    <div className="space-y-3 px-1">
-
-                                        <div className="space-y-2 mb-4">
-                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
-                                                <span>Features</span>
+                                    <div className="space-y-4 px-1">
+                                        {/* Features Section */}
+                                        <div className="space-y-2.5">
+                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                                <span>Log Features</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
                                             </div>
 
-                                            <label className="flex items-center justify-between cursor-pointer group">
-                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Smooth Animation</span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={smoothScroll}
-                                                    onChange={(e) => { setSmoothScroll(e.target.checked); saveUIState({ smoothScroll: e.target.checked }); }}
-                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
-                                                />
-                                            </label>
+                                            <Switch
+                                                label="Smooth Animation"
+                                                checked={smoothScroll}
+                                                onChange={(val) => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }}
+                                            />
 
-                                            <label className="flex items-center justify-between cursor-pointer group">
-                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Timestamp</span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={showTimestamp}
-                                                    onChange={(e) => { setShowTimestamp(e.target.checked); saveUIState({ showTimestamp: e.target.checked }); }}
-                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
-                                                />
-                                            </label>
+                                            <Switch
+                                                label="Timestamp"
+                                                checked={showTimestamp}
+                                                onChange={(val) => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }}
+                                            />
 
-                                            <label className="flex items-center justify-between cursor-pointer group">
-                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Data Length</span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={showDataLength}
-                                                    onChange={(e) => { setShowDataLength(e.target.checked); saveUIState({ showDataLength: e.target.checked }); }}
-                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
-                                                />
-                                            </label>
+                                            <Switch
+                                                label="Data Length"
+                                                checked={showDataLength}
+                                                onChange={(val) => { setShowDataLength(val); saveUIState({ showDataLength: val }); }}
+                                            />
 
-                                            <label className="flex items-center justify-between cursor-pointer group">
-                                                <span className="text-[11px] text-[#cccccc] group-hover:text-white transition-colors">Merge Repeats</span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={mergeRepeats}
-                                                    onChange={(e) => { setMergeRepeats(e.target.checked); saveUIState({ mergeRepeats: e.target.checked }); }}
-                                                    className="w-3.5 h-3.5 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0"
-                                                />
-                                            </label>
+                                            <Switch
+                                                label="Merge Repeats"
+                                                checked={mergeRepeats}
+                                                onChange={(val) => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }}
+                                            />
                                         </div>
 
-                                        {/* Font Settings */}
-                                        <div className="space-y-3 mb-4">
-                                            <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#bbbbbb] whitespace-nowrap">
+                                        {/* Appearance Section */}
+                                        <div className="space-y-2.5">
+                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
                                                 <span>Appearance</span>
                                                 <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
                                             </div>
 
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] text-[#cccccc]">Font Size:</span>
-                                                <div className="relative">
-                                                    <select
-                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-20 appearance-none hover:bg-[#454545] transition-colors"
-                                                        value={fontSize}
-                                                        onChange={(e) => { const val = Number(e.target.value); setFontSize(val); saveUIState({ fontSize: val }); }}
-                                                    >
-                                                        {[10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => (
-                                                            <option key={size} value={size}>{size}px</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                        <ChevronDown size={10} />
-                                                    </div>
-                                                </div>
+                                            <div className="flex flex-col gap-1.5">
+                                                <span className="text-[11px] text-[#808080]">Font Size</span>
+                                                <CustomSelect
+                                                    items={[10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
+                                                        label: `${size}px`,
+                                                        value: String(size)
+                                                    }))}
+                                                    value={String(fontSize)}
+                                                    onChange={(val) => { const n = Number(val); setFontSize(n); saveUIState({ fontSize: n }); }}
+                                                />
                                             </div>
 
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[11px] text-[#cccccc]">Font Family:</span>
-                                                <div className="relative">
-                                                    <select
-                                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-[2px] outline-none px-2 py-1 w-full appearance-none hover:bg-[#454545] transition-colors pr-6"
-                                                        value={fontFamily}
-                                                        onChange={(e) => { setFontFamily(e.target.value); saveUIState({ fontFamily: e.target.value }); }}
-                                                    >
-                                                        <optgroup label="Preset Fonts">
-                                                            {defaultFonts.map(f => (
-                                                                <option key={f.value} value={f.value}>{f.label}</option>
-                                                            ))}
-                                                        </optgroup>
-                                                        {showAllFonts && availableFonts.length > 0 && (
-                                                            <optgroup label="System Fonts">
-                                                                {availableFonts.map((font: any) => (
-                                                                    <option key={font.fullName} value={font.fullName}>
-                                                                        {font.fullName}
-                                                                    </option>
-                                                                ))}
-                                                            </optgroup>
-                                                        )}
-                                                    </select>
-                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                                        <ChevronDown size={12} />
-                                                    </div>
+                                            <div className="flex flex-col gap-1.5 pt-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] text-[#808080]">Font Family</span>
+                                                    <label className="flex items-center gap-1.5 cursor-pointer group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={showAllFonts}
+                                                            onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
+                                                            className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] cursor-pointer"
+                                                        />
+                                                        <span className="text-[10px] text-[#666] group-hover:text-[#999] transition-colors">Show All</span>
+                                                    </label>
                                                 </div>
-
-                                                <label className="flex items-center gap-2 mt-1 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={showAllFonts}
-                                                        onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
-                                                        className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e]"
-                                                    />
-                                                    <span className="text-[10px] text-[#969696]">Show System Fonts</span>
-                                                </label>
+                                                <CustomSelect
+                                                    items={[
+                                                        ...defaultFonts,
+                                                        ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
+                                                    ]}
+                                                    value={fontFamily}
+                                                    onChange={(val) => { setFontFamily(val as string); saveUIState({ fontFamily: val }); }}
+                                                />
                                             </div>
                                         </div>
 
                                         {/* Actions */}
                                         <div className="pt-2 border-t border-[#3c3c3c]">
                                             <button
-                                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors"
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors shadow-sm"
                                                 onClick={() => {
                                                     handleSaveLogs();
                                                     setShowOptionsMenu(false);
