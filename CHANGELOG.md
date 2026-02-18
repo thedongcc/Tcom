@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加虚拟串口启用状态检测机制
 - 添加更多的波特率支持
 - 添加自定义波特率支持
+- 新增自变化token类型auto
+- 增加监视区数据搜索功能
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -47,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化options菜单中的组件样式
 - 修改全部下拉框和其弹出菜单的样式
 - 修改全部switch开关的样式
+- 修复删除session后右侧标签还存在的问题
+- 简化串口发送区上方的token图标
+- 优化token设置菜单
 
 ### Removed
 - 取消设置中的check update功能

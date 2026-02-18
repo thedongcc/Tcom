@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { formatPortInfo, formatTimestamp } from '../../utils/format';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
+import { LogSearch, useLogSearch } from '../common/LogSearch';
 
 
 interface SerialMonitorProps {
@@ -55,6 +56,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+    // Search State
+    const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
 
     // Font Selection Logic
     const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
@@ -142,6 +145,75 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return sum + (log.data.length * count);
     }, 0);
 
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex', enc: string) => {
+        if (mode === 'hex') {
+            if (typeof data === 'string') {
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(data);
+                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+            }
+            return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+        }
+
+        if (typeof data === 'string') return data;
+        try {
+            return new TextDecoder(enc).decode(data);
+        } catch (e) {
+            return new TextDecoder().decode(data);
+        }
+    }, []);
+
+    // Search Logic
+    const {
+        query, setQuery, isRegex, setIsRegex, matches, currentIndex, nextMatch, prevMatch
+    } = useLogSearch(logs, uiState.searchQuery || '', uiState.searchRegex || false, viewMode, formatData, encoding);
+
+    const handleQueryChange = (newQuery: string) => {
+        setQuery(newQuery);
+        // Debounce saving to uiState if needed, but for now direct save is okay or use a ref + blur/unmount save
+        // For simple text input, saving on every char might be heavy if config update triggers re-renders.
+        // But saveUIState implementation merges with current config.
+        // Let's safe-guard:
+        saveUIState({ searchQuery: newQuery });
+    };
+
+    const handleRegexChange = (newRegex: boolean) => {
+        setIsRegex(newRegex);
+        saveUIState({ searchRegex: newRegex });
+    };
+
+    const handleToggleSearch = useCallback(() => {
+        setSearchOpen(prev => {
+            const next = !prev;
+            saveUIState({ searchOpen: next });
+            return next;
+        });
+    }, [saveUIState]);
+
+    // Ctrl+F shortcut
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                handleToggleSearch();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleToggleSearch]);
+
+    const activeMatch = matches[currentIndex];
+
+    // Auto-scroll to active search match
+    useEffect(() => {
+        if (activeMatch && scrollRef.current) {
+            const element = document.getElementById(`log-${activeMatch.logId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [activeMatch]);
+
     // Clear logs
     const handleClearLogs = () => {
         if (onClearLogs) {
@@ -166,34 +238,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         URL.revokeObjectURL(url);
     };
 
-    const formatData = (data: string | Uint8Array, mode: 'text' | 'hex', encoding: string) => {
-        if (mode === 'hex') {
-            if (typeof data === 'string') {
-                // Convert string to hex bytes
-                const encoder = new TextEncoder();
-                const bytes = encoder.encode(data);
-                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-            }
-            return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-        }
-
-        // Text mode
-        if (typeof data === 'string') return data;
-
-        try {
-            if (encoding === 'gbk') {
-                // TextDecoder in browsers may not support GBK directly
-                // For now, fallback to utf-8 or use a polyfill
-                return new TextDecoder('utf-8').decode(data);
-            } else if (encoding === 'ascii') {
-                return new TextDecoder('ascii').decode(data);
-            } else {
-                return new TextDecoder('utf-8').decode(data);
-            }
-        } catch (e) {
-            return new TextDecoder().decode(data);
-        }
-    };
 
     const getDataLengthText = (data: string | Uint8Array) => {
         let length = 0;
@@ -258,6 +302,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     // Filter logs
     const filteredLogs = logs.filter(log => {
+        if (log.type === 'INFO' || log.type === 'ERROR') return true;
         if (filterMode === 'rx') return log.type === 'RX';
         if (filterMode === 'tx') return log.type === 'TX';
         return true; // 'all'
@@ -663,148 +708,204 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             </div>
 
             {/* Log Area */}
-            <div
-                className="flex-1 overflow-auto p-4"
-                style={{
-                    fontSize: `${fontSize}px`,
-                    fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : `"${fontFamily}", sans-serif`,
-                    lineHeight: '1.6'
-                }}
-                ref={scrollRef}
-            >
-                {filteredLogs.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-[#666]">
-                        <p>No data</p>
-                    </div>
-                )}
-                {filteredLogs.length > 100 && (
-                    <div className="text-center text-[10px] text-[#666] py-1 select-none">
-                        ... {filteredLogs.length - 100} earlier messages hidden for performance ...
-                    </div>
-                )}
-                <AnimatePresence initial={false}>
-                    {filteredLogs.slice(-100).map((log) => {
-                        // Animation Logic
-                        const isNewLog = log.timestamp > mountTimeRef.current;
+            <div className="flex-1 relative overflow-hidden">
+                <div className="absolute top-4 right-4 z-10">
+                    <LogSearch
+                        isOpen={searchOpen}
+                        onToggle={handleToggleSearch}
+                        query={query}
+                        isRegex={isRegex}
+                        onQueryChange={handleQueryChange}
+                        onRegexChange={handleRegexChange}
+                        onNext={nextMatch}
+                        onPrev={prevMatch}
+                        logs={logs}
+                        currentIndex={currentIndex}
+                        totalMatches={matches.length}
+                        viewMode={viewMode}
+                        formatData={formatData}
+                        encoding={encoding}
+                    />
+                </div>
+                <div
+                    className="absolute inset-0 overflow-auto p-4"
+                    style={{
+                        fontSize: `${fontSize}px`,
+                        fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : `"${fontFamily}", sans-serif`,
+                        lineHeight: '1.6'
+                    }}
+                    ref={scrollRef}
+                >
+                    {filteredLogs.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-[#666]">
+                            <p>No data</p>
+                        </div>
+                    )}
+                    {filteredLogs.length > 100 && (
+                        <div className="text-center text-[10px] text-[#666] py-1 select-none">
+                            ... {filteredLogs.length - 100} earlier messages hidden for performance ...
+                        </div>
+                    )}
+                    <AnimatePresence initial={false}>
+                        {filteredLogs.slice(-100).map((log) => {
+                            // Animation Logic
+                            const isNewLog = log.timestamp > mountTimeRef.current;
 
-                        // System/Info Messages - Centered Notification Style
-                        if (log.type === 'INFO' || log.type === 'ERROR') {
-                            const content = formatData(log.data, 'text', encoding);
+                            // System/Info Messages - Centered Notification Style
+                            if (log.type === 'INFO' || log.type === 'ERROR') {
+                                const content = formatData(log.data, 'text', encoding);
 
-                            // Determine style based on content/type
-                            let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
-                            if (log.type === 'ERROR') {
-                                styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                            } else if (content.includes('Open') || content.includes('Connected') || content.includes('Restored')) {
-                                styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
-                            } else if (content.includes('Close') || content.includes('Disconnected') || content.includes('Error')) {
-                                styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                            } else {
-                                styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+                                // Determine style based on content/type
+                                let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
+                                if (log.type === 'ERROR') {
+                                    styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                                } else if (content.includes('Open') || content.includes('Connected') || content.includes('Restored')) {
+                                    styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
+                                } else if (content.includes('Close') || content.includes('Disconnected') || content.includes('Error')) {
+                                    styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
+                                } else {
+                                    styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+                                }
+
+                                return (
+                                    <div key={log.id} className="flex justify-center my-2">
+                                        <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
+                                            {content}
+                                        </span>
+                                    </div>
+                                );
                             }
+
+                            // Standard Data Logs (TX/RX)
+                            const variants = {
+                                hidden: { opacity: 0, x: -20 },
+                                visible: {
+                                    opacity: 1,
+                                    x: 0,
+                                    transition: { duration: 0.15, ease: "easeOut" as any }
+                                }
+                            };
 
                             return (
-                                <div key={log.id} className="flex justify-center my-2">
-                                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
-                                        {content}
-                                    </span>
-                                </div>
-                            );
-                        }
-
-                        // Standard Data Logs (TX/RX)
-                        const variants = {
-                            hidden: { opacity: 0, x: -20 },
-                            visible: {
-                                opacity: 1,
-                                x: 0,
-                                transition: { duration: 0.15, ease: "easeOut" as any }
-                            }
-                        };
-
-                        return (
-                            <motion.div
-                                key={log.id}
-                                layout={smoothScroll ? "position" : undefined}
-                                initial={smoothScroll && isNewLog ? "hidden" : false}
-                                animate={smoothScroll ? "visible" : undefined}
-                                variants={variants}
-                                transition={{
-                                    // Layout transition: fast and smooth, no bounce to prevent "jelly" effect on fast streams
-                                    layout: { duration: 0.15, ease: "circOut" as any },
-                                    // Opacity/Transform transition
-                                    default: { duration: 0.15, ease: "easeOut" as any }
-                                }}
-                                className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-[#f48771]' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''}`}
-                                style={{
-                                    fontSize: 'inherit',
-                                    fontFamily: 'inherit',
-                                    // @ts-ignore - CSS variables for animation
-                                    '--flash-color': 'rgba(0, 122, 204, 0.25)'
-                                }}
-                                onContextMenu={(e) => handleLogContextMenu(e, log)}
-                            >
-                                {/* Timestamp & Repeat Count Container */}
-                                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                                    <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
-                                        {showTimestamp && (
-                                            <span className="text-[#999] font-mono opacity-90">
-                                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
+                                <motion.div
+                                    key={log.id}
+                                    layout={smoothScroll ? "position" : undefined}
+                                    initial={smoothScroll && isNewLog ? "hidden" : false}
+                                    animate={smoothScroll ? "visible" : undefined}
+                                    variants={variants}
+                                    transition={{
+                                        // Layout transition: fast and smooth, no bounce to prevent "jelly" effect on fast streams
+                                        layout: { duration: 0.15, ease: "circOut" as any },
+                                        // Opacity/Transform transition
+                                        default: { duration: 0.15, ease: "easeOut" as any }
+                                    }}
+                                    id={`log-${log.id}`}
+                                    className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-[#f48771]' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''} ${activeMatch?.logId === log.id ? 'bg-[#623315]/40 ring-1 ring-[#623315]' : ''}`}
+                                    style={{
+                                        fontSize: 'inherit',
+                                        fontFamily: 'inherit',
+                                        // @ts-ignore - CSS variables for animation
+                                        '--flash-color': 'rgba(0, 122, 204, 0.25)'
+                                    }}
+                                    onContextMenu={(e) => handleLogContextMenu(e, log)}
+                                >
+                                    {/* Timestamp & Repeat Count Container */}
+                                    {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                                        <div className="shrink-0 flex items-center h-[1.6em] select-none gap-1.5">
+                                            {showTimestamp && (
+                                                <span className="text-[#999] font-mono opacity-90">
+                                                    [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
+                                                </span>
+                                            )}
+                                            {log.repeatCount && log.repeatCount > 1 && (
+                                                <span
+                                                    key={log.repeatCount}
+                                                    className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] animate-flash-gold pt-[1px]"
+                                                >
+                                                    x{log.repeatCount}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
+                                        {showPacketType && (
+                                            <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px]
+                                        ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
+                                                    log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
+                                                        'bg-[#454545] text-[#cccccc]'
+                                                }`}>
+                                                {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'SYS'}
                                             </span>
                                         )}
-                                        {log.repeatCount && log.repeatCount > 1 && (
-                                            <span
-                                                key={log.repeatCount}
-                                                className="h-[18px] flex items-center justify-center text-[11px] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px] shadow-sm backdrop-blur-[1px] animate-flash-gold pt-[1px]"
-                                            >
-                                                x{log.repeatCount}
+                                        {showDataLength && (
+                                            <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px]">
+                                                {getDataLengthText(log.data)}
                                             </span>
                                         )}
                                     </div>
-                                )}
-                                <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
-                                    {showPacketType && (
-                                        <span className={`h-[18px] flex items-center justify-center font-bold font-mono select-none px-1 rounded-[3px] w-[36px] text-[11px] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px]
-                                        ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
-                                                log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
-                                                    'bg-[#454545] text-[#cccccc]'
-                                            }`}>
-                                            {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'SYS'}
-                                        </span>
-                                    )}
-                                    {showDataLength && (
-                                        <span className="h-[18px] flex items-center justify-center font-mono select-none px-1.5 rounded-[3px] min-w-[32px] text-[11px] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px]">
-                                            {getDataLengthText(log.data)}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
-                                    log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
-                                        log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
-                                            'text-[var(--st-info-text)]'
-                                    }`}>
-                                    {formatData(log.data, viewMode, encoding)}
-                                </span>
-                                {log.crcStatus === 'error' && (
-                                    <span className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30">
-                                        CRC Error
-                                    </span>
-                                )}
-                            </motion.div>
-                        );
-                    })}
-                </AnimatePresence>
-                {/* Anchor for auto-scroll */}
-                <div ref={(el) => {
-                    if (el && autoScroll) {
-                        el.scrollIntoView({ behavior: 'auto' });
-                    }
-                }} />
+                                    <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
+                                        log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
+                                            log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
+                                                'text-[var(--st-info-text)]'
+                                        }`}>
+                                        {(() => {
+                                            const text = formatData(log.data, viewMode, encoding);
+                                            const logMatches = matches.filter(m => m.logId === log.id);
+                                            if (logMatches.length === 0) return text;
 
+                                            // Sort matches to process from start to end
+                                            const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
+
+                                            const result: React.ReactNode[] = [];
+                                            let lastIndex = 0;
+
+                                            sortedMatches.forEach((match, i) => {
+                                                // Add text before match
+                                                if (match.startIndex > lastIndex) {
+                                                    result.push(text.substring(lastIndex, match.startIndex));
+                                                }
+                                                // Add highlighted text
+                                                const isActive = activeMatch === match;
+                                                result.push(
+                                                    <span
+                                                        key={`${log.id}-match-${i}`}
+                                                        className={isActive ? 'bg-[#ff9632] text-black' : 'bg-[#623315]'}
+                                                    >
+                                                        {text.substring(match.startIndex, match.endIndex)}
+                                                    </span>
+                                                );
+                                                lastIndex = match.endIndex;
+                                            });
+
+                                            // Add remaining text
+                                            if (lastIndex < text.length) {
+                                                result.push(text.substring(lastIndex));
+                                            }
+
+                                            return result;
+                                        })()}
+                                    </span>
+                                    {log.crcStatus === 'error' && (
+                                        <span className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30">
+                                            CRC Error
+                                        </span>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+                    {/* Anchor for auto-scroll */}
+                    <div ref={(el) => {
+                        if (el && autoScroll) {
+                            el.scrollIntoView({ behavior: 'auto' });
+                        }
+                    }} />
+
+                </div>
             </div>
 
             {/* Serial Input Area */}
-            < SerialInput
+            <SerialInput
                 key={session.id}
                 onSend={handleSend}
                 initialContent={uiState.inputContent || ''}

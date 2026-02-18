@@ -271,7 +271,32 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                                     confirmText: '删除会话'
                                 });
                                 if (ok) {
-                                    sessionManager.deleteSession(session.id);
+                                    // 1. Delete config and cleanup manager state
+                                    await sessionManager.deleteSession(session.id);
+                                    // 2. Force cleanup from editor layout across all groups
+                                    const allGroups = editorLayout.layout ? (editorLayout.layout.type === 'leaf' ? [editorLayout.layout] : []) : [];
+                                    // This is a bit brute-force but ensures UI consistency
+                                    // EditorLayout's normalizeTree will handle the rest
+                                    Object.keys(localStorage).forEach(key => {
+                                        if (key.startsWith('editor-layout-')) {
+                                            // The hook itself will handle internal state, 
+                                            // but we need to ensure closeView is called if visible
+                                        }
+                                    });
+                                    // Proper way: closeView needs groupId. In most cases it's in the active group or we can find it.
+                                    // But sessionManager.deleteSession -> closeSession already handles disconnecting.
+                                    // We just need to make sure the UI part (EditorLayout) is triggered.
+                                    editorLayout.closeView('group-0', session.id); // Default group
+                                    // Handle split views if any (more robust check)
+                                    const leaves = (node: any): any[] => node.type === 'leaf' ? [node] : node.children.flatMap(leaves);
+                                    if (editorLayout.layout) {
+                                        const allLeaves = leaves(editorLayout.layout);
+                                        allLeaves.forEach(leaf => {
+                                            if (leaf.views.includes(session.id)) {
+                                                editorLayout.closeView(leaf.id, session.id);
+                                            }
+                                        });
+                                    }
                                 }
                             }
                         }}

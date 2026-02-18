@@ -143,7 +143,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                         onClick={handleToggleConnection}
                     >
                         {isConnected ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-                        {isConnected ? 'Disconnect' : 'Start Monitoring'}
+                        {isConnected ? 'Disconnect' : 'Connect'}
                     </button>
 
                     {isConnected ? (

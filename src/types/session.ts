@@ -61,6 +61,10 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         chunkTimeout?: number; // ms to merge consecutive RX chunks
         mergeRepeats?: boolean; // Merge identical consecutive logs
         smoothScroll?: boolean;
+        // Search State
+        searchOpen?: boolean;
+        searchQuery?: string;
+        searchRegex?: boolean;
     };
 }
 
@@ -97,6 +101,10 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         filterMode?: 'all' | 'rx' | 'tx';
         smoothScroll?: boolean;
         connectionExpanded?: boolean;
+        // Search State
+        searchOpen?: boolean;
+        searchQuery?: string;
+        searchRegex?: boolean;
     };
 }
 
@@ -139,6 +147,10 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         inputTokens?: Record<string, any>;
         inputMode?: 'text' | 'hex';
         lineEnding?: '' | '\n' | '\r' | '\r\n';
+        // Search State
+        searchOpen?: boolean;
+        searchQuery?: string;
+        searchRegex?: boolean;
     };
 }
 

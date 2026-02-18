@@ -176,6 +176,9 @@ export const SerialInput = ({
         } else if (type === 'timestamp') {
             // 时间戳 Token
             config = { format: 'seconds', byteOrder: 'big' };
+        } else if (type === 'auto_inc') {
+            // 自变化 Token
+            config = { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 };
         }
         editor.chain().focus().insertSerialToken({ type, config }).run();
     };
@@ -200,7 +203,9 @@ export const SerialInput = ({
         const traverse = (node: any) => {
             if (node.type === 'serialToken') {
                 const { id, type, config } = node.attrs;
-                tokensMap[id] = { id, type, config };
+                // Deep clone the config here to ensure external modifications don't leak back 
+                // into the editor's state without a proper transaction
+                tokensMap[id] = { id, type, config: JSON.parse(JSON.stringify(config)) };
             }
             if (node.content) node.content.forEach(traverse);
         };
@@ -224,6 +229,29 @@ export const SerialInput = ({
         const tokensMap = extractTokens();
         console.log('SerialInput handleSend:', { html, text, json: JSON.stringify(json, null, 2), tokensMap });
         const { data } = MessagePipeline.process(text, html, mode, tokensMap, lineEnding);
+
+        // After sending, some tokens (like auto_inc) might have updated their currentValue.
+        // We need to sync these updates back to the editor in ONE transition.
+        editor.chain().command(({ tr }) => {
+            let changed = false;
+            tr.doc.descendants((node, pos) => {
+                if (node.type.name === 'serialToken' && node.attrs.type === 'auto_inc') {
+                    const updatedToken = tokensMap[node.attrs.id];
+                    if (updatedToken) {
+                        // We must send a NEW object reference to ProseMirror/TipTap 
+                        // to trigger the update and re-render of the NodeView.
+                        const nextConfig = JSON.parse(JSON.stringify(updatedToken.config));
+
+                        // Compare content to avoid infinite loops or unnecessary updates
+                        if (JSON.stringify(node.attrs.config) !== JSON.stringify(nextConfig)) {
+                            tr.setNodeAttribute(pos, 'config', nextConfig);
+                            changed = true;
+                        }
+                    }
+                }
+            });
+            return changed;
+        }).run();
 
         onSend(data, mode);
     }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens]);
@@ -272,20 +300,25 @@ export const SerialInput = ({
                 {!hideExtras && (
                     <>
                         <div className="shrink-0 w-[1px] h-4 bg-[#3c3c3c] mx-1" />
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 bg-[#3c3c3c] hover:bg-[#4c4c4c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="CRC"
                             onClick={() => insertToken('crc')}>
                             <Plus size={14} className="text-[#4ec9b0]" />
-                            <span>Insert CRC</span>
+                            <span>CRC</span>
                         </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 bg-[#3c3c3c] hover:bg-[#4c4c4c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Flag"
                             onClick={() => insertToken('flag')}>
-                            <Flag size={14} className="text-[#4ec9b0]" />
-                            <span>Add Flag</span>
+                            <Flag size={14} className="text-[#4fc1ff]" />
+                            <span>Flag</span>
                         </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Insert Unix Timestamp"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Time"
                             onClick={() => insertToken('timestamp')}>
                             <div className="flex items-center justify-center w-[14px] h-[14px] border border-[#4fc1ff] text-[#4fc1ff] text-[9px] font-mono rounded-[2px] leading-none">T</div>
                             <span>Time</span>
+                        </button>
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Auto"
+                            onClick={() => insertToken('auto_inc' as any)}>
+                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-[#c586c0] text-[#c586c0] text-[9px] font-mono rounded-[2px] leading-none">A</div>
+                            <span>Auto</span>
                         </button>
                         <div className="shrink-0 w-[1px] h-4 bg-[#3c3c3c] mx-1" />
                         <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap" title="Load File">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Token, CRCConfig, FlagConfig, HexConfig, TimestampConfig, AutoIncConfig } from '../../types/token';
 import { X, Check, ChevronDown } from 'lucide-react';
+import { CustomSelect } from '../common/CustomSelect';
 
 interface TokenConfigPopoverProps {
     token: Token;
@@ -14,6 +15,14 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
     console.log('TokenConfigPopover Rendering:', { token, position });
     const popoverRef = useRef<HTMLDivElement>(null);
     const [config, setConfig] = useState<CRCConfig | FlagConfig | HexConfig | TimestampConfig | AutoIncConfig>(token.config);
+    // Local state for bytes input to allow temporary empty string
+    const [bytesInput, setBytesInput] = useState<string>((token.config as any).bytes?.toString() || '1');
+    // Local state for step input to allow temporary '-' sign or empty string
+    const [stepInput, setStepInput] = useState<string>((token.config as any).step?.toString() || '0');
+    // Local state for CRC range inputs
+    const [startIndexInput, setStartIndexInput] = useState<string>((token.config as any).startIndex?.toString() || '0');
+    const [endIndexInput, setEndIndexInput] = useState<string>((token.config as any).endIndex?.toString() || '0');
+    const [hexByteWidthInput, setHexByteWidthInput] = useState<string>((token.config as any).byteWidth?.toString() || '1');
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -26,7 +35,29 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
     }, [onClose]);
 
     const handleSave = () => {
-        onUpdate(token.id, config);
+        let finalConfig = { ...config };
+
+        // When updating auto_inc, we reset currentValue to defaultValue as well
+        if (token.type === 'auto_inc') {
+            const auto = finalConfig as AutoIncConfig;
+            // Pad or truncate defaultValue to matches bytes
+            let hex = auto.defaultValue.replace(/\s/g, '');
+            const targetNibbles = auto.bytes * 2;
+            if (hex.length < targetNibbles) {
+                hex = hex.padStart(targetNibbles, '0');
+            } else if (hex.length > targetNibbles) {
+                hex = hex.substring(hex.length - targetNibbles);
+            }
+            auto.defaultValue = hex;
+            auto.currentValue = hex;
+        }
+
+        if (token.type === 'hex') {
+            const hex = finalConfig as HexConfig;
+            hex.byteWidth = Math.max(1, Math.min(8, hex.byteWidth || 1));
+        }
+
+        onUpdate(token.id, finalConfig);
         onClose();
     };
 
@@ -41,31 +72,30 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         if (token.type === 'flag') {
             const flagConfig = config as FlagConfig;
             return (
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">Name (Optional)</label>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Name (Optional)</label>
                         <input
                             type="text"
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc] placeholder-[#666]"
                             value={flagConfig.name || ''}
                             placeholder="e.g. Frame Header"
                             onChange={e => setConfig({ ...flagConfig, name: e.target.value })}
                             onKeyDown={handleKeyDown}
                         />
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">Hex Content</label>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Hex Content</label>
                         <textarea
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] h-20 font-mono resize-none"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] h-24 font-mono resize-none text-[#cccccc] placeholder-[#666] leading-relaxed"
                             value={flagConfig.hex || ''}
                             placeholder="AA BB CC"
                             onChange={e => {
-                                // Simple hex validation/filter could be added here
-                                setConfig({ ...flagConfig, hex: e.target.value });
+                                setConfig({ ...flagConfig, hex: e.target.value.replace(/[^0-9A-Fa-f\s]/g, '') });
                             }}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-[#666]">Enter hex bytes separated by space</p>
+                        <p className="text-[10px] text-[#666] leading-snug">Enter hex bytes separated by space</p>
                     </div>
                 </div>
             );
@@ -74,19 +104,28 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         if (token.type === 'hex') {
             const hexConfig = config as HexConfig;
             return (
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">Byte Width</label>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Byte Width</label>
                         <input
-                            type="number"
-                            min="1"
-                            max="8"
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
-                            value={hexConfig.byteWidth || 1}
-                            onChange={e => setConfig({ ...hexConfig, byteWidth: Math.max(1, parseInt(e.target.value) || 1) })}
+                            type="text"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc] w-16"
+                            value={hexByteWidthInput}
+                            onChange={e => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setHexByteWidthInput(val);
+                                if (val !== '') {
+                                    setConfig({ ...hexConfig, byteWidth: Math.max(1, Math.min(8, parseInt(val) || 1)) });
+                                }
+                            }}
+                            onBlur={() => {
+                                const final = Math.max(1, Math.min(8, parseInt(hexByteWidthInput) || 1));
+                                setHexByteWidthInput(final.toString());
+                                setConfig({ ...hexConfig, byteWidth: final });
+                            }}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-[#666]">Target size in bytes (pads with 00 or truncates)</p>
+                        <p className="text-[10px] text-[#666] leading-snug">Target size in bytes (1-8)</p>
                     </div>
                 </div>
             );
@@ -94,61 +133,66 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
 
         if (token.type === 'crc') {
             const crcConfig = config as CRCConfig;
+            const algoItems = [
+                { label: 'Modbus CRC16 (LE)', value: 'modbus-crc16' },
+                { label: 'CCITT CRC116 (BE)', value: 'ccitt-crc16' },
+                { label: 'CRC32', value: 'crc32' },
+            ];
+            const endItems = [
+                { label: '末尾 (End)', value: '0' },
+                { label: '-1 (Last)', value: '-1' },
+                { label: '-2', value: '-2' },
+                { label: '-3', value: '-3' },
+            ];
+
             return (
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696] mb-1">Algorithm</label>
-                        <div className="relative">
-                            <select
-                                className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] appearance-none pr-8"
-                                value={crcConfig.algorithm}
-                                onChange={e => setConfig({ ...crcConfig, algorithm: e.target.value as any })}
-                                onKeyDown={handleKeyDown}
-                            >
-                                <option value="modbus-crc16">Modbus CRC16 (LE)</option>
-                                <option value="ccitt-crc16">CCITT CRC16 (BE)</option>
-                                <option value="crc32">CRC32</option>
-                            </select>
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                <ChevronDown size={12} />
-                            </div>
-                        </div>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Algorithm</label>
+                        <CustomSelect
+                            items={algoItems}
+                            value={crcConfig.algorithm}
+                            onChange={(val) => setConfig({ ...crcConfig, algorithm: val as any })}
+                        />
                     </div>
 
-                    <div className="flex items-center gap-2 my-1 text-[10px] font-bold text-[#666] whitespace-nowrap">
-                        <span>Range Settings</span>
-                        <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
+                    <div className="flex items-center gap-2 my-1">
+                        <span className="text-[10px] font-bold text-[#969696] uppercase tracking-[0.1em] whitespace-nowrap">Range Settings</span>
+                        <div className="h-[1px] bg-[#333] flex-1 mt-0.5" />
                     </div>
 
-                    <div className="flex gap-2">
-                        <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[#969696]">Start Offset</label>
+                    <div className="flex gap-4">
+                        <div className="flex flex-col gap-1.5 flex-none w-20">
+                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Start</label>
                             <input
-                                type="number"
-                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
-                                value={crcConfig.startIndex}
-                                onChange={e => setConfig({ ...crcConfig, startIndex: parseInt(e.target.value) || 0 })}
+                                type="text"
+                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                                value={startIndexInput}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setStartIndexInput(val);
+                                    if (val !== '') {
+                                        setConfig({ ...crcConfig, startIndex: parseInt(val) || 0 });
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const final = parseInt(startIndexInput) || 0;
+                                    setStartIndexInput(final.toString());
+                                    setConfig({ ...crcConfig, startIndex: final });
+                                }}
                                 onKeyDown={handleKeyDown}
                             />
                         </div>
-                        <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[#969696]">End</label>
-                            <div className="relative">
-                                <select
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] appearance-none pr-8"
-                                    value={crcConfig.endIndex ?? 0}
-                                    onChange={e => setConfig({ ...crcConfig, endIndex: parseInt(e.target.value) })}
-                                    onKeyDown={handleKeyDown}
-                                >
-                                    <option value="0">末尾 (End)</option>
-                                    <option value="-1">-1</option>
-                                    <option value="-2">-2</option>
-                                    <option value="-3">-3</option>
-                                </select>
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                    <ChevronDown size={12} />
-                                </div>
-                            </div>
+                        <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">End</label>
+                            <CustomSelect
+                                items={endItems}
+                                value={(crcConfig.endIndex ?? 0).toString()}
+                                onChange={(val) => {
+                                    setEndIndexInput(val);
+                                    setConfig({ ...crcConfig, endIndex: parseInt(val) });
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
@@ -157,41 +201,104 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
 
         if (token.type === 'timestamp') {
             const tsConfig = config as any;
+            const formatItems = [
+                { label: 'Seconds (4-byte)', value: 'seconds' },
+                { label: 'Milliseconds (8-byte)', value: 'milliseconds' },
+            ];
+            const orderItems = [
+                { label: 'Big Endian (BE)', value: 'big' },
+                { label: 'Little Endian (LE)', value: 'little' },
+            ];
+
             return (
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#cccccc] mb-1">Format</label>
-                        <div className="relative">
-                            <select
-                                className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] appearance-none pr-8"
-                                value={tsConfig.format || 'seconds'}
-                                onChange={e => setConfig({ ...tsConfig, format: e.target.value })}
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Format</label>
+                        <CustomSelect
+                            items={formatItems}
+                            value={tsConfig.format || 'seconds'}
+                            onChange={(val) => setConfig({ ...tsConfig, format: val })}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Byte Order</label>
+                        <CustomSelect
+                            items={orderItems}
+                            value={tsConfig.byteOrder || 'big'}
+                            onChange={(val) => setConfig({ ...tsConfig, byteOrder: val })}
+                        />
+                    </div>
+                </div>
+            );
+        }
+
+        if (token.type === 'auto_inc') {
+            const autoConfig = config as AutoIncConfig;
+            return (
+                <div className="flex flex-col gap-4">
+                    <div className="flex gap-4">
+                        <div className="flex flex-col gap-1.5 flex-none w-16">
+                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Bytes</label>
+                            <input
+                                type="text"
+                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                                value={bytesInput}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setBytesInput(val);
+                                    if (val !== '') {
+                                        const bytes = Math.max(1, Math.min(8, parseInt(val) || 1));
+                                        setConfig({ ...autoConfig, bytes });
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const bytes = Math.max(1, Math.min(8, parseInt(bytesInput) || 1));
+                                    setBytesInput(bytes.toString());
+                                    setConfig({ ...autoConfig, bytes });
+                                }}
                                 onKeyDown={handleKeyDown}
-                            >
-                                <option value="seconds">Seconds (4-byte)</option>
-                                <option value="milliseconds">Milliseconds (8-byte)</option>
-                            </select>
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                <ChevronDown size={12} />
-                            </div>
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Initial Val (Hex)</label>
+                            <input
+                                type="text"
+                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] font-mono text-[#cccccc] placeholder-[#666]"
+                                value={autoConfig.defaultValue || ''}
+                                placeholder="00 00 05"
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9A-Fa-f\s]/g, '');
+                                    setConfig({ ...autoConfig, defaultValue: val });
+                                }}
+                                onKeyDown={handleKeyDown}
+                            />
                         </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#cccccc] mb-1">Byte Order</label>
-                        <div className="relative">
-                            <select
-                                className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] appearance-none pr-8"
-                                value={tsConfig.byteOrder || 'big'}
-                                onChange={e => setConfig({ ...tsConfig, byteOrder: e.target.value })}
-                                onKeyDown={handleKeyDown}
-                            >
-                                <option value="big">Big Endian</option>
-                                <option value="little">Little Endian</option>
-                            </select>
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#969696]">
-                                <ChevronDown size={12} />
-                            </div>
-                        </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Step (Offset)</label>
+                        <input
+                            type="text"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                            value={stepInput}
+                            onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || val === '-' || !isNaN(Number(val))) {
+                                    setStepInput(val);
+                                    const parsed = parseInt(val);
+                                    if (!isNaN(parsed)) {
+                                        setConfig({ ...autoConfig, step: parsed });
+                                    }
+                                }
+                            }}
+                            onBlur={() => {
+                                const parsed = parseInt(stepInput);
+                                const finalStep = isNaN(parsed) ? 0 : parsed;
+                                setStepInput(finalStep.toString());
+                                setConfig({ ...autoConfig, step: finalStep });
+                            }}
+                            onKeyDown={handleKeyDown}
+                        />
+                        <p className="text-[10px] text-[#666] leading-snug">Added after each send (can be negative)</p>
                     </div>
                 </div>
             );
@@ -288,7 +395,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         document.removeEventListener('mouseup', handleMouseUpResize);
     };
 
-    if (token.type !== 'crc' && token.type !== 'flag' && token.type !== 'timestamp') return null;
+    if (token.type !== 'crc' && token.type !== 'flag' && token.type !== 'timestamp' && token.type !== 'auto_inc') return null;
 
     return (
         <div
@@ -314,30 +421,33 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                 `}
             </style>
             <div
-                className="flex items-center justify-between px-3 py-2 border-b border-[var(--vscode-border)] bg-[#2d2d2d] cursor-move select-none"
+                className="flex items-center justify-between px-4 py-2 border-b border-[var(--vscode-border)] bg-[#2d2d2d] cursor-move select-none rounded-t-md"
                 onMouseDown={handleMouseDownHeader}
             >
-                <span className="text-xs font-bold uppercase tracking-wide">{token.type === 'crc' ? 'CRC Config' : token.type === 'timestamp' ? 'Timestamp Config' : 'Custom Flag'}</span>
-                <div className="flex gap-2">
-                    <X size={14} className="cursor-pointer hover:text-white" onClick={onClose} />
-                </div>
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#969696]">
+                    {token.type === 'crc' ? 'CRC Config' :
+                        token.type === 'timestamp' ? 'Time Token' :
+                            token.type === 'auto_inc' ? 'Auto Token' :
+                                'Custom Flag'}
+                </span>
+                <X size={14} className="cursor-pointer hover:text-white text-[#666] transition-colors" onClick={onClose} />
             </div>
 
-            <div className="flex-1 overflow-auto p-3 flex flex-col">
+            <div className="flex-1 overflow-auto p-4 flex flex-col custom-scrollbar">
                 {renderContent()}
 
-                <div className="mt-auto pt-3 flex items-center justify-between border-t border-[var(--vscode-border)]">
+                <div className="mt-8 pt-4 flex items-center justify-between border-t border-[#333]">
                     <button
-                        className="px-2 py-1 text-[11px] text-[#f48771] hover:bg-[#4b1818] rounded"
+                        className="px-2 py-1 text-[11px] text-[#f48771] hover:bg-[#4b1818] rounded-[4px] transition-colors"
                         onClick={() => { onDelete(token.id); onClose(); }}
                     >
                         Delete
                     </button>
                     <button
-                        className="px-3 py-1 bg-[var(--vscode-button-bg)] text-white text-[12px] rounded hover:bg-[var(--vscode-button-hover-bg)] flex items-center gap-1"
+                        className="px-4 py-1.5 bg-[#0e639c] text-white text-[12px] font-medium rounded-[4px] hover:bg-[#1177bb] transition-colors flex items-center gap-1.5 shadow-sm"
                         onClick={handleSave}
                     >
-                        <Check size={12} /> Apply
+                        <Check size={14} /> Apply
                     </button>
                 </div>
             </div>

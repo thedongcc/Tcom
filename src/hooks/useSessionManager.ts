@@ -432,13 +432,6 @@ export const useSessionManager = () => {
         await window.workspaceAPI.saveSession(workspacePathRef.current, session);
     }, []);
 
-    const deleteSession = useCallback(async (sessionId: string) => {
-        const session = savedSessionsRef.current.find(s => s.id === sessionId);
-        if (!session || !workspacePathRef.current || !window.workspaceAPI) return;
-        const result = await window.workspaceAPI.deleteSession(workspacePathRef.current, session);
-        if (result.success) setSavedSessions(prev => prev.filter(s => s.id !== sessionId));
-    }, []);
-
     const createSession = useCallback(async (type: SessionConfig['type'] = 'serial', config?: Partial<SessionConfig>) => {
         const newId = Date.now().toString();
         let baseConfig: any = { id: newId, type, autoConnect: false, ...config };
@@ -470,6 +463,18 @@ export const useSessionManager = () => {
         setSessions(prev => prev.filter(s => s.id !== sessionId));
         setActiveSessionId(prev => prev === sessionId ? null : prev);
     }, [disconnectSession]);
+
+    const deleteSession = useCallback(async (sessionId: string) => {
+        const session = savedSessionsRef.current.find(s => s.id === sessionId);
+        if (!session || !workspacePathRef.current || !window.workspaceAPI) return;
+
+        // 1. First cleanup runtime state and connections
+        closeSession(sessionId);
+
+        // 2. Then delete from persistence
+        const result = await window.workspaceAPI.deleteSession(workspacePathRef.current, session);
+        if (result.success) setSavedSessions(prev => prev.filter(s => s.id !== sessionId));
+    }, [closeSession]);
 
     const duplicateSession = useCallback(async (sourceId: string) => {
         const source = sessionsRef.current.find(s => s.id === sourceId);

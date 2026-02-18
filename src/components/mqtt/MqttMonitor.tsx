@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { mqttTopicMatch } from '../../utils/mqttUtils';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
+import { LogSearch, useLogSearch } from '../common/LogSearch';
 
 interface MqttMonitorProps {
     session: {
@@ -38,12 +39,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const { showToast } = useToast();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
-    const initialLogCountRef = useRef(logs.length); // Track log count at mount
-    const mountTimeRef = useRef(Date.now()); // Track mount time to filter out old repeat animations
+    const mountTimeRef = useRef(Date.now());
 
-    // Initial State from Config
+    // UI States
     const uiState = config.uiState || {};
-
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'json'>(uiState.viewMode || 'text');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
@@ -53,65 +52,115 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'mono');
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
-
-    // Font Selection Logic
     const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
-
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+    // Search State
+    const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
 
-    // Publish State
+    // Publish Area State
     const [topic, setTopic] = useState('test/topic');
     const [payload, setPayload] = useState('{"msg": "hello"}');
     const [qos, setQos] = useState<0 | 1 | 2>(0);
     const [retain, setRetain] = useState(false);
     const [publishFormat, setPublishFormat] = useState<'text' | 'hex' | 'json'>('text');
 
-    // Helper: Save UI State
-    const saveUIState = (updates: any) => {
+    // --- Core Logic ---
+
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
+        if (mode === 'hex') {
+            const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+        }
+        if (mode === 'json') {
+            try {
+                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
+                const obj = JSON.parse(str);
+                return JSON.stringify(obj, null, 2);
+            } catch { /* fallback */ }
+        }
+        if (typeof data === 'string') return data;
+        try {
+            return new TextDecoder().decode(data);
+        } catch {
+            return `[Binary ${data.length} bytes]`;
+        }
+    }, []);
+
+    const saveUIState = useCallback((updates: any) => {
         if (!onUpdateConfig) return;
         const currentUI = config.uiState || {};
         onUpdateConfig({
             uiState: {
                 ...currentUI,
-                ...updates,
                 viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll,
-                fontSize, fontFamily, mergeRepeats, filterMode
+                fontSize, fontFamily, mergeRepeats, filterMode,
+                ...updates,  // updates 最后展开，确保新值不被旧 state 覆盖
             }
         });
+    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, fontSize, fontFamily, mergeRepeats, filterMode]);
+
+    // Search Hook
+    const {
+        query, setQuery, isRegex, setIsRegex, matches, currentIndex, nextMatch, prevMatch
+    } = useLogSearch(logs, uiState.searchQuery || '', uiState.searchRegex || false, viewMode, formatData, 'utf-8');
+    const activeMatch = matches[currentIndex];
+
+    const handleQueryChange = (newQuery: string) => {
+        setQuery(newQuery);
+        saveUIState({ searchQuery: newQuery });
     };
 
-    // Auto-scroll logic
-    useEffect(() => {
-        if (scrollRef.current && autoScroll) {
-            requestAnimationFrame(() => {
-                if (scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                }
-            });
-        }
-    }, [logs, autoScroll, filterMode]); // Added filterMode dependency to scroll when filter changes
+    const handleRegexChange = (newRegex: boolean) => {
+        setIsRegex(newRegex);
+        saveUIState({ searchRegex: newRegex });
+    };
 
-    // System Fonts Loading
+    const handleToggleSearch = useCallback(() => {
+        setSearchOpen(prev => {
+            const next = !prev;
+            saveUIState({ searchOpen: next });
+            return next;
+        });
+    }, [saveUIState]);
+
+    // Ctrl+F shortcut
     useEffect(() => {
-        if (showAllFonts) {
-            // @ts-ignore - queryLocalFonts is an experimental API
-            if (window.queryLocalFonts) {
-                // @ts-ignore
-                window.queryLocalFonts().then((fonts: any[]) => {
-                    // Filter and deduplicate
-                    const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
-                        .map(name => fonts.find((f: any) => f.fullName === name))
-                        .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
-                    setAvailableFonts(uniqueFonts);
-                }).catch((e: any) => {
-                    console.error('Failed to query local fonts:', e);
-                });
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                handleToggleSearch();
             }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleToggleSearch]);
+
+    useEffect(() => {
+        if (activeMatch && scrollRef.current) {
+            const element = document.getElementById(`log-${activeMatch.logId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [activeMatch]);
+
+    // System Fonts
+    useEffect(() => {
+        // @ts-ignore
+        if (showAllFonts && window.queryLocalFonts) {
+            // @ts-ignore
+            window.queryLocalFonts().then((fonts: any[]) => {
+                const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
+                    .map(name => fonts.find((f: any) => f.fullName === name))
+                    .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
+                setAvailableFonts(uniqueFonts);
+            });
         }
     }, [showAllFonts]);
 
-    // Helpers
+    // --- Render Helpers ---
+
     const formatTimestamp = (ts: number) => {
         const date = new Date(ts);
         const fmt = themeConfig.timestampFormat || 'HH:mm:ss.SSS';
@@ -123,204 +172,143 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             .replace('SSS', pad(date.getMilliseconds(), 3));
     };
 
-    const formatData = (data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
-        if (mode === 'hex') {
-            const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-        }
-        if (mode === 'json') {
-            try {
-                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
-                const obj = JSON.parse(str);
-                return JSON.stringify(obj, null, 2);
-            } catch {
-                // fallback to text if invalid json
-            }
-        }
-        // Text
-        if (typeof data === 'string') return data;
-        try {
-            return new TextDecoder().decode(data);
-        } catch {
-            return `[Binary ${data.length} bytes]`;
-        }
-    };
-
     const getDataLengthText = (data: string | Uint8Array) => {
-        let length = 0;
-        if (typeof data === 'string') {
-            length = new TextEncoder().encode(data).length;
-        } else {
-            length = data.length;
-        }
+        const length = typeof data === 'string' ? new TextEncoder().encode(data).length : data.length;
         return `[${length}B]`;
     };
 
+    const renderHighlightedText = (log: LogEntry, text: string) => {
+        const logMatches = matches.filter(m => m.logId === log.id);
+        if (logMatches.length === 0) return text;
+
+        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
+        const result: React.ReactNode[] = [];
+        let lastIndex = 0;
+
+        sortedMatches.forEach((match, i) => {
+            if (match.startIndex > lastIndex) {
+                result.push(text.substring(lastIndex, match.startIndex));
+            }
+            const isActive = activeMatch === match;
+            result.push(
+                <span
+                    key={`${log.id}-match-${i}`}
+                    className={isActive ? 'bg-[#ff9632] text-black' : 'bg-[#623315] text-[#ce9178]'}
+                >
+                    {text.substring(match.startIndex, match.endIndex)}
+                </span>
+            );
+            lastIndex = match.endIndex;
+        });
+
+        if (lastIndex < text.length) {
+            result.push(text.substring(lastIndex));
+        }
+        return result;
+    };
+
+    const renderPayload = (log: LogEntry) => {
+        const { data } = log;
+        if (viewMode === 'json') {
+            try {
+                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
+                const obj = JSON.parse(str);
+                const json = JSON.stringify(obj, null, 2);
+                const highlighted = json
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[\[\]{}:,])/g, (match) => {
+                        let cls = 'color: #d4d4d4;';
+                        if (/^"/.test(match)) {
+                            cls = /:$/.test(match) ? 'color: #9cdcfe; font-weight: bold;' : 'color: #ce9178;';
+                        } else if (/true|false/.test(match)) cls = 'color: #569cd6; font-weight: bold;';
+                        else if (/null/.test(match)) cls = 'color: #569cd6; font-weight: bold;';
+                        else if (/^-?\d/.test(match)) cls = 'color: #b5cea8;';
+                        else if (/[\[\]{}:,]/.test(match)) cls = 'color: #ffd700; font-weight: bold;';
+                        return `<span style="${cls}">${match}</span>`;
+                    });
+                return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
+            } catch { /* fallback to text */ }
+        }
+        return renderHighlightedText(log, formatData(data, viewMode));
+    };
+
+    // --- Handlers ---
+
     const handleSend = async () => {
-        if (!isConnected) {
-            if (onConnectRequest) {
-                try {
-                    const success = await onConnectRequest();
-                    if (!success) {
-                        // If connection failed (likely config), show settings and highlight
-                        if (onShowSettings) onShowSettings('connection');
-                        showToast('Connection failed. Please check configuration.', 'error');
-                        return;
-                    }
-                    // If success, we could wait for connection, but onPublish might fail if not ready immediately.
-                    // Ideally we wait for isConnected state, but that requires useEffect or polling.
-                    // For now, let's assume if connectRequest returns true, it's initiating.
-                    // But actually, we should probably just return and let user click again or queue it?
-                    // Let's try to send if immediate, else warn.
-                    // A better UX: "Connecting..." toast.
-                } catch (e) {
-                    if (onShowSettings) onShowSettings('connection');
-                    return;
-                }
-            } else {
+        if (!isConnected && onConnectRequest) {
+            const success = await onConnectRequest();
+            if (!success) {
+                onShowSettings?.('connection');
                 return;
             }
         }
-
         if (!topic) {
             showToast('Topic is required', 'error');
             return;
         }
-
         let data: string | Uint8Array = payload;
-
         if (publishFormat === 'hex') {
             const cleanHex = payload.replace(/\s+/g, '');
-            if (!/^[0-9A-Fa-f]*$/.test(cleanHex) || cleanHex.length % 2 !== 0) {
+            if (cleanHex.length % 2 !== 0) {
                 showToast('Invalid Hex String', 'error');
                 return;
             }
-            if (cleanHex.length > 0)
-                data = new Uint8Array(cleanHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
-            else
-                data = new Uint8Array(0);
-
-        } else if (publishFormat === 'json') {
-            try {
-                JSON.parse(payload);
-            } catch (e) {
-                // warning optional
-            }
+            data = new Uint8Array(cleanHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
         }
         onPublish(topic, data, qos, retain);
-    };
-
-    const handleClearLogs = () => {
-        if (onClearLogs) onClearLogs();
     };
 
     const handleSaveLogs = () => {
         const content = logs.map(log => {
             const timestamp = new Date(log.timestamp).toLocaleTimeString();
-            const dataStr = formatData(log.data, viewMode);
-            const topicStr = log.topic ? `[${log.topic}] ` : '';
-            return `[${timestamp}][${log.type}] ${topicStr}${dataStr}`;
+            return `[${timestamp}][${log.type}] ${log.topic ? `[${log.topic}] ` : ''}${formatData(log.data, viewMode)}`;
         }).join('\n');
-
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `mqtt_log_${Date.now()}.txt`;
         a.click();
-        URL.revokeObjectURL(url);
     };
 
-    // Toggle Filter Mode
-    const toggleFilter = (mode: 'tx' | 'rx') => {
-        const newMode = filterMode === mode ? 'all' : mode;
-        setFilterMode(newMode);
-        saveUIState({ filterMode: newMode });
-    };
-
-    // Stats Calculation
-    const txBytes = logs.filter(log => log.type === 'TX').reduce((sum, log) => {
-        const count = log.repeatCount || 1;
-        const len = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
-        return sum + (len * count);
-    }, 0);
-
-    const rxBytes = logs.filter(log => log.type === 'RX').reduce((sum, log) => {
-        const count = log.repeatCount || 1;
-        const len = typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length;
-        return sum + (len * count);
-    }, 0);
-
-    // Filter Logs for Display
     const filteredLogs = useMemo(() => {
         return logs.filter(log => {
-            // 1. Basic Type Filter (TX/RX)
+            if (log.type === 'INFO' || log.type === 'ERROR') return true;
             if (filterMode === 'tx' && log.type !== 'TX') return false;
             if (filterMode === 'rx' && log.type !== 'RX') return false;
-
-            // 2. MQTT Topic Filter (Only for RX/TX with topics)
             if (log.topic && (log.type === 'RX' || log.type === 'TX')) {
                 const topicConfigs = config.topics || [];
                 if (topicConfigs.length > 0) {
-                    // Find all matching patterns in subscription list
                     const matches = topicConfigs.filter(t => mqttTopicMatch(t.path, log.topic!));
-
-                    if (matches.length > 0) {
-                        // If there are matches, it must match at least one ENABLED subscription
-                        return matches.some(m => m.subscribed);
-                    }
-                    // If no match in list, show it (allow discovering new topics)
+                    if (matches.length > 0) return matches.some(m => m.subscribed);
                 }
             }
-
             return true;
         });
     }, [logs, filterMode, config.topics]);
 
-    // JSON Highlighter Helper
-    const renderPayload = (data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
-        if (mode === 'json') {
-            try {
-                const str = typeof data === 'string' ? data : new TextDecoder().decode(data);
-                const obj = JSON.parse(str);
-                const json = JSON.stringify(obj, null, 2);
-
-                const escaped = json
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
-
-                // Enhanced Regex for keys, strings, numbers, booleans, null, and punctuation
-                const highlighted = escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[\[\]{}:,])/g, (match) => {
-                    let cls = 'color: #d4d4d4;'; // default/punctuation
-                    if (/^"/.test(match)) {
-                        if (/:$/.test(match)) {
-                            cls = 'color: #9cdcfe; font-weight: bold;'; // key
-                        } else {
-                            cls = 'color: #ce9178;'; // string
-                        }
-                    } else if (/true|false/.test(match)) {
-                        cls = 'color: #569cd6; font-weight: bold;'; // boolean
-                    } else if (/null/.test(match)) {
-                        cls = 'color: #569cd6; font-weight: bold;'; // null
-                    } else if (/^-?\d/.test(match)) {
-                        cls = 'color: #b5cea8;'; // number
-                    } else if (/[\[\]{}:,]/.test(match)) {
-                        cls = 'color: #ffd700; font-weight: bold;'; // punctuation
-                    }
-                    return `<span style="${cls}">${match}</span>`;
-                });
-
-                return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
-            } catch (e) {
-                // fallback to text if invalid json
-            }
+    // Auto-scroll effect
+    useEffect(() => {
+        if (scrollRef.current && autoScroll) {
+            requestAnimationFrame(() => {
+                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            });
         }
-        return formatData(data, mode);
-    };
+    }, [logs, autoScroll, filterMode]);
 
     return (
         <div className="absolute inset-0 flex flex-col bg-[#1e1e1e] select-none">
+            <style>{`
+                @keyframes flash-new { 
+                    0% { background-color: rgba(30, 255, 0, 0.2); } 
+                    100% { background-color: #2d2d2d; } 
+                } 
+                .animate-flash-new { 
+                    animation: flash-new 1s ease-out forwards; 
+                }
+            `}</style>
             {/* Toolbar */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
                 <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
@@ -333,32 +321,34 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Stats with Filter Toggle - Swapped R/T Order */}
-                    <div className="flex items-center bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-sm">
+                    {/* Stats */}
+                    <div className="flex items-center bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden">
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
-                            title="Click to filter RX only"
-                            onClick={() => toggleFilter('rx')}
+                            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e]' : 'hover:bg-[#2a2d2e]'}`}
+                            onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                         >
-                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#aaaaaa]'}`}>R:</span>
-                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
+                            <span className="text-[11px] font-mono">R:</span>
+                            <span className="text-[11px] font-mono tabular-nums">
+                                {logs.filter(l => l.type === 'RX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
+                            </span>
                         </div>
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
-                            title="Click to filter TX only"
-                            onClick={() => toggleFilter('tx')}
+                            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white' : 'hover:bg-[#2a2d2e]'}`}
+                            onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                         >
-                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
-                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
+                            <span className="text-[11px] font-mono">T:</span>
+                            <span className="text-[11px] font-mono tabular-nums">
+                                {logs.filter(l => l.type === 'TX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
+                            </span>
                         </div>
                     </div>
 
-                    {/* View Mode */}
+                    {/* View Modes */}
                     <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-7">
                         {(['text', 'hex', 'json'] as const).map(m => (
                             <button
                                 key={m}
-                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase ${viewMode === m ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                className={`px-2.5 h-full text-[10px] font-medium rounded-[2px] uppercase ${viewMode === m ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:text-[#cccccc]'}`}
                                 onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}
                             >
                                 {m}
@@ -366,12 +356,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         ))}
                     </div>
 
+
                     {/* Options */}
                     <div className="relative">
                         <button
-                            className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors flex items-center gap-1.5 border border-transparent ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
+                            className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
                             onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-                            title="Options"
                         >
                             <Menu size={16} />
                             <span className="text-[11px] font-medium">Options</span>
@@ -380,96 +370,55 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                 <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
-                                        <div className="text-[12px] text-[#cccccc] font-bold">Log Settings</div>
-                                    </div>
+                                    <div className="text-[12px] text-[#cccccc] font-bold mb-4 pb-1 border-b border-[#3c3c3c]">Log Settings</div>
                                     <div className="space-y-4 px-1">
-                                        {/* Features Section */}
                                         <div className="space-y-2.5">
-                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                                                <span>Log Features</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
+                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Display</div>
+                                            <Switch label="Smooth Animation" checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
+                                            <Switch label="Timestamp" checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
+                                            <Switch label="Data Length" checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
+                                            <Switch label="Merge Repeats" checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
 
-                                            <Switch
-                                                label="Smooth Animation"
-                                                checked={smoothScroll}
-                                                onChange={(val) => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }}
-                                            />
-
-                                            <Switch
-                                                label="Timestamp"
-                                                checked={showTimestamp}
-                                                onChange={(val) => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }}
-                                            />
-
-                                            <Switch
-                                                label="Data Length"
-                                                checked={showDataLength}
-                                                onChange={(val) => { setShowDataLength(val); saveUIState({ showDataLength: val }); }}
-                                            />
-
-                                            <Switch
-                                                label="Merge Repeats"
-                                                checked={mergeRepeats}
-                                                onChange={(val) => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }}
-                                            />
-                                        </div>
-
-                                        {/* Appearance Section */}
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
-                                                <span>Appearance</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1 mt-0.5" />
-                                            </div>
-
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[11px] text-[#808080]">Font Size</span>
-                                                <CustomSelect
-                                                    items={[10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                        label: `${size}px`,
-                                                        value: String(size)
-                                                    }))}
-                                                    value={String(fontSize)}
-                                                    onChange={(val) => { const n = Number(val); setFontSize(n); saveUIState({ fontSize: n }); }}
-                                                />
-                                            </div>
-
-                                            <div className="flex flex-col gap-1.5 pt-1">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] text-[#808080]">Font Family</span>
-                                                    <label className="flex items-center gap-1.5 cursor-pointer group">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={showAllFonts}
-                                                            onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
-                                                            className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] cursor-pointer"
-                                                        />
-                                                        <span className="text-[10px] text-[#666] group-hover:text-[#999] transition-colors">Show All</span>
-                                                    </label>
+                                            <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
+                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">Typography</div>
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-[#aaaaaa]">Font Family:</span>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer group">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
+                                                                checked={showAllFonts}
+                                                                onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
+                                                            />
+                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">System Fonts</span>
+                                                        </label>
+                                                    </div>
+                                                    <CustomSelect
+                                                        items={[
+                                                            ...defaultFonts,
+                                                            ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
+                                                        ]}
+                                                        value={fontFamily}
+                                                        onChange={(val) => { setFontFamily(val); saveUIState({ fontFamily: val }); }}
+                                                    />
                                                 </div>
-                                                <CustomSelect
-                                                    items={[
-                                                        ...defaultFonts,
-                                                        ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
-                                                    ]}
-                                                    value={fontFamily}
-                                                    onChange={(val) => { setFontFamily(val as string); saveUIState({ fontFamily: val }); }}
-                                                />
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    <span className="text-[11px] text-[#aaaaaa]">Font Size:</span>
+                                                    <CustomSelect
+                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
+                                                            label: `${size}px`,
+                                                            value: size.toString()
+                                                        }))}
+                                                        value={fontSize.toString()}
+                                                        onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-
-                                        {/* Actions */}
                                         <div className="pt-2 border-t border-[#3c3c3c]">
-                                            <button
-                                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors shadow-sm"
-                                                onClick={() => {
-                                                    handleSaveLogs();
-                                                    setShowOptionsMenu(false);
-                                                }}
-                                            >
-                                                <Download size={14} />
-                                                <span>Export Log</span>
+                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] text-white text-[11px] rounded hover:bg-[#0062a3] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                                <Download size={14} /> Export Log
                                             </button>
                                         </div>
                                     </div>
@@ -478,290 +427,118 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         )}
                     </div>
 
-                    {/* Actions */}
+                    {/* Action Buttons */}
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button
-                            className={`p-1 rounded transition-colors ${autoScroll ? 'text-[#4ec9b0] bg-[#1e1e1e]' : 'text-[#969696] hover:text-[#cccccc] hover:bg-[#3c3c3c]'}`}
-                            onClick={() => {
-                                const newState = !autoScroll;
-                                setAutoScroll(newState);
-                                saveUIState({ autoScroll: newState });
-                                if (newState && scrollRef.current) {
-                                    const scroll = () => {
-                                        if (scrollRef.current) {
-                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                                        }
-                                    };
-
-                                    if (smoothScroll && logs.length > 0 && Date.now() - mountTimeRef.current > 1000) {
-                                        requestAnimationFrame(scroll); // smooth (already async)
-                                    } else {
-                                        // Wrap in RAF to ensure it runs after strict React lifecycle steps
-                                        requestAnimationFrame(scroll);
-                                    }
-                                }
-                            }}
-                            title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
-                        >
+                        <button className={`p-1 rounded ${autoScroll ? 'text-[#4ec9b0]' : 'text-[#969696]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
                             <ArrowDownToLine size={14} />
                         </button>
-                        <button
-                            className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors"
-                            onClick={handleClearLogs}
-                            title="Clear Logs"
-                        >
+                        <button className="p-1 text-[#969696] hover:text-[#cccccc]" onClick={() => onClearLogs?.()}>
                             <Trash2 size={14} />
                         </button>
                     </div>
-
                 </div>
             </div>
 
-            {/* Logs Area - Compact Chat Bubble Layout */}
-            <div
-                className="flex-1 overflow-auto p-2 flex flex-col gap-1.5 select-text scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
-                ref={scrollRef}
-                style={{
-                    fontSize: `${fontSize}px`,
-                    fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily,
-                    lineHeight: '1.4'
-                }}
-            >
+            {/* Logs Area */}
+            <div className="flex-1 relative overflow-hidden">
+                <div className="absolute top-4 right-4 z-10">
+                    <LogSearch
+                        isOpen={searchOpen}
+                        onToggle={handleToggleSearch}
+                        query={query}
+                        isRegex={isRegex}
+                        onQueryChange={handleQueryChange}
+                        onRegexChange={handleRegexChange}
+                        onNext={nextMatch}
+                        onPrev={prevMatch}
+                        logs={logs}
+                        currentIndex={currentIndex}
+                        totalMatches={matches.length}
+                        viewMode={viewMode}
+                        formatData={formatData}
+                        encoding="utf-8"
+                    />
+                </div>
+                <div
+                    className="absolute inset-0 overflow-auto p-2 flex flex-col gap-1.5 select-text"
+                    ref={scrollRef}
+                    style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily, lineHeight: '1.4' }}
+                >
+                    {filteredLogs.slice(-100).map((log) => {
+                        const isTX = log.type === 'TX';
+                        const isNewLog = log.timestamp > mountTimeRef.current;
+                        const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
 
-                {logs.length === 0 && (
-                    <div className="text-[#666] italic text-center mt-10 select-none text-sm">
-                        {session.isConnected ? 'Connected. Waiting for messages...' : 'Disconnected.'}
-                    </div>
-                )}
-                {filteredLogs.length > 100 && (
-                    <div className="text-center text-[10px] text-[#666] py-1 select-none">
-                        ... {filteredLogs.length - 100} earlier messages hidden for performance ...
-                    </div>
-                )}
-                {filteredLogs.slice(-100).map((log) => {
-                    const isTX = log.type === 'TX';
-                    const isRX = log.type === 'RX';
-                    const isError = log.type === 'ERROR';
-                    const isInfo = log.type === 'INFO';
-
-
-
-                    // Determine Topic Color
-                    const topicColor = (session.config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
-                    // Slightly transparent versions for Topic Pill (not bubble background)
-                    const bgTint = topicColor + '15';
-                    const borderTint = topicColor + '50';
-
-                    if (isError || isInfo || !log.topic) {
-                        const content = isInfo ? formatData(log.data, 'text') : (log.topic ? formatData(log.data, 'text') : `[${log.type}] ${formatData(log.data, 'text')}`);
-
-                        // Determine style based on content/type
-                        let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
-                        if (isError) {
-                            styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                        } else if (content.includes('Connected') || content.includes('Subscribing')) {
-                            styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
-                        } else if (content.includes('Disconnected') || content.includes('Unsubscribing') || content.includes('closed')) {
-                            styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                        } else {
-                            styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
+                        if (log.type === 'INFO' || log.type === 'ERROR' || !log.topic) {
+                            return (
+                                <div key={log.id} className="flex justify-center my-1">
+                                    <span className={`px-4 py-0.5 rounded-full text-[10px] border ${log.type === 'ERROR' ? 'bg-red-900/20 text-red-400 border-red-500/30' : 'bg-gray-800/40 text-gray-400 border-gray-600/30'}`}>
+                                        {formatData(log.data, 'text')}
+                                    </span>
+                                </div>
+                            );
                         }
 
                         return (
-                            <div key={log.id} className="flex justify-center my-2">
-                                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
-                                    {content}
-                                </span>
-                            </div>
-                        );
-                    }
-
-                    // Animation Logic
-                    const isNewLog = log.timestamp > mountTimeRef.current;
-                    const isRepeat = log.repeatCount && log.repeatCount > 1;
-
-                    const variants = {
-                        hidden: { opacity: 0, y: 10, scale: 0.98 },
-                        visible: {
-                            opacity: 1,
-                            y: 0,
-                            scale: 1,
-                            transition: { duration: 0.2, ease: "easeOut" as any }
-                        }
-                    };
-
-                    return (
-                        <motion.div
-                            key={log.id}
-                            initial={smoothScroll && isNewLog && !isRepeat ? "hidden" : false}
-                            animate="visible"
-                            variants={variants}
-                            className={`flex w-full group relative ${isTX ? 'justify-end' : 'justify-start'}`}
-                        >
-                            {/* Message Bubble - Compact & Colored */}
-                            <div
-                                key={`${log.id}-${log.repeatCount || 0}`} // Force re-render on repeat to trigger flash
-                                className={`relative max-w-[90%] rounded-lg px-3 py-2 border shadow-sm transition-all overflow-hidden
-                                    ${isTX
-                                        ? 'rounded-br-sm'
-                                        : 'rounded-bl-sm'
-                                    } ${isNewLog ? 'animate-flash-new' : ''}`}
-                                style={{
-                                    backgroundColor: '#2d2d2d', // Lighter gray background
-                                    borderColor: topicColor + '80', // Full border in topic color with semi-transparency
-
-                                    // CSS Vars for animation - unified blue flash color for all topics
-                                    // @ts-ignore
-                                    '--flash-color': 'rgba(0, 122, 204, 0.25)', // Unified blue flash glow
-                                    '--flash-border': '#007acc',      // Unified blue flash border
-                                    '--final-bg': '#2d2d2d',   // Final background state matches initial
-                                    '--final-border': topicColor + '80' // Semi-transparent final border (keeps topic color)
-                                }}
+                            <motion.div
+                                key={log.id}
+                                id={`log-${log.id}`}
+                                initial={smoothScroll && isNewLog ? { opacity: 0, y: 10 } : false}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`flex w-full ${isTX ? 'justify-end' : 'justify-start'}`}
                             >
-
-                                {/* Header: Timestamp & Topic */}
-                                <div className={`flex items-baseline gap-2 mb-1 opacity-90 select-none relative z-10 ${isTX ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {/* Timestamp - brackets added */}
-                                    {showTimestamp && (
-                                        <span className="text-[#999] text-[0.9em] font-mono whitespace-nowrap leading-none">
-                                            [{formatTimestamp(log.timestamp)}]
-                                        </span>
-                                    )}
-
-                                    {/* Topic Pill */}
-                                    {log.topic && (
-                                        <span
-                                            className="px-1.5 py-0.5 rounded-[3px] text-[0.9em] font-medium leading-none border border-current opacity-100 select-text max-w-[300px] truncate shadow-sm cursor-pointer hover:opacity-80"
-                                            style={{
-                                                color: topicColor,
-                                                borderColor: borderTint,
-                                                backgroundColor: bgTint
-                                            }}
-                                            title={log.topic}
-                                        >
-                                            {log.topic}
-                                        </span>
-                                    )}
-
-                                    {/* Repeat Badge - Flash on change via key */}
-                                    {log.repeatCount && log.repeatCount > 1 && (
-                                        <span
-                                            className="text-[0.9em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 py-0.5 rounded-[3px] border border-[#FFD700]/40 min-w-[24px] text-center shadow-[0_0_8px_rgba(255,215,0,0.15)] animate-flash-gold"
-                                        >
-                                            x{log.repeatCount}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Body: Payload - JSON Rendering Support */}
-                                <div className={`relative z-10 whitespace-pre-wrap break-all select-text font-mono text-[1.05em] leading-snug
-                                        ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
-                                    {renderPayload(log.data, viewMode)}
-                                </div>
-
-                                {/* Link Indicator/Footer */}
-                                {showDataLength && (
-                                    <div className={`mt-1 flex relative z-10 ${isTX ? 'justify-end' : 'justify-start'}`}>
-                                        <span className="text-[0.75em] text-[#666] font-mono bg-black/20 px-1.5 rounded-[3px]">
-                                            {getDataLengthText(log.data)}
-                                        </span>
+                                <div
+                                    key={`${log.id}-${log.repeatCount || 1}`}
+                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${(isNewLog || (log.repeatCount && log.repeatCount > 1)) ? 'animate-flash-new' : 'bg-[#2d2d2d]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
+                                    style={{ borderColor: topicColor + '50' }}
+                                >
+                                    <div className={`flex items-baseline gap-2 mb-1 opacity-80 text-[0.85em] font-mono ${isTX ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        {showTimestamp && <span>[{formatTimestamp(log.timestamp)}]</span>}
+                                        <span className="px-1.5 rounded-[3px] border border-current opacity-90 text-[0.9em]" style={{ color: topicColor, borderColor: topicColor }}>{log.topic}</span>
+                                        {showDataLength && (
+                                            <span className="text-[0.85em] opacity-70">
+                                                {getDataLengthText(log.data)}
+                                            </span>
+                                        )}
+                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && <span className="text-[#FFD700]">x{log.repeatCount}</span>}
                                     </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                                    <div className={`whitespace-pre-wrap break-all font-mono ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
+                                        {renderPayload(log)}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
             </div>
 
-            {/* Rich Publish Area */}
-            <div className="border-t border-[var(--vscode-border)] bg-[#252526] p-2 flex flex-col gap-2 shrink-0">
-                {/* Top Row: Topic, QoS, Retain */}
+            {/* Publish Area */}
+            <div className="border-t border-[#2b2b2b] bg-[#252526] p-2 flex flex-col gap-2 shrink-0">
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-[#3c3c3c] border border-[#3c3c3c] rounded-sm px-2 py-1 flex-1 relative">
-                        <span className="text-[#969696] text-[11px]">Topic</span>
-                        <input
-                            className="bg-transparent border-none outline-none text-[#cccccc] text-[12px] flex-1 font-mono"
-                            value={topic}
-                            onChange={(e) => setTopic(e.target.value)}
-                            placeholder="topic/path"
-                            list="mqtt-topics-list"
-                        />
-                        <datalist id="mqtt-topics-list">
-                            {(session.config.topics || []).map(t => (
-                                <option key={t.id} value={t.path}>{t.path}</option>
-                            ))}
-                        </datalist>
+                    <div className="flex items-center gap-1 bg-[#3c3c3c] rounded px-2 py-1 flex-1">
+                        <span className="text-[#969696] text-[10px]">Topic</span>
+                        <input className="bg-transparent border-none outline-none text-[#cccccc] text-[11px] flex-1 font-mono" value={topic} onChange={e => setTopic(e.target.value)} />
                     </div>
-
                     <div className="flex items-center gap-1">
-                        <span className="text-[#969696] text-[11px]">QoS</span>
-                        <select
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-[12px] p-1 rounded-sm outline-none"
-                            value={qos}
-                            onChange={(e) => setQos(Number(e.target.value) as 0 | 1 | 2)}
-                        >
-                            <option value={0}>0</option>
-                            <option value={1}>1</option>
-                            <option value={2}>2</option>
+                        <span className="text-[#969696] text-[10px]">QoS</span>
+                        <select className="bg-[#3c3c3c] text-[#cccccc] text-[11px] p-0.5 rounded outline-none" value={qos} onChange={e => setQos(Number(e.target.value) as 0 | 1 | 2)}>
+                            <option value={0}>0</option><option value={1}>1</option><option value={2}>2</option>
                         </select>
                     </div>
-
-                    <div className="flex items-center gap-1 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            id="retain-check"
-                            checked={retain}
-                            onChange={(e) => setRetain(e.target.checked)}
-                            className="bg-[#3c3c3c]"
-                        />
-                        <label htmlFor="retain-check" className="text-[#969696] text-[11px] select-none cursor-pointer">Retain</label>
-                    </div>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" checked={retain} onChange={e => setRetain(e.target.checked)} />
+                        <span className="text-[#969696] text-[10px]">Retain</span>
+                    </label>
                 </div>
-
-                {/* Middle Row: Format & Payload */}
-                <div className="flex gap-2 h-20">
-                    <div className="flex flex-col gap-1 w-24 shrink-0">
-                        <div className="flex flex-col gap-0.5 bg-[#1e1e1e] rounded p-0.5 border border-[#3c3c3c]">
-                            {['text', 'json', 'hex'].map((fmt) => (
-                                <div
-                                    key={fmt}
-                                    className={`text-[10px] text-center cursor-pointer py-1 rounded-sm uppercase ${publishFormat === fmt ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:bg-[#333]'}`}
-                                    onClick={() => setPublishFormat(fmt as any)}
-                                >
-                                    {fmt}
-                                </div>
-                            ))}
-                        </div>
+                <div className="flex gap-2 h-16">
+                    <div className="flex flex-col gap-0.5 bg-[#1e1e1e] rounded p-0.5 border border-[#3c3c3c] w-16">
+                        {['text', 'json', 'hex'].map(f => (
+                            <div key={f} className={`text-[9px] text-center cursor-pointer py-0.5 rounded uppercase ${publishFormat === f ? 'bg-[#007acc] text-white' : 'text-[#969696]'}`} onClick={() => setPublishFormat(f as any)}>{f}</div>
+                        ))}
                     </div>
-
-                    <textarea
-                        className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] p-2 text-[12px] font-mono outline-none focus:border-[var(--vscode-focusBorder)] resize-none"
-                        value={payload}
-                        onChange={(e) => setPayload(e.target.value)}
-                        placeholder={`Enter ${publishFormat} payload...`}
-                    />
-
-                    <button
-                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                            ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white'
-                            : (onConnectRequest && !session.isConnecting)
-                                ? 'bg-[#2d2d2d] hover:bg-[#3c3c3c] text-[#cccccc] cursor-pointer border border-[#3c3c3c] hover:border-[#007acc]'
-                                : 'bg-[#2d2d2d] text-[#666] cursor-not-allowed'}`}
-                        onClick={handleSend}
-                        disabled={(!isConnected && !onConnectRequest) || session.isConnecting}
-                        title={session.isConnecting ? "Connecting..." : !isConnected ? (onConnectRequest ? "Connect and Send" : "Disconnected") : "Send Payload"}
-                    >
-                        {session.isConnecting ? (
-                            <RefreshCw size={16} className="animate-spin" />
-                        ) : isConnected ? (
-                            <Send size={16} />
-                        ) : (
-                            <div className="relative">
-                                <Send size={16} className="opacity-50" />
-                                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div>
-                            </div>
-                        )}
-                        <span className="text-[10px]">{session.isConnecting ? '...' : isConnected ? 'Send' : 'Connect'}</span>
+                    <textarea className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] p-1.5 text-[11px] font-mono outline-none resize-none" value={payload} onChange={e => setPayload(e.target.value)} />
+                    <button className={`w-14 flex flex-col items-center justify-center rounded transition-colors ${isConnected ? 'bg-[#0e639c] text-white' : 'bg-[#2d2d2d] text-[#666]'}`} onClick={handleSend} disabled={session.isConnecting}>
+                        <Send size={14} /> <span className="text-[9px]">{isConnected ? 'Send' : 'Connect'}</span>
                     </button>
                 </div>
             </div>

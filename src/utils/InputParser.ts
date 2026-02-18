@@ -1,4 +1,4 @@
-import { Segment, Token, CRCConfig, FlagConfig } from '../types/token';
+import { Segment, Token, CRCConfig, FlagConfig, AutoIncConfig } from '../types/token';
 import { calculateCRC, sliceData } from './crc';
 
 export const parseDOM = (root: HTMLElement): Segment[] => {
@@ -148,6 +148,38 @@ export const compileSegments = (
                 console.log('Compiler: Timestamp Token', { format, byteOrder, timestamp: timestamp.toString(), bytes });
                 parts.push(bytes);
                 currentTotalLength += bytes.length;
+            } else if (token.type === 'auto_inc') {
+                const autoConfig = token.config as AutoIncConfig;
+                const byteSize = autoConfig.bytes || 1;
+                const currentValueHex = autoConfig.currentValue || autoConfig.defaultValue || '00';
+
+                // 1. Parse current hex value to bytes
+                const bytes = new Uint8Array(byteSize);
+                const cleanHex = currentValueHex.padStart(byteSize * 2, '0');
+                for (let i = 0; i < byteSize; i++) {
+                    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
+                }
+                parts.push(bytes);
+                currentTotalLength += bytes.length;
+
+                // 2. Compute next value for the token
+                // We use BigInt to handle up to 8 bytes safely
+                let val = BigInt(0);
+                for (let i = 0; i < byteSize; i++) {
+                    val = (val << BigInt(8)) | BigInt(bytes[i]);
+                }
+
+                // Add step (can be negative)
+                val += BigInt(autoConfig.step || 0);
+
+                // Handle overflow/underflow based on byteSize
+                const mask = (BigInt(1) << BigInt(byteSize * 8)) - BigInt(1);
+                val = val & mask;
+
+                // Convert back to hex string for next time
+                let nextHex = val.toString(16).toUpperCase();
+                nextHex = nextHex.padStart(byteSize * 2, '0');
+                autoConfig.currentValue = nextHex;
             }
         }
     }

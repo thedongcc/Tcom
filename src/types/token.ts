@@ -13,11 +13,10 @@ export interface CRCConfig {
 }
 
 export interface AutoIncConfig {
-    type: 'number' | 'hex';
-    value: number;
-    step: number;
-    encoding: 'dec' | 'hex';
-    bytes: number; // 1, 2, 4
+    bytes: number; // 字节数 (1-8)
+    defaultValue: string; // 默认值 (Hex 字符串)
+    currentValue: string; // 当前值 (Hex 字符串)
+    step: number; // 偏移量 (可正可负)
 }
 
 export interface FlagConfig {

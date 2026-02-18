@@ -127,6 +127,21 @@ export const getSuggestionOptions = () => ({
                         .run();
                 },
             },
+            {
+                title: 'Auto',
+                type: 'auto_inc',
+                config: { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 },
+                icon: Settings,
+                iconColor: 'text-[#c586c0]',
+                command: ({ editor, range }: any) => {
+                    editor
+                        .chain()
+                        .focus()
+                        .deleteRange(range)
+                        .insertSerialToken({ type: 'auto_inc', config: { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 } })
+                        .run();
+                },
+            },
         ];
 
         return items.filter(item =>

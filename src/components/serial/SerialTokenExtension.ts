@@ -69,7 +69,7 @@ export const SerialToken = Node.create<SerialTokenOptions>({
 
     addNodeView() {
         return ({ node, getPos, editor }) => {
-            const { id, type, config } = node.attrs;
+            let currentNode = node;
 
             // Create container
             const dom = document.createElement('span');
@@ -84,10 +84,15 @@ export const SerialToken = Node.create<SerialTokenOptions>({
             `;
 
             // Apply type-specific colors
-            if (type === 'crc') span.classList.add('text-[#4ec9b0]');
-            else if (type === 'timestamp') span.classList.add('text-[#4fc1ff]');
-            else span.classList.add('text-[#f48771]');
+            const updateColors = (type: string) => {
+                span.classList.remove('text-[#4ec9b0]', 'text-[#4fc1ff]', 'text-[#c586c0]', 'text-[#f48771]');
+                if (type === 'crc') span.classList.add('text-[#4ec9b0]');
+                else if (type === 'timestamp') span.classList.add('text-[#4fc1ff]');
+                else if (type === 'auto_inc') span.classList.add('text-[#c586c0]');
+                else span.classList.add('text-[#f48771]');
+            };
 
+            updateColors(node.attrs.type);
             span.title = 'Click to configure';
 
             // Helper to update label
@@ -105,6 +110,8 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                     label = config.name ? `${config.name}: ${display}` : (hex ? `Flag:${display}` : 'Flag');
                 } else if (type === 'timestamp') {
                     label = config.format === 'milliseconds' ? 'Time:Unix_ms' : 'Time:Unix_s';
+                } else if (type === 'auto_inc') {
+                    label = `Val:${config.currentValue || config.defaultValue || '00'}`;
                 }
 
                 span.innerHTML = `<span class="opacity-50 mr-[1px]">/</span><span class="${type === 'crc' ? 'font-medium' : ''}">${label}</span>`;
@@ -116,11 +123,31 @@ export const SerialToken = Node.create<SerialTokenOptions>({
             const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
             span.onclick = (e) => {
                 e.stopPropagation();
+                const { id, type, config } = currentNode.attrs;
                 const rect = span.getBoundingClientRect();
                 const event = new CustomEvent(SERIAL_TOKEN_CLICK_EVENT, {
                     detail: { id, type, config, x: rect.left, y: rect.bottom, pos: getPos() }
                 });
                 window.dispatchEvent(event);
+            };
+
+            // Right Click / Context Menu Handler (Reset)
+            span.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Use editor.commands to ensure we follow the framework's way
+                if (currentNode.attrs.type === 'auto_inc') {
+                    const currentConfig = currentNode.attrs.config;
+                    const newConfig = JSON.parse(JSON.stringify({
+                        ...currentConfig,
+                        currentValue: currentConfig.defaultValue
+                    }));
+
+                    editor.chain().focus().command(({ tr }) => {
+                        tr.setNodeAttribute(getPos(), 'config', newConfig);
+                        return true;
+                    }).run();
+                }
             };
 
             dom.appendChild(span);
@@ -129,7 +156,9 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 dom,
                 update: (updatedNode) => {
                     if (updatedNode.type.name !== this.name) return false;
-                    updateLabel(updatedNode.attrs);
+                    currentNode = updatedNode;
+                    updateColors(currentNode.attrs.type);
+                    updateLabel(currentNode.attrs);
                     return true;
                 },
                 selectNode: () => {
