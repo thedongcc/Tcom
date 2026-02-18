@@ -1527,6 +1527,8 @@ ipcMain.handle('app:list-fonts', async () => {
     const { spawn } = require('node:child_process');
     // 通过 PowerShell 读取注册表中安装的字体名称
     const psScript = `
+      [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+      $OutputEncoding = [System.Text.Encoding]::UTF8
       $fonts = @()
       $regPaths = @(
         'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts',
@@ -1538,30 +1540,39 @@ ipcMain.handle('app:list-fonts', async () => {
           $keys.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } | ForEach-Object {
             # 字体名称格式通常是 "FontName (TrueType)" 或 "FontName Bold (TrueType)"
             $name = $_.Name -replace '\\s*\\(.*\\)\\s*$', '' -replace '\\s+$', ''
-            if ($name -and $name.Length -gt 0) {
+            if ($name -and $name.Length -gt 1) {
               $fonts += $name
             }
           }
         }
       }
       # 去重并排序
-      $fonts | Sort-Object -Unique | ForEach-Object { Write-Output $_ }
-    `;
-    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], {
+      $fonts | Sort-Object -Unique | ForEach-Object { [Console]::WriteLine($_) }
+    `.trim();
+
+    // 转换为 PowerShell 识别的 Unicode (UTF-16LE) Base64
+    const buffer = Buffer.from(psScript, 'utf16le');
+    const encodedCommand = buffer.toString('base64');
+
+    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand], {
       windowsHide: true
     });
-    let out = '';
+
+    const chunks: Buffer[] = [];
     let err = '';
-    child.stdout.on('data', (d: any) => out += d.toString());
+
+    child.stdout.on('data', (d: Buffer) => chunks.push(d));
     child.stderr.on('data', (d: any) => err += d.toString());
+
     child.on('close', (code: number) => {
+      const out = Buffer.concat(chunks).toString('utf8');
       if (code === 0 && out.trim()) {
-        const fonts = out.split('\n')
+        const fonts = out.split(/\r?\n/)
           .map((f: string) => f.trim())
-          .filter((f: string) => f.length > 0);
+          .filter(Boolean);
         resolve({ success: true, fonts });
       } else {
-        resolve({ success: false, fonts: [], error: err });
+        resolve({ success: false, fonts: [], error: err || 'Failed to list fonts' });
       }
     });
     child.on('error', (e: any) => {

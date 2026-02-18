@@ -549,10 +549,19 @@ export const useSessionManager = () => {
         listPorts();
         const interval = setInterval(listPorts, 2000);
         const initWs = async () => {
+            let admin = false;
             if (window.com0comAPI?.isAdmin) {
-                const admin = await window.com0comAPI.isAdmin();
+                admin = await window.com0comAPI.isAdmin();
                 setIsAdmin(admin);
             }
+
+            // 如果是非管理员模式启动，自动关闭监控功能，防止由于持久化的 monitorEnabled 导致权限不足时的异常闪动
+            if (!admin && monitorEnabledRef.current) {
+                console.log('[SessionManager] Non-admin detected, auto-disabling monitor to prevent flickering.');
+                setMonitorEnabled(false);
+                localStorage.setItem('tcom-monitor-enabled', 'false');
+            }
+
             if (!window.workspaceAPI) return;
             const lastWs = await window.workspaceAPI.getLastWorkspace();
             if (lastWs.success && lastWs.path) await openWorkspace(lastWs.path);

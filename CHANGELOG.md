@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化Virtual Pairs显示逻辑
 - 优化sessions中的串口节点显示效果
 - 完善设置菜单
+- 修复管理员模式下启动监控，关闭后以非管理员模式打开软件会导致异常闪动的问题
 
 ### Removed
 - 取消设置中的check update功能
