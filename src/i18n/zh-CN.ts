@@ -108,8 +108,6 @@ export const zhCN = {
         typography: {
             fontFamily: '字体',
             fontFamilyDesc: '用于代码和日志显示的字体',
-            fontSize: '字体大小',
-            fontSizeDesc: '控制日志和编辑器的基本字体大小 (px)',
         },
 
         // 日志格式化

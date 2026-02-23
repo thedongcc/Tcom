@@ -132,7 +132,6 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         viewMode?: 'text' | 'hex';
         filterMode?: 'all' | 'rx' | 'tx';
         encoding?: 'utf-8' | 'gbk' | 'ascii';
-        fontSize?: number;
         fontFamily?: 'mono' | 'consolas' | 'courier';
         showTimestamp?: boolean;
         showPacketType?: boolean;

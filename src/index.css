@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'AppCoreFont';
+  src: url('./assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  /* 显式映射到 400, 500, 700，因为文件本身是 Medium */
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AppCoreFont';
+  src: url('./assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AppCoreFont';
+  src: url('./assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Force cursor override for react-resizable-panels Separator with HIGH SPECIFICITY */
 /* Using double attribute selector to increase specificity */
 div[data-direction="horizontal"][data-direction="horizontal"] {
@@ -76,7 +101,7 @@ div[data-direction="vertical"]:hover {
   --vscode-menu-fg: #cccccc;
   --vscode-menu-border: #454545;
 
-  --font-mono: 'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Segou UI Mono', 'Consolas', 'Courier New', monospace;
+  --font-mono: 'AppCoreFont', 'Microsoft YaHei', monospace;
 }
 
 
@@ -87,7 +112,10 @@ div[data-direction="vertical"]:hover {
 body {
   background-color: var(--vscode-bg);
   color: var(--vscode-fg);
-  font-family: var(--st-font-family, 'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+  font-family: var(--st-font-family, 'AppCoreFont', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+  line-height: var(--st-line-height, 1.5);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   /* Prevent body scroll, handle in components */
 }
@@ -193,4 +221,15 @@ body {
 
 .animate-mqtt-slide-in {
   animation: mqtt-slide-in 0.5s ease-out;
+}
+
+/* 移除数字输入框原生上下调节点击按钮 */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }

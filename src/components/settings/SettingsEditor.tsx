@@ -240,22 +240,33 @@ export const SettingsEditor = () => {
     const inputCls =
         'bg-[var(--vscode-input-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] text-[12px] px-2 py-0.5 outline-none focus:border-[var(--vscode-focusBorder)]';
 
-    // 预设字体列表（用于 Font Family 下拉框）
+    // 预设字体列表（内置字体 + 分类后的系统字体）
     const fontFamilyPresets = [
-        { label: 'Consolas, Courier New (Default)', value: 'Consolas, "Courier New", monospace' },
-        { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
-        { label: 'Cascadia Code', value: '"Cascadia Code", monospace' },
-        { label: 'Fira Code', value: '"Fira Code", monospace' },
-        { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
-        { label: 'Courier New', value: '"Courier New", monospace' },
-        { label: 'Lucida Console', value: '"Lucida Console", monospace' },
-        { label: 'Microsoft YaHei UI', value: '"Microsoft YaHei UI", sans-serif' },
-        { label: 'Segoe UI', value: '"Segoe UI", sans-serif' },
-        // 系统字体（去重，排除已在预设中的字体名）
-        ...systemFonts
-            .filter(f => !['Consolas', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Source Code Pro',
-                'Courier New', 'Lucida Console', 'Microsoft YaHei UI', 'Segoe UI'].includes(f))
-            .map(f => ({ label: f, value: `"${f}"` }))
+        { label: '-- Built-in --', value: '', disabled: true },
+        { label: '内嵌字体 (Default)', value: 'AppCoreFont' },
+    ];
+
+    // 分类系统字体
+    const monoFonts: { label: string; value: string }[] = [];
+    const propFonts: { label: string; value: string }[] = [];
+
+    // 定义一些常见的等宽字体关键词，用于初步分类
+    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
+
+    systemFonts.forEach(f => {
+        const lowerF = f.toLowerCase();
+        const item = { label: f, value: `"${f}"` };
+        if (monoKeywords.some(kw => lowerF.includes(kw))) {
+            monoFonts.push(item);
+        } else {
+            propFonts.push(item);
+        }
+    });
+
+    const finalFontList = [
+        ...fontFamilyPresets,
+        ...(monoFonts.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...monoFonts] : []),
+        ...(propFonts.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...propFonts] : [])
     ];
 
     // ── 颜色区块数据 ──
@@ -365,24 +376,11 @@ export const SettingsEditor = () => {
                     render: () => (
                         <div className="w-56">
                             <CustomSelect
-                                items={fontFamilyPresets}
+                                items={finalFontList}
                                 value={config.typography.fontFamily}
                                 onChange={(val) => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: val } }))}
-                                allowCustom
                             />
                         </div>
-                    ),
-                },
-                {
-                    label: t('settings.typography.fontSize'),
-                    description: t('settings.typography.fontSizeDesc'),
-                    render: () => (
-                        <input
-                            type="number"
-                            value={config.typography.fontSize}
-                            onChange={e => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontSize: Number(e.target.value) } }))}
-                            className={`w-24 ${inputCls}`}
-                        />
                     ),
                 },
             ],

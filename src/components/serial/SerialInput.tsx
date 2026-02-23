@@ -68,7 +68,7 @@ export const SerialInput = ({
         attributes: {
             class: 'outline-none text-[var(--st-input-text)] whitespace-pre-wrap break-all flex-1 min-h-[40px] overflow-y-auto custom-scrollbar p-2 leading-relaxed [&_p]:m-0 tracking-[0px]',
             spellcheck: 'false',
-            style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily}; font-variant-ligatures: none;`
+            style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)')};`
         },
     }), [fontSize, fontFamily]);
 

@@ -49,6 +49,14 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
     const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
     const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 13);
+
+    // Sync fontSize with global theme when not overridden locally
+    /* useEffect(() => {
+        if (uiState.fontSize === undefined) {
+             // 由于系统设置已移除 fontSize，此处回退到硬编码 13
+            setFontSize(13);
+        }
+    }, [uiState.fontSize]); */
     const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier'>(uiState.fontFamily || 'mono');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
@@ -58,37 +66,43 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     // Search State
     const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
 
-    // Font Selection Logic
-    const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
-
-    const defaultFonts = [
-        { label: 'Monospace (Default)', value: 'mono' },
-        { label: 'JetBrains Mono (Built-in)', value: 'JetBrains Mono' },
-        { label: 'Consolas', value: 'consolas' },
-        { label: 'Courier New', value: 'Courier New' },
-        { label: 'Microsoft YaHei UI', value: 'Microsoft YaHei UI' },
-        { label: 'Segoe UI', value: 'Segoe UI' },
-        { label: 'Inter', value: 'Inter' },
-    ];
+    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
     useEffect(() => {
-        if (showAllFonts) {
-            // @ts-ignore - queryLocalFonts is an experimental API
-            if (window.queryLocalFonts) {
-                // @ts-ignore
-                window.queryLocalFonts().then((fonts: any[]) => {
-                    // Filter and deduplicate
-                    const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
-                        .map(name => fonts.find((f: any) => f.fullName === name))
-                        .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
-                    setAvailableFonts(uniqueFonts);
-                }).catch((e: any) => {
-                    console.error('Failed to query local fonts:', e);
+        const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
+        if (queryFonts) {
+            queryFonts().then((res: any) => {
+                const fonts = Array.isArray(res) ? res : (res?.fonts || []);
+                const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
+
+                const mono: any[] = [];
+                const prop: any[] = [];
+
+                uniqueNames.forEach(name => {
+                    const lower = (name as string).toLowerCase();
+                    const item = { label: name as string, value: `"${name as string}"` };
+                    if (monoKeywords.some(kw => lower.includes(kw))) {
+                        mono.push(item);
+                    } else {
+                        prop.push(item);
+                    }
                 });
-            }
+
+                const builtIn = [
+                    { label: '内嵌字体 (Default)', value: 'AppCoreFont' },
+                ];
+
+                const final = [
+                    { label: '-- Built-in --', value: '', disabled: true },
+                    ...builtIn,
+                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...mono] : []),
+                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...prop] : [])
+                ];
+                setAvailableFonts(final);
+            });
         }
-    }, [showAllFonts]);
+    }, []);
 
     // CRC is in session.config.rxCRC.enabled
     const crcEnabled = (config as any).rxCRC?.enabled || false;
@@ -610,25 +624,13 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     />
                                                 </div>
 
+                                                {/* Font FontFamily */}
+
                                                 {/* Font Family */}
                                                 <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
-                                                        <label className="flex items-center gap-1.5 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                                checked={showAllFonts}
-                                                                onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
-                                                            />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">{t('monitor.systemFonts')}</span>
-                                                        </label>
-                                                    </div>
+                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
                                                     <CustomSelect
-                                                        items={[
-                                                            ...defaultFonts,
-                                                            ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
-                                                        ]}
+                                                        items={availableFonts}
                                                         value={fontFamily}
                                                         onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val as any }); }}
                                                     />
@@ -730,8 +732,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     className="absolute inset-0 overflow-auto p-4"
                     style={{
                         fontSize: `${fontSize}px`,
-                        fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : `"${fontFamily}", sans-serif`,
-                        lineHeight: '1.6'
+                        fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'),
+                        lineHeight: '1.5'
                     }}
                     ref={scrollRef}
                 >

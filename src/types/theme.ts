@@ -76,7 +76,7 @@ export const DEFAULT_THEME: ThemeConfig = {
     },
     images: {},
     typography: {
-        fontFamily: 'Consolas, "Courier New", monospace',
+        fontFamily: 'AppCoreFont',
         fontSize: 13,
         lineHeight: 1.5
     },

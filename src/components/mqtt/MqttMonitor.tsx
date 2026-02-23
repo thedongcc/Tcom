@@ -25,15 +25,6 @@ interface MqttMonitorProps {
     onConnectRequest?: () => Promise<boolean>;
 }
 
-const defaultFonts = [
-    { label: 'Monospace (Default)', value: 'mono' },
-    { label: 'JetBrains Mono (Built-in)', value: 'JetBrains Mono' },
-    { label: 'Consolas', value: 'consolas' },
-    { label: 'Courier New', value: 'Courier New' },
-    { label: 'Microsoft YaHei UI', value: 'Microsoft YaHei UI' },
-    { label: 'Segoe UI', value: 'Segoe UI' },
-    { label: 'Inter', value: 'Inter' },
-];
 
 export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs, onConnectRequest }: MqttMonitorProps) => {
     const { config: themeConfig } = useSettings();
@@ -54,11 +45,47 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'mono');
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
-    const [showAllFonts, setShowAllFonts] = useState(uiState.showAllFonts || false);
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     // Search State
     const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
+
+    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
+
+    useEffect(() => {
+        const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
+        if (queryFonts) {
+            queryFonts().then((res: any) => {
+                const fonts = Array.isArray(res) ? res : (res?.fonts || []);
+                const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
+
+                const mono: any[] = [];
+                const prop: any[] = [];
+
+                uniqueNames.forEach(name => {
+                    const lower = (name as string).toLowerCase();
+                    const item = { label: name as string, value: `"${name as string}"` };
+                    if (monoKeywords.some(kw => lower.includes(kw))) {
+                        mono.push(item);
+                    } else {
+                        prop.push(item);
+                    }
+                });
+
+                const builtIn = [
+                    { label: '内嵌字体 (Default)', value: 'AppCoreFont' },
+                ];
+
+                const final = [
+                    { label: '-- Built-in --', value: '', disabled: true },
+                    ...builtIn,
+                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...mono] : []),
+                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...prop] : [])
+                ];
+                setAvailableFonts(final);
+            });
+        }
+    }, []);
 
     // Publish Area State
     const [topic, setTopic] = useState('test/topic');
@@ -147,19 +174,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         }
     }, [activeMatch]);
 
-    // System Fonts
-    useEffect(() => {
-        // @ts-ignore
-        if (showAllFonts && window.queryLocalFonts) {
-            // @ts-ignore
-            window.queryLocalFonts().then((fonts: any[]) => {
-                const uniqueFonts = Array.from(new Set(fonts.map((f: any) => f.fullName)))
-                    .map(name => fonts.find((f: any) => f.fullName === name))
-                    .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
-                setAvailableFonts(uniqueFonts);
-            });
-        }
-    }, [showAllFonts]);
 
     // --- Render Helpers ---
 
@@ -384,26 +398,14 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                             <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
                                                 <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                 <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center justify-between">
+                                                    <div className="flex flex-col gap-2">
                                                         <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
-                                                        <label className="flex items-center gap-1.5 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="w-3 h-3 rounded border-[#3c3c3c] bg-[#1e1e1e] text-[#007acc] focus:ring-0 focus:ring-offset-0"
-                                                                checked={showAllFonts}
-                                                                onChange={(e) => { setShowAllFonts(e.target.checked); saveUIState({ showAllFonts: e.target.checked }); }}
-                                                            />
-                                                            <span className="text-[10px] text-[#888888] group-hover:text-[#cccccc] transition-colors">{t('monitor.systemFonts')}</span>
-                                                        </label>
+                                                        <CustomSelect
+                                                            items={availableFonts}
+                                                            value={fontFamily}
+                                                            onChange={(val) => { setFontFamily(val); saveUIState({ fontFamily: val }); }}
+                                                        />
                                                     </div>
-                                                    <CustomSelect
-                                                        items={[
-                                                            ...defaultFonts,
-                                                            ...(showAllFonts ? availableFonts.map(f => ({ label: f.fullName, value: f.fullName })) : [])
-                                                        ]}
-                                                        value={fontFamily}
-                                                        onChange={(val) => { setFontFamily(val); saveUIState({ fontFamily: val }); }}
-                                                    />
                                                 </div>
                                                 <div className="flex flex-col gap-2 mt-2">
                                                     <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
@@ -464,7 +466,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 <div
                     className="absolute inset-0 overflow-auto p-2 flex flex-col gap-1.5 select-text"
                     ref={scrollRef}
-                    style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily, lineHeight: '1.4' }}
+                    style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: '1.5' }}
                 >
                     {filteredLogs.slice(-100).map((log) => {
                         const isTX = log.type === 'TX';

@@ -76,7 +76,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
         // 3. 应用排版变量
         root.style.setProperty('--st-font-family', typography.fontFamily);
-        root.style.setProperty('--st-font-size', `${typography.fontSize}px`);
         root.style.setProperty('--st-line-height', `${typography.lineHeight}`);
 
         // 4. 应用背景图片
