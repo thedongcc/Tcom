@@ -131,8 +131,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
     // Search Hook
     const {
-        query, setQuery, isRegex, setIsRegex, matches, currentIndex, nextMatch, prevMatch
-    } = useLogSearch(logs, uiState.searchQuery || '', uiState.searchRegex || false, viewMode, formatData, 'utf-8');
+        query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev
+    } = useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData, 'utf-8');
     const activeMatch = matches[currentIndex];
 
     const handleQueryChange = (newQuery: string) => {
@@ -143,6 +143,11 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const handleRegexChange = (newRegex: boolean) => {
         setIsRegex(newRegex);
         saveUIState({ searchRegex: newRegex });
+    };
+
+    const handleMatchCaseChange = (newMatchCase: boolean) => {
+        setMatchCase(newMatchCase);
+        saveUIState({ searchMatchCase: newMatchCase });
     };
 
     const handleToggleSearch = useCallback(() => {
@@ -169,10 +174,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         if (activeMatch && scrollRef.current) {
             const element = document.getElementById(`log-${activeMatch.logId}`);
             if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
             }
         }
-    }, [activeMatch]);
+    }, [activeMatchRev]);
 
 
     // --- Render Helpers ---
@@ -305,14 +310,17 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         });
     }, [logs, filterMode, config.topics]);
 
-    // Auto-scroll effect
+    const prevLogLengthRef = useRef(logs.length);
     useEffect(() => {
-        if (scrollRef.current && autoScroll) {
+        const prevLength = prevLogLengthRef.current;
+        prevLogLengthRef.current = logs.length;
+        // 只有新增了数据条目时才执行自动滚动
+        if (scrollRef.current && autoScroll && logs.length > prevLength) {
             requestAnimationFrame(() => {
                 if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
             });
         }
-    }, [logs, autoScroll, filterMode]);
+    }, [logs.length, autoScroll, filterMode]);
 
     return (
         <div className="absolute inset-0 flex flex-col bg-[#1e1e1e] select-none">
@@ -451,8 +459,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         onToggle={handleToggleSearch}
                         query={query}
                         isRegex={isRegex}
+                        isMatchCase={matchCase}
                         onQueryChange={handleQueryChange}
                         onRegexChange={handleRegexChange}
+                        onMatchCaseChange={handleMatchCaseChange}
                         onNext={nextMatch}
                         onPrev={prevMatch}
                         logs={logs}
@@ -461,6 +471,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         viewMode={viewMode}
                         formatData={formatData}
                         encoding="utf-8"
+                        regexError={regexError}
                     />
                 </div>
                 <div

@@ -65,6 +65,7 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         searchOpen?: boolean;
         searchQuery?: string;
         searchRegex?: boolean;
+        searchMatchCase?: boolean;
     };
 }
 
@@ -105,6 +106,7 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         searchOpen?: boolean;
         searchQuery?: string;
         searchRegex?: boolean;
+        searchMatchCase?: boolean;
     };
 }
 
@@ -148,6 +150,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         searchOpen?: boolean;
         searchQuery?: string;
         searchRegex?: boolean;
+        searchMatchCase?: boolean;
     };
 }
 

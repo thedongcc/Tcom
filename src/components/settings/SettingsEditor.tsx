@@ -511,7 +511,7 @@ export const SettingsEditor = () => {
                     <input
                         type="text"
                         placeholder={t('settings.search')}
-                        className="w-full bg-[var(--vscode-settings-header-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] pl-10 pr-4 py-2 text-[13px] outline-none focus:border-[var(--vscode-focusBorder)] shadow-sm"
+                        className="w-full bg-[var(--vscode-settings-header-bg)] text-[var(--vscode-input-fg)] border border-[var(--vscode-input-border)] pl-10 pr-4 py-2 text-[13px] outline-none focus:border-[var(--vscode-focusBorder)] shadow-sm rounded-[4px]"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />

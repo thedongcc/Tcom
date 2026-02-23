@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1] - 2026-02-23
+## [0.0.2] - 2026-02-24
 ### Added
 - 串口接收区数据统计增加筛选功能
 - 修改mqtt监视器内容显示为聊天样式
@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加系统字体分类
 - 分离虚拟串口和串口监控功能
 - 增加窗口置顶功能
+- 监视区搜索增加match case功能
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -64,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 完善设置菜单
 - 修复管理员模式下启动监控，关闭后以非管理员模式打开软件会导致异常闪动的问题
 - 优化创建虚拟串口对功能
+- 修复监视区自动滚动异常问题
+- 修复监视区数据搜索问题
 
 ### Removed
 - 取消设置中的check update功能

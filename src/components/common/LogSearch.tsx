@@ -13,11 +13,13 @@ export interface LogSearchProps {
     isOpen: boolean;
     query: string;
     isRegex: boolean;
+    isMatchCase: boolean;
 
     // Actions
     onToggle: () => void;
     onQueryChange: (query: string) => void;
     onRegexChange: (isRegex: boolean) => void;
+    onMatchCaseChange: (isMatchCase: boolean) => void;
     onNext: () => void;
     onPrev: () => void;
 
@@ -28,55 +30,72 @@ export interface LogSearchProps {
     viewMode: 'text' | 'hex' | 'json';
     formatData: (data: any, mode: any, encoding: string) => string;
     encoding: string;
+    regexError?: boolean;
 }
 
 export const useLogSearch = (
     logs: any[],
     initialQuery: string = '',
     initialIsRegex: boolean = false,
+    initialIsMatchCase: boolean = false,
     viewMode: 'text' | 'hex' | 'json',
     formatData: (data: any, mode: any, encoding: string) => string,
     encoding: string
 ) => {
     const [query, setQuery] = useState(initialQuery);
     const [isRegex, setIsRegex] = useState(initialIsRegex);
+    const [matchCase, setMatchCase] = useState(initialIsMatchCase);
     const [currentIndex, setCurrentIndex] = useState(-1);
     const [matches, setMatches] = useState<SearchMatch[]>([]);
+    const [regexError, setRegexError] = useState(false);
+    const [activeMatchRev, setActiveMatchRev] = useState(0);
 
-    // Update state when initial props change (if needed for deep linking/restoring)
+    // 同步外部传入的查询条件（比如当搜索框关闭时强制清除词）
     useEffect(() => {
-        if (initialQuery !== query && query === '') setQuery(initialQuery);
-        if (initialIsRegex !== isRegex) setIsRegex(initialIsRegex);
-        // We only start sync if local is empty to avoid overwriting user input, 
-        // OR we can rely on parent to pass initial values only on mount.
-        // For now, let's treat initial* as true INITIAL values for useState.
-        // So we don't need this effect if we assume component remounts.
-        // But if we want to sync with external state changes:
-    }, []);
+        setQuery(initialQuery);
+    }, [initialQuery]);
+
+    useEffect(() => {
+        setIsRegex(initialIsRegex);
+    }, [initialIsRegex]);
+
+    useEffect(() => {
+        setMatchCase(initialIsMatchCase);
+    }, [initialIsMatchCase]);
+
+    // 记录上一次成功搜索的条件信息
+    const lastSearchRef = useRef({
+        query: '',
+        isRegex: false,
+        matchCase: false,
+        activeMatch: null as SearchMatch | null
+    });
 
     useEffect(() => {
         if (!query) {
             setMatches([]);
             setCurrentIndex(-1);
+            setRegexError(false);
+            lastSearchRef.current.query = '';
+            lastSearchRef.current.activeMatch = null;
             return;
         }
 
         try {
             let regex: RegExp;
+            const flags = matchCase ? 'g' : 'gi';
             if (isRegex) {
-                regex = new RegExp(query, 'gi');
+                regex = new RegExp(query, flags);
             } else {
-                // Escape special characters for literal search
                 const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                regex = new RegExp(escapedQuery, 'gi');
+                regex = new RegExp(escapedQuery, flags);
             }
+            setRegexError(false);
 
             const newMatches: SearchMatch[] = [];
             logs.forEach(log => {
                 const text = formatData(log.data, viewMode, encoding);
                 let match;
-                // Use exec for global search to find all occurrences in a line
-                // Reset regex index for each line if not global, but we use 'gi'
                 regex.lastIndex = 0;
                 while ((match = regex.exec(text)) !== null) {
                     newMatches.push({
@@ -84,38 +103,114 @@ export const useLogSearch = (
                         startIndex: match.index,
                         endIndex: regex.lastIndex
                     });
-                    if (regex.lastIndex === match.index) regex.lastIndex++; // Avoid infinite loops
+                    if (regex.lastIndex === match.index) regex.lastIndex++;
                 }
             });
 
             setMatches(newMatches);
-            setCurrentIndex(newMatches.length > 0 ? 0 : -1);
+
+            // 判断搜索词或模式是否改变
+            const conditionChanged =
+                lastSearchRef.current.query !== query ||
+                lastSearchRef.current.isRegex !== isRegex ||
+                lastSearchRef.current.matchCase !== matchCase;
+
+            if (newMatches.length > 0) {
+                if (conditionChanged) {
+                    // 查询条件变了，找到屏幕中心的 match
+                    let closestIndex = -1;
+                    let minDist = Infinity;
+                    const center = window.innerHeight / 2;
+                    for (let i = 0; i < newMatches.length; i++) {
+                        const el = document.getElementById(`log-${newMatches[i].logId}`);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            const dist = Math.abs(rect.top + rect.height / 2 - center);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closestIndex = i;
+                            }
+                        }
+                    }
+                    if (closestIndex === -1) {
+                        closestIndex = newMatches.length - 1; // 如果都没渲染，选最新的
+                    }
+                    setCurrentIndex(closestIndex);
+                    setActiveMatchRev(r => r + 1); // 触发滚动
+                } else {
+                    // 条件没变但是 logs 有更新：尝试找回之前的焦点
+                    const prevMatch = lastSearchRef.current.activeMatch;
+                    let nextIndex = 0;
+                    if (prevMatch) {
+                        const foundIndex = newMatches.findIndex(m =>
+                            m.logId === prevMatch.logId &&
+                            m.startIndex === prevMatch.startIndex
+                        );
+                        if (foundIndex !== -1) {
+                            nextIndex = foundIndex;
+                        } else {
+                            nextIndex = -1;
+                        }
+                    } else if (currentIndex === -1) {
+                        nextIndex = -1;
+                    }
+                    setCurrentIndex(nextIndex);
+                    // 注意：这里不增加 activeMatchRev，不让他滚动
+                }
+            } else {
+                setCurrentIndex(-1);
+            }
+
+            // 记录新的搜索条件
+            lastSearchRef.current.query = query;
+            lastSearchRef.current.isRegex = isRegex;
+            lastSearchRef.current.matchCase = matchCase;
+
         } catch (e) {
             console.error('Search regex error:', e);
             setMatches([]);
             setCurrentIndex(-1);
+            setRegexError(true);
         }
-    }, [query, isRegex, logs, viewMode, formatData, encoding]);
+    }, [query, isRegex, matchCase, logs, viewMode, formatData, encoding]);
+
+    // 同步 activeMatch
+    useEffect(() => {
+        if (currentIndex >= 0 && currentIndex < matches.length) {
+            lastSearchRef.current.activeMatch = matches[currentIndex];
+        } else {
+            lastSearchRef.current.activeMatch = null;
+        }
+    }, [currentIndex, matches]);
 
     const nextMatch = useCallback(() => {
         if (matches.length === 0) return;
-        setCurrentIndex(prev => (prev + 1) % matches.length);
+        setCurrentIndex(prev => {
+            const next = prev === -1 ? 0 : (prev + 1) % matches.length;
+            return next;
+        });
+        setActiveMatchRev(r => r + 1);
     }, [matches.length]);
 
     const prevMatch = useCallback(() => {
         if (matches.length === 0) return;
-        setCurrentIndex(prev => (prev - 1 + matches.length) % matches.length);
+        setCurrentIndex(prev => {
+            const next = prev === -1 ? matches.length - 1 : (prev - 1 + matches.length) % matches.length;
+            return next;
+        });
+        setActiveMatchRev(r => r + 1);
     }, [matches.length]);
 
     return {
-        query,
-        setQuery,
-        isRegex,
-        setIsRegex,
+        query, setQuery,
+        isRegex, setIsRegex,
+        matchCase, setMatchCase,
         currentIndex,
         matches,
         nextMatch,
-        prevMatch
+        prevMatch,
+        regexError,
+        activeMatchRev
     };
 };
 
@@ -123,13 +218,16 @@ export const LogSearch: React.FC<LogSearchProps> = ({
     isOpen,
     query,
     isRegex,
+    isMatchCase,
     onToggle,
     onQueryChange,
     onRegexChange,
+    onMatchCaseChange,
     onNext,
     onPrev,
     currentIndex,
     totalMatches,
+    regexError
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -163,7 +261,8 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         initial={{ width: 0, opacity: 0, scale: 0.95 }}
                         animate={{ width: 'auto', opacity: 1, scale: 1 }}
                         exit={{ width: 0, opacity: 0, scale: 0.95 }}
-                        className="flex items-center bg-[#252526] border border-[#454545] rounded-sm overflow-hidden mr-1 shadow-lg h-7"
+                        className={`flex items-center bg-[#252526] border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-colors focus-within:border-[var(--vscode-focusBorder)] focus-within:ring-1 focus-within:ring-[var(--vscode-focusBorder)] ${regexError ? 'border-[var(--st-error)] shadow-[0_0_8px_rgba(244,135,113,0.3)]' : 'border-[#454545]'
+                            }`}
                     >
                         <input
                             ref={inputRef}
@@ -179,20 +278,29 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             {totalMatches > 0 ? `${currentIndex + 1}/${totalMatches}` : '0/0'}
                         </div>
 
-                        <button
-                            onClick={() => onRegexChange(!isRegex)}
-                            className={`p-1 hover:bg-[#3c3c3c] transition-colors ${isRegex ? 'text-[#007acc] bg-[#3c3c3c]' : 'text-[#969696]'}`}
-                            title="Use Regular Expression (Alt+R)"
-                        >
-                            <Regex size={14} />
-                        </button>
+                        <div className="flex items-center space-x-0.5 px-0.5">
+                            <button
+                                onClick={() => onMatchCaseChange(!isMatchCase)}
+                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'text-[#81C783] bg-[#35538F]' : 'text-[#969696] hover:bg-[#3c3c3c] hover:text-[#cccccc]'}`}
+                                title="Match Case"
+                            >
+                                <span className="font-sans font-medium text-[13px] leading-none tracking-tight">Aa</span>
+                            </button>
+                            <button
+                                onClick={() => onRegexChange(!isRegex)}
+                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'text-[#81C783] bg-[#35538F]' : 'text-[#969696] hover:bg-[#3c3c3c] hover:text-[#cccccc]'}`}
+                                title="Use Regular Expression"
+                            >
+                                <span className="font-mono font-bold text-[14px] leading-none tracking-widest pl-[1px] transform -translate-y-[1px]">.*</span>
+                            </button>
+                        </div>
 
-                        <div className="w-[1px] h-4 bg-[#454545] mx-0.5" />
+                        <div className="w-[1px] h-4 bg-[#454545] mx-1" />
 
                         <button
                             onClick={onPrev}
                             disabled={totalMatches === 0}
-                            className="p-1 hover:bg-[#3c3c3c] text-[#969696] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            className="p-1 hover:bg-[#3c3c3c] text-[#80CBC4] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-[4px]"
                             title="Previous Match (Shift+Enter)"
                         >
                             <ChevronUp size={14} />
@@ -200,7 +308,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         <button
                             onClick={onNext}
                             disabled={totalMatches === 0}
-                            className="p-1 hover:bg-[#3c3c3c] text-[#969696] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            className="p-1 hover:bg-[#3c3c3c] text-[#80CBC4] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-[4px]"
                             title="Next Match (Enter)"
                         >
                             <ChevronDown size={14} />

@@ -271,7 +271,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const getDataLengthText = useCallback((data: string | Uint8Array) => `[${(typeof data === 'string' ? new TextEncoder().encode(data).length : data.length)}B]`, []);
 
     // Search logic
-    const { query, setQuery, isRegex, setIsRegex, matches, currentIndex, nextMatch, prevMatch } = useLogSearch(logs, uiState.searchQuery || '', uiState.searchRegex || false, viewMode, formatData as any, encoding);
+    const { query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev } = useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData as any, encoding);
     const activeMatch = matches[currentIndex];
 
     const handleQueryChange = (newQuery: string) => {
@@ -282,6 +282,11 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const handleRegexChange = (newRegex: boolean) => {
         setIsRegex(newRegex);
         saveUIState({ searchRegex: newRegex });
+    };
+
+    const handleMatchCaseChange = (newMatchCase: boolean) => {
+        setMatchCase(newMatchCase);
+        saveUIState({ searchMatchCase: newMatchCase });
     };
 
     const handleToggleSearch = useCallback(() => {
@@ -304,21 +309,27 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleToggleSearch]);
 
-    // Scroll to active match
+    // Scroll to active match when activeMatchRev changes
     useEffect(() => {
         if (activeMatch && scrollRef.current) {
             const element = document.getElementById(`log-${activeMatch.logId}`);
-            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
         }
-    }, [activeMatch]);
+    }, [activeMatchRev]);
 
+    const prevLogLengthRef = useRef(logs.length);
     useEffect(() => {
-        if (scrollRef.current && autoScroll) {
+        const prevLength = prevLogLengthRef.current;
+        prevLogLengthRef.current = logs.length;
+        // 只有新增了数据条目时才执行自动滚动
+        if (scrollRef.current && autoScroll && logs.length > prevLength) {
             requestAnimationFrame(() => {
                 if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
             });
         }
-    }, [logs, autoScroll]);
+    }, [logs.length, autoScroll]);
 
     const handleClearLogs = () => sessionManager.clearLogs(session.id);
 
@@ -499,8 +510,10 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         onToggle={handleToggleSearch}
                         query={query}
                         isRegex={isRegex}
+                        isMatchCase={matchCase}
                         onQueryChange={handleQueryChange}
                         onRegexChange={handleRegexChange}
+                        onMatchCaseChange={handleMatchCaseChange}
                         onNext={nextMatch}
                         onPrev={prevMatch}
                         logs={logs}
@@ -509,6 +522,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         viewMode={viewMode}
                         formatData={formatData as any}
                         encoding={encoding}
+                        regexError={regexError}
                     />
                 </div>
                 <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>

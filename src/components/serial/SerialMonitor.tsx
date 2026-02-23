@@ -178,8 +178,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     // Search Logic
     const {
-        query, setQuery, isRegex, setIsRegex, matches, currentIndex, nextMatch, prevMatch
-    } = useLogSearch(logs, uiState.searchQuery || '', uiState.searchRegex || false, viewMode, formatData, encoding);
+        query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev
+    } = useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData, encoding);
 
     const handleQueryChange = (newQuery: string) => {
         setQuery(newQuery);
@@ -193,6 +193,11 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const handleRegexChange = (newRegex: boolean) => {
         setIsRegex(newRegex);
         saveUIState({ searchRegex: newRegex });
+    };
+
+    const handleMatchCaseChange = (newMatchCase: boolean) => {
+        setMatchCase(newMatchCase);
+        saveUIState({ searchMatchCase: newMatchCase });
     };
 
     const handleToggleSearch = useCallback(() => {
@@ -217,15 +222,15 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     const activeMatch = matches[currentIndex];
 
-    // Auto-scroll to active search match
+    // Scroll to active match when user explicitly navigates
     useEffect(() => {
         if (activeMatch && scrollRef.current) {
             const element = document.getElementById(`log-${activeMatch.logId}`);
             if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
             }
         }
-    }, [activeMatch]);
+    }, [activeMatchRev]);
 
     // Clear logs
     const handleClearLogs = () => {
@@ -262,15 +267,19 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return `[${length}B]`;
     };
 
+    const prevLogLengthRef = useRef(logs.length);
     useEffect(() => {
-        if (scrollRef.current && autoScroll) {
+        const prevLength = prevLogLengthRef.current;
+        prevLogLengthRef.current = logs.length;
+        // 只有新增了数据条目时才执行自动滚动
+        if (scrollRef.current && autoScroll && logs.length > prevLength) {
             requestAnimationFrame(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
                 }
             });
         }
-    }, [logs, autoScroll]);
+    }, [logs.length, autoScroll]);
 
     // Auto-connect on mount if configured
 
@@ -716,8 +725,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         onToggle={handleToggleSearch}
                         query={query}
                         isRegex={isRegex}
+                        isMatchCase={matchCase}
                         onQueryChange={handleQueryChange}
                         onRegexChange={handleRegexChange}
+                        onMatchCaseChange={handleMatchCaseChange}
                         onNext={nextMatch}
                         onPrev={prevMatch}
                         logs={logs}
@@ -726,6 +737,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         viewMode={viewMode}
                         formatData={formatData}
                         encoding={encoding}
+                        regexError={regexError}
                     />
                 </div>
                 <div
@@ -742,13 +754,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             <p>No data</p>
                         </div>
                     )}
-                    {filteredLogs.length > 100 && (
-                        <div className="text-center text-[10px] text-[#666] py-1 select-none">
-                            ... {filteredLogs.length - 100} earlier messages hidden for performance ...
-                        </div>
-                    )}
                     <AnimatePresence initial={false}>
-                        {filteredLogs.slice(-100).map((log) => {
+                        {filteredLogs.map((log) => {
                             // Animation Logic
                             const isNewLog = log.timestamp > mountTimeRef.current;
 
@@ -895,12 +902,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             );
                         })}
                     </AnimatePresence>
-                    {/* Anchor for auto-scroll */}
-                    <div ref={(el) => {
-                        if (el && autoScroll) {
-                            el.scrollIntoView({ behavior: 'auto' });
-                        }
-                    }} />
 
                 </div>
             </div>
