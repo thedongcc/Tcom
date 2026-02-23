@@ -237,7 +237,7 @@ export const enUS = {
         adminRequired: '\u26a0\ufe0f Admin rights required to enable virtual serial port monitoring. Please restart as administrator.',
         stopFirst: 'Please stop monitoring first',
         stopFirstCreate: 'Please stop monitoring before creating a virtual port pair',
-        setupcPath: 'setupc.exe Path',
+        setupcPath: '[setupc.exe]Path',
         virtualPairs: 'Virtual Pairs',
         suggestNextPair: 'Suggest Next Pair',
         refresh: 'Refresh',
@@ -265,6 +265,15 @@ export const enUS = {
         deletePairMessage: 'Are you sure you want to delete this virtual port pair?\n{portA} <-> {portB}\nNote: If other software is using these ports, deletion may require a system restart.',
         deletePairConfirm: 'Delete',
         pairedWith: '(paired with {port})',
+        // com0com Check & Install
+        pathChecking: 'Checking...',
+        pathValid: 'Path Valid {version}',
+        pathInvalid: 'Valid setupc.exe not found',
+        installCom0com: 'Install com0com',
+        installMethodTitle: 'Install com0com Virtual Serial Port Driver',
+        installMethodDesc: 'You need to install the com0com driver to enable virtual serial port features.\nThis software includes a built-in installer, or you can download it from the official website.\n\nDisclaimer: Driver installation may require administrator privileges or a system restart.',
+        builtinInstall: 'Built-in Installer',
+        websiteDownload: 'Official Website',
     },
 
     // Command

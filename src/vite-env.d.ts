@@ -55,6 +55,8 @@ declare global {
             installDriver: () => Promise<{ success: boolean; path?: string; error?: string }>;
             setFriendlyName: (port: string, name: string) => Promise<{ success: boolean; error?: string }>;
             isAdmin: () => Promise<boolean>;
+            checkPath: (path: string) => Promise<{ success: boolean; version?: string | null }>;
+            launchInstaller: () => Promise<{ success: boolean; error?: string }>;
         }
         monitorAPI: {
             start: (sessionId: string, config: any) => Promise<{ success: boolean; error?: string }>;
@@ -81,6 +83,7 @@ declare global {
         }
         shellAPI: {
             openExternal: (url: string) => Promise<void>;
+            showOpenDialog: (options: any) => Promise<any>;
         }
         workspaceAPI: {
             getLastWorkspace: () => Promise<{ success: boolean; path: string | null }>;

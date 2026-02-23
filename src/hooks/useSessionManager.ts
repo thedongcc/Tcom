@@ -209,8 +209,11 @@ export const useSessionManager = () => {
                         allPorts.push({ path: pair.portB, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portB})` });
                     }
                 });
-            } catch (e) {
-                console.warn("Failed to list com0com ports", e);
+            } catch (e: any) {
+                const errStr = e.message || String(e);
+                if (!errStr.includes('Unauthorized command') && !errStr.includes('Unauthorized')) {
+                    console.warn("Failed to list com0com ports", e);
+                }
             }
         }
         setPorts(allPorts);

@@ -235,7 +235,7 @@ export const zhCN = {
         adminRequired: '⚠️ 启动虚拟串口监控需要管理员权限。请以管理员身份重启软件以开启此功能。',
         stopFirst: '请先停止监控',
         stopFirstCreate: '请先停止监控后再创建虚拟串口对',
-        setupcPath: 'setupc.exe 路径',
+        setupcPath: '选择[setupc.exe]',
         virtualPairs: '虚拟串口对',
         suggestNextPair: '建议下一对',
         refresh: '刷新',
@@ -263,6 +263,15 @@ export const zhCN = {
         deletePairMessage: '确定要删除此对虚拟串口吗？\n{portA} <-> {portB}\n注意：如果有其他软件正在占用这些端口，删除可能会导致系统提示重启。',
         deletePairConfirm: '确认删除',
         pairedWith: '（与 {port} 配对）',
+        // com0com 检测与安装
+        pathChecking: '检测中...',
+        pathValid: '路径有效 {version}',
+        pathInvalid: '未找到有效的 setupc.exe',
+        installCom0com: '安装com0com',
+        installMethodTitle: '安装 com0com 虚拟串口驱动',
+        installMethodDesc: '需要安装 com0com 驱动才能开启虚拟串口功能。\n本软件内置了一个安装包，您也可以自行前往官网下载安装。\n\n免责声明：驱动安装可能需要管理员权限或重启电脑。',
+        builtinInstall: '内置安装包',
+        websiteDownload: '前往官网',
     },
 
     // 命令

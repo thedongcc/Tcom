@@ -116,7 +116,9 @@ contextBridge.exposeInMainWorld('com0comAPI', {
   exec: (command: string) => ipcRenderer.invoke('com0com:exec', command),
   installDriver: () => ipcRenderer.invoke('com0com:install'),
   setFriendlyName: (port: string, name: string) => ipcRenderer.invoke('com0com:name', { port, name }),
-  isAdmin: () => ipcRenderer.invoke('app:is-admin')
+  isAdmin: () => ipcRenderer.invoke('app:is-admin'),
+  checkPath: (path: string) => ipcRenderer.invoke('com0com:check', path),
+  launchInstaller: () => ipcRenderer.invoke('com0com:launch-installer')
 });
 
 contextBridge.exposeInMainWorld('monitorAPI', {
@@ -195,4 +197,5 @@ contextBridge.exposeInMainWorld('updateAPI', {
 
 contextBridge.exposeInMainWorld('shellAPI', {
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  showOpenDialog: (options: any) => ipcRenderer.invoke('shell:showOpenDialog', options),
 });

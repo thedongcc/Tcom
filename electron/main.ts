@@ -901,7 +901,7 @@ function createWindow() {
   // =============================================
   const fs = require('fs').promises;
 
-  const workspaceStateFile = path.join(app.getPath('userData'), 'workspace-state.json');
+  const workspaceStateFile = path.join(app.getPath('userData'), 'window-state.json');
   const defaultWorkspacePath = path.join(app.getPath('userData'), 'DefaultWorkspace');
 
   // Get last opened workspace path
@@ -1065,6 +1065,39 @@ function createWindow() {
     await shell.openExternal(url);
   });
 
+  // Show open dialog for files
+  ipcMain.handle('shell:showOpenDialog', async (_event: any, options: any) => {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(win, options);
+    return result;
+  });
+
+  ipcMain.handle('com0com:launch-installer', async () => {
+    const isDev = !!VITE_DEV_SERVER_URL;
+    let installerPath = '';
+    if (isDev) {
+      installerPath = path.join(__dirname, '../resources/drivers/com0com_setup.exe');
+    } else {
+      installerPath = path.join(process.resourcesPath, 'resources/drivers/com0com_setup.exe');
+    }
+
+    try {
+      installerPath = installerPath.replace(/^["']|["']$/g, '');
+      const fs = require('fs/promises');
+      const stats = await fs.stat(installerPath);
+      if (!stats.isFile()) return { success: false, error: '内置安装包未找到，请确认打包时包含 resources/drivers/com0com_setup.exe' };
+    } catch {
+      return { success: false, error: '内置安装包未找到，请确认打包时包含 resources/drivers/com0com_setup.exe' };
+    }
+
+    const { shell: eShell } = require('electron');
+    const result = await eShell.openPath(installerPath);
+    if (result) {
+      return { success: false, error: result };
+    }
+    return { success: true };
+  });
+
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
@@ -1083,9 +1116,26 @@ function createWindow() {
   });
 
   // Com0Com Integration
+  ipcMain.handle('com0com:check', async (_event, targetPath: string) => {
+    try {
+      targetPath = (targetPath || '').replace(/^["']|["']$/g, '');
+      const filename = require('path').basename(targetPath).toLowerCase();
+      if (filename !== 'setupc.exe') {
+        return { success: false };
+      }
+      const fs = require('fs/promises');
+      const stats = await fs.stat(targetPath);
+      if (!stats.isFile()) return { success: false };
+
+      return { success: true, version: null };
+    } catch (e) {
+      return { success: false };
+    }
+  });
+
   const { exec } = require('node:child_process');
 
-  ipcMain.handle('com0com:exec', async (_event, command) => {
+  ipcMain.handle('com0com:exec', async (_event, command: string) => {
     // Check admin privileges first for non-list commands
     if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
       const isAdmin = await new Promise((resolve) => {
@@ -1097,7 +1147,7 @@ function createWindow() {
       }
     }
 
-    if (!command.toLowerCase().includes('setupc')) {
+    if (!command.toLowerCase().includes('setupc.exe')) {
       return { success: false, error: 'Unauthorized command' };
     }
 

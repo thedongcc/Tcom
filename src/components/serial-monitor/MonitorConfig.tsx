@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Play, Square, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
+import { RefreshCw, Play, Square, Wand2, ArrowRightLeft, FolderOpen, Trash2, X, AlertCircle } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com, PairInfo } from '../../utils/com0com';
@@ -28,6 +28,38 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     const [existingPairs, setExistingPairs] = useState<PairInfo[]>([]);
     const [setupcPath, setSetupcPath] = useState(monitorConfig.setupcPath || 'C:\\Program Files (x86)\\com0com\\setupc.exe');
     const [listPairsError, setListPairsError] = useState<string | null>(null);
+
+    const [pathStatus, setPathStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
+    const [com0comVersion, setCom0comVersion] = useState<string | null>(null);
+    const [showInstallDialog, setShowInstallDialog] = useState(false);
+
+    const checkCom0comPath = useCallback(async (path: string) => {
+        if (!path) {
+            setPathStatus('invalid');
+            return;
+        }
+        setPathStatus('checking');
+        try {
+            const res = await window.com0comAPI?.checkPath(path);
+            if (res?.success) {
+                setPathStatus('valid');
+                setCom0comVersion(res.version || null);
+            } else {
+                setPathStatus('invalid');
+                setCom0comVersion(null);
+            }
+        } catch (e) {
+            setPathStatus('invalid');
+            setCom0comVersion(null);
+        }
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            checkCom0comPath(setupcPath);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [setupcPath, checkCom0comPath]);
 
     const updateConfig = useCallback((updates: Partial<MonitorSessionConfig>) => {
         updateSessionConfig(session.id, updates);
@@ -90,20 +122,23 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                 }
             }
         } catch (e: any) {
-            console.error('Failed to list pairs', e);
-            setListPairsError(e.message || String(e));
+            const errStr = e.message || String(e);
+            if (!errStr.includes('Unauthorized command')) {
+                console.error('Failed to list pairs', e);
+                setListPairsError(errStr);
+            }
             setExistingPairs([]);
         }
     }, [monitorConfig.setupcPath, monitorConfig.virtualSerialPort, monitorConfig.pairedPort, updateConfig, monitorEnabled, isAdmin]);
 
     useEffect(() => {
         // Load pairs when setup path, enabled status, or admin status changes
-        if (monitorConfig.setupcPath && monitorEnabled && isAdmin) {
+        if (monitorConfig.setupcPath && monitorEnabled && isAdmin && pathStatus === 'valid') {
             refreshPairs();
-        } else if (!monitorEnabled || !isAdmin) {
+        } else if (!monitorEnabled || !isAdmin || pathStatus === 'invalid') {
             setExistingPairs([]);
         }
-    }, [monitorConfig.setupcPath, monitorEnabled, isAdmin, refreshPairs]);
+    }, [monitorConfig.setupcPath, monitorEnabled, isAdmin, pathStatus, refreshPairs]);
 
     useEffect(() => {
         return () => {
@@ -225,7 +260,16 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     {/* setupc.exe Path */}
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">{t('monitor.setupcPath')}</label>
+                        <div className="flex justify-between items-center h-[18px]">
+                            <label className="text-[11px] text-[#969696] mb-0">{t('monitor.setupcPath')}</label>
+                            <button
+                                className="text-[11px] text-[#0e639c] hover:text-[#1177bb] transition-colors"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInstallDialog(true); }}
+                                disabled={isConnected}
+                            >
+                                {t('monitor.installCom0com')}
+                            </button>
+                        </div>
                         <div
                             className="flex gap-1"
                             onClickCapture={(e) => {
@@ -248,11 +292,13 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                                 onClick={async () => {
                                     if (isConnected) return;
                                     try {
-                                        const result = await window.workspaceAPI.openFolder();
-                                        if (result.success && result.path) {
-                                            const exePath = result.path.endsWith('\\')
-                                                ? `${result.path}setupc.exe`
-                                                : `${result.path}\\setupc.exe`;
+                                        const result = await window.shellAPI?.showOpenDialog({
+                                            title: '选择 setupc.exe',
+                                            filters: [{ name: 'com0com installer (setupc.exe)', extensions: ['exe'] }],
+                                            properties: ['openFile']
+                                        });
+                                        if (result && !result.canceled && result.filePaths.length > 0) {
+                                            const exePath = result.filePaths[0];
                                             setSetupcPath(exePath);
                                             updateConfig({ setupcPath: exePath });
                                         }
@@ -264,6 +310,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                             >
                                 <FolderOpen size={14} />
                             </button>
+                        </div>
+                        <div className="h-[16px] text-[11px] mt-0.5 flex items-center">
+                            {pathStatus === 'checking' && <span className="text-[#808080]">{t('monitor.pathChecking')}</span>}
+                            {pathStatus === 'valid' && <span className="text-[#10b981]">✓ {t('monitor.pathValid').replace(' {version}', '')}</span>}
+                            {pathStatus === 'invalid' && <span className="text-[#f48771]">✗ {t('monitor.pathInvalid')}</span>}
                         </div>
                     </div>
 
@@ -288,10 +339,10 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                                     <Wand2 size={13} />
                                 </button>
                                 <button
-                                    onClick={(e) => { e.preventDefault(); if (!isConnected) refreshPairs(); }}
-                                    className={`p-1 rounded text-[#969696] transition-colors ${isConnected ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#3c3c3c] hover:text-white'}`}
+                                    onClick={(e) => { e.preventDefault(); if (!isConnected && pathStatus === 'valid') refreshPairs(); }}
+                                    className={`p-1 rounded text-[#969696] transition-colors ${isConnected || pathStatus !== 'valid' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#3c3c3c] hover:text-white'}`}
                                     title={t('monitor.refresh')}
-                                    disabled={isConnected}
+                                    disabled={isConnected || pathStatus !== 'valid'}
                                 >
                                     <RefreshCw size={13} />
                                 </button>
@@ -308,7 +359,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                                     }))}
                                     value={newPairExt}
                                     onChange={val => setNewPairExt(val)}
-                                    disabled={isConnected}
+                                    disabled={isConnected || pathStatus !== 'valid'}
                                 />
                                 <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
                                 <CustomSelect
@@ -319,7 +370,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                                     }))}
                                     value={newPairInt}
                                     onChange={val => setNewPairInt(val)}
-                                    disabled={isConnected}
+                                    disabled={isConnected || pathStatus !== 'valid'}
                                 />
                             </div>
                             <button
@@ -328,10 +379,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                                         showToast(t('monitor.stopFirstCreate'), 'info');
                                         return;
                                     }
+                                    if (pathStatus !== 'valid') return;
                                     createNewPair();
                                 }}
-                                disabled={isCreatingPair || !isAdmin || !monitorEnabled}
-                                className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${isConnected || !isAdmin || !monitorEnabled
+                                disabled={isCreatingPair || !isAdmin || !monitorEnabled || pathStatus !== 'valid'}
+                                className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${isConnected || !isAdmin || !monitorEnabled || pathStatus !== 'valid'
                                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                     : 'bg-[#0e639c] text-white hover:bg-[#1177bb]'
                                     }`}
@@ -550,6 +602,55 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                     )}
                 </div>
             </div>
+
+            {/* Install Com0com Dialog */}
+            {showInstallDialog && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowInstallDialog(false)}>
+                    <div
+                        className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[400px] flex flex-col rounded-md overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
+                            <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{t('monitor.installMethodTitle')}</span>
+                            <button onClick={() => setShowInstallDialog(false)} className="text-[#969696] hover:text-white transition-colors">
+                                <X size={14} />
+                            </button>
+                        </div>
+                        {/* Content */}
+                        <div className="p-5 flex gap-4 items-start">
+                            <div className="shrink-0 mt-0.5"><AlertCircle className="text-[#007acc]" size={24} /></div>
+                            <div className="flex-1">
+                                <p className="text-[13px] text-[#cccccc] leading-relaxed whitespace-pre-wrap">{t('monitor.installMethodDesc')}</p>
+                            </div>
+                        </div>
+                        {/* Footer */}
+                        <div className="flex justify-end gap-2 p-3 bg-[#1e1e1e] border-t border-[#3c3c3c]">
+                            <button
+                                onClick={async () => {
+                                    setShowInstallDialog(false);
+                                    window.shellAPI?.openExternal('https://com0com.sourceforge.net/');
+                                }}
+                                className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] border border-[#3c3c3c] rounded-sm text-xs transition-colors"
+                            >
+                                {t('monitor.websiteDownload')}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setShowInstallDialog(false);
+                                    const res = await window.com0comAPI?.launchInstaller();
+                                    if (!res?.success) {
+                                        showToast(res?.error || 'Launch failed', 'error');
+                                    }
+                                }}
+                                className="px-4 py-1.5 text-white bg-[#0e639c] hover:bg-[#1177bb] rounded-sm text-xs transition-all"
+                            >
+                                {t('monitor.builtinInstall')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
