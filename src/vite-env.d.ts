@@ -96,6 +96,10 @@ declare global {
             getRecentWorkspaces: () => Promise<{ success: boolean; workspaces: string[] }>;
             migrateOldSessions: () => Promise<{ success: boolean; migrated: number; path?: string }>;
         }
+        windowAPI: {
+            setAlwaysOnTop: (flag: boolean) => Promise<{ success: boolean; alwaysOnTop: boolean }>;
+            isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
+        }
     }
 }
 

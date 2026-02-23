@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加内嵌字体
 - 增加系统字体分类
 - 分离虚拟串口和串口监控功能
+- 增加窗口置顶功能
 
 ### Fixed
 - 修复重复发送不被计数问题

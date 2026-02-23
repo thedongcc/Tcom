@@ -314,6 +314,12 @@ export const enUS = {
         resetSettings: 'Are you sure you want to reset all settings to their defaults?',
     },
 
+    // Title bar
+    titleBar: {
+        pinWindow: 'Pin Window',
+        unpinWindow: 'Unpin Window',
+    },
+
     // Status bar
     statusBar: {
         connected: 'Connected',

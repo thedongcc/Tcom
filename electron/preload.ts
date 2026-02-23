@@ -199,3 +199,8 @@ contextBridge.exposeInMainWorld('shellAPI', {
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   showOpenDialog: (options: any) => ipcRenderer.invoke('shell:showOpenDialog', options),
 });
+
+contextBridge.exposeInMainWorld('windowAPI', {
+  setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
+  isAlwaysOnTop: () => ipcRenderer.invoke('window:isAlwaysOnTop'),
+});

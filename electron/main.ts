@@ -1631,6 +1631,15 @@ ipcMain.handle('app:list-fonts', async () => {
   });
 });
 
+// 窗口置顶
+ipcMain.handle('window:setAlwaysOnTop', (_event, flag: boolean) => {
+  win?.setAlwaysOnTop(flag);
+  return { success: true, alwaysOnTop: flag };
+});
+
+ipcMain.handle('window:isAlwaysOnTop', () => {
+  return { success: true, alwaysOnTop: win?.isAlwaysOnTop() ?? false };
+});
 
 
 // Quit when all windows are closed, except on macOS. There, it's common

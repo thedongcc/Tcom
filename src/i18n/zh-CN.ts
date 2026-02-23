@@ -312,6 +312,12 @@ export const zhCN = {
         resetSettings: '确定要恢复所有设置为默认值吗？',
     },
 
+    // 标题栏
+    titleBar: {
+        pinWindow: '置顶窗口',
+        unpinWindow: '取消置顶',
+    },
+
     // 状态栏
     statusBar: {
         connected: '已连接',
