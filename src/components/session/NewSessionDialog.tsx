@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { X, Network, FileText, Monitor, Cpu, Server, Activity } from 'lucide-react';
 import { SessionType } from '../../types/session';
+import { useI18n } from '../../context/I18nContext';
 
 interface NewSessionDialogProps {
     onSelect: (type: SessionType) => void;
@@ -10,23 +11,20 @@ interface NewSessionDialogProps {
 
 interface SessionTypeOption {
     type: SessionType;
-    label: string;
+    labelKey: string;
+    descKey: string;
     icon: any;
-    description: string;
 }
 
 const OPTIONS: SessionTypeOption[] = [
-    { type: 'serial', label: 'Serial Port', icon: Cpu, description: 'Connect to COM ports' },
-    { type: 'mqtt', label: 'MQTT Client', icon: Network, description: 'Subscribe/Publish to brokers' },
-    { type: 'tcp', label: 'TCP Client', icon: Server, description: 'Raw TCP socket connection' },
-    { type: 'udp', label: 'UDP Socket', icon: Network, description: 'Datagram communication' },
-    { type: 'ssh', label: 'SSH Terminal', icon: Monitor, description: 'Secure Shell connection' },
-    { type: 'monitor', label: 'Serial Monitor', icon: Activity, description: 'Bridge & Monitor Serial Ports' },
-    { type: 'file', label: 'File Monitor', icon: FileText, description: 'Watch and read files' },
+    { type: 'serial', labelKey: 'session.serial', descKey: 'session.serialDesc', icon: Cpu },
+    { type: 'mqtt', labelKey: 'session.mqtt', descKey: 'session.mqttDesc', icon: Network },
+    { type: 'monitor', labelKey: 'session.monitor', descKey: 'session.monitorDesc', icon: Activity },
 ];
 
 export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDialogProps) => {
     const ref = useRef<HTMLDivElement>(null);
+    const { t } = useI18n();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -45,7 +43,7 @@ export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDial
             style={{ left: position.x, top: position.y }}
         >
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">New Session</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">{t('session.newSession')}</span>
                 <button
                     onClick={onClose}
                     className="text-[#969696] hover:text-white transition-colors"
@@ -65,8 +63,8 @@ export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDial
                             <opt.icon size={16} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-medium leading-none">{opt.label}</span>
-                            <span className="text-[10px] opacity-50 mt-1 truncate">{opt.description}</span>
+                            <span className="text-[13px] font-medium leading-none">{t(opt.labelKey as any)}</span>
+                            <span className="text-[10px] opacity-50 mt-1 truncate">{t(opt.descKey as any)}</span>
                         </div>
                     </div>
                 ))}

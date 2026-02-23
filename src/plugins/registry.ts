@@ -1,5 +1,6 @@
 import { Plugin } from '../types/plugin';
 import { CommandMenuPlugin } from './CommandMenu';
+import { VirtualPortPlugin } from './VirtualPort';
 
 /**
  * Central Registry of all available plugins in the application.
@@ -7,7 +8,8 @@ import { CommandMenuPlugin } from './CommandMenu';
  * For now, it lists all built-in plugins.
  */
 export const PLUGIN_REGISTRY: Plugin[] = [
-    CommandMenuPlugin
+    CommandMenuPlugin,
+    VirtualPortPlugin
 ];
 
 export const getPluginById = (id: string): Plugin | undefined => {

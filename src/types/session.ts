@@ -119,12 +119,10 @@ export interface GraphSessionConfig extends BaseSessionConfig {
 
 export interface MonitorSessionConfig extends BaseSessionConfig {
     type: 'monitor';
-    setupcPath?: string;
     virtualSerialPort?: string;
     physicalSerialPort?: string;
     connection: SerialOpenOptions; // Use this to store parameters for the physical port
     linked?: boolean;
-    setupcOutput?: string;
     // Pairing Logic
     pairedPort?: string; // The internal port (e.g. COM101) automatically paired with virtualSerialPort
     autoDestroyPair?: boolean; // Whether to destroy the pair on session close/delete

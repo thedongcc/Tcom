@@ -20,6 +20,14 @@ export const useSessionManager = () => {
     const [monitorEnabled, setMonitorEnabled] = useState(() => {
         return localStorage.getItem('tcom-monitor-enabled') !== 'false'; // Default to true
     });
+    const [setupcPath, setSetupcPathState] = useState(() => {
+        return localStorage.getItem('tcom-setupc-path') || 'C:\\Program Files (x86)\\com0com\\setupc.exe';
+    });
+
+    const setSetupcPath = useCallback((path: string) => {
+        setSetupcPathState(path);
+        localStorage.setItem('tcom-setupc-path', path);
+    }, []);
 
     // --- References for stable callbacks ---
     const sessionsRef = useRef<SessionState[]>([]);
@@ -186,10 +194,8 @@ export const useSessionManager = () => {
     // --- Persistence for Active Session ---
 
     const findSetupcPath = useCallback(() => {
-        const monitorSession = sessionsRef.current.find(s => s.config.type === 'monitor');
-        if (monitorSession) return (monitorSession.config as MonitorSessionConfig).setupcPath;
-        return localStorage.getItem('setupc_path') || undefined;
-    }, []);
+        return setupcPath;
+    }, [setupcPath]);
 
     const listPorts = useCallback(async () => {
         let allPorts: SerialPortInfo[] = [];
@@ -264,19 +270,19 @@ export const useSessionManager = () => {
 
         if (session.config.type === 'monitor') {
             if (!monitorEnabledRef.current) {
-                addLog(sessionId, 'ERROR', '虚拟串口监控功能已禁用，请在设置中开启');
+                addLog(sessionId, 'ERROR', '虚拟串口功能已禁用，请在设置中开启');
                 return false;
             }
             if (!isAdminRef.current) {
-                addLog(sessionId, 'ERROR', '启动虚拟串口监控需要管理员权限，请以管理员身份重启软件');
+                addLog(sessionId, 'ERROR', '启动虚拟串口功能需要管理员权限，请以管理员身份重启软件');
                 return false;
             }
             const monitorConfig = session.config as MonitorSessionConfig;
             updateSession(sessionId, () => ({ isConnecting: true }));
             let actualPort = monitorConfig.pairedPort;
-            if (!actualPort && monitorConfig.virtualSerialPort && monitorConfig.setupcPath) {
+            if (!actualPort && monitorConfig.virtualSerialPort && setupcPath) {
                 try {
-                    const found = await Com0Com.findPairedPort(monitorConfig.setupcPath, monitorConfig.virtualSerialPort);
+                    const found = await Com0Com.findPairedPort(setupcPath, monitorConfig.virtualSerialPort);
                     if (found) {
                         actualPort = found;
                         updateSessionConfig(sessionId, { pairedPort: found });
@@ -359,9 +365,9 @@ export const useSessionManager = () => {
                 cleanupRefs.current.delete(sessionId);
             }
 
-            if (monitorConfig.autoDestroyPair && monitorConfig.pairedPort && monitorConfig.setupcPath) {
+            if (monitorConfig.autoDestroyPair && monitorConfig.pairedPort && setupcPath) {
                 try {
-                    await Com0Com.removePair(monitorConfig.setupcPath, monitorConfig.pairedPort);
+                    await Com0Com.removePair(setupcPath, monitorConfig.pairedPort);
                     updateSessionConfig(sessionId, { pairedPort: undefined });
                 } catch (e) { addLog(sessionId, 'ERROR', `Failed to remove pair: ${e}`); }
             }
@@ -470,7 +476,6 @@ export const useSessionManager = () => {
         } else if (type === 'monitor') {
             baseConfig.name = generateUniqueName(existingNames, 'Monitor');
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
-            baseConfig.setupcPath = 'C:\\Program Files (x86)\\com0com\\setupc.exe';
         }
 
         const newState: SessionState = { id: newId, config: baseConfig, isConnected: false, isConnecting: false, logs: [] };
@@ -618,12 +623,12 @@ export const useSessionManager = () => {
         writeToSession, writeToMonitor, updateSessionConfig, updateUIState, clearLogs, publishMqtt,
         listPorts, saveSession, deleteSession, openSavedSession, openSavedSessions, openWorkspace, closeWorkspace, browseAndOpenWorkspace,
         reorderSessions: async (order: SessionConfig[]) => setSavedSessions(order),
-        isAdmin, monitorEnabled, toggleMonitor
+        isAdmin, monitorEnabled, toggleMonitor, setupcPath, setSetupcPath
     }), [
         sessions, activeSessionId, savedSessions, ports, workspacePath, recentWorkspaces,
         createSession, duplicateSession, closeSession, connectSession, disconnectSession,
         writeToSession, writeToMonitor, updateSessionConfig, updateUIState, clearLogs, publishMqtt,
         listPorts, saveSession, deleteSession, openSavedSession, openSavedSessions, openWorkspace, closeWorkspace, browseAndOpenWorkspace,
-        isAdmin, monitorEnabled, toggleMonitor
+        isAdmin, monitorEnabled, toggleMonitor, setupcPath, setSetupcPath
     ]);
 };
