@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Cpu, MemoryStick, RefreshCw, Github, ArrowDownCircle } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 
@@ -55,7 +55,7 @@ export const StatusBar = () => {
     };
 
     return (
-        <div className="h-[22px] bg-[var(--vscode-statusbar)] flex items-center justify-between px-2 text-[11px] text-[var(--vscode-fg)] select-none cursor-default shrink-0 border-t border-[var(--vscode-border)]">
+        <div className="h-[22px] bg-[var(--statusbar-background)] flex items-center justify-between px-2 text-[11px] text-[var(--app-foreground)] select-none cursor-default shrink-0 border-t border-[var(--border-color)]">
             {/* Left Section */}
             <div className="flex items-center gap-3">
                 {/* Version (leftmost) */}
@@ -63,7 +63,7 @@ export const StatusBar = () => {
                     <span>v{version || '...'}</span>
                 </div>
 
-                <div className="w-[1px] h-3 bg-[var(--vscode-fg)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* CPU */}
                 <div className="flex items-center gap-1 px-1 rounded-sm" title={`App CPU Usage: ${cpu}%`}>
@@ -77,11 +77,11 @@ export const StatusBar = () => {
                     <span className={memUsed > 500 ? 'text-[#f48771]' : 'opacity-80'}>{memUsed} MB</span>
                 </div>
 
-                <div className="w-[1px] h-3 bg-[var(--vscode-fg)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* Check Update */}
                 <div
-                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--vscode-hover)] cursor-pointer transition-colors"
+                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
                     onClick={handleCheckUpdate}
                     title={t('statusBar.checkUpdate')}
                 >
@@ -98,11 +98,11 @@ export const StatusBar = () => {
                     )}
                 </div>
 
-                <div className="w-[1px] h-3 bg-[var(--vscode-fg)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* GitHub */}
                 <div
-                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--vscode-hover)] cursor-pointer transition-colors"
+                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
                     onClick={openGitHub}
                     title="Open project on GitHub"
                 >

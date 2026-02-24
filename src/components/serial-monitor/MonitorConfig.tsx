@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Play, Square, ArrowRightLeft } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
@@ -152,16 +152,16 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)]">
-            <div className="px-4 py-2 border-b border-[var(--vscode-border)] bg-[#252526] text-[11px] font-bold text-[#cccccc] uppercase tracking-wide">
+        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
+            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wide">
                 <span>{t('monitor.settings')}</span>
             </div>
 
             <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto">
                 {/* 未开启虚拟串口功能时显示提示 */}
                 {(!monitorEnabled || !isAdmin) && (
-                    <div className="p-3 border border-red-500/50 bg-red-900/30 rounded-sm">
-                        <p className="text-[11px] text-[#F48771] leading-relaxed">
+                    <div className="p-3 border border-red-500/30 bg-red-500/10 rounded-sm">
+                        <p className="text-[11px] text-[var(--st-error-text)] leading-relaxed">
                             {t('monitor.enableFirst')}
                         </p>
                     </div>
@@ -173,7 +173,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                     {/* Select Virtual Port (from existing pairs) */}
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-1">
-                            <label className="text-[11px] text-[#969696]">{t('monitor.externalPort')}</label>
+                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.externalPort')}</label>
                             <CustomSelect
                                 items={availablePairOptions.length > 0 ? availablePairOptions.map(opt => ({
                                     label: opt.label,
@@ -209,9 +209,9 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                         </div>
 
                         {monitorConfig.pairedPort && (
-                            <div className="px-2 py-1.5 bg-[#252526] border border-[#3c3c3c] rounded-sm flex items-center justify-between">
-                                <span className="text-[11px] text-[#969696]">{t('monitor.internalBridgePort')}</span>
-                                <span className="text-[12px] font-mono text-[#10b981] font-bold">{monitorConfig.pairedPort}</span>
+                            <div className="px-2 py-1.5 bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] flex items-center justify-between shadow-sm">
+                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.internalBridgePort')}</span>
+                                <span className="text-[12px] font-mono text-emerald-600 dark:text-emerald-500 font-bold">{monitorConfig.pairedPort}</span>
                             </div>
                         )}
                     </div>
@@ -219,24 +219,25 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     {/* Physical Port */}
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696] flex justify-between">
+                        <label className="text-[11px] text-[var(--app-foreground)] font-medium flex justify-between">
                             {t('monitor.physicalPort')}
-                            <button onClick={listPorts} className="hover:text-white" title={t('monitor.refreshPorts')}>
+                            <button onClick={listPorts} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors" title={t('monitor.refreshPorts')}>
                                 <RefreshCw size={12} />
                             </button>
                         </label>
                         <CustomSelect
-                            items={ports.reduce((acc, p) => {
-                                if (!acc.find(item => item.path === p.path)) acc.push(p);
-                                return acc;
-                            }, [] as typeof ports).map(port => ({
-                                label: port.friendlyName
-                                    ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
-                                    : port.path,
-                                value: port.path,
-                                busy: port.busy,
-                                description: port.manufacturer ? `Manufacturer: ${port.manufacturer}` : undefined
-                            }))}
+                            items={ports.filter(p => !(p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual')))
+                                .reduce((acc, p) => {
+                                    if (!acc.find(item => item.path === p.path)) acc.push(p);
+                                    return acc;
+                                }, [] as typeof ports).map(port => ({
+                                    label: port.friendlyName
+                                        ? `${port.path} - ${port.friendlyName.replace(`(${port.path})`, '').trim()}`
+                                        : port.path,
+                                    value: port.path,
+                                    busy: port.busy,
+                                    description: port.manufacturer ? `Manufacturer: ${port.manufacturer}` : undefined
+                                }))}
                             value={monitorConfig.physicalSerialPort || ''}
                             onChange={(val) => {
                                 updateConfig({
@@ -261,7 +262,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     {/* Baud Rate & Params for Physical Port */}
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">{t('monitor.baudRate')}</label>
+                        <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.baudRate')}</label>
                         <CustomSelect
                             items={COMMON_BAUD_RATES.map(rate => ({
                                 label: String(rate),
@@ -277,7 +278,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                     <div className="flex gap-2">
                         <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[#969696]">{t('monitor.dataBits')}</label>
+                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.dataBits')}</label>
                             <CustomSelect
                                 items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.dataBits || 8)}
@@ -286,7 +287,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                             />
                         </div>
                         <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[#969696]">{t('monitor.stopBits')}</label>
+                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.stopBits')}</label>
                             <CustomSelect
                                 items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.stopBits || 1)}
@@ -297,7 +298,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[#969696]">{t('monitor.parity')}</label>
+                        <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('monitor.parity')}</label>
                         <CustomSelect
                             items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
                                 label: p.charAt(0).toUpperCase() + p.slice(1),
@@ -311,11 +312,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
 
                 </div>
 
-                <div className="space-y-2 mt-auto pt-4 border-t border-[#3c3c3c]">
+                <div className="space-y-2 mt-auto pt-4 border-t border-[var(--border-color)]">
                     <button
                         className={`w-full py-2 px-3 text-white text-[13px] font-bold rounded-sm transition-all flex items-center justify-center gap-2 ${isConnected
-                            ? 'bg-[#a1260d] hover:bg-[#c93f24]'
-                            : (isAdmin && monitorEnabled ? 'bg-[#0e639c] hover:bg-[#1177bb]' : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50')
+                            ? 'bg-red-700 hover:bg-red-600'
+                            : (isAdmin && monitorEnabled ? 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)]' : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50')
                             }`}
                         disabled={(isConnecting || !monitorEnabled || !isAdmin) && !isConnected}
                         onClick={handleToggleConnection}

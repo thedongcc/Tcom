@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+﻿import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { SideBar } from './SideBar';
@@ -100,7 +100,7 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
     return (
         <SessionProvider manager={sessionManager}>
             <PluginProvider>
-                <div className="flex flex-col h-screen w-full bg-[var(--vscode-bg)] text-[var(--vscode-fg)] overflow-hidden">
+                <div className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden">
                     <TitleBar />
                     <div className={`flex-1 flex overflow-hidden ${sidebarAtRight ? 'flex-row-reverse' : 'flex-row'}`}>
                         <ActivityBar

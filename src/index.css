@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @font-face {
   font-family: 'AppCoreFont';
@@ -44,62 +44,68 @@ div[data-direction="vertical"]:hover {
 
 :root {
   /* Dark+ (Default) */
-  --vscode-bg: #1e1e1e;
-  --vscode-sidebar: #252526;
-  --vscode-activitybar: #333333;
-  --vscode-statusbar: #252526;
-  --vscode-statusbar-debugging: #cc6633;
-  --vscode-titlebar: #3c3c3c;
-  --vscode-panel: #1e1e1e;
-  --vscode-border: #2b2b2b;
-  --vscode-fg: #cccccc;
-  --vscode-input-bg: #3c3c3c;
-  --vscode-input-fg: #cccccc;
-  --vscode-input-border: #3c3c3c;
-  --vscode-input-placeholder: #a6a6a6;
-  --vscode-hover: #2a2d2e;
-  --vscode-selection: #094771;
-  --vscode-accent: #007acc;
-  --vscode-focusBorder: #007acc;
-  --vscode-list-hover: #2a2d2e;
-  --vscode-list-active: #37373d;
+  --app-background: #1e1e1e;
+  --sidebar-background: #252526;
+  --activitybar-background: #333333;
+  --statusbar-background: #252526;
+  --statusbar-debugging-background: #cc6633;
+  --titlebar-background: #3c3c3c;
+  --panel-background: #1e1e1e;
+  --border-color: #2b2b2b;
+  --app-foreground: #cccccc;
+  --input-background: #3c3c3c;
+  --input-foreground: #cccccc;
+  --input-border-color: #3c3c3c;
+  --input-placeholder-color: #a6a6a6;
+  --hover-background: #2a2d2e;
+  --selection-background: #094771;
+  --accent-color: #007acc;
+  --focus-border-color: #007acc;
+  --list-hover-background: #2a2d2e;
+  --list-active-background: #37373d;
 
   /* Editor - Dark */
-  --vscode-editor-background: #1e1e1e;
+  --editor-background: #1e1e1e;
 
   /* Checkbox - Dark */
-  --vscode-checkbox-background: #007acc;
-  --vscode-checkbox-border: #007acc;
-  --vscode-checkbox-foreground: #ffffff;
+  --checkbox-background: #007acc;
+  --checkbox-border-color: #007acc;
+  --checkbox-foreground: #ffffff;
 
   /* Settings - Dark */
-  --vscode-settings-header-bg: #252526;
-  --vscode-settings-row-hover-bg: #2a2d2e;
+  --settings-header-background: #252526;
+  --settings-row-hover-background: #2a2d2e;
 
   /* Scrollbar - Dark */
-  --vscode-scrollbar-shadow: #000000;
-  --vscode-scrollbar-slider: #79797966;
-  --vscode-scrollbar-slider-hover: #646464bb;
-  --vscode-scrollbar-slider-active: #bfbfbf66;
+  --scrollbar-shadow-color: #000000;
+  --scrollbar-slider-color: #79797966;
+  --scrollbar-slider-hover-color: #646464bb;
+  --scrollbar-slider-active-color: #bfbfbf66;
 
   /* Additional Widgets - Dark */
-  --vscode-editor-widget-bg: #252526;
-  --vscode-widget-border: #454545;
+  --widget-background: #252526;
+  --widget-border-color: #454545;
+
+  /* Dropdown - Dark */
+  --dropdown-background: #1f1f1f;
+  --dropdown-border-color: #454545;
+  --dropdown-item-hover-background: #094771;
+  --dropdown-item-selected-foreground: #ffffff;
 
   /* Buttons & Links - Dark */
-  --vscode-button-bg: #0e639c;
-  --vscode-button-fg: #ffffff;
-  --vscode-button-hover-bg: #1177bb;
-  --vscode-button-secondary-bg: #3c3c3c;
-  --vscode-button-secondary-hover-bg: #4a4a4a;
-  --vscode-textLink-foreground: #3794ff;
+  --button-background: #0e639c;
+  --button-foreground: #ffffff;
+  --button-hover-background: #1177bb;
+  --button-secondary-background: #3c3c3c;
+  --button-secondary-hover-background: #4a4a4a;
+  --link-foreground: #3794ff;
 
-  --vscode-activitybar-inactive-fg: #858585;
+  --activitybar-inactive-foreground: #858585;
 
   /* Menu - Dark */
-  --vscode-menu-bg: #252526;
-  --vscode-menu-fg: #cccccc;
-  --vscode-menu-border: #454545;
+  --menu-background: #252526;
+  --menu-foreground: #cccccc;
+  --menu-border-color: #454545;
 
   --font-mono: 'AppCoreFont', 'Microsoft YaHei', monospace;
 }
@@ -110,8 +116,8 @@ div[data-direction="vertical"]:hover {
 
 
 body {
-  background-color: var(--vscode-bg);
-  color: var(--vscode-fg);
+  background-color: var(--app-background);
+  color: var(--app-foreground);
   font-family: var(--st-font-family, 'AppCoreFont', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
   line-height: var(--st-line-height, 1.5);
   -webkit-font-smoothing: antialiased;
@@ -131,17 +137,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--vscode-scrollbar-slider);
+  background-color: var(--scrollbar-slider-color);
   transition: background-color 0s;
   /* VS Code style instant */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--vscode-scrollbar-slider-hover);
+  background-color: var(--scrollbar-slider-hover-color);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background-color: var(--vscode-scrollbar-slider-active);
+  background-color: var(--scrollbar-slider-active-color);
 }
 
 ::-webkit-scrollbar-track {
@@ -232,4 +238,5 @@ input::-webkit-inner-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }

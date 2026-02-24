@@ -58,7 +58,7 @@ export const ContextMenu = ({ x, y, items, onClose }: Props) => {
                 return (
                     <div
                         key={idx}
-                        className={`px-3 py-1.5 text-[13px] hover:bg-[#04395e] hover:text-white cursor-pointer flex items-center gap-2 transition-colors ${item.color === 'red' ? 'text-red-400' : 'text-[#cccccc]'}`}
+                        className={`px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2 transition-colors ${item.color === 'red' ? 'text-[var(--st-error-text)]' : 'text-[var(--menu-foreground)]'}`}
                         onClick={() => {
                             item.onClick();
                             onClose();

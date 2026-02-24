@@ -1,5 +1,5 @@
 import { MqttSessionConfig, LogEntry } from '../../types/session';
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Send, Trash2, ArrowDownToLine, Menu, X, ChevronDown, Download, Settings, RefreshCw, Check, Filter } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
@@ -9,6 +9,7 @@ import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
+import { useSystemMessage } from '../../hooks/useSystemMessage';
 
 interface MqttMonitorProps {
     session: {
@@ -25,11 +26,13 @@ interface MqttMonitorProps {
     onConnectRequest?: () => Promise<boolean>;
 }
 
+const scrollPositions = new Map<string, number>();
 
 export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs, onConnectRequest }: MqttMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const { t } = useI18n();
+    const { parseSystemMessage } = useSystemMessage();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
     const mountTimeRef = useRef(Date.now());
@@ -310,17 +313,38 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         });
     }, [logs, filterMode, config.topics]);
 
-    const prevLogLengthRef = useRef(logs.length);
+    const prevLogsRef = useRef(logs);
     useEffect(() => {
-        const prevLength = prevLogLengthRef.current;
-        prevLogLengthRef.current = logs.length;
-        // 只有新增了数据条目时才执行自动滚动
-        if (scrollRef.current && autoScroll && logs.length > prevLength) {
+        const isNewData = logs !== prevLogsRef.current;
+        prevLogsRef.current = logs;
+        if (isNewData && scrollRef.current && autoScroll) {
             requestAnimationFrame(() => {
-                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    scrollPositions.set(session.id, scrollRef.current.scrollHeight);
+                }
             });
         }
-    }, [logs.length, autoScroll, filterMode]);
+    }, [logs, autoScroll, filterMode, session.id]);
+
+    useLayoutEffect(() => {
+        if (scrollRef.current && scrollPositions.has(session.id)) {
+            scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+        }
+    }, [session.id]);
+
+    useEffect(() => {
+        if (!scrollRef.current) return;
+        const observer = new ResizeObserver(() => {
+            if (scrollRef.current && scrollRef.current.clientHeight > 0) {
+                if (scrollPositions.has(session.id)) {
+                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+                }
+            }
+        });
+        observer.observe(scrollRef.current);
+        return () => observer.disconnect();
+    }, [session.id]);
 
     return (
         <div className="absolute inset-0 flex flex-col bg-[#1e1e1e] select-none">
@@ -334,8 +358,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 }
             `}</style>
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
-                <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
+                <div className="text-sm font-medium text-[var(--app-foreground)] flex items-center gap-2">
                     {isConnected ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
                     ) : (
@@ -346,33 +370,33 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
                 <div className="flex items-center gap-4">
                     {/* Stats */}
-                    <div className="flex items-center bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden">
+                    <div className="flex items-center bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] divide-x divide-[var(--border-color)] overflow-hidden h-7">
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e]' : 'hover:bg-[#2a2d2e]'}`}
+                            className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'rx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`}
                             onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                         >
-                            <span className="text-[11px] font-mono">R:</span>
-                            <span className="text-[11px] font-mono tabular-nums">
+                            <span className="text-[11px] font-bold font-mono">R:</span>
+                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
                                 {logs.filter(l => l.type === 'RX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
                             </span>
                         </div>
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white' : 'hover:bg-[#2a2d2e]'}`}
+                            className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'tx' ? 'bg-emerald-500 text-white' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`}
                             onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                         >
-                            <span className="text-[11px] font-mono">T:</span>
-                            <span className="text-[11px] font-mono tabular-nums">
+                            <span className="text-[11px] font-bold font-mono">T:</span>
+                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
                                 {logs.filter(l => l.type === 'TX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
                             </span>
                         </div>
                     </div>
 
                     {/* View Modes */}
-                    <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-7">
+                    <div className="flex items-center gap-0.5 bg-[var(--input-background)] p-0.5 rounded-[3px] border border-[var(--border-color)] h-7">
                         {(['text', 'hex', 'json'] as const).map(m => (
                             <button
                                 key={m}
-                                className={`px-2.5 h-full text-[10px] font-medium rounded-[2px] uppercase ${viewMode === m ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                                 onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}
                             >
                                 {m}
@@ -380,34 +404,34 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         ))}
                     </div>
 
-
                     {/* Options */}
                     <div className="relative">
                         <button
-                            className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
+                            className={`h-7 px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
                             onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                            title="Options"
                         >
-                            <Menu size={16} />
+                            <Menu size={14} />
                             <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                         </button>
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                    <div className="text-[12px] text-[#cccccc] font-bold mb-4 pb-1 border-b border-[#3c3c3c]">{t('monitor.logSettings')}</div>
+                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
+                                    <div className="text-[12px] text-[var(--app-foreground)] font-bold mb-4 pb-1 border-b border-[var(--menu-border-color)]">{t('monitor.logSettings')}</div>
                                     <div className="space-y-4 px-1">
                                         <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
+                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
                                             <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
                                             <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
                                             <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
                                             <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
 
-                                            <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
-                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
+                                            <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
+                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex flex-col gap-2">
-                                                        <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
+                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
                                                         <CustomSelect
                                                             items={availableFonts}
                                                             value={fontFamily}
@@ -416,7 +440,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
+                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -428,8 +452,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="pt-2 border-t border-[#3c3c3c]">
-                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] text-white text-[11px] rounded hover:bg-[#0062a3] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                        <div className="pt-2 border-t border-[var(--menu-border-color)]">
+                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
                                                 <Download size={14} /> {t('monitor.exportLog')}
                                             </button>
                                         </div>
@@ -440,11 +464,19 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button className={`p-1 rounded ${autoScroll ? 'text-[#4ec9b0]' : 'text-[#969696]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
+                    <div className="flex items-center gap-1 border-l border-[var(--border-color)] pl-2 h-7">
+                        <button
+                            className={`w-7 h-7 flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--list-active-background)] text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)]'}`}
+                            onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}
+                            title="Auto Scroll"
+                        >
                             <ArrowDownToLine size={14} />
                         </button>
-                        <button className="p-1 text-[#969696] hover:text-[#cccccc]" onClick={() => onClearLogs?.()}>
+                        <button
+                            className="w-7 h-7 flex items-center justify-center rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] transition-colors"
+                            onClick={() => onClearLogs?.()}
+                            title="Clear Logs"
+                        >
                             <Trash2 size={14} />
                         </button>
                     </div>
@@ -477,6 +509,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 <div
                     className="absolute inset-0 overflow-auto p-2 flex flex-col gap-1.5 select-text"
                     ref={scrollRef}
+                    onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: '1.5' }}
                 >
                     {filteredLogs.slice(-100).map((log) => {
@@ -485,11 +518,19 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
 
                         if (log.type === 'INFO' || log.type === 'ERROR' || !log.topic) {
+                            const content = formatData(log.data, 'text').trim();
+                            const { styleClass, translatedText } = parseSystemMessage(log.type, content);
+
                             return (
-                                <div key={log.id} className="flex justify-center my-1">
-                                    <span className={`px-4 py-0.5 rounded-full text-[10px] border ${log.type === 'ERROR' ? 'bg-red-900/20 text-red-400 border-red-500/30' : 'bg-gray-800/40 text-gray-400 border-gray-600/30'}`}>
-                                        {formatData(log.data, 'text')}
+                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
+                                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+                                        {translatedText}
                                     </span>
+                                    {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                                        <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
+                                            x{log.repeatCount}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         }

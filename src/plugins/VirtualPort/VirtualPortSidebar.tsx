@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Wand2, ArrowRightLeft, FolderOpen, Trash2, X, AlertCircle } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
@@ -136,10 +136,10 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)] overflow-y-auto w-full">
+        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)] overflow-y-auto w-full">
             <div className="p-4 flex flex-col gap-4">
                 {/* Global Monitor Enable Switch */}
-                <div className="border border-[#3c3c3c] p-3 bg-[#2d2d2d] rounded-sm">
+                <div className="border border-[var(--border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
                     <Switch
                         label={t('monitor.enableVirtualMonitor')}
                         checked={monitorEnabled}
@@ -148,7 +148,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                     />
                     {!isAdmin && (
                         <div className="mt-2 p-2 bg-red-900/30 border border-red-500/50 rounded-sm">
-                            <p className="text-[11px] text-[#f48771]">
+                            <p className="text-[11px] text-red-400">
                                 {t('monitor.adminRequired')}
                             </p>
                         </div>
@@ -160,9 +160,9 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                     {/* setupc.exe Path */}
                     <div className="flex flex-col gap-1">
                         <div className="flex justify-between items-center h-[18px]">
-                            <label className="text-[11px] text-[#969696] mb-0">{t('monitor.setupcPath')}</label>
+                            <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium mb-0">{t('monitor.setupcPath')}</label>
                             <button
-                                className="text-[11px] text-[#0e639c] hover:text-[#1177bb] transition-colors"
+                                className="text-[11px] text-[var(--link-foreground)] hover:text-[var(--button-hover-background)] transition-colors"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInstallDialog(true); }}
                             >
                                 {t('monitor.installCom0com')}
@@ -170,12 +170,12 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                         </div>
                         <div className="flex gap-1 w-full">
                             <input
-                                className="w-[10px] flex-1 bg-[#3c3c3c] border border-[#3c3c3c] text-[13px] text-[#cccccc] p-1 outline-none focus:border-[var(--vscode-selection)]"
+                                className="w-[10px] flex-1 bg-[var(--input-background)] border border-[var(--input-border-color)] text-[13px] text-[var(--app-foreground)] font-medium p-1 outline-none focus:border-[var(--selection-background)]"
                                 value={setupcPath}
                                 onChange={(e) => setSetupcPath(e.target.value)}
                             />
                             <button
-                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-1 px-2 transition-colors hover:bg-[#4a4a4a] shrink-0"
+                                className="bg-[var(--button-secondary-background)] border border-[var(--input-border-color)] text-[var(--button-foreground)] p-1 px-2 transition-colors hover:bg-[var(--button-secondary-hover-background)] shrink-0"
                                 onClick={async () => {
                                     try {
                                         const result = await window.shellAPI?.showOpenDialog({
@@ -195,27 +195,27 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                             </button>
                         </div>
                         <div className="h-[16px] text-[11px] mt-0.5 flex items-center">
-                            {pathStatus === 'checking' && <span className="text-[#808080]">{t('monitor.pathChecking')}</span>}
-                            {pathStatus === 'valid' && <span className="text-[#10b981]">✓ {t('monitor.pathValid').replace(' {version}', '')}</span>}
-                            {pathStatus === 'invalid' && <span className="text-[#f48771]">✗ {t('monitor.pathInvalid')}</span>}
+                            {pathStatus === 'checking' && <span className="text-[var(--activitybar-inactive-foreground)]">{t('monitor.pathChecking')}</span>}
+                            {pathStatus === 'valid' && <span className="text-green-500">✓ {t('monitor.pathValid').replace(' {version}', '')}</span>}
+                            {pathStatus === 'invalid' && <span className="text-red-400">✗ {t('monitor.pathInvalid')}</span>}
                         </div>
                     </div>
 
                     {/* Virtual Pair Management */}
-                    <div className="flex flex-col gap-2 border border-[#3c3c3c] p-3 bg-[#2d2d2d] rounded-sm">
-                        <div className="text-[11px] text-[#969696] flex justify-between items-center mb-1 font-medium">
+                    <div className="flex flex-col gap-2 border border-[var(--border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
+                        <div className="text-[11px] text-[var(--activitybar-inactive-foreground)] flex justify-between items-center mb-1 font-medium">
                             <span>{t('monitor.virtualPairs')}</span>
                             <div className="flex gap-1 items-center">
                                 <button
                                     onClick={(e) => { e.preventDefault(); suggestNextPair(); }}
-                                    className="p-1 rounded text-[#969696] transition-colors hover:bg-[#3c3c3c] hover:text-white"
+                                    className="p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]"
                                     title={t('monitor.suggestNextPair')}
                                 >
                                     <Wand2 size={13} />
                                 </button>
                                 <button
                                     onClick={(e) => { e.preventDefault(); if (pathStatus === 'valid') refreshPairs(); }}
-                                    className={`p-1 rounded text-[#969696] transition-colors ${pathStatus !== 'valid' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#3c3c3c] hover:text-white'}`}
+                                    className={`p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors ${pathStatus !== 'valid' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]'}`}
                                     title={t('monitor.refresh')}
                                     disabled={pathStatus !== 'valid'}
                                 >
@@ -236,7 +236,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                     onChange={val => setNewPairExt(val)}
                                     disabled={pathStatus !== 'valid'}
                                 />
-                                <ArrowRightLeft size={10} className="text-[#969696] shrink-0" />
+                                <ArrowRightLeft size={10} className="text-[var(--activitybar-inactive-foreground)] shrink-0" />
                                 <CustomSelect
                                     items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
                                         label: com,
@@ -255,8 +255,8 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                 }}
                                 disabled={isCreatingPair || !isAdmin || !monitorEnabled || pathStatus !== 'valid'}
                                 className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${!isAdmin || !monitorEnabled || pathStatus !== 'valid'
-                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                    : 'bg-[#0e639c] text-white hover:bg-[#1177bb]'
+                                    ? 'bg-[var(--button-secondary-background)] text-[var(--input-placeholder-color)] cursor-not-allowed'
+                                    : 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
                                     }`}
                             >
                                 {isCreatingPair ? t('monitor.creating') : t('monitor.createVirtualPair')}
@@ -265,14 +265,14 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
 
                         <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
                             {existingPairs.map(pair => (
-                                <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[#3c3c3c] px-2 py-1.5 relative hover:bg-[#444444] transition-colors rounded-sm mb-1 last:mb-0">
+                                <div key={pair.id} className="group flex justify-between items-center text-[12px] bg-[var(--input-background)] px-2 py-1.5 relative hover:bg-[var(--list-hover-background)] transition-colors rounded-sm mb-1 last:mb-0">
                                     <div className="grid grid-cols-[45px_20px_45px] items-center font-mono">
-                                        <span className="text-[#cccccc]">{pair.portA}</span>
-                                        <ArrowRightLeft size={10} className="text-[#808080]" />
-                                        <span className="text-[#cccccc]">{pair.portB}</span>
+                                        <span className="text-[var(--app-foreground)]">{pair.portA}</span>
+                                        <ArrowRightLeft size={10} className="text-[var(--activitybar-inactive-foreground)]" />
+                                        <span className="text-[var(--app-foreground)]">{pair.portB}</span>
                                     </div>
                                     <button
-                                        className="p-1 rounded transition-colors text-[#666] hover:text-[#f48771] hover:bg-[#4a4a4a]"
+                                        className="p-1 rounded transition-colors text-[var(--input-placeholder-color)] hover:text-red-400 hover:bg-[var(--hover-background)]"
                                         onClick={async () => {
                                             const ok = await confirm({
                                                 title: t('monitor.deletePairTitle'),
@@ -291,7 +291,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                 </div>
                             ))}
                             {existingPairs.length === 0 && (
-                                <span className="text-[11px] text-[#808080] italic">
+                                <span className="text-[11px] text-[var(--input-placeholder-color)] italic">
                                     {!monitorEnabled ? t('monitor.monitorDisabled') : (!isAdmin ? t('monitor.adminPermRequired') : t('monitor.noPairsFound'))}
                                 </span>
                             )}
@@ -304,28 +304,28 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
             {showInstallDialog && (
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowInstallDialog(false)}>
                     <div
-                        className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[400px] flex flex-col rounded-md overflow-hidden"
+                        className="bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-2xl w-[400px] flex flex-col rounded-md overflow-hidden"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                            <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{t('monitor.installMethodTitle')}</span>
-                            <button onClick={() => setShowInstallDialog(false)} className="text-[#969696] hover:text-white transition-colors">
+                        <div className="flex items-center justify-between p-2.5 border-b border-[var(--border-color)] bg-[var(--widget-background)]">
+                            <span className="text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wider">{t('monitor.installMethodTitle')}</span>
+                            <button onClick={() => setShowInstallDialog(false)} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
                                 <X size={14} />
                             </button>
                         </div>
                         <div className="p-5 flex gap-4 items-start">
-                            <div className="shrink-0 mt-0.5"><AlertCircle className="text-[#007acc]" size={24} /></div>
+                            <div className="shrink-0 mt-0.5"><AlertCircle className="text-[var(--accent-color)]" size={24} /></div>
                             <div className="flex-1">
-                                <p className="text-[13px] text-[#cccccc] leading-relaxed whitespace-pre-wrap">{t('monitor.installMethodDesc')}</p>
+                                <p className="text-[13px] text-[var(--app-foreground)] leading-relaxed whitespace-pre-wrap">{t('monitor.installMethodDesc')}</p>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2 p-3 bg-[#1e1e1e] border-t border-[#3c3c3c]">
+                        <div className="flex justify-end gap-2 p-3 bg-[var(--app-background)] border-t border-[var(--border-color)]">
                             <button
                                 onClick={async () => {
                                     setShowInstallDialog(false);
                                     window.shellAPI?.openExternal('https://com0com.sourceforge.net/');
                                 }}
-                                className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] border border-[#3c3c3c] rounded-sm text-xs transition-colors"
+                                className="px-4 py-1.5 text-[var(--app-foreground)] hover:bg-[var(--hover-background)] border border-[var(--border-color)] rounded-sm text-xs transition-colors"
                             >
                                 {t('monitor.websiteDownload')}
                             </button>
@@ -337,7 +337,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                         showToast(res?.error || 'Launch failed', 'error');
                                     }
                                 }}
-                                className="px-4 py-1.5 text-white bg-[#0e639c] hover:bg-[#1177bb] rounded-sm text-xs transition-all"
+                                className="px-4 py-1.5 text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] rounded-sm text-xs transition-all"
                             >
                                 {t('monitor.builtinInstall')}
                             </button>

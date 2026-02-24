@@ -1,4 +1,4 @@
-import { useSortable } from '@dnd-kit/sortable';
+﻿import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SessionConfig, SessionType } from '../../types/session';
 import { FolderOpen, Network, Cpu } from 'lucide-react';
@@ -63,7 +63,7 @@ export const SessionListItem = ({
             style={style}
             {...attributes}
             {...listeners}
-            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center gap-2 group border-l-4 ${isActive ? 'border-[var(--vscode-accent)] bg-[var(--vscode-list-active)]' : 'border-transparent'}`}
+            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 group border-l-4 ${isActive ? 'border-[var(--accent-color)] bg-[var(--list-active-background)]' : 'border-transparent'}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
             title="Click to open, Right-click for options. Drag to reorder."
@@ -75,7 +75,7 @@ export const SessionListItem = ({
             {isEditing ? (
                 <input
                     autoFocus
-                    className="bg-[var(--vscode-input-bg)] text-[13px] text-[var(--vscode-input-fg)] border border-[var(--vscode-focusBorder)] outline-none flex-1 min-w-0"
+                    className="bg-[var(--input-background)] text-[13px] text-[var(--input-foreground)] border border-[var(--focus-border-color)] outline-none flex-1 min-w-0"
                     value={editName}
                     onChange={(e) => onEditNameChange(e.target.value)}
                     onBlur={onSaveEdit}

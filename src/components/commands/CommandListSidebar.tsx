@@ -473,12 +473,12 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#252526] text-[#cccccc]" onContextMenu={(e) => { e.preventDefault(); }}>
-            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[#252526] border-b border-[#3c3c3c]">
+        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]" onContextMenu={(e) => { e.preventDefault(); }}>
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--sidebar-background)] border-b border-[var(--border-color)]">
                 <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
                 <div className="flex items-center gap-1 relative">
                     <button
-                        className="p-1 hover:bg-[#3c3c3c] rounded text-[#cccccc]"
+                        className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)]"
                         title="Menu"
                         onClick={() => setShowMenu(!showMenu)}
                     >
@@ -488,27 +488,27 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                     {showMenu && (
                         <>
                             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-[#252526] border border-[#3c3c3c] shadow-lg rounded-sm z-50 text-[13px]">
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-lg rounded-sm z-50 text-[13px]">
                                 <div className="py-1">
-                                    <div className="px-3 py-1.5 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)); setShowMenu(false); }}>
                                         <FolderPlus size={14} /> {t('command.newGroup')}
                                     </div>
-                                    <div className="px-3 py-1.5 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }); setShowMenu(false); }}>
                                         <FileText size={14} /> {t('command.newCommand')}
                                     </div>
-                                    <div className="h-[1px] bg-[#3c3c3c] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+                                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { importCommands(); setShowMenu(false); }}>
                                         <Upload size={14} /> {t('command.import')}
                                     </div>
-                                    <div className="px-3 py-1.5 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { exportCommands(); setShowMenu(false); }}>
                                         <Upload size={14} className="rotate-180" /> {t('command.export')}
                                     </div>
-                                    <div className="h-[1px] bg-[#3c3c3c] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2 text-red-400"
+                                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]"
                                         onClick={() => { clearAll(); setShowMenu(false); }}>
                                         <Trash2 size={14} /> {t('command.clearAll')}
                                     </div>

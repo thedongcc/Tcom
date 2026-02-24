@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+﻿import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';
 import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter } from 'lucide-react';
@@ -15,7 +15,7 @@ import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
-
+import { useSystemMessage } from '../../hooks/useSystemMessage';
 
 interface SerialMonitorProps {
     session: SessionState;
@@ -26,11 +26,13 @@ interface SerialMonitorProps {
     onClearLogs?: () => void;
     onConnectRequest?: () => Promise<boolean | void> | void;
 }
+const scrollPositions = new Map<string, number>();
 
 export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig, onInputStateChange, onClearLogs, onConnectRequest }: SerialMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const { t } = useI18n();
+    const { parseSystemMessage } = useSystemMessage();
     const { logs, isConnected, config } = session;
     const currentPort = config.type === 'serial' ? config.connection.path : '';
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -267,19 +269,38 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return `[${length}B]`;
     };
 
-    const prevLogLengthRef = useRef(logs.length);
+    const prevLogsRef = useRef(logs);
     useEffect(() => {
-        const prevLength = prevLogLengthRef.current;
-        prevLogLengthRef.current = logs.length;
-        // 只有新增了数据条目时才执行自动滚动
-        if (scrollRef.current && autoScroll && logs.length > prevLength) {
+        const isNewData = logs !== prevLogsRef.current;
+        prevLogsRef.current = logs;
+        if (isNewData && scrollRef.current && autoScroll) {
             requestAnimationFrame(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    scrollPositions.set(session.id, scrollRef.current.scrollHeight);
                 }
             });
         }
-    }, [logs.length, autoScroll]);
+    }, [logs, autoScroll, session.id]);
+
+    useLayoutEffect(() => {
+        if (scrollRef.current && scrollPositions.has(session.id)) {
+            scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+        }
+    }, [session.id]);
+
+    useEffect(() => {
+        if (!scrollRef.current) return;
+        const observer = new ResizeObserver(() => {
+            if (scrollRef.current && scrollRef.current.clientHeight > 0) {
+                if (scrollPositions.has(session.id)) {
+                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+                }
+            }
+        });
+        observer.observe(scrollRef.current);
+        return () => observer.disconnect();
+    }, [session.id]);
 
     // Auto-connect on mount if configured
 
@@ -405,7 +426,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     return (
         <div
-            className="absolute inset-0 flex flex-col bg-[var(--st-rx-bg)] bg-cover bg-center select-none"
+            className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center select-none"
             style={{ backgroundImage: 'var(--st-rx-bg-img)' }}
             onClick={() => setContextMenu(null)}
         >
@@ -424,7 +445,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             </style>
 
             {/* ... Toolbar ... */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
                 {/* ... existing toolbar code ... */}
                 <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
                     {isConnected ? (
@@ -441,37 +462,36 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                 <div className="flex items-center gap-4">
                     {/* Stats Display - Refined JetBrains Style */}
-                    <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
+                    <div className="flex items-center bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] divide-x divide-[var(--border-color)] overflow-hidden h-7">
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white hover:bg-[#0062a3]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            className={`flex items-center gap-1.5 px-2.5 h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] bg-transparent'}`}
                             title="Click to filter TX only"
                             onClick={() => toggleFilter('tx')}
                         >
-                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'tx' ? 'text-white' : 'text-[#aaaaaa]'}`}>T:</span>
-                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'tx' ? 'text-white' : 'text-[#cccccc]'}`}>{txBytes.toLocaleString()}</span>
+                            <span className="text-[11px] font-bold font-mono">T:</span>
+                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1 transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e] hover:bg-[#3da892]' : 'hover:bg-[#2a2d2e] bg-transparent'}`}
+                            className={`flex items-center gap-1.5 px-2.5 h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] bg-transparent'}`}
                             title="Click to filter RX only"
                             onClick={() => toggleFilter('rx')}
                         >
-                            <span className={`text-[11px] font-semibold font-mono ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#aaaaaa]'}`}>R:</span>
-                            <span className={`text-[11px] font-semibold font-mono tabular-nums leading-none ${filterMode === 'rx' ? 'text-[#1e1e1e]' : 'text-[#cccccc]'}`}>{rxBytes.toLocaleString()}</span>
+                            <span className="text-[11px] font-bold font-mono">R:</span>
+                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
                     {/* Mode Toggle & Options Group */}
                     <div className="flex items-center gap-1.5">
                         {/* Hex/Text Display Mode */}
-                        {/* Hex/Text Display Mode */}
-                        <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-[26px]">
+                        <div className="flex items-center gap-0.5 bg-[var(--input-background)] p-0.5 rounded-[3px] border border-[var(--border-color)] h-7">
                             <button
-                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] ${viewMode === 'text' ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                                 onClick={() => { setViewMode('text'); saveUIState({ viewMode: 'text' }); }}
                             >
                                 TXT
                             </button>
                             <button
-                                className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] ${viewMode === 'hex' ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`}
+                                className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                                 onClick={() => { setViewMode('hex'); saveUIState({ viewMode: 'hex' }); }}
                             >
                                 HEX
@@ -482,27 +502,27 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         {/* Options Menu Button and Panel */}
                         <div className="relative">
                             <button
-                                className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors flex items-center gap-1.5 border border-transparent ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`}
+                                className={`h-7 px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
                                 onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                                 title="Options"
                             >
-                                <Menu size={16} />
+                                <Menu size={14} />
                                 <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                             </button>
                             {showOptionsMenu && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                    <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
-                                            <div className="text-[12px] text-[#cccccc] font-bold">{t('monitor.logSettings')}</div>
-                                            <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
+                                    <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
+                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
+                                            <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
+                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
                                         </div>
 
                                         {/* Encoding Section */}
                                         <div className="mb-4 px-1">
-                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.encoding')}</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
+                                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
                                             </div>
                                             <CustomSelect
                                                 items={[
@@ -517,9 +537,9 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                         {/* Features Section */}
                                         <div className="mb-4 px-1">
-                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.logFeatures')}</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
+                                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
                                             </div>
                                             <div className="space-y-2.5">
                                                 <Switch
@@ -553,7 +573,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 />
 
                                                 {/* CRC */}
-                                                <div className="space-y-2 pt-1 border-t border-[#3c3c3c]/50 mt-1">
+                                                <div className="space-y-2 pt-1 border-t border-[var(--menu-border-color)] mt-1">
                                                     <div className="flex items-center gap-2 group/crc">
                                                         <Switch
                                                             label={t('monitor.crcCheck')}
@@ -563,7 +583,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                         />
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
-                                                            className={`p-1 rounded hover:bg-[#3c3c3c] text-[#969696] hover:text-white transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[#3c3c3c] text-white' : ''}`}
+                                                            className={`p-1 rounded hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
                                                             title="CRC Configuration"
                                                         >
                                                             <Settings size={12} />
@@ -571,9 +591,9 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     </div>
 
                                                     {showCRCPanel && (
-                                                        <div className="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                        <div className="bg-[var(--input-background)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.algorithm')}:</span>
+                                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.algorithm')}:</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: 'Modbus CRC16', value: 'modbus-crc16' },
@@ -589,7 +609,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 <span className="text-[10px] text-[#888888] font-medium">{t('monitor.startOffset')}:</span>
                                                                 <input
                                                                     type="number"
-                                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1 focus:border-[var(--vscode-focusBorder)]"
+                                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1 focus:border-[var(--focus-border-color)]"
                                                                     value={rxCRC.startIndex}
                                                                     onChange={(e) => updateRxCRC({ startIndex: parseInt(e.target.value) || 0 })}
                                                                 />
@@ -650,7 +670,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     <span className="text-[11px] text-[#aaaaaa]">{t('monitor.packetTimeout')}:</span>
                                                     <input
                                                         type="number"
-                                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--vscode-focusBorder)] transition-colors"
+                                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--focus-border-color)] transition-colors"
                                                         value={uiState.chunkTimeout || 0}
                                                         onChange={(e) => {
                                                             const val = parseInt(e.target.value);
@@ -748,6 +768,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         lineHeight: '1.5'
                     }}
                     ref={scrollRef}
+                    onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
                 >
                     {filteredLogs.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-[#666]">
@@ -761,25 +782,19 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                             // System/Info Messages - Centered Notification Style
                             if (log.type === 'INFO' || log.type === 'ERROR') {
-                                const content = formatData(log.data, 'text', encoding);
-
-                                // Determine style based on content/type
-                                let styleClass = "bg-[#1e1e1e] text-[#666] border-[#333]";
-                                if (log.type === 'ERROR') {
-                                    styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                                } else if (content.includes('Open') || content.includes('Connected') || content.includes('Restored')) {
-                                    styleClass = "bg-green-900/20 text-green-400 border-green-500/30 font-bold";
-                                } else if (content.includes('Close') || content.includes('Disconnected') || content.includes('Error')) {
-                                    styleClass = "bg-red-900/20 text-red-400 border-red-500/30";
-                                } else {
-                                    styleClass = "bg-gray-800/40 text-gray-400 border-gray-600/30";
-                                }
+                                const content = formatData(log.data, 'text', encoding).trim();
+                                const { styleClass, translatedText } = parseSystemMessage(log.type, content);
 
                                 return (
-                                    <div key={log.id} className="flex justify-center my-2">
-                                        <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm ${styleClass}`}>
-                                            {content}
+                                    <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
+                                        <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+                                            {translatedText}
                                         </span>
+                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                                            <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
+                                                x{log.repeatCount}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             }
@@ -808,12 +823,12 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         default: { duration: 0.15, ease: "easeOut" as any }
                                     }}
                                     id={`log-${log.id}`}
-                                    className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-[#f48771]' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[#04395e]/40 ring-1 ring-[#04395e]' : ''} ${activeMatch?.logId === log.id ? 'bg-[#623315]/40 ring-1 ring-[#623315]' : ''}`}
+                                    className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-red-500/40' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[var(--selection-background)] ring-1 ring-[var(--focus-border-color)]' : ''} ${activeMatch?.logId === log.id ? 'bg-[var(--selection-background)] ring-1 ring-[var(--focus-border-color)]' : ''}`}
                                     style={{
                                         fontSize: 'inherit',
                                         fontFamily: 'inherit',
                                         // @ts-ignore - CSS variables for animation
-                                        '--flash-color': 'rgba(0, 122, 204, 0.25)'
+                                        '--flash-color': 'var(--selection-background)'
                                     }}
                                     onContextMenu={(e) => handleLogContextMenu(e, log)}
                                 >

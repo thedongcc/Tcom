@@ -204,3 +204,10 @@ contextBridge.exposeInMainWorld('windowAPI', {
   setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
   isAlwaysOnTop: () => ipcRenderer.invoke('window:isAlwaysOnTop'),
 });
+
+contextBridge.exposeInMainWorld('themeAPI', {
+  loadAll: () => ipcRenderer.invoke('theme:loadAll'),
+  openFolder: () => ipcRenderer.invoke('theme:openFolder'),
+  openFile: (id: string) => ipcRenderer.invoke('theme:openFile', { id }),
+  updateTitleBar: (colors: { bgColor: string, symbolColor: string }) => ipcRenderer.invoke('theme:updateTitleBar', colors),
+});

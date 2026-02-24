@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 分离虚拟串口和串口监控功能
 - 增加窗口置顶功能
 - 监视区搜索增加match case功能
+- 增加系统消息中英文支持
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -67,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化创建虚拟串口对功能
 - 修复监视区自动滚动异常问题
 - 修复监视区数据搜索问题
+- 统一监视区中系统通知样式
+- 修复monitor的物理端口列表显示虚拟端口的问题
+- 更新设置中配色方案相关内容
 
 ### Removed
 - 取消设置中的check update功能
@@ -74,3 +78,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 取消标签栏中的加号
 - 删除字体大小设定功能
 - 删除系统字体功能开关
+- 取消侧边栏点击后弹出的弹出的Extensions和Color Theme

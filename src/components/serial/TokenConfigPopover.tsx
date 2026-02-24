@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Token, CRCConfig, FlagConfig, HexConfig, TimestampConfig, AutoIncConfig } from '../../types/token';
 import { X, Check, ChevronDown } from 'lucide-react';
 import { CustomSelect } from '../common/CustomSelect';
@@ -74,10 +74,10 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
             return (
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Name (Optional)</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Name (Optional)</label>
                         <input
                             type="text"
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc] placeholder-[#666]"
+                            className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)]"
                             value={flagConfig.name || ''}
                             placeholder="e.g. Frame Header"
                             onChange={e => setConfig({ ...flagConfig, name: e.target.value })}
@@ -85,9 +85,9 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                         />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Hex Content</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Hex Content</label>
                         <textarea
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] h-24 font-mono resize-none text-[#cccccc] placeholder-[#666] leading-relaxed"
+                            className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] h-24 font-mono resize-none text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)] leading-relaxed"
                             value={flagConfig.hex || ''}
                             placeholder="AA BB CC"
                             onChange={e => {
@@ -95,7 +95,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             }}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-[#666] leading-snug">Enter hex bytes separated by space</p>
+                        <p className="text-[10px] text-[var(--activitybar-inactive-foreground)] leading-snug">Enter hex bytes separated by space</p>
                     </div>
                 </div>
             );
@@ -106,10 +106,10 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
             return (
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Byte Width</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Byte Width</label>
                         <input
                             type="text"
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc] w-16"
+                            className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)] w-16"
                             value={hexByteWidthInput}
                             onChange={e => {
                                 const val = e.target.value.replace(/\D/g, '');
@@ -125,7 +125,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             }}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-[#666] leading-snug">Target size in bytes (1-8)</p>
+                        <p className="text-[10px] text-[var(--activitybar-inactive-foreground)] leading-snug">Target size in bytes (1-8)</p>
                     </div>
                 </div>
             );
@@ -148,7 +148,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
             return (
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Algorithm</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Algorithm</label>
                         <CustomSelect
                             items={algoItems}
                             value={crcConfig.algorithm}
@@ -157,16 +157,16 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                     </div>
 
                     <div className="flex items-center gap-2 my-1">
-                        <span className="text-[10px] font-bold text-[#969696] uppercase tracking-[0.1em] whitespace-nowrap">Range Settings</span>
-                        <div className="h-[1px] bg-[#333] flex-1 mt-0.5" />
+                        <span className="text-[10px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-[0.1em] whitespace-nowrap">Range Settings</span>
+                        <div className="h-[1px] bg-[var(--border-color)] flex-1 mt-0.5" />
                     </div>
 
                     <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5 flex-none w-20">
-                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Start</label>
+                            <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Start</label>
                             <input
                                 type="text"
-                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                                className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)]"
                                 value={startIndexInput}
                                 onChange={e => {
                                     const val = e.target.value.replace(/\D/g, '');
@@ -184,7 +184,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             />
                         </div>
                         <div className="flex flex-col gap-1.5 flex-1">
-                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">End</label>
+                            <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">End</label>
                             <CustomSelect
                                 items={endItems}
                                 value={(crcConfig.endIndex ?? 0).toString()}
@@ -213,7 +213,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
             return (
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Format</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Format</label>
                         <CustomSelect
                             items={formatItems}
                             value={tsConfig.format || 'seconds'}
@@ -221,7 +221,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                         />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Byte Order</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Byte Order</label>
                         <CustomSelect
                             items={orderItems}
                             value={tsConfig.byteOrder || 'big'}
@@ -238,10 +238,10 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                 <div className="flex flex-col gap-4">
                     <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5 flex-none w-16">
-                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Bytes</label>
+                            <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Bytes</label>
                             <input
                                 type="text"
-                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                                className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)]"
                                 value={bytesInput}
                                 onChange={e => {
                                     const val = e.target.value.replace(/\D/g, '');
@@ -260,10 +260,10 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             />
                         </div>
                         <div className="flex flex-col gap-1.5 flex-1">
-                            <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Initial Val (Hex)</label>
+                            <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Initial Val (Hex)</label>
                             <input
                                 type="text"
-                                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] font-mono text-[#cccccc] placeholder-[#666]"
+                                className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] font-mono text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)]"
                                 value={autoConfig.defaultValue || ''}
                                 placeholder="00 00 05"
                                 onChange={e => {
@@ -275,10 +275,10 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                         </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-medium text-[#969696] uppercase tracking-wider">Step (Offset)</label>
+                        <label className="text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider">Step (Offset)</label>
                         <input
                             type="text"
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--vscode-focusBorder)] text-[#cccccc]"
+                            className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)]"
                             value={stepInput}
                             onChange={e => {
                                 const val = e.target.value;
@@ -298,7 +298,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             }}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-[#666] leading-snug">Added after each send (can be negative)</p>
+                        <p className="text-[10px] text-[var(--activitybar-inactive-foreground)] leading-snug">Added after each send (can be negative)</p>
                     </div>
                 </div>
             );
@@ -400,7 +400,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
     return (
         <div
             ref={popoverRef}
-            className="fixed z-50 bg-[#252526] border border-[var(--vscode-widget-border)] shadow-xl rounded-md flex flex-col text-[var(--vscode-fg)] select-none"
+            className="fixed z-50 bg-[var(--menu-background)] border border-[var(--widget-border-color)] shadow-xl rounded-md flex flex-col text-[var(--app-foreground)] select-none"
             style={{
                 left: pos.x,
                 top: pos.y,
@@ -421,16 +421,16 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                 `}
             </style>
             <div
-                className="flex items-center justify-between px-4 py-2 border-b border-[var(--vscode-border)] bg-[#2d2d2d] cursor-move select-none rounded-t-md"
+                className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--widget-background)] cursor-move select-none rounded-t-md"
                 onMouseDown={handleMouseDownHeader}
             >
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#969696]">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--input-placeholder-color)]">
                     {token.type === 'crc' ? 'CRC Config' :
                         token.type === 'timestamp' ? 'Time Token' :
                             token.type === 'auto_inc' ? 'Auto Token' :
                                 'Custom Flag'}
                 </span>
-                <X size={14} className="cursor-pointer hover:text-white text-[#666] transition-colors" onClick={onClose} />
+                <X size={14} className="cursor-pointer hover:text-[var(--app-foreground)] text-[var(--activitybar-inactive-foreground)] transition-colors" onClick={onClose} />
             </div>
 
             <div className="flex-1 overflow-auto p-4 flex flex-col custom-scrollbar">

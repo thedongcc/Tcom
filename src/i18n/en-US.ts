@@ -410,4 +410,24 @@ export const enUS = {
         uninstall: 'Uninstall',
         devDocs: 'Plugin Development Docs',
     },
+
+    // System Messages
+    messages: {
+        connectedTo: 'Connected to {path}',
+        disconnectedRemote: 'Disconnected (Remote)',
+        mqttError: 'MQTT Error: {err}',
+        connectionFailed: 'Connection failed: {err}',
+        connectionError: 'Connection Error: {err}',
+        monitorStarted: 'Monitor started',
+        internalBridgeDisconnected: 'Internal Bridge Port: {path} Disconnected',
+        physicalDeviceDisconnected: 'Physical Device: {path} Disconnected',
+        missingPairedPort: 'Missing Paired Port',
+        monitorStartError: 'Monitor Start Error: {err}',
+        serialOpenError: 'Serial Open Error: {err}',
+        closed: 'Closed',
+        disconnected: 'Disconnected',
+        writeFailed: 'Write failed: {err}',
+        publishFailed: 'Publish failed: {err}',
+        failedToConnect: 'Failed to connect: {err}',
+    },
 } as const;

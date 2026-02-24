@@ -104,7 +104,7 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
                 <button
                     className={`p-1 rounded transition-colors ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0))
                         ? 'text-[#666] hover:bg-[#333] hover:text-[#999] cursor-not-allowed'
-                        : 'hover:bg-[#007acc] text-[#cccccc] hover:text-white'}`}
+                        : 'hover:bg-[var(--button-hover-background)] text-[var(--app-foreground)] hover:text-[var(--button-foreground)]'}`}
                     title={disabled ? "Click to Connect & Send" : "Send Command"}
                     onClick={(e) => {
                         e.stopPropagation();

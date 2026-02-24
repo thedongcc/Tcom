@@ -1,4 +1,4 @@
-import { MqttSessionConfig, MqttTopicConfig } from '../../types/session';
+﻿import { MqttSessionConfig, MqttTopicConfig } from '../../types/session';
 import { Plus, Trash2, Play, Square, ChevronDown, ChevronRight, Check, RefreshCw } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../../context/I18nContext';
@@ -66,9 +66,9 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
     const isLocked = isConnected || isConnecting;
 
     return (
-        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)]">
+        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
             {/* Connection Settings */}
-            <div className="border-b border-[var(--vscode-border)] shrink-0">
+            <div className="border-b border-[var(--border-color)] shrink-0">
                 <div
                     className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[#252526] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[#2a2d2e]"
                     onClick={toggleConnectionExpanded}
@@ -83,7 +83,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         <div className="flex flex-col gap-1 min-w-0">
                             <label className="text-[11px] text-[#969696]">{t('mqtt.broker')}</label>
                             <input
-                                className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                 placeholder="broker.emqx.io"
                                 value={config.host}
                                 onChange={(e) => onUpdate({ host: e.target.value })}
@@ -96,7 +96,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                             <div className="flex flex-col gap-1 w-[80px] shrink-0">
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.protocol')}</label>
                                 <select
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.protocol}
                                     onChange={(e) => {
                                         const newProto = e.target.value as any;
@@ -123,7 +123,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.port')}</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.port}
                                     onChange={(e) => onUpdate({ port: parseInt(e.target.value) || 1883 })}
                                     disabled={isLocked}
@@ -133,7 +133,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                                     <label className="text-[11px] text-[#969696]">{t('mqtt.path')}</label>
                                     <input
-                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                         placeholder="/mqtt"
                                         value={config.path || ''}
                                         onChange={(e) => onUpdate({ path: e.target.value })}
@@ -148,13 +148,13 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.clientId')}</label>
                                 <div className="flex gap-1 w-full">
                                     <input
-                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] flex-1 min-w-0 disabled:opacity-50"
+                                        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] flex-1 min-w-0 disabled:opacity-50"
                                         value={config.clientId}
                                         onChange={(e) => onUpdate({ clientId: e.target.value })}
                                         disabled={isLocked}
                                     />
                                     <button
-                                        className="px-2 bg-[var(--vscode-button-secondary-bg)] hover:bg-[var(--vscode-button-secondary-hover-bg)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
+                                        className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
                                         onClick={() => onUpdate({ clientId: `client - ${Math.random().toString(16).substring(2, 8)} ` })}
                                         title={t('mqtt.generateId')}
                                         disabled={isLocked}
@@ -169,7 +169,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                             <div className="flex flex-col gap-1 flex-1 min-w-0">
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.username')}</label>
                                 <input
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.username || ''}
                                     onChange={(e) => onUpdate({ username: e.target.value })}
                                     placeholder={t('mqtt.optional')}
@@ -180,7 +180,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.password')}</label>
                                 <input
                                     type="password"
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.password || ''}
                                     onChange={(e) => onUpdate({ password: e.target.value })}
                                     placeholder={t('mqtt.optional')}
@@ -195,7 +195,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.keepAlive')}</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.keepAlive}
                                     onChange={(e) => onUpdate({ keepAlive: parseInt(e.target.value) || 60 })}
                                     disabled={isLocked}
@@ -205,7 +205,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <label className="text-[11px] text-[#969696]">{t('mqtt.timeout')}</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)] disabled:opacity-50"
+                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50"
                                     value={config.connectTimeout}
                                     onChange={(e) => onUpdate({ connectTimeout: parseInt(e.target.value) || 30 })}
                                     disabled={isLocked}
@@ -262,21 +262,21 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
 
             {/* Subscriptions */}
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[#252526] sticky top-0 border-b border-[var(--vscode-border)] shrink-0">
+                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[#252526] sticky top-0 border-b border-[var(--border-color)] shrink-0">
                     {t('mqtt.subscriptions')}
                 </div>
 
                 <div className="p-4 flex flex-col gap-4 min-h-0">
                     <div className="flex flex-col gap-2 shrink-0">
                         <input
-                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--vscode-focusBorder)]"
+                            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)]"
                             placeholder={t('mqtt.addTopicPlaceholder')}
                             value={newTopicPath}
                             onChange={(e) => setNewTopicPath(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
                         />
                         <button
-                            className="w-full py-1.5 bg-[var(--vscode-button-bg)] hover:bg-[var(--vscode-button-hover-bg)] text-white text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
+                            className="w-full py-1.5 bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-white text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
                             onClick={handleAddTopic}
                         >
                             <Plus size={14} />

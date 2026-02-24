@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Send, Plus, Upload, Timer, Flag } from 'lucide-react';
 import { Token, CRCConfig, FlagConfig } from '../../types/token';
 import { TokenConfigPopover } from './TokenConfigPopover';
@@ -282,18 +282,18 @@ export const SerialInput = ({
     }, [isTimerRunning, timerInterval]);
 
     return (
-        <div className={`${hideExtras ? '' : 'border-t border-[var(--vscode-border)]'} bg-[#252526] p-2 flex flex-col gap-2 shrink-0 select-none`}>
+        <div className={`${hideExtras ? '' : 'border-t border-[var(--border-color)]'} bg-[var(--sidebar-background)] p-2 flex flex-col gap-2 shrink-0 select-none`}>
             {/* Mode Switcher - always visible */}
             <div className="flex items-center gap-2 h-6 overflow-x-auto scrollbar-none">
-                <div className="shrink-0 flex items-center gap-[1px] bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm overflow-hidden p-[2px]">
+                <div className="shrink-0 flex items-center gap-[1px] bg-[var(--input-background)] border border-[var(--border-color)] rounded-sm overflow-hidden p-[2px]">
                     <button
-                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[#007acc] text-white' : 'text-[#666] hover:bg-[#2d2d2d]'}`}
+                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                         onClick={() => setMode('text')}
                     >
                         TXT
                     </button>
                     <button
-                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[#007acc] text-white' : 'text-[#666] hover:bg-[#2d2d2d]'}`}
+                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                         onClick={() => setMode('hex')}
                     >
                         HEX
@@ -301,40 +301,40 @@ export const SerialInput = ({
                 </div>
                 {!hideExtras && (
                     <>
-                        <div className="shrink-0 w-[1px] h-4 bg-[#3c3c3c] mx-1" />
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="CRC"
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="CRC"
                             onClick={() => insertToken('crc')}>
-                            <Plus size={14} className="text-[#4ec9b0]" />
+                            <Plus size={14} className="text-emerald-500" />
                             <span>CRC</span>
                         </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Flag"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Flag"
                             onClick={() => insertToken('flag')}>
-                            <Flag size={14} className="text-[#4fc1ff]" />
+                            <Flag size={14} className="text-blue-400" />
                             <span>Flag</span>
                         </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Time"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Time"
                             onClick={() => insertToken('timestamp')}>
-                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-[#4fc1ff] text-[#4fc1ff] text-[9px] font-mono rounded-[2px] leading-none">T</div>
+                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-blue-400 text-blue-400 text-[9px] font-mono rounded-[2px] leading-none">T</div>
                             <span>Time</span>
                         </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors whitespace-nowrap" title="Auto"
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Auto"
                             onClick={() => insertToken('auto_inc' as any)}>
-                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-[#c586c0] text-[#c586c0] text-[9px] font-mono rounded-[2px] leading-none">A</div>
+                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
                             <span>Auto</span>
                         </button>
-                        <div className="shrink-0 w-[1px] h-4 bg-[#3c3c3c] mx-1" />
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[#3c3c3c] text-[12px] text-[#cccccc] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap" title="Load File">
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
+                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap" title="Load File">
                             <Upload size={14} />
                             <span>File</span>
                         </button>
                         <div className="flex-1 shrink min-w-0" />
                         {/* Timed Send: flat toggle + input */}
-                        <div className="shrink-0 w-[1px] h-4 bg-[#3c3c3c]" />
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)]" />
                         <div className="shrink-0 flex items-center gap-1.5">
                             <button
                                 className={`flex items-center gap-1 px-2 py-0.5 text-[12px] rounded-sm transition-colors cursor-pointer whitespace-nowrap ${isTimerRunning
-                                    ? 'bg-[#007acc] text-white hover:bg-[#0062a3]'
-                                    : ((!isTimerRunning && isEmpty) ? 'bg-[#3c3c3c] text-[#666] cursor-not-allowed' : 'bg-[#3c3c3c] text-[#cccccc] hover:bg-[#4c4c4c]')
+                                    ? 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
+                                    : ((!isTimerRunning && isEmpty) ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-secondary-background)] text-[var(--button-foreground)] hover:bg-[var(--button-secondary-hover-background)]')
                                     }`}
                                 onClick={() => {
                                     if (!isTimerRunning && isEmpty) {
@@ -350,7 +350,7 @@ export const SerialInput = ({
                             </button>
                             <input
                                 type="text"
-                                className="w-12 h-[22px] bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc] text-[11px] px-1 rounded-sm focus:border-[var(--vscode-focusBorder)] outline-none text-center font-mono"
+                                className="w-12 h-[22px] bg-[var(--input-background)] border border-[var(--border-color)] text-[var(--app-foreground)] text-[11px] px-1 rounded-sm focus:border-[var(--focus-border-color)] outline-none text-center font-mono"
                                 value={timerIntervalInput}
                                 onChange={(e) => {
                                     const val = e.target.value;
@@ -377,7 +377,7 @@ export const SerialInput = ({
             <div className="flex gap-2 min-h-[42px]">
 
                 <div
-                    className="flex-1 bg-[var(--st-input-bg)] border border-[#3c3c3c] rounded-sm focus-within:border-[var(--vscode-focusBorder)] cursor-text flex flex-col bg-cover bg-center"
+                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--border-color)] rounded-sm focus-within:border-[var(--focus-border-color)] cursor-text flex flex-col bg-cover bg-center"
                     onClick={() => editor?.commands.focus()}
                     style={{ backgroundImage: 'var(--st-input-bg-img)' }}
                 >
@@ -387,12 +387,12 @@ export const SerialInput = ({
                 {!hideExtras && (
                     <button
                         className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                            ? (isEmpty ? 'bg-[#3c3c3c] text-[#666] cursor-not-allowed' : 'bg-[#007acc] hover:bg-[#0062a3] text-white')
-                            : 'bg-[#2d2d2d] hover:bg-[#3c3c3c] text-[#cccccc] cursor-pointer border border-[#3c3c3c] hover:border-[#007acc]'}`}
+                            ? (isEmpty ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
+                            : 'bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
                         onClick={() => handleSend()}
                         title={isConnected ? (isEmpty ? 'Type message to send' : 'Send Data') : 'Connect and Send'}
                     >
-                        {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#007acc] rounded-full border border-[#252526]"></div></div>}
+                        {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]"></div></div>}
                         <span className="text-[10px]">{isConnected ? 'Send' : 'Connect'}</span>
                     </button>
                 )}

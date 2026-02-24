@@ -184,7 +184,7 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
             >
                 <div className="flex items-center justify-between p-3 border-b border-[#3c3c3c] bg-[#2d2d2d]">
                     <span className="text-xs font-bold text-[#cccccc] uppercase tracking-wider">软件更新</span>
-                    <button onClick={onClose} className="text-[#969696] hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
                         <X size={16} />
                     </button>
                 </div>

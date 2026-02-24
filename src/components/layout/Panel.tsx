@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { X, Maximize2, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useI18n } from '../../context/I18nContext';
@@ -30,24 +30,24 @@ export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
     }, [logs]);
 
     return (
-        <div className="flex flex-col border-t border-[var(--vscode-border)] bg-[var(--vscode-panel)] shrink-0" style={{ height: `${height}px` }}>
+        <div className="flex flex-col border-t border-[var(--border-color)] bg-[var(--panel-background)] shrink-0" style={{ height: `${height}px` }}>
             {/* Panel Header */}
             <div className="flex items-center justify-between px-4 h-[35px] select-none">
                 <div className="flex items-center gap-6 h-full">
-                    <div className="h-full flex items-center border-b border-[var(--vscode-accent)] text-[var(--vscode-fg)] font-medium text-[11px] uppercase tracking-wide cursor-pointer">
+                    <div className="h-full flex items-center border-b border-[var(--accent-color)] text-[var(--app-foreground)] font-medium text-[11px] uppercase tracking-wide cursor-pointer">
                         {t('panel.terminal')}
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-[#969696]">
-                    <Trash2 size={14} className="cursor-pointer hover:text-[var(--vscode-fg)]" />
-                    <Maximize2 size={14} className="cursor-pointer hover:text-[var(--vscode-fg)]" />
-                    <X size={14} className="cursor-pointer hover:text-[var(--vscode-fg)]" />
+                    <Trash2 size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
+                    <Maximize2 size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
+                    <X size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
                 </div>
             </div>
 
             {/* Panel Content */}
-            <div className="flex-1 overflow-auto p-2 font-mono text-[13px] bg-[var(--vscode-bg)]" ref={scrollRef}>
+            <div className="flex-1 overflow-auto p-2 font-mono text-[13px] bg-[var(--app-background)]" ref={scrollRef}>
                 <div className="text-[#969696] mb-2">
                     {isConnected ? t('panel.connectedTo', { port: currentPort }) : t('panel.disconnected')}
                 </div>

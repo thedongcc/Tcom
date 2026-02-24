@@ -409,6 +409,26 @@ export const zhCN = {
         uninstall: '卸载',
         devDocs: '插件开发文档',
     },
+
+    // 系统消息
+    messages: {
+        connectedTo: '已连接到 {path}',
+        disconnectedRemote: '已断开 (远程)',
+        mqttError: 'MQTT 错误: {err}',
+        connectionFailed: '连接失败: {err}',
+        connectionError: '连接出错: {err}',
+        monitorStarted: '监控已启动',
+        internalBridgeDisconnected: '内部桥接端口: {path} 已断开',
+        physicalDeviceDisconnected: '物理设备: {path} 已断开',
+        missingPairedPort: '缺少配对端口',
+        monitorStartError: '监控启动失败: {err}',
+        serialOpenError: '串口打开失败: {err}',
+        closed: '已关闭',
+        disconnected: '已断开连接',
+        writeFailed: '写入失败: {err}',
+        publishFailed: '发布失败: {err}',
+        failedToConnect: '连接失败: {err}',
+    },
 } as const;
 
 export type I18nKeys = typeof zhCN;

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+﻿import { useRef, useEffect } from 'react';
 import { X, Network, FileText, Monitor, Cpu, Server, Activity } from 'lucide-react';
 import { SessionType } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
@@ -39,24 +39,24 @@ export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDial
     return (
         <div
             ref={ref}
-            className="fixed z-[1000] w-72 bg-[#252526] border border-[#3c3c3c] shadow-2xl rounded-md flex flex-col text-[var(--vscode-fg)] animate-in fade-in zoom-in-95 duration-200"
+            className="fixed z-[1000] w-72 bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-2xl rounded-md flex flex-col text-[var(--app-foreground)] animate-in fade-in zoom-in-95 duration-200"
             style={{ left: position.x, top: position.y }}
         >
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">{t('session.newSession')}</span>
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border-color)] bg-[var(--widget-background)]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--app-foreground)]">{t('session.newSession')}</span>
                 <button
                     onClick={onClose}
-                    className="text-[#969696] hover:text-white transition-colors"
+                    className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors"
                 >
                     <X size={14} />
                 </button>
             </div>
 
-            <div className="flex flex-col p-1.5 max-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
+            <div className="flex flex-col p-1.5 max-h-[400px] overflow-y-auto custom-scrollbar bg-[var(--app-background)]">
                 {OPTIONS.map(opt => (
                     <div
                         key={opt.type}
-                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[#094771] rounded-sm group transition-colors"
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[var(--list-hover-background)] rounded-sm group transition-colors"
                         onClick={() => onSelect(opt.type)}
                     >
                         <div className="text-[var(--vscode-foreground)] opacity-70 group-hover:opacity-100 transition-opacity">

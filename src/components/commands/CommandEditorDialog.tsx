@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+﻿import { useRef, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { CommandEntity, CommandItem } from '../../types/command';
 import { SerialInput } from '../serial/SerialInput';
@@ -98,7 +98,7 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
             >
                 <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
                     <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{t('command.editCommand')} {isCommand ? t('command.commandName') : 'Group'}</span>
-                    <button onClick={onClose} className="text-[#969696] hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
                         <X size={14} />
                     </button>
                 </div>
@@ -107,7 +107,7 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">{t('command.commandName')}</label>
                         <input
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--vscode-focusBorder)] text-[13px] transition-all"
+                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--focus-border-color)] text-[13px] transition-all"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoFocus

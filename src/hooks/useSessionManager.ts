@@ -270,11 +270,11 @@ export const useSessionManager = () => {
 
         if (session.config.type === 'monitor') {
             if (!monitorEnabledRef.current) {
-                addLog(sessionId, 'ERROR', '虚拟串口功能已禁用，请在设置中开启');
+                addLog(sessionId, 'ERROR', 'Virtual serial port not enabled');
                 return false;
             }
             if (!isAdminRef.current) {
-                addLog(sessionId, 'ERROR', '启动虚拟串口功能需要管理员权限，请以管理员身份重启软件');
+                addLog(sessionId, 'ERROR', 'Admin required to start monitoring');
                 return false;
             }
             const monitorConfig = session.config as MonitorSessionConfig;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { ConfigSidebar } from '../serial/ConfigSidebar';
 import { SessionListSidebar } from '../serial/SessionListSidebar';
@@ -17,7 +17,7 @@ interface SideBarProps {
 }
 
 export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout }: SideBarProps) => {
-    if (!activeView) return null;
+    if (!activeView || activeView === 'settings') return null;
 
     const { getPlugin } = usePluginManager();
     const activePlugin = getPlugin(activeView);
@@ -79,12 +79,12 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
 
     return (
         <div
-            className="flex flex-col border-r border-[var(--vscode-border)] relative shrink-0"
-            style={{ width: `${width}px`, backgroundColor: 'var(--vscode-sidebar)' }}
+            className="flex flex-col border-r border-[var(--border-color)] relative shrink-0"
+            style={{ width: `${width}px`, backgroundColor: 'var(--sidebar-background)' }}
         >
-            <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--vscode-fg)] tracking-wide uppercase shrink-0">
+            <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--app-foreground)] tracking-wide uppercase shrink-0">
                 <span className="truncate">{activePlugin ? activePlugin.name : activeView === 'explorer' ? t('sidebar.sessions') : activeView === 'serial' ? t('sidebar.configuration') : activeView === 'commands' ? t('sidebar.commands') : activeView}</span>
-                <MoreHorizontal size={14} className="cursor-pointer hover:text-white" />
+                <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
@@ -105,7 +105,7 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
 
             {/* Resize Sash */}
             <div
-                className="absolute top-0 right-0 w-[4px] h-full cursor-col-resize hover:bg-[var(--vscode-accent)] opacity-0 hover:opacity-100 transition-opacity z-10"
+                className="absolute top-0 right-0 w-[4px] h-full cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-10"
                 style={{ right: '-2px' }}
                 onMouseDown={startResizing}
                 onDoubleClick={handleDoubleClick}

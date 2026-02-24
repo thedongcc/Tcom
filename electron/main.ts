@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+﻿import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 
@@ -652,7 +652,7 @@ function createWindow() {
     // frame: false, // Commented out to enable native window behavior (Aero Snap)
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#3c3c3c', // Matches --vscode-titlebar
+      color: '#3c3c3c', // Matches --titlebar-background
       symbolColor: '#cccccc',
       height: 29
     },
@@ -699,6 +699,227 @@ function createWindow() {
 
   ipcMain.handle('monitor:write', async (_event, { sessionId, target, data }) => {
     return monitorService?.write(sessionId, target, data);
+  });
+
+  // Theme IPC
+  const DEFAULT_DARK_COLORS = {
+    '--app-background': '#1e1e1e',
+    '--app-foreground': '#cccccc',
+    '--sidebar-background': '#252526',
+    '--activitybar-background': '#333333',
+    '--statusbar-background': '#252526',
+    '--statusbar-debugging-background': '#cc6633',
+    '--titlebar-background': '#3c3c3c',
+    '--panel-background': '#1e1e1e',
+    '--border-color': '#2b2b2b',
+    '--widget-border-color': '#454545',
+    '--input-background': '#3c3c3c',
+    '--input-foreground': '#cccccc',
+    '--input-border-color': '#3c3c3c',
+    '--input-placeholder-color': '#a6a6a6',
+    '--hover-background': '#2a2d2e',
+    '--selection-background': '#094771',
+    '--accent-color': '#007acc',
+    '--focus-border-color': '#007acc',
+    '--list-hover-background': '#2a2d2e',
+    '--list-active-background': '#37373d',
+    '--editor-background': '#1e1e1e',
+    '--widget-background': '#252526',
+    '--dropdown-background': '#1f1f1f',
+    '--dropdown-border-color': '#454545',
+    '--dropdown-item-hover-background': '#094771',
+    '--dropdown-item-selected-foreground': '#ffffff',
+    '--checkbox-background': '#007acc',
+    '--checkbox-border-color': '#007acc',
+    '--checkbox-foreground': '#ffffff',
+    '--settings-header-background': '#252526',
+    '--settings-row-hover-background': '#2a2d2e',
+    '--scrollbar-shadow-color': '#000000',
+    '--scrollbar-slider-color': '#79797966',
+    '--scrollbar-slider-hover-color': '#646464bb',
+    '--scrollbar-slider-active-color': '#bfbfbf66',
+    '--button-background': '#0e639c',
+    '--button-foreground': '#ffffff',
+    '--button-hover-background': '#1177bb',
+    '--button-secondary-background': '#3c3c3c',
+    '--button-secondary-hover-background': '#4a4a4a',
+    '--link-foreground': '#3794ff',
+    '--activitybar-inactive-foreground': '#858585',
+    '--menu-background': '#252526',
+    '--menu-foreground': '#cccccc',
+    '--menu-border-color': '#454545',
+    '--st-rx-text': '#cccccc',
+    '--st-tx-text': '#ce9178',
+    '--st-rx-label': '#6a9955',
+    '--st-tx-label': '#d16969',
+    '--st-info-text': '#9cdcfe',
+    '--st-error-text': '#f48771',
+    '--st-timestamp': '#569cd6',
+    '--st-rx-bg': '#1e1e1e',
+    '--st-input-bg': '#1e1e1e',
+    '--st-input-text': '#d4d4d4',
+    '--st-token-crc': '#4ec9b0',
+    '--st-token-flag': '#c586c0',
+    '--st-accent': '#007acc'
+  };
+
+  const DEFAULT_LIGHT_COLORS = {
+    '--app-background': '#ffffff',
+    '--app-foreground': '#333333',
+    '--sidebar-background': '#f3f3f3',
+    '--activitybar-background': '#2c2c2c',
+    '--statusbar-background': '#e8e8e8',
+    '--statusbar-debugging-background': '#cc6633',
+    '--titlebar-background': '#dddddd',
+    '--panel-background': '#ffffff',
+    '--border-color': '#e4e4e4',
+    '--widget-border-color': '#e4e4e4',
+    '--input-background': '#ffffff',
+    '--input-foreground': '#333333',
+    '--input-border-color': '#cecece',
+    '--input-placeholder-color': '#a6a6a6',
+    '--hover-background': '#e8e8e8',
+    '--selection-background': '#add6ff',
+    '--accent-color': '#007acc',
+    '--focus-border-color': '#0090f1',
+    '--list-hover-background': '#e8e8e8',
+    '--list-active-background': '#e4e6f1',
+    '--editor-background': '#ffffff',
+    '--widget-background': '#f3f3f3',
+    '--dropdown-background': '#f3f3f3',
+    '--dropdown-border-color': '#d4d4d4',
+    '--dropdown-item-hover-background': '#add6ff',
+    '--dropdown-item-selected-foreground': '#000000',
+    '--checkbox-background': '#007acc',
+    '--checkbox-border-color': '#007acc',
+    '--checkbox-foreground': '#ffffff',
+    '--settings-header-background': '#f3f3f3',
+    '--settings-row-hover-background': '#e8e8e8',
+    '--scrollbar-shadow-color': '#dddddd',
+    '--scrollbar-slider-color': '#64646466',
+    '--scrollbar-slider-hover-color': '#646464bb',
+    '--scrollbar-slider-active-color': '#00000099',
+    '--button-background': '#007acc',
+    '--button-foreground': '#ffffff',
+    '--button-hover-background': '#0062a3',
+    '--button-secondary-background': '#e4e4e4',
+    '--button-secondary-hover-background': '#d4d4d4',
+    '--link-foreground': '#006ab1',
+    '--activitybar-inactive-foreground': '#858585',
+    '--menu-background': '#ffffff',
+    '--menu-foreground': '#333333',
+    '--menu-border-color': '#cecece',
+    '--st-rx-text': '#333333',
+    '--st-tx-text': '#a31515',
+    '--st-rx-label': '#008000',
+    '--st-tx-label': '#cd3131',
+    '--st-info-text': '#0000ff',
+    '--st-error-text': '#cd3131',
+    '--st-timestamp': '#0000ff',
+    '--st-rx-bg': '#ffffff',
+    '--st-input-bg': '#ffffff',
+    '--st-input-text': '#333333',
+    '--st-token-crc': '#008000',
+    '--st-token-flag': '#800080',
+    '--st-accent': '#007acc'
+  };
+
+  const createThemeTemplate = (title: string, colors: Record<string, string>) => `{
+  // === ${title} ===
+  // 提示：你可以在这里随意修改颜色并保存。保存后在软件下拉框内重新点击一下即可自动刷新。
+  // 注意：文件名即展示的主题名称（比如命名为 "我的暗红配色.json"）。
+  // 你可以随时删除此文件或加入新的 .json 。
+  "colors": ${JSON.stringify(colors, null, 2).split('\\n').join('\\n  ')}
+}`;
+
+  async function ensureThemeFilesExists(themeDir: string) {
+    await fs.mkdir(themeDir, { recursive: true });
+    const darkPath = path.join(themeDir, 'dark.json');
+    const lightPath = path.join(themeDir, 'light.json');
+
+    try {
+      await fs.access(darkPath);
+    } catch {
+      await fs.writeFile(darkPath, createThemeTemplate('Tcom 默认暗色配置', DEFAULT_DARK_COLORS), 'utf-8');
+    }
+
+    try {
+      await fs.access(lightPath);
+    } catch {
+      await fs.writeFile(lightPath, createThemeTemplate('Tcom 默认亮色配置', DEFAULT_LIGHT_COLORS), 'utf-8');
+    }
+  }
+
+  ipcMain.handle('theme:updateTitleBar', async (_event, { bgColor, symbolColor }) => {
+    if (win) {
+      try {
+        win.setTitleBarOverlay({
+          color: bgColor,
+          symbolColor: symbolColor
+        });
+        if (bgColor && bgColor !== 'transparent') {
+          win.setBackgroundColor(bgColor);
+        }
+      } catch (e) {
+        console.warn('Failed to update titleBarOverlay:', e);
+      }
+    }
+  });
+
+  ipcMain.handle('theme:loadAll', async () => {
+    try {
+      const themeDir = path.join(app.getPath('userData'), 'themes');
+      await ensureThemeFilesExists(themeDir);
+
+      const files = await fs.readdir(themeDir);
+      const themes: any[] = [];
+
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          try {
+            const content = await fs.readFile(path.join(themeDir, file), 'utf-8');
+            // 支持双斜杠和多行注释
+            const jsonString = content.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+            const parsed = JSON.parse(jsonString);
+            if (parsed && typeof parsed === 'object' && parsed.colors) {
+              const baseName = path.parse(file).name;
+              themes.push({
+                id: baseName, // 这里提取文件名来替代手动填写
+                name: baseName,
+                type: parsed.type || 'dark',
+                colors: parsed.colors
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to parse theme file ${file}`, e);
+          }
+        }
+      }
+      return { success: true, themes };
+    } catch (err: any) {
+      console.error('Failed to load themes:', err);
+      return { success: false, error: err.message, themes: [] };
+    }
+  });
+
+  ipcMain.handle('theme:openFolder', async () => {
+    const themeDir = path.join(app.getPath('userData'), 'themes');
+    await ensureThemeFilesExists(themeDir);
+    shell.openPath(themeDir);
+    return { success: true };
+  });
+
+  ipcMain.handle('theme:openFile', async (_event, { id }) => {
+    try {
+      const themeDir = path.join(app.getPath('userData'), 'themes');
+      await ensureThemeFilesExists(themeDir);
+      const filePath = path.join(themeDir, `${id}.json`);
+      // 不再覆盖写入文件，仅打开已存在的文件
+      shell.openPath(filePath);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   });
 
   // MQTT Service Logic

@@ -1,4 +1,4 @@
-import { GraphNode as IGraphNode, GraphEdge as IGraphEdge } from '../../services/GraphService';
+﻿import { GraphNode as IGraphNode, GraphEdge as IGraphEdge } from '../../services/GraphService';
 import { GraphLayout } from './GraphStyles';
 
 interface GraphCanvasProps {
@@ -64,7 +64,7 @@ export const GraphCanvas = ({ nodes, edges, tempEdge, activeDrag, selectedEdgeId
                         {/* Visible Wire */}
                         <path
                             d={getBezierPath(src.x, src.y, tgt.x, tgt.y)}
-                            stroke={isSelected ? "#4ec9b0" : (edge.active ? "var(--vscode-textLink-foreground)" : "#666")}
+                            stroke={isSelected ? "#4ec9b0" : (edge.active ? "var(--link-foreground)" : "#666")}
                             strokeWidth={isSelected ? "3" : "2"}
                             fill="none"
                             className="pointer-events-none transition-colors"
@@ -75,7 +75,7 @@ export const GraphCanvas = ({ nodes, edges, tempEdge, activeDrag, selectedEdgeId
             {tempEdge && (
                 <path
                     d={getBezierPath(tempEdge.sourceX, tempEdge.sourceY, tempEdge.targetX, tempEdge.targetY)}
-                    stroke="var(--vscode-textLink-foreground)"
+                    stroke="var(--link-foreground)"
                     strokeWidth="2"
                     strokeDasharray="5,5"
                     fill="none"

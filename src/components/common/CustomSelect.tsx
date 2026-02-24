@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 
@@ -131,8 +131,15 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     // 下拉菜单内容（渲染到 fixed 层）
     const dropdownContent = isOpen && !disabled ? (
         <div
-            style={dropdownStyle}
-            className="bg-[#1f1f1f] border border-[#454545] shadow-[0_10px_30px_rgba(0,0,0,0.5)] rounded-[4px] overflow-hidden group/menu"
+            style={{
+                ...dropdownStyle,
+                backgroundColor: 'var(--dropdown-background)',
+                border: '1px solid var(--dropdown-border-color)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            }}
+            className="group/menu"
             onMouseDown={(e) => e.stopPropagation()}
         >
             <div
@@ -153,7 +160,10 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 setIsCustomInput(true);
                                 setIsOpen(false);
                             }}
-                            className="w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none hover:bg-[#094771] text-[#969696] italic border-b border-[#333333] mb-0.5"
+                            style={{ borderBottom: '1px solid var(--dropdown-border-color)' }}
+                            className="w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none mb-0.5 text-[var(--input-placeholder-color)] italic"
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover-background)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
                             <span className="truncate flex-1 py-0.5">Custom...</span>
                         </button>
@@ -168,7 +178,16 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 onChange(item.value);
                                 setIsOpen(false);
                             }}
-                            className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[#094771]'} ${value === item.value ? 'text-white' : 'text-[#cccccc]'}`}
+                            style={{
+                                color: value === item.value
+                                    ? 'var(--dropdown-item-selected-foreground)'
+                                    : 'var(--app-foreground)',
+                            }}
+                            className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                            onMouseEnter={e => {
+                                if (!item.disabled) e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover-background)';
+                            }}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
                             {showStatus && (
                                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-red-500' : 'bg-green-500'}`} />
@@ -187,14 +206,17 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                         top: `${scrollRatio * (Math.min((items.length + (allowCustom ? 1 : 0)) * 28, 240) - thumbHeight)}px`,
                         height: `${thumbHeight}px`,
                         width: '4px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        backgroundColor: 'var(--scrollbar-slider-hover-color)',
                         borderRadius: '4px',
                     }}
                 />
             )}
 
             {items.length === 0 && !allowCustom && (
-                <div className="px-3 py-2 text-[11px] text-[#969696] italic text-center">
+                <div
+                    className="px-3 py-2 text-[11px] italic text-center"
+                    style={{ color: 'var(--input-placeholder-color)' }}
+                >
                     No items available
                 </div>
             )}
@@ -204,7 +226,14 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     return (
         <div ref={containerRef} className="relative w-full text-[13px]">
             {isCustomInput ? (
-                <div className="w-full bg-[#1e1e1e] border border-[var(--vscode-focusBorder)] text-[#cccccc] h-7 flex items-center rounded-[4px] overflow-hidden">
+                <div
+                    className="w-full h-7 flex items-center rounded-[4px] overflow-hidden"
+                    style={{
+                        backgroundColor: 'var(--input-background)',
+                        border: '1px solid var(--focus-border-color)',
+                        color: 'var(--input-foreground)',
+                    }}
+                >
                     <input
                         ref={inputRef}
                         type="text"
@@ -221,7 +250,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                             onChange(e.target.value);
                             setIsCustomInput(false);
                         }}
-                        className="w-full bg-transparent border-none outline-none px-2 h-full text-[13px] text-[#cccccc]"
+                        className="w-full bg-transparent border-none outline-none px-2 h-full text-[13px]"
+                        style={{ color: 'var(--input-foreground)' }}
                     />
                 </div>
             ) : (
@@ -232,7 +262,24 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                         if (!isOpen) updateDropdownPosition();
                         setIsOpen(!isOpen);
                     }}
-                    className={`w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] px-2 h-7 flex items-center justify-between outline-none focus:border-[var(--vscode-focusBorder)] transition-all rounded-[4px] ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#454545]'}`}
+                    style={{
+                        backgroundColor: 'var(--input-background)',
+                        border: '1px solid var(--input-border-color)',
+                        color: 'var(--input-foreground)',
+                    }}
+                    className={`w-full px-2 h-7 flex items-center justify-between outline-none rounded-[4px] transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onMouseEnter={e => {
+                        if (!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)';
+                    }}
+                    onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--input-background)';
+                    }}
+                    onFocus={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--focus-border-color)';
+                    }}
+                    onBlur={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--input-border-color)';
+                    }}
                 >
                     <div className="flex items-center gap-1.5 truncate">
                         {showStatus && selectedItem && (
@@ -244,7 +291,11 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                             {selectedItem ? selectedItem.label : (allowCustom && value ? value : (placeholder || 'Select...'))}
                         </span>
                     </div>
-                    <ChevronDown size={14} className={`text-[#969696] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                        size={14}
+                        style={{ color: 'var(--input-placeholder-color)' }}
+                        className={`transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    />
                 </button>
             )}
 

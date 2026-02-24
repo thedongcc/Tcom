@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useEffect, useMemo } from 'react';
+﻿import { type ReactNode, useState, useRef, useEffect, useMemo } from 'react';
 import { Files, Search, GitGraph, Box, Settings, Monitor, Check } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { usePluginManager } from '../../context/PluginContext';
@@ -32,7 +32,7 @@ interface ActivityItemProps {
 
 const ActivityItem = ({ icon, active, onClick, className, onContextMenu }: ActivityItemProps) => (
     <div
-        className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-white transition-colors border-l-4 ${active ? 'text-white border-[var(--vscode-accent)]' : 'text-[var(--vscode-activitybar-inactive-fg)] border-transparent'} ${className}`}
+        className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--app-foreground)] transition-colors border-l-4 ${active ? 'text-[var(--app-foreground)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
         onClick={onClick}
         onContextMenu={onContextMenu}
     >
@@ -79,10 +79,6 @@ const DEFAULT_ITEMS = [
 
 export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
     const { plugins } = usePluginManager();
-    const { config, setTheme } = useSettings();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [activeSubmenu, setActiveSubmenu] = useState<'main' | 'themes'>('main');
-    const menuRef = useRef<HTMLDivElement>(null);
 
     // --- State for Drag & Drop and Visibility ---
     // Merge default items + plugin items
@@ -156,10 +152,6 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-                setActiveSubmenu('main');
-            }
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
                 setContextMenuState(prev => ({ ...prev, show: false }));
             }
@@ -199,14 +191,9 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
         // If hiding active view, switch to first visible? Or just leave empty? VSCode leaves it but hides icon.
     };
 
-    const resetMenu = () => {
-        setIsMenuOpen(false);
-        setActiveSubmenu('main');
-    };
-
     return (
         <div
-            className="w-[48px] bg-[var(--vscode-activitybar)] flex flex-col justify-between py-2 border-r border-[var(--vscode-border)] z-40"
+            className="w-[48px] bg-[var(--activitybar-background)] flex flex-col justify-between py-2 border-r border-[var(--border-color)] z-40"
             onContextMenu={handleContextMenu}
         >
             <DndContext
@@ -237,97 +224,26 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
 
             {/* Bottom Actions (Settings) */}
             <div className="flex flex-col gap-0">
-
-                <div className="relative" ref={menuRef}>
-                    <ActivityItem
-                        icon={<Settings size={24} />}
-                        active={isMenuOpen}
-                        onClick={() => {
-                            if (isMenuOpen) resetMenu();
-                            else setIsMenuOpen(true);
-                        }}
-                    />
-
-                    {/* Settings Menu Popup */}
-                    {isMenuOpen && (
-                        <div className="absolute left-full bottom-0 ml-1 w-64 bg-[var(--vscode-bg)] border border-[var(--vscode-border)] shadow-lg rounded py-1 z-50">
-                            {activeSubmenu === 'main' ? (
-                                <>
-                                    <div className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => {
-                                            if (onOpenSettings) onOpenSettings();
-                                            resetMenu();
-                                        }}>
-                                        <span>Settings</span>
-                                        <span className="text-[11px] opacity-60">Ctrl+,</span>
-                                    </div>
-                                    <div className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => alert('Extensions not implemented')}>
-                                        <span>Extensions</span>
-                                    </div>
-                                    <div className="h-[1px] bg-[var(--vscode-border)] my-1 opacity-50"></div>
-                                    <div className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => setActiveSubmenu('themes')}>
-                                        <span>Color Theme</span>
-                                        <span className="text-[11px] opacity-60">Ctrl+K Ctrl+T</span>
-                                    </div>
-
-                                </>
-                            ) : (
-                                <>
-                                    <div className="px-3 py-1.5 text-[11px] font-bold text-[var(--vscode-fg)] opacity-50 uppercase tracking-wide flex items-center gap-2 cursor-pointer hover:text-[var(--vscode-accent)]" onClick={() => setActiveSubmenu('main')}>
-                                        <span>← Back</span>
-                                    </div>
-                                    <div className="h-[1px] bg-[var(--vscode-border)] my-1 opacity-50"></div>
-                                    <div className="px-3 py-1.5 text-[11px] font-bold text-[var(--vscode-fg)] opacity-50 uppercase tracking-wide">
-                                        Select Color Theme
-                                    </div>
-                                    <div
-                                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => { setTheme('dark'); resetMenu(); }}
-                                    >
-                                        <span>Dark Modern</span>
-                                        {config.theme === 'dark' && <Check size={14} />}
-                                    </div>
-                                    <div
-                                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => { setTheme('light'); resetMenu(); }}
-                                    >
-                                        <span>Light Modern</span>
-                                        {config.theme === 'light' && <Check size={14} />}
-                                    </div>
-                                    <div
-                                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => { setTheme('hc'); resetMenu(); }}
-                                    >
-                                        <span>High Contrast</span>
-                                        {config.theme === 'hc' && <Check size={14} />}
-                                    </div>
-                                    <div
-                                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center justify-between text-[var(--vscode-fg)]"
-                                        onClick={() => { setTheme('one-dark-vivid'); resetMenu(); }}
-                                    >
-                                        <span>One Dark Vivid</span>
-                                        {config.theme === 'one-dark-vivid' && <Check size={14} />}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
+                <ActivityItem
+                    icon={<Settings size={24} />}
+                    active={false}
+                    onClick={() => {
+                        if (onOpenSettings) onOpenSettings();
+                    }}
+                />
             </div>
 
             {/* Context Menu for Visibility */}
             {contextMenuState.show && (
                 <div
                     ref={contextMenuRef}
-                    className="fixed z-[100] bg-[var(--vscode-menu-bg)] border border-[var(--vscode-menu-border)] shadow-xl rounded py-1 min-w-[150px]"
+                    className="fixed z-[100] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-xl rounded py-1 min-w-[150px]"
                     style={{ left: contextMenuState.x, top: contextMenuState.y }}
                 >
                     {allKnownItems.map(item => (
                         <div
                             key={item.id}
-                            className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center gap-2 text-[var(--vscode-fg)]"
+                            className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--app-foreground)]"
                             onClick={() => toggleVisibility(item.id)}
                         >
                             <div className={`w-4 flex items-center justify-center opacity-80`}>
@@ -336,9 +252,9 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                             <span>{item.label}</span>
                         </div>
                     ))}
-                    <div className="h-[1px] bg-[var(--vscode-menu-border)] my-1 opacity-50"></div>
+                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1 opacity-50"></div>
                     <div
-                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--vscode-list-hover)] cursor-pointer flex items-center gap-2 text-[var(--vscode-fg)]"
+                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--app-foreground)]"
                         onClick={() => {
                             // Reset everything
                             const defaultOrder = allKnownItems.map(i => i.id);

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 interface SwitchProps {
     checked: boolean;
@@ -24,7 +24,7 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, disabl
                 </span>
             )}
             <div
-                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vscode-focusBorder)] focus-visible:ring-offset-2 ${checked ? 'bg-[#0e639c]' : 'bg-[#3c3c3c]'}`}
+                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-border-color)] focus-visible:ring-offset-2 ${checked ? 'bg-[#0e639c]' : 'bg-[#3c3c3c]'}`}
             >
                 <span
                     className={`pointer-events-none block h-3 w-3 rounded-full bg-white shadow-lg ring-0 transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`}

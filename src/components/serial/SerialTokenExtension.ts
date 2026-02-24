@@ -1,4 +1,4 @@
-import { Node, mergeAttributes } from '@tiptap/core';
+﻿import { Node, mergeAttributes } from '@tiptap/core';
 
 export const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
 
@@ -162,10 +162,10 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                     return true;
                 },
                 selectNode: () => {
-                    span.classList.add('ring-1', 'ring-[var(--vscode-focusBorder)]');
+                    span.classList.add('ring-1', 'ring-[var(--focus-border-color)]');
                 },
                 deselectNode: () => {
-                    span.classList.remove('ring-1', 'ring-[var(--vscode-focusBorder)]');
+                    span.classList.remove('ring-1', 'ring-[var(--focus-border-color)]');
                 }
             };
         };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import {
     Trash2,
     ArrowDownToLine,
@@ -29,6 +29,7 @@ import { ContextMenu } from '../common/ContextMenu';
 import { SessionState, MonitorSessionConfig, LogEntry } from '../../types/session';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
+import { useSystemMessage } from '../../hooks/useSystemMessage';
 
 interface MonitorTerminalProps {
     session: SessionState;
@@ -73,7 +74,7 @@ const LogItem = React.memo(({
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[#ff9632] text-black' : 'bg-[#623315] text-[#ce9178]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--app-foreground)]'}
                 >
                     {text.substring(match.startIndex, match.endIndex)}
                 </span>
@@ -87,22 +88,15 @@ const LogItem = React.memo(({
         return result;
     };
 
+    const { parseSystemMessage } = useSystemMessage();
+
     if (log.type === 'INFO' || log.type === 'ERROR') {
         const content = formatData(log.data, 'text', encoding).trim();
-        let style = "bg-gray-800/40 text-gray-400 border-gray-600/30";
-        if (log.type === 'ERROR') {
-            style = "bg-red-900/40 text-red-400 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)]";
-        } else if (content.includes('Internal Bridge Port')) {
-            style = "bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold";
-        } else if (content.includes('Physical Device')) {
-            style = "bg-emerald-600/20 text-emerald-400 border-emerald-500/30 font-semibold";
-        } else if (content.includes('Started') || content.includes('Restored') || content.includes('Monitor started')) {
-            style = "bg-green-600/20 text-green-400 border-green-500/30 font-bold";
-        }
+        const { styleClass, translatedText } = parseSystemMessage(log.type, content);
         return (
             <div className="flex justify-center my-2 gap-2 items-center">
-                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${style}`}>
-                    {content}
+                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+                    {translatedText}
                 </span>
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
@@ -119,8 +113,8 @@ const LogItem = React.memo(({
             initial={effectiveSmooth && isNewLog ? { opacity: 0, x: -10 } : false}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.15 }}
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[#2a2d2e] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
-            style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'rgba(0, 122, 204, 0.25)' } as any}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
+            style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'var(--selection-background)' } as any}
             onContextMenu={(e) => onContextMenu(e, log)}
         >
             {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
@@ -140,32 +134,32 @@ const LogItem = React.memo(({
             <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
                 {showPacketType && (
                     <div className={`h-[18px] flex items-center justify-center font-bold font-mono px-2 rounded-[3px] text-[10px] border shadow-sm
-                    ${log.topic === 'virtual' ? 'bg-[#007acc]/20 text-[#4daafc] border-[#007acc]/30' : 'bg-[#4ec9b0]/10 text-[#4ec9b0] border-[#4ec9b0]/30'}`}>
+                    ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}>
                         {log.type === 'TX' && log.crcStatus === 'none' ? (
                             <span className="flex items-center gap-1">
-                                <span className="font-extrabold text-[#79c0ff]">Tcom</span>
-                                <span className="opacity-40 text-[8px]">→</span>
+                                <span className="font-extrabold text-[var(--button-background)]">Tcom</span>
+                                <span className="opacity-50 text-[10px] px-0.5">→</span>
                                 <span className="opacity-90">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
                             </span>
                         ) : (
                             log.topic === 'virtual' ? (
                                 <span className="flex items-center gap-1">
-                                    <span className="opacity-70">{virtualSerialPort}</span>
-                                    <span className="opacity-40 text-[8px]">→</span>
-                                    <span className="font-extrabold">{physicalPortPath}</span>
+                                    <span className="opacity-90">{virtualSerialPort}</span>
+                                    <span className="opacity-50 text-[10px] px-0.5">→</span>
+                                    <span className="font-extrabold text-[var(--button-background)]">{physicalPortPath}</span>
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-1">
-                                    <span className="font-extrabold">{physicalPortPath}</span>
-                                    <span className="opacity-40 text-[8px]">→</span>
-                                    <span className="opacity-70">{virtualSerialPort}</span>
+                                    <span className="font-extrabold text-[var(--st-rx-label)]">{physicalPortPath}</span>
+                                    <span className="opacity-50 text-[10px] px-0.5">→</span>
+                                    <span className="opacity-90">{virtualSerialPort}</span>
                                 </span>
                             )
                         )}
                     </div>
                 )}
                 {showDataLength && (
-                    <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-white/10 bg-white/5 text-[#aaaaaa]">
+                    <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)]">
                         {getDataLengthText(log.data)}
                     </span>
                 )}
@@ -176,6 +170,8 @@ const LogItem = React.memo(({
         </motion.div>
     );
 });
+
+const scrollPositions = new Map<string, number>();
 
 export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: MonitorTerminalProps) => {
     const { config: themeConfig } = useSettings();
@@ -319,17 +315,38 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         }
     }, [activeMatchRev]);
 
-    const prevLogLengthRef = useRef(logs.length);
+    const prevLogsRef = useRef(logs);
     useEffect(() => {
-        const prevLength = prevLogLengthRef.current;
-        prevLogLengthRef.current = logs.length;
-        // 只有新增了数据条目时才执行自动滚动
-        if (scrollRef.current && autoScroll && logs.length > prevLength) {
+        const isNewData = logs !== prevLogsRef.current;
+        prevLogsRef.current = logs;
+        if (isNewData && scrollRef.current && autoScroll) {
             requestAnimationFrame(() => {
-                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    scrollPositions.set(session.id, scrollRef.current.scrollHeight);
+                }
             });
         }
-    }, [logs.length, autoScroll]);
+    }, [logs, autoScroll, session.id]);
+
+    useLayoutEffect(() => {
+        if (scrollRef.current && scrollPositions.has(session.id)) {
+            scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+        }
+    }, [session.id]);
+
+    useEffect(() => {
+        if (!scrollRef.current) return;
+        const observer = new ResizeObserver(() => {
+            if (scrollRef.current && scrollRef.current.clientHeight > 0) {
+                if (scrollPositions.has(session.id)) {
+                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+                }
+            }
+        });
+        observer.observe(scrollRef.current);
+        return () => observer.disconnect();
+    }, [session.id]);
 
     const handleClearLogs = () => sessionManager.clearLogs(session.id);
 
@@ -394,53 +411,53 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-[var(--st-rx-bg)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }} onClick={() => setContextMenu(null)}>
+        <div className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }} onClick={() => setContextMenu(null)}>
             <style>{`@keyframes flash-new { 0% { background-color: var(--flash-color); } 100% { background-color: transparent; } } .animate-flash-new { animation: flash-new 1s ease-out forwards; }`}</style>
 
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#2b2b2b] bg-[#252526] shrink-0">
-                <div className="text-sm font-medium text-[#cccccc] flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
+                <div className="text-sm font-medium text-[var(--app-foreground)] flex items-center gap-2">
                     {isConnected ? <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" /> : <div className="w-2 h-2 rounded-full bg-red-500" />}
                     <span className="opacity-80">Monitor: </span>
-                    <span className="text-[#4daafc] font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
+                    <span className="text-blue-400 font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
                     <span className="text-gray-600 px-1">⟷</span>
-                    <span className="text-[#4ec9b0] font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
+                    <span className="text-emerald-400 font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-[#1e1e1e]/80 border border-[#3c3c3c] rounded-sm divide-x divide-[#3c3c3c] overflow-hidden shadow-inner">
-                        <div className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'tx' ? 'bg-[#007acc] text-white' : 'hover:bg-[#2a2d2e]'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[9px] font-bold font-mono opacity-80">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
+                    <div className="flex items-center bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] divide-x divide-[var(--border-color)] overflow-hidden shadow-inner h-7">
+                        <div className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <span className="text-[11px] font-bold font-mono">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
-                        <div className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer ${filterMode === 'rx' ? 'bg-[#4ec9b0] text-[#1e1e1e]' : 'hover:bg-[#2a2d2e]'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[9px] font-bold font-mono opacity-60">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
+                        <div className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'rx' ? 'bg-emerald-500 text-white' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <span className="text-[11px] font-bold font-mono">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded border border-[#3c3c3c] h-[26px]">
+                    <div className="flex items-center gap-0.5 bg-[var(--input-background)] p-0.5 rounded-[3px] border border-[var(--border-color)] h-7">
                         {(['text', 'hex'] as const).map(m => (
-                            <button key={m} className={`px-2.5 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase ${viewMode === m ? 'bg-[#007acc] text-white shadow-sm' : 'text-[#969696] hover:text-[#cccccc]'}`} onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}>{m === 'text' ? 'TXT' : 'HEX'}</button>
+                            <button key={m} className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`} onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}>{m === 'text' ? 'TXT' : 'HEX'}</button>
                         ))}
                     </div>
 
 
                     <div className="relative">
-                        <button className={`h-8 px-2 hover:bg-[#3c3c3c] rounded text-[#969696] flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[#3c3c3c] text-white' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
-                            <Menu size={16} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
+                        <button className={`h-7 px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
+                            <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                         </button>
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 bg-[#2b2d2e] border border-[#3c3c3c] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[#3c3c3c]">
-                                        <div className="text-[12px] text-[#cccccc] font-bold">{t('monitor.logSettings')}</div>
-                                        <X size={14} className="cursor-pointer text-[#969696] hover:text-white" onClick={() => setShowOptionsMenu(false)} />
+                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
+                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
+                                        <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
+                                        <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
                                     </div>
                                     <div className="space-y-4 px-1">
                                         <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                            <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
+                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
+                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
                                             <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }} />
                                             <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
                                             <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
@@ -448,10 +465,10 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                             <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
                                             <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
 
-                                            <div className="pt-2 mt-2 border-t border-[#3c3c3c]">
-                                                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
+                                            <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
+                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
+                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
                                                     <CustomSelect
                                                         items={availableFonts}
                                                         value={fontFamily}
@@ -459,7 +476,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
+                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -472,8 +489,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                             </div>
                                         </div>
 
-                                        <div className="pt-2 border-t border-[#3c3c3c]">
-                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#007acc] text-white text-[11px] rounded hover:bg-[#0062a3] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                        <div className="pt-2 border-t border-[var(--menu-border-color)]">
+                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
                                                 <Download size={14} /> {t('monitor.exportLog')}
                                             </button>
                                         </div>
@@ -483,11 +500,11 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button className={`p-1 rounded ${autoScroll ? 'text-[#4ec9b0] bg-[#1e1e1e]' : 'text-[#969696]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
+                    <div className="flex items-center gap-1 border-l border-[var(--border-color)] pl-2 h-7">
+                        <button className={`w-7 h-7 flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--list-active-background)] text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
                             <ArrowDownToLine size={14} />
                         </button>
-                        <button className="p-1 text-[#969696] hover:text-[#cccccc]" onClick={handleClearLogs}><Trash2 size={14} /></button>
+                        <button className="w-7 h-7 flex items-center justify-center rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] transition-colors" onClick={handleClearLogs}><Trash2 size={14} /></button>
                     </div>
                 </div>
             </div>
@@ -525,7 +542,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         regexError={regexError}
                     />
                 </div>
-                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
+                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
                     <AnimatePresence initial={false}>
                         {filteredLogs.slice(-400).map((log) => (
                             <LogItem key={log.id} log={log} isNewLog={log.timestamp > mountTimeRef.current} effectiveSmooth={smoothScroll} viewMode={viewMode} encoding={encoding} showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength} mergeRepeats={mergeRepeats} virtualSerialPort={(config as MonitorSessionConfig).virtualSerialPort} physicalPortPath={(config as MonitorSessionConfig).connection?.path || 'DEV'} onContextMenu={handleLogContextMenu} formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText} timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch} />
@@ -535,10 +552,10 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
             </div>
 
-            <div className="bg-[#1e1e1e] border-t border-[#2b2b2b]">
-                <div className="flex items-center bg-[#2d2d2e]/30 px-3 py-1 border-y border-white/5 gap-2">
-                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[#007acc] text-white shadow-md' : 'bg-[#292929] text-gray-400 hover:text-gray-200 hover:bg-[#4a4a4a]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
-                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[#4ec9b0] text-[#0a2e26] shadow-md' : 'bg-[#292929] text-gray-400 hover:text-gray-200 hover:bg-[#4a4a4a]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
+            <div className="bg-[var(--app-background)] border-t border-[var(--border-color)]">
+                <div className="flex items-center bg-[var(--widget-background)]/30 px-3 py-1 border-y border-white/5 gap-2">
+                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
+                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-emerald-500 text-teal-950 shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
                 <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding || '\r\n'} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
             </div>

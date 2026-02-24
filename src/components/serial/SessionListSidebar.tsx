@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { FolderOpen, Plus, Trash2, Edit2, Network, Cpu, FolderClosed, X, MoreHorizontal, Check } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
@@ -114,9 +114,9 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
         : null;
 
     return (
-        <div className="flex flex-col h-full bg-[var(--vscode-sidebar)] text-[var(--vscode-fg)] relative">
+        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)] relative">
             {/* Workspace Header */}
-            <div className="px-3 py-2 border-b border-[var(--vscode-border)] bg-[var(--vscode-sidebar)]">
+            <div className="px-3 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)]">
                 {sessionManager.workspacePath ? (
                     <div className="flex items-center justify-between">
                         <div
@@ -129,7 +129,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         <div className="flex items-center gap-0.5 shrink-0">
                             <div
                                 ref={recentButtonRef}
-                                className="cursor-pointer p-1 rounded hover:bg-[var(--vscode-list-hover)]"
+                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
                                 title={t('session.recentWorkspaces')}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -141,7 +141,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             </div>
                             <div
                                 ref={addButtonRef}
-                                className="cursor-pointer p-1 rounded hover:bg-[var(--vscode-list-hover)]"
+                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
                                 title={t('session.newSession')}
                                 onClick={() => setShowNewSessionDialog(true)}
                             >
@@ -154,7 +154,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         <FolderOpen size={32} className="opacity-30" />
                         <span className="text-[11px] opacity-50 text-center">{t('session.noWorkspaceOpen')}</span>
                         <button
-                            className="text-[12px] px-3 py-1.5 rounded bg-[var(--vscode-button-bg)] text-[var(--vscode-button-fg)] hover:bg-[var(--vscode-button-hover-bg)] cursor-pointer transition-colors"
+                            className="text-[12px] px-3 py-1.5 rounded bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)] cursor-pointer transition-colors"
                             onClick={() => sessionManager.browseAndOpenWorkspace()}
                         >
                             {t('session.openWorkspace')}
@@ -166,7 +166,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Recent Workspaces Menu */}
             {recentMenu && (
                 <div
-                    className="fixed z-50 bg-[var(--vscode-bg)] border border-[var(--vscode-widget-border)] shadow-lg rounded py-1 min-w-[200px]"
+                    className="fixed z-50 bg-[var(--app-background)] border border-[var(--widget-border-color)] shadow-lg rounded py-1 min-w-[200px]"
                     style={{ top: recentMenu.y, left: recentMenu.x }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -176,7 +176,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                     {sessionManager.recentWorkspaces.map(ws => (
                         <div
                             key={ws}
-                            className="px-3 py-1.5 text-[12px] hover:bg-[var(--vscode-list-hover)] hover:text-white cursor-pointer flex items-center gap-2"
+                            className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
                             onClick={() => {
                                 sessionManager.openWorkspace(ws);
                                 setRecentMenu(null);
@@ -189,10 +189,10 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         </div>
                     ))}
                     {sessionManager.recentWorkspaces.length > 0 && (
-                        <div className="h-[1px] bg-[var(--vscode-border)] my-1 opacity-50" />
+                        <div className="h-[1px] bg-[var(--border-color)] my-1 opacity-50" />
                     )}
                     <div
-                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--vscode-list-hover)] hover:text-white cursor-pointer"
+                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer"
                         onClick={() => {
                             sessionManager.browseAndOpenWorkspace();
                             setRecentMenu(null);
@@ -206,7 +206,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Session List */}
             <div className="flex flex-col flex-1 overflow-y-auto" onClick={() => setEditingId(null)}>
                 {sessionManager.workspacePath && sessionManager.savedSessions.length === 0 && (
-                    <div className="p-4 text-[11px] text-[#858585] italic text-center">
+                    <div className="p-4 text-[11px] text-[var(--activitybar-inactive-foreground)] italic text-center">
                         {t('session.noSessions')}
                     </div>
                 )}
@@ -259,11 +259,11 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Context Menu */}
             {contextMenu && (
                 <div
-                    className="fixed z-[5000] bg-[#252526] border border-[#454545] shadow-2xl rounded-sm py-1 w-[160px] animate-in fade-in zoom-in-95 duration-100"
+                    className="fixed z-[5000] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-2xl rounded-sm py-1 w-[160px] animate-in fade-in zoom-in-95 duration-100"
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                 >
                     <div
-                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[#094771] hover:text-white cursor-pointer transition-colors group"
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer transition-colors group"
                         onClick={() => {
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
                             if (session) startEditing(session);
@@ -272,9 +272,9 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         <Edit2 size={13} className="opacity-60 group-hover:opacity-100" />
                         {t('common.edit')}
                     </div>
-                    <div className="h-[1px] bg-[#3c3c3c] my-1 mx-1" />
+                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1 mx-1" />
                     <div
-                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[#a1260d] hover:text-white cursor-pointer text-red-400 transition-colors group"
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-red-500/10 hover:text-red-400 cursor-pointer text-red-500/80 transition-colors group"
                         onClick={async () => {
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
                             if (session) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, X, ChevronUp, ChevronDown, Regex } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -261,8 +261,12 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         initial={{ width: 0, opacity: 0, scale: 0.95 }}
                         animate={{ width: 'auto', opacity: 1, scale: 1 }}
                         exit={{ width: 0, opacity: 0, scale: 0.95 }}
-                        className={`flex items-center bg-[#252526] border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-colors focus-within:border-[var(--vscode-focusBorder)] focus-within:ring-1 focus-within:ring-[var(--vscode-focusBorder)] ${regexError ? 'border-[var(--st-error)] shadow-[0_0_8px_rgba(244,135,113,0.3)]' : 'border-[#454545]'
+                        className={`flex items-center border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-colors focus-within:ring-1 focus-within:ring-[var(--focus-border-color)] ${regexError ? 'border-[var(--st-error-text)] shadow-sm' : ''
                             }`}
+                        style={{
+                            backgroundColor: 'var(--widget-background)',
+                            borderColor: regexError ? undefined : 'var(--widget-border-color)',
+                        }}
                     >
                         <input
                             ref={inputRef}
@@ -271,36 +275,49 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             onChange={handleChange}
                             onKeyDown={handleKeyDown}
                             placeholder="Find..."
-                            className="bg-transparent border-none outline-none text-[#cccccc] text-xs px-2 w-48 h-full font-mono"
+                            className="bg-transparent border-none outline-none text-xs px-2 w-48 h-full font-mono"
+                            style={{ color: 'var(--app-foreground)' }}
                         />
 
-                        <div className="flex items-center px-1 text-[10px] text-[#888888] font-mono min-w-[40px] justify-center select-none">
+                        <div
+                            className="flex items-center px-1 text-[10px] font-mono min-w-[40px] justify-center select-none"
+                            style={{ color: 'var(--input-placeholder-color)' }}
+                        >
                             {totalMatches > 0 ? `${currentIndex + 1}/${totalMatches}` : '0/0'}
                         </div>
 
                         <div className="flex items-center space-x-0.5 px-0.5">
                             <button
                                 onClick={() => onMatchCaseChange(!isMatchCase)}
-                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'text-[#81C783] bg-[#35538F]' : 'text-[#969696] hover:bg-[#3c3c3c] hover:text-[#cccccc]'}`}
+                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                style={isMatchCase ? {} : { color: 'var(--input-placeholder-color)' }}
+                                onMouseEnter={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                                onMouseLeave={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
                                 title="Match Case"
                             >
                                 <span className="font-sans font-medium text-[13px] leading-none tracking-tight">Aa</span>
                             </button>
                             <button
                                 onClick={() => onRegexChange(!isRegex)}
-                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'text-[#81C783] bg-[#35538F]' : 'text-[#969696] hover:bg-[#3c3c3c] hover:text-[#cccccc]'}`}
+                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                style={isRegex ? {} : { color: 'var(--input-placeholder-color)' }}
+                                onMouseEnter={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                                onMouseLeave={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
                                 title="Use Regular Expression"
                             >
                                 <span className="font-mono font-bold text-[14px] leading-none tracking-widest pl-[1px] transform -translate-y-[1px]">.*</span>
                             </button>
                         </div>
 
-                        <div className="w-[1px] h-4 bg-[#454545] mx-1" />
+                        <div className="w-[1px] h-4 mx-1" style={{ backgroundColor: 'var(--widget-border-color)' }} />
 
                         <button
                             onClick={onPrev}
                             disabled={totalMatches === 0}
-                            className="p-1 hover:bg-[#3c3c3c] text-[#80CBC4] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-[4px]"
+                            className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
+                            style={{ color: 'var(--focus-border-color)' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
                             title="Previous Match (Shift+Enter)"
                         >
                             <ChevronUp size={14} />
@@ -308,7 +325,10 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         <button
                             onClick={onNext}
                             disabled={totalMatches === 0}
-                            className="p-1 hover:bg-[#3c3c3c] text-[#80CBC4] disabled:opacity-30 disabled:hover:bg-transparent transition-colors rounded-[4px]"
+                            className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
+                            style={{ color: 'var(--focus-border-color)' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
                             title="Next Match (Enter)"
                         >
                             <ChevronDown size={14} />
@@ -319,7 +339,13 @@ export const LogSearch: React.FC<LogSearchProps> = ({
 
             <button
                 onClick={onToggle}
-                className={`p-1.5 rounded transition-colors ${isOpen ? 'bg-[#007acc] text-white' : 'text-[#969696] hover:text-[#cccccc] hover:bg-[#3c3c3c]'}`}
+                className="p-1.5 rounded transition-colors"
+                style={isOpen
+                    ? { backgroundColor: 'var(--accent-color)', color: 'var(--button-foreground)' }
+                    : { color: 'var(--input-placeholder-color)' }
+                }
+                onMouseEnter={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                onMouseLeave={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
                 title="Find (Ctrl+F)"
             >
                 {isOpen ? <X size={16} /> : <Search size={16} />}

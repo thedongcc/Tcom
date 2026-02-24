@@ -1,17 +1,14 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { ThemeConfig, DEFAULT_THEME, ThemeMode } from '../types/theme';
-import { ThemeDefinition, applyTheme, findTheme, importTheme as parseTheme } from '../themes';
+import { ThemeDefinition, applyTheme } from '../themes';
 
 interface SettingsContextType {
     config: ThemeConfig;
+    availableThemes: ThemeDefinition[];
+    loadThemes: () => Promise<void>;
     updateConfig: (updates: Partial<ThemeConfig> | ((prev: ThemeConfig) => ThemeConfig)) => void;
-    updateColors: (updates: Partial<ThemeConfig['colors']>) => void;
     updateUI: (updates: Partial<ThemeConfig['ui']>) => void;
-    setTheme: (themeId: ThemeMode) => void;
-    /** 添加或替换一个自定义主题 */
-    addCustomTheme: (theme: ThemeDefinition) => void;
-    /** 删除自定义主题 */
-    removeCustomTheme: (themeId: string) => void;
+    setTheme: (themeId: string) => void;
     importConfig: (json: string) => void;
     exportConfig: () => string;
     resetConfig: () => void;
@@ -20,6 +17,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
+    // 设置状态
     const [config, setConfig] = useState<ThemeConfig>(() => {
         const saved = localStorage.getItem('tcom-settings');
         if (saved) {
@@ -30,16 +28,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 const merged: ThemeConfig = {
                     ...DEFAULT_THEME,
                     ...parsed,
-                    colors: { ...DEFAULT_THEME.colors, ...(parsed.colors || {}) },
                     typography: { ...DEFAULT_THEME.typography, ...(parsed.typography || {}) },
                     ui: { ...DEFAULT_THEME.ui, ...(parsed.ui || {}) },
-                    customThemes: Array.isArray(parsed.customThemes) ? parsed.customThemes : [],
                 };
 
                 // 兼容旧版 tcom-theme 键
                 const legacyTheme = localStorage.getItem('tcom-theme');
-                if (legacyTheme && ['light', 'hc', 'dark', 'one-dark-vivid'].includes(legacyTheme)) {
-                    merged.theme = legacyTheme as ThemeMode;
+                if (legacyTheme) {
+                    merged.theme = legacyTheme;
                 }
 
                 return merged;
@@ -50,29 +46,44 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         return DEFAULT_THEME;
     });
 
+    // ── 真实的物理主题文件状态 ──────────────────────────────────────────────────────
+    const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>([]);
+
+    const loadThemes = async () => {
+        try {
+            const api = (window as any).themeAPI;
+            if (api?.loadAll) {
+                const res = await api.loadAll();
+                if (res?.success) {
+                    setAvailableThemes(res.themes);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load themes:', e);
+        }
+    };
+
+    // 初次挂载加载一次
+    useEffect(() => {
+        loadThemes();
+    }, []);
+
     // ── 主题 CSS 变量注入 ──────────────────────────────────────────────────────
     useEffect(() => {
         const root = document.documentElement;
-        const { colors, typography, images, theme, customThemes } = config;
+        const { typography, images, theme } = config;
 
-        // 1. 应用主题 CSS 变量（覆盖所有 --vscode-* 变量）
-        const themeDefinition = findTheme(theme, customThemes);
-        applyTheme(themeDefinition);
-
-        // 2. 应用用户自定义颜色变量（串口日志颜色等）
-        root.style.setProperty('--st-rx-text', colors.rxTextColor);
-        root.style.setProperty('--st-tx-text', colors.txTextColor);
-        root.style.setProperty('--st-rx-label', colors.rxLabelColor);
-        root.style.setProperty('--st-tx-label', colors.txLabelColor);
-        root.style.setProperty('--st-info-text', colors.infoColor);
-        root.style.setProperty('--st-error-text', colors.errorColor);
-        root.style.setProperty('--st-timestamp', colors.timestampColor);
-        root.style.setProperty('--st-rx-bg', colors.rxBgColor);
-        root.style.setProperty('--st-input-bg', colors.inputBgColor);
-        root.style.setProperty('--st-input-text', colors.inputTextColor);
-        root.style.setProperty('--st-token-crc', colors.crcTokenColor);
-        root.style.setProperty('--st-token-flag', colors.flagTokenColor);
-        root.style.setProperty('--st-accent', colors.accentColor);
+        // 1. 应用主题 CSS 变量（从现有加载出的主题列表里找）
+        if (availableThemes.length > 0) {
+            let activeDef = availableThemes.find(t => t.id === theme);
+            if (!activeDef) {
+                // 如果找不到（比如用户删掉了 json），强制回退系统里一定会生成的一个 default dark
+                activeDef = availableThemes.find(t => t.id === 'dark') || availableThemes[0];
+            }
+            if (activeDef) {
+                applyTheme(activeDef);
+            }
+        }
 
         // 3. 应用排版变量
         root.style.setProperty('--st-font-family', typography.fontFamily);
@@ -85,11 +96,25 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             root.style.removeProperty('--st-rx-bg-img');
         }
 
-        // 5. 持久化
+        // 5. 提取用于更新窗口原生按钮的色彩
+        setTimeout(() => {
+            try {
+                const computed = getComputedStyle(root);
+                const bgColor = computed.getPropertyValue('--titlebar-background').trim() || '#3c3c3c';
+                const symbolColor = computed.getPropertyValue('--app-foreground').trim() || '#cccccc';
+                if ((window as any).themeAPI?.updateTitleBar) {
+                    (window as any).themeAPI.updateTitleBar({ bgColor, symbolColor });
+                }
+            } catch (e) {
+                console.warn('Failed to update native titleBar color', e);
+            }
+        }, 50);
+
+        // 6. 持久化
         localStorage.setItem('tcom-settings', JSON.stringify(config));
         localStorage.setItem('tcom-theme', theme);
 
-    }, [config]);
+    }, [config, availableThemes]); // availableThemes 加载完后也需要触发注入
 
     // ── 更新函数 ──────────────────────────────────────────────────────────────
 
@@ -101,32 +126,12 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updateColors = (updates: Partial<ThemeConfig['colors']>) => {
-        setConfig(prev => ({ ...prev, colors: { ...prev.colors, ...updates } }));
-    };
-
     const updateUI = (updates: Partial<ThemeConfig['ui']>) => {
         setConfig(prev => ({ ...prev, ui: { ...prev.ui, ...updates } }));
     };
 
-    const setTheme = (themeId: ThemeMode) => {
+    const setTheme = (themeId: string) => {
         setConfig(prev => ({ ...prev, theme: themeId }));
-    };
-
-    const addCustomTheme = (theme: ThemeDefinition) => {
-        setConfig(prev => {
-            const existing = prev.customThemes.filter(t => t.id !== theme.id);
-            return { ...prev, customThemes: [...existing, theme] };
-        });
-    };
-
-    const removeCustomTheme = (themeId: string) => {
-        setConfig(prev => ({
-            ...prev,
-            customThemes: prev.customThemes.filter(t => t.id !== themeId),
-            // 如果当前正在使用被删除的主题，回退到 dark
-            theme: prev.theme === themeId ? 'dark' : prev.theme,
-        }));
     };
 
     const importConfig = (json: string) => {
@@ -135,9 +140,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             setConfig({
                 ...DEFAULT_THEME,
                 ...parsed,
-                colors: { ...DEFAULT_THEME.colors, ...(parsed.colors || {}) },
                 ui: { ...DEFAULT_THEME.ui, ...(parsed.ui || {}) },
-                customThemes: Array.isArray(parsed.customThemes) ? parsed.customThemes : [],
             });
         } catch (e) {
             console.error('Import failed', e);
@@ -153,12 +156,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     return (
         <SettingsContext.Provider value={{
             config,
+            availableThemes,
+            loadThemes,
             updateConfig,
-            updateColors,
             updateUI,
             setTheme,
-            addCustomTheme,
-            removeCustomTheme,
             importConfig,
             exportConfig,
             resetConfig,

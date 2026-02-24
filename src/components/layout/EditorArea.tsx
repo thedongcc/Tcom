@@ -1,4 +1,4 @@
-import React, { type ReactNode, useState } from 'react';
+﻿import React, { type ReactNode, useState } from 'react';
 import { useI18n } from '../../context/I18nContext';
 import { X, LayoutTemplate, Plus, Columns } from 'lucide-react';
 // Use legacy matching imports to ensure compatibility with user's environment
@@ -61,10 +61,10 @@ const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabPro
     <div
         onClick={onClick}
         className={`
-    h-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--vscode-border)] select-none group
+    h-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--border-color)] select-none group
     ${active
-                ? `bg-[var(--vscode-bg)] ${isGroupActive ? 'text-[var(--vscode-fg)] border-t-[2px] border-t-[var(--vscode-accent)] font-bold tracking-wide' : 'text-[#777] border-t-2 border-t-transparent'}`
-                : 'bg-[var(--vscode-editor-widget-bg)] text-[#666] hover:bg-[var(--vscode-bg)]'
+                ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] border-t-[2px] border-t-[var(--accent-color)] font-bold tracking-wide' : 'text-[var(--input-placeholder-color)] border-t-2 border-t-transparent'}`
+                : 'bg-[var(--widget-background)] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--app-background)]'
             }
 `}
         title={label}
@@ -76,7 +76,7 @@ const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabPro
         <div className="flex items-center">
             <div
                 onClick={onClose}
-                className="p-0.5 rounded-md hover:bg-[var(--vscode-hover)]">
+                className="p-0.5 rounded-md hover:bg-[var(--hover-background)]">
                 <X size={14} />
             </div>
         </div>
@@ -119,7 +119,7 @@ interface GroupHeaderProps {
 const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: GroupHeaderProps) => {
     return (
         <div
-            className={`relative z-50 flex h-9 bg-[#252526] border-b border-[#2b2b2b] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
+            className={`relative z-50 flex h-9 bg-[var(--sidebar-background)] border-b border-[var(--border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
             onClick={() => setActiveGroupId(group.id)}
         >
             {children}
@@ -130,7 +130,7 @@ const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: Group
 // --- Drop Zone Overlay ---
 const DropZone = ({ id, className, activeClassName }: { id: string, className?: string, activeClassName?: string }) => {
     const { isOver, setNodeRef } = useDroppable({ id });
-    const activeClass = activeClassName || 'bg-[var(--vscode-accent)] opacity-20';
+    const activeClass = activeClassName || 'bg-[var(--accent-color)] opacity-20';
     return (
         <div
             ref={setNodeRef}
@@ -154,7 +154,7 @@ const HeaderDropZone = ({ id, children, className }: { id: string, children: Rea
 
 // --- Drop Indicator ---
 const DropIndicator = () => (
-    <div className="w-[3px] h-full bg-[#007fd4] absolute z-[2000] pointer-events-none shadow-[0_0_4px_rgba(0,0,0,0.5)] transform -translate-x-1/2" />
+    <div className="w-[3px] h-full bg-[var(--accent-color)] absolute z-[2000] pointer-events-none shadow-[0_0_4px_rgba(0,0,0,0.5)] transform -translate-x-1/2" />
 );
 
 // --- Group Panel ---
@@ -185,13 +185,13 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                     <DropZone
                         id={`${node.id}-center`}
                         className="absolute inset-0 z-30"
-                        activeClassName="bg-[var(--vscode-accent)] opacity-10 border-2 border-[var(--vscode-focusBorder)]"
+                        activeClassName="bg-[var(--accent-color)] opacity-10 border-2 border-[var(--focus-border-color)]"
                     />
                 </>
             )}
 
             <GroupHeader group={node} isActiveGroup={isActive} setActiveGroupId={setActiveGroupId}>
-                <HeaderDropZone id={`${node.id}-header`} className="flex-1 flex items-center overflow-x-auto scrollbar-hide h-full px-1 relative">
+                <HeaderDropZone id={`${node.id}-header`} className="flex-1 flex items-center overflow-x-auto scrollbar-hide h-full relative">
                     {activeDragId && (
                         <DropZone
                             id={`${node.id}-start`}
@@ -242,7 +242,7 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                     {node.views && node.views.length > 0 && (
                         <div className="flex items-center px-1 gap-1 ml-auto">
                             <div
-                                className="p-1 hover:bg-[var(--vscode-hover)] rounded cursor-pointer text-[var(--vscode-fg)]"
+                                className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)]"
                                 title="Split Editor Right"
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -257,7 +257,7 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
             </GroupHeader>
 
             {/* Content */}
-            <div className="flex-1 relative bg-[var(--vscode-bg)]">
+            <div className="flex-1 relative bg-[var(--app-background)]">
                 {node.activeViewId ? (
                     (() => {
                         const session = sessions.find(s => s.id === node.activeViewId);
@@ -310,9 +310,9 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                     })()
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 select-none pointer-events-none text-center p-4">
-                        <LayoutTemplate size={64} className="mb-4 text-[var(--vscode-fg)] opacity-50" />
-                        <p className="text-lg font-medium text-[var(--vscode-fg)]">{t('editor.noEditorOpen')}</p>
-                        <p className="text-sm text-[#888] mt-2 max-w-[300px]">{t('editor.noEditorDesc')}</p>
+                        <LayoutTemplate size={64} className="mb-4 text-[var(--app-foreground)] opacity-50" />
+                        <p className="text-lg font-medium text-[var(--app-foreground)]">{t('editor.noEditorOpen')}</p>
+                        <p className="text-sm text-[var(--activitybar-inactive-foreground)] mt-2 max-w-[300px]">{t('editor.noEditorDesc')}</p>
                     </div>
                 )}
             </div>
@@ -352,7 +352,7 @@ const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutA
                         {index < node.children.length - 1 && (
                             <Separator
                                 data-direction={node.direction}
-                                className={`bg-[var(--vscode-widget-border)] hover:bg-[var(--vscode-focusBorder)] transition-all z-10
+                                className={`bg-[var(--widget-border-color)] hover:bg-[var(--focus-border-color)] transition-all z-10
                                     ${node.direction === 'vertical'
                                         ? 'h-[1px] hover:h-[2px] w-full'
                                         : 'w-[1px] hover:w-[2px] h-full'
@@ -592,7 +592,7 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex-1 flex flex-col bg-[var(--vscode-bg)] overflow-hidden">
+            <div className="flex-1 flex flex-col bg-[var(--app-background)] overflow-hidden">
                 {layout ? (
                     <LayoutRenderer
                         node={layout}
@@ -640,7 +640,7 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
                     }
                 ]}>
                     {activeDragId ? (
-                        <div className="h-full px-3 bg-[var(--vscode-editor-widget-bg)] text-[var(--vscode-fg)] border-t-2 border-[var(--vscode-accent)] flex items-center min-w-[120px] pointer-events-none shadow-lg opacity-90">
+                        <div className="h-full px-3 bg-[var(--widget-background)] text-[var(--app-foreground)] border-t-2 border-[var(--accent-color)] flex items-center min-w-[120px] pointer-events-none shadow-lg opacity-90">
                             <span className="text-[13px]">
                                 {(() => {
                                     const parsed = parseCompositeId(activeDragId);
