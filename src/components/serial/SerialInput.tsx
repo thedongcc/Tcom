@@ -11,6 +11,7 @@ import { SerialToken, SERIAL_TOKEN_CLICK_EVENT } from './SerialTokenExtension';
 import { SuggestionExtension, getSuggestionOptions } from './SuggestionExtension';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
+import { CustomSelect } from '../common/CustomSelect';
 
 interface SerialInputProps {
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
@@ -18,12 +19,12 @@ interface SerialInputProps {
     initialHTML?: string;
     initialTokens?: Record<string, Token>;
     initialMode?: 'text' | 'hex';
-    initialLineEnding?: '' | '\n' | '\r' | '\r\n';
+    initialLineEnding?: string;
     isConnected?: boolean;
     fontSize?: number;
     fontFamily?: string;
     onConnectRequest?: () => void;
-    onStateChange?: (state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: '' | '\n' | '\r' | '\r\n' }) => void;
+    onStateChange?: (state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: string }) => void;
     /** Hide toolbar, timer, and send button (e.g. for Command Editor) */
     hideExtras?: boolean;
 }
@@ -36,8 +37,8 @@ export const SerialInput = ({
     initialMode = 'hex',
     initialLineEnding = '\r\n',
     isConnected = false,
-    fontSize = 13,
-    fontFamily = 'var(--font-mono)',
+    fontSize = 15,
+    fontFamily = 'AppCoreFont',
     onConnectRequest,
     onStateChange,
     hideExtras = false
@@ -45,7 +46,7 @@ export const SerialInput = ({
     const { showToast } = useToast();
     const { t } = useI18n();
     const [mode, setMode] = useState<'text' | 'hex'>(initialMode);
-    const [lineEnding, setLineEnding] = useState<'' | '\n' | '\r' | '\r\n'>(initialLineEnding);
+    const [lineEnding, setLineEnding] = useState<string>(initialLineEnding);
     const [isEmpty, setIsEmpty] = useState(true);
     const [popover, setPopover] = useState<{ id: string; type: string; x: number; y: number; pos: number } | null>(null);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -66,9 +67,8 @@ export const SerialInput = ({
     // Memoize editorProps
     const editorProps = useMemo(() => ({
         attributes: {
-            class: 'outline-none text-[var(--st-input-text)] whitespace-pre-wrap break-all flex-1 min-h-[40px] overflow-y-auto custom-scrollbar p-2 leading-relaxed [&_p]:m-0 tracking-[0px]',
-            spellcheck: 'false',
-            style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)')};`
+            class: "absolute inset-0 bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-none z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium h-fit flex-1",
+            style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)')};`
         },
     }), [fontSize, fontFamily]);
 
@@ -302,6 +302,27 @@ export const SerialInput = ({
                 {!hideExtras && (
                     <>
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
+
+                        {/* Line Ending Selector (Only for Text Mode) */}
+                        {mode === 'text' && (
+                            <div className="flex items-center gap-1">
+                                <CustomSelect
+                                    value={lineEnding}
+                                    onChange={(val) => setLineEnding(val)}
+                                    allowCustom={true}
+                                    dropdownWidth={110}
+                                    items={[
+                                        { value: '', label: 'None' },
+                                        { value: '\\n', label: 'LF (\\n)' },
+                                        { value: '\\r', label: 'CR (\\r)' },
+                                        { value: '\\r\\n', label: 'CRLF (\\r\\n)' }
+                                    ]}
+                                    className="!w-[88px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.truncate]:!text-[10px] [&_input]:!text-[10px]"
+                                />
+                                <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] ml-1" />
+                            </div>
+                        )}
+
                         <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="CRC"
                             onClick={() => insertToken('crc')}>
                             <Plus size={14} className="text-emerald-500" />

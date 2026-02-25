@@ -34,6 +34,12 @@ export const enUS = {
         resetTitle: 'Reset Settings',
         resetMessage: 'Are you sure you want to reset all settings to their defaults? This includes theme, colors, fonts, and UI layout preferences, and cannot be undone.',
         resetConfirm: 'Reset to Defaults',
+        factoryReset: 'Factory Reset',
+        factoryResetDesc: 'Clear all data (including cache, local storage, config) and restore software to fresh install state.',
+        factoryResetBtn: 'Factory Reset Data',
+        factoryResetDialogTitle: 'DANGER: Factory Reset',
+        factoryResetDialogMessage: 'This action will completely delete all local data of the application, including:\n• All user configurations and preferences\n• All saved sessions and commands\n• Application cache and local storage\n\nThe application will restart automatically. This action CANNOT be undone!\n\nPlease type "{keyword}" to confirm:',
+        factoryResetKeyword: 'RESET',
 
         // Group titles
         groups: {

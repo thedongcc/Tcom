@@ -100,6 +100,9 @@ declare global {
             setAlwaysOnTop: (flag: boolean) => Promise<{ success: boolean; alwaysOnTop: boolean }>;
             isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
         }
+        appAPI: {
+            factoryReset: () => Promise<{ success: true } | { success: false; error: string }>;
+        }
     }
 }
 

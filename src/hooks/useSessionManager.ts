@@ -21,7 +21,7 @@ export const useSessionManager = () => {
         return localStorage.getItem('tcom-monitor-enabled') !== 'false'; // Default to true
     });
     const [setupcPath, setSetupcPathState] = useState(() => {
-        return localStorage.getItem('tcom-setupc-path') || 'C:\\Program Files (x86)\\com0com\\setupc.exe';
+        return localStorage.getItem('tcom-setupc-path') || '';
     });
 
     const setSetupcPath = useCallback((path: string) => {

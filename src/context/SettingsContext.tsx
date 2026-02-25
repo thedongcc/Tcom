@@ -32,6 +32,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                     ui: { ...DEFAULT_THEME.ui, ...(parsed.ui || {}) },
                 };
 
+                // 迁移旧版默认值 13px -> 15px，mono -> AppCoreFont
+                if (merged.typography.fontSize === 13) {
+                    merged.typography.fontSize = 15;
+                }
+                if (merged.typography.fontFamily === 'mono' || merged.typography.fontFamily === 'var(--font-mono)') {
+                    merged.typography.fontFamily = 'AppCoreFont';
+                }
+
                 // 兼容旧版 tcom-theme 键
                 const legacyTheme = localStorage.getItem('tcom-theme');
                 if (legacyTheme) {
@@ -137,11 +145,20 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const importConfig = (json: string) => {
         try {
             const parsed = JSON.parse(json);
-            setConfig({
+            const merged = {
                 ...DEFAULT_THEME,
                 ...parsed,
+                typography: { ...DEFAULT_THEME.typography, ...(parsed.typography || {}) },
                 ui: { ...DEFAULT_THEME.ui, ...(parsed.ui || {}) },
-            });
+            };
+            // 迁移旧版默认值
+            if (merged.typography.fontSize === 13) {
+                merged.typography.fontSize = 15;
+            }
+            if (merged.typography.fontFamily === 'mono' || merged.typography.fontFamily === 'var(--font-mono)') {
+                merged.typography.fontFamily = 'AppCoreFont';
+            }
+            setConfig(merged);
         } catch (e) {
             console.error('Import failed', e);
         }

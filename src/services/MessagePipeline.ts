@@ -17,7 +17,7 @@ export const MessagePipeline = {
         html: string | null,
         mode: 'text' | 'hex',
         tokens: Record<string, Token>,
-        lineEnding: '' | '\n' | '\r' | '\r\n' = ''
+        lineEnding: string = ''
     ): ProcessedMessage => {
 
         let data: Uint8Array | string = content;
@@ -46,11 +46,17 @@ export const MessagePipeline = {
         // SerialInput logic: if compiled data is Uint8Array, we append generic bytes.
 
         if (mode === 'text' && lineEnding) {
+            // 解析真实的转义字符 (将字符串 '\\n' 转换为真正的换行符 '\n' 以便编码为 0x0A)
+            const realLineEnding = lineEnding
+                .replace(/\\r/g, '\r')
+                .replace(/\\n/g, '\n')
+                .replace(/\\t/g, '\t');
+
             if (typeof data === 'string') {
-                data += lineEnding;
+                data += realLineEnding;
             } else if (data instanceof Uint8Array) {
                 const encoder = new TextEncoder();
-                const leBytes = encoder.encode(lineEnding);
+                const leBytes = encoder.encode(realLineEnding);
                 const newData = new Uint8Array(data.length + leBytes.length);
                 newData.set(data);
                 newData.set(leBytes, data.length);

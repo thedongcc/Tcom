@@ -34,6 +34,12 @@ export const zhCN = {
         resetTitle: '重置设置',
         resetMessage: '您确定要将所有设置恢复为默认值吗？此操作包含主题、颜色、字体及 UI 布局偏好，且无法撤销。',
         resetConfirm: '恢复默认',
+        factoryReset: '彻底重置 (Factory Reset)',
+        factoryResetDesc: '清除所有数据（包括缓存、本地存储、配置）并将软件恢复到刚安装的状态。',
+        factoryResetBtn: '彻底重置数据',
+        factoryResetDialogTitle: '危险操作：彻底重置',
+        factoryResetDialogMessage: '此操作将完全删除应用的所有本地数据，包括：\n• 所有用户配置和偏好设置\n• 所有保存的会话和命令\n• 应用缓存和本地存储\n\n应用将自动重启。此操作无法撤销！\n\n请输入 "{keyword}" 以确认执行：',
+        factoryResetKeyword: 'RESET',
 
         // 分组标题
         groups: {

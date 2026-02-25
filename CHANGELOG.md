@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.2] - 2026-02-24
+## [0.0.2] - 2026-02-25
 ### Added
 - 串口接收区数据统计增加筛选功能
 - 修改mqtt监视器内容显示为聊天样式
@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加窗口置顶功能
 - 监视区搜索增加match case功能
 - 增加系统消息中英文支持
+- 增加彻底重置按钮(Reset All)
+- 增加txt发送模式的追加选项下拉框
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -71,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 统一监视区中系统通知样式
 - 修复monitor的物理端口列表显示虚拟端口的问题
 - 更新设置中配色方案相关内容
+- 修复mqtt配置页面报错问题
+- 优化监控区的工具栏内组件的样式和显示效果
+- 修改全局和监视区的默认字体为内嵌字体,默认字号为15px
+- 修复light主题下的mqtt标签页和配置页的组件颜色
+- 修正token内容在txt发送模式下的逻辑
 
 ### Removed
 - 取消设置中的check update功能

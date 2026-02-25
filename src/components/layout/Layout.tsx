@@ -94,7 +94,6 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
             editorLayout.openSession(settingsSession.id);
             sessionManager.setActiveSessionId(settingsSession.id);
         }
-        setActiveView('settings');
     };
 
     return (

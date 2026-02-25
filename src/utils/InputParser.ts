@@ -2,16 +2,12 @@ import { Segment, Token, CRCConfig, FlagConfig, AutoIncConfig } from '../types/t
 import { calculateCRC, sliceData } from './crc';
 
 export const parseDOM = (root: HTMLElement): Segment[] => {
-
     const segments: Segment[] = [];
 
-    // Flatten child nodes helper
     const traverse = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent || '';
             if (text) {
-                // If previous segment was text, merge? No, simple is fine.
-                // Actually merging might be better for hex parsing.
                 if (segments.length > 0 && segments[segments.length - 1].type === 'text') {
                     segments[segments.length - 1].content += text;
                 } else {
@@ -24,7 +20,6 @@ export const parseDOM = (root: HTMLElement): Segment[] => {
                 const id = el.getAttribute('data-token-id')!;
                 segments.push({ id, type: 'token', content: { id } as any });
             } else {
-                // Traverse children
                 el.childNodes.forEach(traverse);
             }
         }
@@ -36,15 +31,22 @@ export const parseDOM = (root: HTMLElement): Segment[] => {
 
 export const parseHex = (text: string): Uint8Array => {
     const clean = text.replace(/[^0-9A-Fa-f]/g, '');
-    if (clean.length % 2 !== 0) {
-        // Handle odd length? Pad? Or return error?
-        // Let's assume validation happens elsewhere or we just ignore last nibble
-    }
-    const bytes = new Uint8Array(clean.length / 2);
-    for (let i = 0; i < clean.length; i += 2) {
+    const bytes = new Uint8Array(Math.floor(clean.length / 2));
+    for (let i = 0; i < clean.length - 1; i += 2) {
         bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
     }
     return bytes;
+};
+
+/**
+ * TXT 模式下将二进制字节转为 ASCII hex 字符串字节
+ * 例如 [0x64, 0xCC] → "64 CC" → [0x36, 0x34, 0x20, 0x43, 0x43]
+ */
+const bytesToAsciiHex = (bytes: Uint8Array): Uint8Array => {
+    const hexStr = Array.from(bytes)
+        .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
+        .join(' ');
+    return new TextEncoder().encode(hexStr);
 };
 
 export const compileSegments = (
@@ -52,19 +54,17 @@ export const compileSegments = (
     mode: 'text' | 'hex',
     tokens: Record<string, Token>
 ): Uint8Array => {
-    // 1. Build intermediate list of byte arrays
+    // 无论是 text 还是 hex 模式，首先都把内容当做真实的 Hex payload 来收集原始字节。
+    // 这样，诸如 `EE 01 00 00 /crc` 才能用真实的 [0xEE, 0x01, 0x00, 0x00] 来计算 CRC (64 CC)。
+    // 如果最终模式是 'text'，我们在把所有的真实字节拼装完之后，再整体转成纯文本的 ASCII Hex 字符串。
+
     const parts: Uint8Array[] = [];
     let currentTotalLength = 0;
 
     for (const segment of segments) {
         if (segment.type === 'text') {
             const text = segment.content as string;
-            let bytes: Uint8Array;
-            if (mode === 'hex') {
-                bytes = parseHex(text);
-            } else {
-                bytes = new TextEncoder().encode(text);
-            }
+            const bytes = parseHex(text);
             if (bytes.length > 0) {
                 parts.push(bytes);
                 currentTotalLength += bytes.length;
@@ -77,119 +77,92 @@ export const compileSegments = (
             if (token.type === 'crc') {
                 const config = token.config as CRCConfig;
 
-                // Flatten current buffer to handle offsets correctly
+                // 展开当前缓冲区获取前方真实的 Payload 字节
                 const currentBuf = new Uint8Array(currentTotalLength);
                 let offset = 0;
-                for (const p of parts) {
-                    currentBuf.set(p, offset);
-                    offset += p.length;
-                }
+                for (const p of parts) { currentBuf.set(p, offset); offset += p.length; }
 
-                // Determine Insertion/Split Point based on endIndex (0, -1, -2...)
                 const offsetParam = config.endIndex || 0;
                 let splitIdx = currentBuf.length;
-                if (offsetParam < 0) {
-                    splitIdx = Math.max(0, currentBuf.length + offsetParam);
-                }
+                if (offsetParam < 0) splitIdx = Math.max(0, currentBuf.length + offsetParam);
 
-                // Head is what we checksum (subject to startIndex validation)
                 const head = currentBuf.slice(0, splitIdx);
                 const tail = currentBuf.slice(splitIdx);
 
-                // Calculate CRC on the Head
-                // sliceData handles startIndex and 0 (End) logic
+                // 在真实的 Bytes 上计算 CRC
                 const dataToCheck = sliceData(head, config.startIndex || 0, 0);
-                const crcBytes = calculateCRC(dataToCheck, config.algorithm);
+                const rawCrc = calculateCRC(dataToCheck, config.algorithm);
 
-                // Re-assemble parts: [Head, CRC, Tail]
                 parts.length = 0;
                 if (head.length > 0) parts.push(head);
-                parts.push(crcBytes);
+                parts.push(rawCrc);
                 if (tail.length > 0) parts.push(tail);
-
-                currentTotalLength = head.length + crcBytes.length + tail.length;
+                currentTotalLength = head.length + rawCrc.length + tail.length;
 
             } else if (token.type === 'flag') {
                 const config = token.config as FlagConfig;
-                const bytes = parseHex(config.hex || '');
-                parts.push(bytes);
-                currentTotalLength += bytes.length;
+                const rawBytes = parseHex(config.hex || '');
+                parts.push(rawBytes);
+                currentTotalLength += rawBytes.length;
+
             } else if (token.type === 'timestamp') {
-                // 时间戳 Token - 发送时生成当前 Unix 时间戳
                 const tsConfig = token.config as any;
                 const format = tsConfig.format || 'seconds';
                 const byteOrder = tsConfig.byteOrder || 'big';
 
                 let timestamp: bigint;
                 let byteSize: number;
+                if (format === 'milliseconds') { timestamp = BigInt(Date.now()); byteSize = 8; }
+                else { timestamp = BigInt(Math.floor(Date.now() / 1000)); byteSize = 4; }
 
-                if (format === 'milliseconds') {
-                    timestamp = BigInt(Date.now());
-                    byteSize = 8;
-                } else {
-                    timestamp = BigInt(Math.floor(Date.now() / 1000));
-                    byteSize = 4;
-                }
-
-                const bytes = new Uint8Array(byteSize);
-
+                const rawBytes = new Uint8Array(byteSize);
                 if (byteOrder === 'big') {
-                    // Big Endian
                     for (let i = byteSize - 1; i >= 0; i--) {
-                        bytes[byteSize - 1 - i] = Number((timestamp >> BigInt(i * 8)) & BigInt(0xFF));
+                        rawBytes[byteSize - 1 - i] = Number((timestamp >> BigInt(i * 8)) & BigInt(0xFF));
                     }
                 } else {
-                    // Little Endian
                     for (let i = 0; i < byteSize; i++) {
-                        bytes[i] = Number((timestamp >> BigInt(i * 8)) & BigInt(0xFF));
+                        rawBytes[i] = Number((timestamp >> BigInt(i * 8)) & BigInt(0xFF));
                     }
                 }
 
-                console.log('Compiler: Timestamp Token', { format, byteOrder, timestamp: timestamp.toString(), bytes });
-                parts.push(bytes);
-                currentTotalLength += bytes.length;
+                parts.push(rawBytes);
+                currentTotalLength += rawBytes.length;
+
             } else if (token.type === 'auto_inc') {
                 const autoConfig = token.config as AutoIncConfig;
                 const byteSize = autoConfig.bytes || 1;
                 const currentValueHex = autoConfig.currentValue || autoConfig.defaultValue || '00';
 
-                // 1. Parse current hex value to bytes
-                const bytes = new Uint8Array(byteSize);
+                const rawBytes = new Uint8Array(byteSize);
                 const cleanHex = currentValueHex.padStart(byteSize * 2, '0');
                 for (let i = 0; i < byteSize; i++) {
-                    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
+                    rawBytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
                 }
-                parts.push(bytes);
-                currentTotalLength += bytes.length;
 
-                // 2. Compute next value for the token
-                // We use BigInt to handle up to 8 bytes safely
+                parts.push(rawBytes);
+                currentTotalLength += rawBytes.length;
+
                 let val = BigInt(0);
-                for (let i = 0; i < byteSize; i++) {
-                    val = (val << BigInt(8)) | BigInt(bytes[i]);
-                }
-
-                // Add step (can be negative)
+                for (let i = 0; i < byteSize; i++) { val = (val << BigInt(8)) | BigInt(rawBytes[i]); }
                 val += BigInt(autoConfig.step || 0);
-
-                // Handle overflow/underflow based on byteSize
                 const mask = (BigInt(1) << BigInt(byteSize * 8)) - BigInt(1);
                 val = val & mask;
-
-                // Convert back to hex string for next time
-                let nextHex = val.toString(16).toUpperCase();
-                nextHex = nextHex.padStart(byteSize * 2, '0');
+                let nextHex = val.toString(16).toUpperCase().padStart(byteSize * 2, '0');
                 autoConfig.currentValue = nextHex;
             }
         }
     }
 
-    // Combined result
-    const result = new Uint8Array(currentTotalLength);
+    // 合并真正的二进制结果
+    const rawResult = new Uint8Array(currentTotalLength);
     let offset = 0;
-    for (const p of parts) {
-        result.set(p, offset);
-        offset += p.length;
+    for (const p of parts) { rawResult.set(p, offset); offset += p.length; }
+
+    // 根据发送模式决定最终返回：如果是 HEX 模式发原字节；如果是 TEXT 模式，将所有字节转为可见的 ASCII Hex 字符串。
+    if (mode === 'text') {
+        return bytesToAsciiHex(rawResult);
     }
-    return result;
+
+    return rawResult;
 };

@@ -1,5 +1,5 @@
 ﻿import { useState, useRef, useEffect } from 'react';
-import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, Check, FolderOpen, FileJson } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, Check, FolderOpen, FileJson, AlertTriangle, X } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useI18n } from '../../context/I18nContext';
@@ -60,6 +60,29 @@ export const SettingsEditor = () => {
     const [systemFonts, setSystemFonts] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const themeFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Factory Reset State
+    const [showFactoryReset, setShowFactoryReset] = useState(false);
+    const [resetInput, setResetInput] = useState('');
+    const resetKeyword = t('settings.factoryResetKeyword'); // "RESET"
+    const canFactoryReset = resetInput === resetKeyword;
+
+    const performFactoryReset = async () => {
+        if (!canFactoryReset) return;
+        try {
+            if (!(window as any).appAPI) {
+                alert('appAPI 未定义，请完全重启应用以加载最新的主进程和预加载脚本！\nappAPI is undefined, please restart the app fully.');
+                return;
+            }
+            const res = await (window as any).appAPI.factoryReset();
+            if (res && res.success === false) {
+                alert('重置失败 (Reset Failed):\n' + res.error);
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert('重置期间发生异常:\n' + e.message);
+        }
+    };
 
     // 加载系统字体列表
     useEffect(() => {
@@ -289,6 +312,26 @@ export const SettingsEditor = () => {
                 },
             ],
         },
+        {
+            title: 'Danger Zone',
+            items: [
+                {
+                    label: t('settings.factoryReset'),
+                    description: t('settings.factoryResetDesc'),
+                    render: () => (
+                        <button
+                            onClick={() => {
+                                setResetInput('');
+                                setShowFactoryReset(true);
+                            }}
+                            className="bg-[#a1260d] hover:bg-[#c93f24] text-white px-3 py-1.5 rounded-[3px] text-xs transition-colors"
+                        >
+                            {t('settings.factoryResetBtn')}
+                        </button>
+                    ),
+                },
+            ],
+        },
     ];
 
     // ── 搜索过滤 ──
@@ -381,6 +424,55 @@ export const SettingsEditor = () => {
 
                 </div>
             </div>
+
+            {/* Factory Reset Confirmation Dialog */}
+            {showFactoryReset && (
+                <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div
+                        className="bg-[#252526] border border-[#a1260d] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between p-3 border-b border-[#3c3c3c] bg-[#a1260d]/20">
+                            <span className="text-[12px] font-bold text-[#f48771] uppercase tracking-wider flex items-center gap-2">
+                                <AlertTriangle size={14} />
+                                {t('settings.factoryResetDialogTitle')}
+                            </span>
+                            <button onClick={() => setShowFactoryReset(false)} className="text-[#cccccc] hover:text-white transition-colors">
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <p className="text-[13px] text-[#cccccc] leading-relaxed whitespace-pre-wrap mb-4">
+                                {t('settings.factoryResetDialogMessage', { keyword: resetKeyword })}
+                            </p>
+                            <input
+                                autoFocus
+                                type="text"
+                                className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] p-2 text-sm text-[var(--input-foreground)] outline-none focus:border-[#a1260d] rounded"
+                                placeholder={resetKeyword}
+                                value={resetInput}
+                                onChange={e => setResetInput(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 p-3 bg-[#1e1e1e] border-t border-[#3c3c3c]">
+                            <button
+                                onClick={() => setShowFactoryReset(false)}
+                                className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs transition-colors"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button
+                                disabled={!canFactoryReset}
+                                onClick={performFactoryReset}
+                                className={`px-4 py-1.5 text-white rounded-sm text-xs transition-all flex items-center gap-2 ${canFactoryReset ? 'bg-[#a1260d] hover:bg-[#c93f24] cursor-pointer' : 'bg-[#3c3c3c] text-[#888] cursor-not-allowed opacity-50'}`}
+                            >
+                                {canFactoryReset && <AlertTriangle size={12} />}
+                                {t('settings.factoryResetBtn')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

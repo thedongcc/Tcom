@@ -30,9 +30,11 @@ interface CustomSelectProps {
     placeholder?: string;
     showStatus?: boolean;
     allowCustom?: boolean;
+    className?: string;
+    dropdownWidth?: number | string;
 }
 
-export const CustomSelect = ({ items, value, onChange, disabled, placeholder, showStatus = false, allowCustom = false }: CustomSelectProps) => {
+export const CustomSelect = ({ items, value, onChange, disabled, placeholder, showStatus = false, allowCustom = false, className = '', dropdownWidth }: CustomSelectProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isCustomInput, setIsCustomInput] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -61,7 +63,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 position: 'fixed',
                 top: rect.bottom + 2,
                 left: rect.left,
-                width: rect.width,
+                width: dropdownWidth || rect.width,
+                minWidth: rect.width,
                 zIndex: 9999,
             });
         } else {
@@ -69,7 +72,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 position: 'fixed',
                 bottom: viewportHeight - rect.top + 2,
                 left: rect.left,
-                width: rect.width,
+                width: dropdownWidth || rect.width,
+                minWidth: rect.width,
                 zIndex: 9999,
             });
         }
@@ -224,7 +228,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     ) : null;
 
     return (
-        <div ref={containerRef} className="relative w-full text-[13px]">
+        <div ref={containerRef} className={`relative w-full text-[13px] ${className}`}>
             {isCustomInput ? (
                 <div
                     className="w-full h-7 flex items-center rounded-[4px] overflow-hidden"

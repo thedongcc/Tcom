@@ -129,27 +129,24 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
     pairedPort?: string; // The internal port (e.g. COM101) automatically paired with virtualSerialPort
     autoDestroyPair?: boolean; // Whether to destroy the pair on session close/delete
     uiState?: {
-        viewMode?: 'text' | 'hex';
-        filterMode?: 'all' | 'rx' | 'tx';
-        encoding?: 'utf-8' | 'gbk' | 'ascii';
-        fontFamily?: 'mono' | 'consolas' | 'courier';
+        viewMode?: 'text' | 'hex' | 'both';
         showTimestamp?: boolean;
         showPacketType?: boolean;
         showDataLength?: boolean;
         autoScroll?: boolean;
         smoothScroll?: boolean;
         mergeRepeats?: boolean;
-        showAllFonts?: boolean;
-        // Input Persistence
+        filterMode?: 'all' | 'rx' | 'tx';
         inputContent?: string;
         inputHTML?: string;
-        inputTokens?: Record<string, any>;
+        inputTokens?: any;
         inputMode?: 'text' | 'hex';
-        lineEnding?: '' | '\n' | '\r' | '\r\n';
-        // Search State
+        encoding?: 'utf-8' | 'gbk' | 'ascii';
+        fontSize?: number;
+        fontFamily?: string;
+        sendTarget?: 'virtual' | 'physical';
+        lineEnding?: string;
         searchOpen?: boolean;
-        searchQuery?: string;
-        searchRegex?: boolean;
         searchMatchCase?: boolean;
     };
 }

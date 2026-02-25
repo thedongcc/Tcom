@@ -35,7 +35,7 @@ export const DEFAULT_THEME: ThemeConfig = {
     images: {},
     typography: {
         fontFamily: 'AppCoreFont',
-        fontSize: 13,
+        fontSize: 15,
         lineHeight: 1.5
     },
     timestampFormat: 'HH:mm:ss.SSS',

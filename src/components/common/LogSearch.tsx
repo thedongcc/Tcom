@@ -27,7 +27,7 @@ export interface LogSearchProps {
     logs: any[];
     currentIndex: number;
     totalMatches: number;
-    viewMode: 'text' | 'hex' | 'json';
+    viewMode: 'text' | 'hex' | 'json' | 'both';
     formatData: (data: any, mode: any, encoding: string) => string;
     encoding: string;
     regexError?: boolean;
@@ -38,7 +38,7 @@ export const useLogSearch = (
     initialQuery: string = '',
     initialIsRegex: boolean = false,
     initialIsMatchCase: boolean = false,
-    viewMode: 'text' | 'hex' | 'json',
+    viewMode: 'text' | 'hex' | 'json' | 'both',
     formatData: (data: any, mode: any, encoding: string) => string,
     encoding: string
 ) => {

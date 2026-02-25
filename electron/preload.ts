@@ -121,6 +121,10 @@ contextBridge.exposeInMainWorld('com0comAPI', {
   launchInstaller: () => ipcRenderer.invoke('com0com:launch-installer')
 });
 
+contextBridge.exposeInMainWorld('appAPI', {
+  factoryReset: () => ipcRenderer.invoke('app:factory-reset')
+});
+
 contextBridge.exposeInMainWorld('monitorAPI', {
   start: (sessionId: string, config: any) => ipcRenderer.invoke('monitor:start', { sessionId, config }),
   stop: (sessionId: string) => ipcRenderer.invoke('monitor:stop', { sessionId }),

@@ -1,6 +1,37 @@
 ﻿import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs/promises'
+import fsSync from 'node:fs'
+
+// ─── 将所有数据重定向到安装目录旁的 data/ 文件夹 ─────────────────────────────────────
+// 生产模式 (app.isPackaged = true):
+//   exe 在哪个盘，data 就在哪个盘，与 exe 同级展开
+//   例如：D:\MyApps\Tcom\Tcom.exe  → D:\MyApps\Tcom\data\
+// 开发模式 (npm run dev / IDE 编译运行, app.isPackaged = false):
+//   开发目录下的 dev-data/ 文件夹（小心不要提交到 git）
+//   例如：p:\Webstorm\Tcom\dev-data\
+const customDataPath = app.isPackaged
+  ? path.join(path.dirname(app.getPath('exe')), 'data')
+  : path.join(app.getAppPath(), 'dev-data');
+
+app.setPath('userData', customDataPath);
+
+// ─── 启动时检查「重置待执行」标记 ────────────────────────────────────────────────────
+// 若上次退出前写入了 .reset-pending 文件（在 userData 父目录），则在进程完全启动前
+// 删除整个 userData 目录，确保没有任何文件句柄被占用
+const resetFlagPath = path.join(path.dirname(customDataPath), '.reset-pending');
+if (fsSync.existsSync(resetFlagPath)) {
+  try {
+    fsSync.rmSync(customDataPath, { recursive: true, force: true });
+  } catch (e) {
+    console.error('[Reset] Failed to delete userData on cold start:', e);
+  }
+  try {
+    fsSync.unlinkSync(resetFlagPath);
+  } catch (e) {
+    console.error('[Reset] Failed to delete reset flag:', e);
+  }
+}
 
 // --- Global Exception Handler (Anti-Crash) ---
 // Windows SerialPort (GetOverlappedResult) sometimes throws uncatchable errors
@@ -767,7 +798,7 @@ function createWindow() {
     '--app-background': '#ffffff',
     '--app-foreground': '#333333',
     '--sidebar-background': '#f3f3f3',
-    '--activitybar-background': '#2c2c2c',
+    '--activitybar-background': '#F8F8F8',
     '--statusbar-background': '#e8e8e8',
     '--statusbar-debugging-background': '#cc6633',
     '--titlebar-background': '#dddddd',
@@ -793,7 +824,7 @@ function createWindow() {
     '--checkbox-background': '#007acc',
     '--checkbox-border-color': '#007acc',
     '--checkbox-foreground': '#ffffff',
-    '--settings-header-background': '#f3f3f3',
+    '--settings-header-background': '#f8f8f8',
     '--settings-row-hover-background': '#e8e8e8',
     '--scrollbar-shadow-color': '#dddddd',
     '--scrollbar-slider-color': '#64646466',
@@ -1404,8 +1435,10 @@ function createWindow() {
 
         const child = spawn(exePath, args, {
           cwd,
-          shell: true, // Use shell to help resolver and UAC
-          windowsHide: true
+          shell: true,
+          windowsHide: true,
+          // 显式传递父进程环境，确保 Windows 能找到 cmd.exe
+          env: process.env
         });
 
         let stdout = '';
@@ -1851,6 +1884,32 @@ ipcMain.handle('app:list-fonts', async () => {
     });
   });
 });
+
+// 彻底重置
+ipcMain.handle('app:factory-reset', async () => {
+  try {
+    // 1. 清除 WebContents Session（Cookie、LocalStorage 等）
+    if (win) {
+      await win.webContents.session.clearStorageData();
+    }
+
+    // 2. 写入「重置待执行」标记文件到 userData 的父目录
+    //    这样在应用完全关闭后（文件句柄释放）下次军动加载时再删除，
+    //    避免 Windows ENOTEMPTY / 文件占用错误
+    const userDataPath = app.getPath('userData');
+    const flagPath = path.join(path.dirname(userDataPath), '.reset-pending');
+    fsSync.writeFileSync(flagPath, '1', 'utf-8');
+
+    // 3. Relaunch（重启时已无任何文件句柄，启动模块会检测标记并剅去 data/）
+    app.relaunch();
+    app.exit(0);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Factory reset failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 
 // 窗口置顶
 ipcMain.handle('window:setAlwaysOnTop', (_event, flag: boolean) => {

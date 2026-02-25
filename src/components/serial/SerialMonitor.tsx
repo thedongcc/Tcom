@@ -43,23 +43,23 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     console.log('SerialMonitor: uiState loaded', { sessionId: session.id, inputHTML: uiState.inputHTML, inputContent: uiState.inputContent });
 
     // Display Settings State - Initialize from uiState
-    const [viewMode, setViewMode] = useState<'text' | 'hex'>(uiState.viewMode || 'hex');
+    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
     const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
-    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 13);
+    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 15);
 
     // Sync fontSize with global theme when not overridden locally
     /* useEffect(() => {
         if (uiState.fontSize === undefined) {
-             // 由于系统设置已移除 fontSize，此处回退到硬编码 13
-            setFontSize(13);
+             // 由于系统设置已移除 fontSize，此处回退到硬编码 15
+            setFontSize(15);
         }
     }, [uiState.fontSize]); */
-    const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier'>(uiState.fontFamily || 'mono');
+    const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier' | 'AppCoreFont'>(uiState.fontFamily || 'AppCoreFont');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -160,21 +160,38 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return sum + (log.data.length * count);
     }, 0);
 
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex', enc: string) => {
-        if (mode === 'hex') {
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => {
+        let hexStr = '';
+        let textStr = '';
+
+        if (mode === 'hex' || mode === 'both') {
             if (typeof data === 'string') {
                 const encoder = new TextEncoder();
                 const bytes = encoder.encode(data);
-                return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+                hexStr = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+            } else {
+                hexStr = Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
             }
-            return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
         }
 
-        if (typeof data === 'string') return data;
-        try {
-            return new TextDecoder(enc).decode(data);
-        } catch (e) {
-            return new TextDecoder().decode(data);
+        if (mode === 'text' || mode === 'both') {
+            if (typeof data === 'string') {
+                textStr = data;
+            } else {
+                try {
+                    textStr = new TextDecoder(enc).decode(data);
+                } catch (e) {
+                    textStr = new TextDecoder().decode(data);
+                }
+            }
+        }
+
+        if (mode === 'both') {
+            return `${hexStr} [${textStr}]`;
+        } else if (mode === 'hex') {
+            return hexStr;
+        } else {
+            return textStr;
         }
     }, []);
 
@@ -357,7 +374,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         saveUIState({ filterMode: newMode });
     };
 
-    const fontFamilyClass = fontFamily === 'consolas' ? 'font-[Consolas]' : fontFamily === 'courier' ? 'font-[Courier]' : 'font-mono';
+    const fontFamilyClass = fontFamily === 'consolas' ? 'font-[Consolas]' : fontFamily === 'courier' ? 'font-[Courier]' : fontFamily === 'AppCoreFont' ? 'font-[AppCoreFont]' : 'font-mono';
 
     const handleInputStateChange = useCallback((state: { content: string, html: string, tokens: any, mode: 'text' | 'hex', lineEnding: string }) => {
         // Prevent update if content hasn't changed (simple check)
@@ -409,7 +426,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         setShowCommandEditor({
             name: generateUniqueName(commands, 'command', undefined),
             payload: payload,
-            mode: viewMode === 'hex' ? 'hex' : 'text',
+            mode: viewMode === 'text' ? 'text' : 'hex',
             tokens: {},
             lineEnding: '' // Default or detect?
         });
@@ -462,39 +479,49 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                 <div className="flex items-center gap-4">
                     {/* Stats Display - Refined JetBrains Style */}
-                    <div className="flex items-center bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] divide-x divide-[var(--border-color)] overflow-hidden h-7">
+                    <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
                         <div
-                            className={`flex items-center gap-1.5 px-2.5 h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] bg-transparent'}`}
+                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
                             title="Click to filter TX only"
                             onClick={() => toggleFilter('tx')}
                         >
-                            <span className="text-[11px] font-bold font-mono">T:</span>
+                            <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
                         <div
-                            className={`flex items-center gap-1.5 px-2.5 h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] bg-transparent'}`}
+                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
                             title="Click to filter RX only"
                             onClick={() => toggleFilter('rx')}
                         >
-                            <span className="text-[11px] font-bold font-mono">R:</span>
+                            <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
                     {/* Mode Toggle & Options Group */}
                     <div className="flex items-center gap-1.5">
                         {/* Hex/Text Display Mode */}
-                        <div className="flex items-center gap-0.5 bg-[var(--input-background)] p-0.5 rounded-[3px] border border-[var(--border-color)] h-7">
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
                             <button
-                                className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`}
-                                onClick={() => { setViewMode('text'); saveUIState({ viewMode: 'text' }); }}
-                            >
-                                TXT
-                            </button>
-                            <button
-                                className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`}
-                                onClick={() => { setViewMode('hex'); saveUIState({ viewMode: 'hex' }); }}
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                onClick={() => {
+                                    if (viewMode === 'hex') return; // Cannot unselect the only active mode
+                                    const newMode = viewMode === 'both' ? 'text' : 'both';
+                                    setViewMode(newMode);
+                                    saveUIState({ viewMode: newMode });
+                                }}
                             >
                                 HEX
+                            </button>
+                            <button
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                onClick={() => {
+                                    if (viewMode === 'text') return; // Cannot unselect the only active mode
+                                    const newMode = viewMode === 'both' ? 'hex' : 'both';
+                                    setViewMode(newMode);
+                                    saveUIState({ viewMode: newMode });
+                                }}
+                            >
+                                TXT
                             </button>
                         </div>
 
@@ -502,7 +529,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         {/* Options Menu Button and Panel */}
                         <div className="relative">
                             <button
-                                className={`h-7 px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
+                                className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
                                 onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                                 title="Options"
                             >
@@ -708,7 +735,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
                         <button
-                            className={`p-1 rounded transition-colors ${autoScroll ? 'text-[#4ec9b0] bg-[#1e1e1e]' : 'text-[#969696] hover:text-[#cccccc] hover:bg-[#3c3c3c]'}`}
+                            className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
                             onClick={() => {
                                 const newState = !autoScroll;
                                 setAutoScroll(newState);
@@ -727,7 +754,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             <ArrowDownToLine size={14} />
                         </button>
                         <button
-                            className="p-1 hover:bg-[#3c3c3c] rounded text-[#969696] hover:text-[#cccccc] transition-colors"
+                            className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
                             onClick={handleClearLogs}
                             title="Clear Logs"
                         >
@@ -764,7 +791,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     className="absolute inset-0 overflow-auto p-4"
                     style={{
                         fontSize: `${fontSize}px`,
-                        fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'),
+                        fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'),
                         lineHeight: '1.5'
                     }}
                     ref={scrollRef}

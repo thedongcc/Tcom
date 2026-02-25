@@ -184,22 +184,22 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
     const uiState = (config as any).uiState || {};
 
-    const [viewMode, setViewMode] = useState<'text' | 'hex'>(uiState.viewMode || 'hex');
+    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
     const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
-    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || themeConfig.typography.fontSize || 13);
+    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || themeConfig.typography.fontSize || 15);
 
     // Sync fontSize with global theme when not overridden locally
     useEffect(() => {
         if (uiState.fontSize === undefined) {
-            setFontSize(themeConfig.typography.fontSize || 13);
+            setFontSize(themeConfig.typography.fontSize || 15);
         }
     }, [themeConfig.typography.fontSize, uiState.fontSize]);
-    const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'mono');
+    const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -251,16 +251,33 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
     }, [session.id, sessionManager, config]);
 
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex', enc: string) => {
-        if (mode === 'hex') {
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => {
+        let hexStr = '';
+        let textStr = '';
+
+        if (mode === 'hex' || mode === 'both') {
             const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+            hexStr = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
         }
-        if (typeof data === 'string') return data;
-        try {
-            return new TextDecoder(enc).decode(data);
-        } catch {
-            return new TextDecoder().decode(data);
+
+        if (mode === 'text' || mode === 'both') {
+            if (typeof data === 'string') {
+                textStr = data;
+            } else {
+                try {
+                    textStr = new TextDecoder(enc).decode(data);
+                } catch {
+                    textStr = new TextDecoder().decode(data);
+                }
+            }
+        }
+
+        if (mode === 'both') {
+            return `${hexStr} [${textStr}]`;
+        } else if (mode === 'hex') {
+            return hexStr;
+        } else {
+            return textStr;
         }
     }, []);
 
@@ -424,87 +441,107 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] divide-x divide-[var(--border-color)] overflow-hidden shadow-inner h-7">
-                        <div className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[11px] font-bold font-mono">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
+                    <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
+                        <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
-                        <div className={`flex items-center gap-1.5 px-2.5 h-full cursor-pointer transition-colors ${filterMode === 'rx' ? 'bg-emerald-500 text-white' : 'hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[11px] font-bold font-mono">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
+                        <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-0.5 bg-[var(--input-background)] p-0.5 rounded-[3px] border border-[var(--border-color)] h-7">
-                        {(['text', 'hex'] as const).map(m => (
-                            <button key={m} className={`px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'}`} onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}>{m === 'text' ? 'TXT' : 'HEX'}</button>
-                        ))}
-                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
+                            <button
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                onClick={() => {
+                                    if (viewMode === 'hex') return;
+                                    const newMode = viewMode === 'both' ? 'text' : 'both';
+                                    setViewMode(newMode);
+                                    saveUIState({ viewMode: newMode });
+                                }}
+                            >
+                                HEX
+                            </button>
+                            <button
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                onClick={() => {
+                                    if (viewMode === 'text') return;
+                                    const newMode = viewMode === 'both' ? 'hex' : 'both';
+                                    setViewMode(newMode);
+                                    saveUIState({ viewMode: newMode });
+                                }}
+                            >
+                                TXT
+                            </button>
+                        </div>
 
+                        <div className="relative">
+                            <button className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
+                                <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
+                            </button>
+                            {showOptionsMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
+                                    <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
+                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
+                                            <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
+                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
+                                        </div>
+                                        <div className="space-y-4 px-1">
+                                            <div className="space-y-2.5">
+                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
+                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
+                                                <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }} />
+                                                <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
+                                                <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
+                                                <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
+                                                <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
+                                                <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
 
-                    <div className="relative">
-                        <button className={`h-7 px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
-                            <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
-                        </button>
-                        {showOptionsMenu && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
-                                        <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
-                                        <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
-                                    </div>
-                                    <div className="space-y-4 px-1">
-                                        <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
-                                            <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }} />
-                                            <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
-                                            <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
-                                            <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
-                                            <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
-                                            <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
-
-                                            <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
-                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
-                                                    <CustomSelect
-                                                        items={availableFonts}
-                                                        value={fontFamily}
-                                                        onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val }); }}
-                                                    />
-                                                </div>
-                                                <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
-                                                    <CustomSelect
-                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                            label: `${size}px`,
-                                                            value: size.toString()
-                                                        }))}
-                                                        value={fontSize.toString()}
-                                                        onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
-                                                    />
+                                                <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
+                                                    <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
+                                                        <CustomSelect
+                                                            items={availableFonts}
+                                                            value={fontFamily}
+                                                            onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val }); }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 mt-2">
+                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
+                                                        <CustomSelect
+                                                            items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
+                                                                label: `${size}px`,
+                                                                value: size.toString()
+                                                            }))}
+                                                            value={fontSize.toString()}
+                                                            onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
-                                                <Download size={14} /> {t('monitor.exportLog')}
-                                            </button>
+                                            <div className="pt-2 border-t border-[var(--menu-border-color)]">
+                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                                    <Download size={14} /> {t('monitor.exportLog')}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-1 border-l border-[var(--border-color)] pl-2 h-7">
-                        <button className={`w-7 h-7 flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--list-active-background)] text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
+                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
+                        <button className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
                             <ArrowDownToLine size={14} />
                         </button>
-                        <button className="w-7 h-7 flex items-center justify-center rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] transition-colors" onClick={handleClearLogs}><Trash2 size={14} /></button>
+                        <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
                     </div>
                 </div>
             </div>
@@ -542,7 +579,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         regexError={regexError}
                     />
                 </div>
-                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
+                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
                     <AnimatePresence initial={false}>
                         {filteredLogs.slice(-400).map((log) => (
                             <LogItem key={log.id} log={log} isNewLog={log.timestamp > mountTimeRef.current} effectiveSmooth={smoothScroll} viewMode={viewMode} encoding={encoding} showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength} mergeRepeats={mergeRepeats} virtualSerialPort={(config as MonitorSessionConfig).virtualSerialPort} physicalPortPath={(config as MonitorSessionConfig).connection?.path || 'DEV'} onContextMenu={handleLogContextMenu} formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText} timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch} />
