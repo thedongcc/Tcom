@@ -50,12 +50,12 @@ export const Com0Com = {
         return pairs;
     },
 
-    listPairs: async (setupcPath: string): Promise<PairInfo[]> => {
+    listPairs: async (setupcPath: string, silent = false): Promise<PairInfo[]> => {
         if (!window.com0comAPI) throw new Error('com0comAPI not available');
         // Command: setupc list
         // We need to quote path if it has spaces
         const cmd = `"${setupcPath}" list`;
-        const res = await window.com0comAPI.exec(cmd);
+        const res = await window.com0comAPI.exec(cmd, silent);
         if (!res.success) throw new Error(res.error || res.stderr);
         return Com0Com.parsePairs(res.stdout || '');
     },

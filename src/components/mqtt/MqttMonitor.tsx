@@ -44,6 +44,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : false);
+    const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 15);
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
@@ -125,12 +126,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         onUpdateConfig({
             uiState: {
                 ...currentUI,
-                viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll,
+                viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, flashNewMessage,
                 fontSize, fontFamily, mergeRepeats, filterMode,
                 ...updates,  // updates 最后展开，确保新值不被旧 state 覆盖
             }
         });
-    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, fontSize, fontFamily, mergeRepeats, filterMode]);
+    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, flashNewMessage, fontSize, fontFamily, mergeRepeats, filterMode]);
 
     // Search Hook
     const {
@@ -313,19 +314,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         });
     }, [logs, filterMode, config.topics]);
 
-    const prevLogsRef = useRef(logs);
-    useEffect(() => {
-        const isNewData = logs !== prevLogsRef.current;
-        prevLogsRef.current = logs;
-        if (isNewData && scrollRef.current && autoScroll) {
-            requestAnimationFrame(() => {
-                if (scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                    scrollPositions.set(session.id, scrollRef.current.scrollHeight);
-                }
-            });
+    useLayoutEffect(() => {
+        if (autoScroll && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollPositions.set(session.id, scrollRef.current.scrollHeight);
         }
-    }, [logs, autoScroll, filterMode, session.id]);
+    }, [logs, autoScroll, session.id]);
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) {
@@ -425,6 +419,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                             <div className="space-y-2.5">
                                                 <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
                                                 <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
+                                                <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
                                                 <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
                                                 <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
                                                 <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
@@ -539,23 +534,21 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         }
 
                         return (
-                            <motion.div
+                            <div
                                 key={log.id}
                                 id={`log-${log.id}`}
-                                initial={smoothScroll && isNewLog ? { opacity: 0, y: 10 } : false}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`flex w-full ${isTX ? 'justify-end' : 'justify-start'}`}
+                                className={`flex w-full ${(smoothScroll && isNewLog) ? 'animate-slide-in-up' : ''} ${isTX ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div
                                     key={`${log.id}-${log.repeatCount || 1}`}
-                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${(isNewLog || (log.repeatCount && log.repeatCount > 1)) ? 'animate-flash-new' : 'bg-[#2d2d2d]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
+                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage) ? 'animate-flash-new' : 'bg-[#2d2d2d]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
                                     style={{ borderColor: topicColor + '50' }}
                                 >
                                     <div className={`flex items-baseline gap-2 mb-1 opacity-80 text-[0.85em] font-mono ${isTX ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {showTimestamp && <span>[{formatTimestamp(log.timestamp)}]</span>}
+                                        {showTimestamp && <span className="tabular-nums tracking-tight">[{formatTimestamp(log.timestamp)}]</span>}
                                         <span className="px-1.5 rounded-[3px] border border-current opacity-90 text-[0.9em]" style={{ color: topicColor, borderColor: topicColor }}>{log.topic}</span>
                                         {showDataLength && (
-                                            <span className="text-[0.85em] opacity-70">
+                                            <span className="text-[0.85em] opacity-70 tabular-nums tracking-tight">
                                                 {getDataLengthText(log.data)}
                                             </span>
                                         )}
@@ -565,7 +558,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         {renderPayload(log)}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         );
                     })}
                 </div>

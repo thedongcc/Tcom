@@ -229,6 +229,21 @@ body {
   animation: mqtt-slide-in 0.5s ease-out;
 }
 
+/* Fast lightweight DOM slide-in for thousands of entries */
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.15s ease-out forwards;
+}
+
 /* 移除数字输入框原生上下调节点击按钮 */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {

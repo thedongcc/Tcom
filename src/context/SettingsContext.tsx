@@ -46,6 +46,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                     merged.theme = legacyTheme;
                 }
 
+                // Force default sidebar to 'explorer' (Sessions) on every startup
+                if (merged.ui) {
+                    merged.ui.activeActivityItem = 'explorer';
+                }
+
                 return merged;
             } catch (e) {
                 console.error('Failed to parse settings', e);

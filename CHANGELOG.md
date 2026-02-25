@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加系统消息中英文支持
 - 增加彻底重置按钮(Reset All)
 - 增加txt发送模式的追加选项下拉框
+- 增加高亮块、时间戳、报文方向、token等内容和文本同步调整大小的逻辑
+- 增加新消息闪烁功能开关
+- 增加定时发送时间持久化功能
 
 ### Fixed
 - 修复重复发送不被计数问题
@@ -78,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修改全局和监视区的默认字体为内嵌字体,默认字号为15px
 - 修复light主题下的mqtt标签页和配置页的组件颜色
 - 修正token内容在txt发送模式下的逻辑
+- 修复追加下拉框默认为空和custom持久化问题
 
 ### Removed
 - 取消设置中的check update功能

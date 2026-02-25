@@ -113,7 +113,7 @@ contextBridge.exposeInMainWorld('workspaceAPI', {
 });
 
 contextBridge.exposeInMainWorld('com0comAPI', {
-  exec: (command: string) => ipcRenderer.invoke('com0com:exec', command),
+  exec: (command: string, silent?: boolean) => ipcRenderer.invoke('com0com:exec', command, silent),
   installDriver: () => ipcRenderer.invoke('com0com:install'),
   setFriendlyName: (port: string, name: string) => ipcRenderer.invoke('com0com:name', { port, name }),
   isAdmin: () => ipcRenderer.invoke('app:is-admin'),

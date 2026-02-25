@@ -107,7 +107,35 @@ export const useSessionManager = () => {
             if (newLogs.length > MAX_LOGS) {
                 newLogs = newLogs.slice(-MAX_LOGS);
             }
-            return { ...s, logs: newLogs };
+
+            let newTxBytes = s.txBytes || 0;
+            let newRxBytes = s.rxBytes || 0;
+
+            bufferLogs.forEach(incoming => {
+                const len = typeof incoming.data === 'string'
+                    ? new TextEncoder().encode(incoming.data).length
+                    : incoming.data.length;
+
+                // Adjust for serial monitor vs terminal monitor log characteristics
+                // In serial monitor, RX logs don't have a topic. TX logs might have no topic.
+                // In terminal monitor, RX is topic='physical' and TX is topic='virtual'.
+                // crcStatus check applies to monitor logs (which must be 'ok' or 'none' but we just count all payload bytes)
+                if (incoming.type === 'TX') {
+                    if (!incoming.topic || incoming.topic === 'virtual') {
+                        if (incoming.crcStatus !== 'error') {
+                            newTxBytes += len * (incoming.repeatCount || 1);
+                        }
+                    }
+                } else if (incoming.type === 'RX') {
+                    if (!incoming.topic || incoming.topic === 'physical') {
+                        if (incoming.crcStatus !== 'error') {
+                            newRxBytes += len * (incoming.repeatCount || 1);
+                        }
+                    }
+                }
+            });
+
+            return { ...s, logs: newLogs, txBytes: newTxBytes, rxBytes: newRxBytes };
         }));
     }, []);
 
@@ -127,7 +155,7 @@ export const useSessionManager = () => {
     }, [flushLogBuffer]);
 
     const clearLogs = useCallback((sessionId: string) => {
-        updateSession(sessionId, () => ({ logs: [] }));
+        updateSession(sessionId, () => ({ logs: [], txBytes: 0, rxBytes: 0 }));
     }, [updateSession]);
 
     // --- Config Update with Stability ---
@@ -197,7 +225,8 @@ export const useSessionManager = () => {
         return setupcPath;
     }, [setupcPath]);
 
-    const listPorts = useCallback(async () => {
+    const listPorts = useCallback(async (isSilent?: any) => {
+        const silent = isSilent === true;
         let allPorts: SerialPortInfo[] = [];
         if ((window as any).serialAPI) {
             const res = await (window as any).serialAPI.listPorts({ includeCom0ComNames: monitorEnabledRef.current });
@@ -206,7 +235,7 @@ export const useSessionManager = () => {
         const setupcPath = findSetupcPath();
         if (monitorEnabledRef.current && setupcPath) {
             try {
-                const pairs = await Com0Com.listPairs(setupcPath);
+                const pairs = await Com0Com.listPairs(setupcPath, silent);
                 pairs.forEach(pair => {
                     if (!allPorts.find(p => p.path === pair.portA)) {
                         allPorts.push({ path: pair.portA, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portA})` });
@@ -478,7 +507,7 @@ export const useSessionManager = () => {
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
         }
 
-        const newState: SessionState = { id: newId, config: baseConfig, isConnected: false, isConnecting: false, logs: [] };
+        const newState: SessionState = { id: newId, config: baseConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] };
         setSessions(prev => [...prev, newState]);
         setActiveSessionId(newId);
         setSavedSessions(prev => [...prev, baseConfig]);
@@ -511,7 +540,7 @@ export const useSessionManager = () => {
         const existingNames = savedSessionsRef.current.map(s => s.name);
         const newName = generateUniqueName(existingNames, source.config.name, 'Copy');
         const newConfig = { ...source.config, id: newId, name: newName };
-        setSessions(prev => [...prev, { id: newId, config: newConfig as any, isConnected: false, isConnecting: false, logs: [] }]);
+        setSessions(prev => [...prev, { id: newId, config: newConfig as any, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] }]);
         setSavedSessions(prev => [...prev, newConfig as any]);
         if (workspacePathRef.current) await window.workspaceAPI?.saveSession(workspacePathRef.current, newConfig as any);
         return newId;
@@ -519,7 +548,7 @@ export const useSessionManager = () => {
 
     const openSavedSession = useCallback((config: SessionConfig) => {
         if (sessionsRef.current.some(s => s.id === config.id)) { setActiveSessionId(config.id); return; }
-        setSessions(prev => [...prev, { id: config.id, config: { ...config }, isConnected: false, isConnecting: false, logs: [] }]);
+        setSessions(prev => [...prev, { id: config.id, config: { ...config }, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] }]);
         setActiveSessionId(config.id);
     }, []);
 
@@ -537,6 +566,8 @@ export const useSessionManager = () => {
                         config: { ...config },
                         isConnected: false,
                         isConnecting: false,
+                        txBytes: 0,
+                        rxBytes: 0,
                         logs: []
                     });
                     changed = true;
@@ -554,8 +585,8 @@ export const useSessionManager = () => {
 
     // --- Background Tasks ---
     useEffect(() => {
-        listPorts();
-        const interval = setInterval(listPorts, 2000);
+        listPorts(false);
+        const interval = setInterval(() => listPorts(true), 2000);
         const initWs = async () => {
             let admin = false;
             if (window.com0comAPI?.isAdmin) {

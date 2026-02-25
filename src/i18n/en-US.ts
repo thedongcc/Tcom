@@ -221,6 +221,7 @@ export const enUS = {
         fontFamily: 'Font Family',
         systemFonts: 'System Fonts',
         smoothAnimation: 'Smooth Animation',
+        flashNewMessage: 'New Message Flash',
         timestamp: 'Timestamp',
         dataLength: 'Data Length',
         mergeRepeats: 'Merge Repeats',

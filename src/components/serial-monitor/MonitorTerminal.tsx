@@ -56,7 +56,8 @@ const LogItem = React.memo(({
     timestampFormat,
     matches = [],
     activeMatch = null,
-    mergeRepeats = true
+    mergeRepeats = true,
+    flashNewMessage
 }: any) => {
     const renderHighlightedText = (log: any, text: string) => {
         const logMatches = matches.filter((m: any) => m.logId === log.id);
@@ -99,7 +100,7 @@ const LogItem = React.memo(({
                     {translatedText}
                 </span>
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                    <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
+                    <span className="h-[1.2em] flex items-center justify-center text-[0.67em] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.4em] rounded-full border border-[#FFD700]/30 min-w-[1.6em]">
                         x{log.repeatCount}
                     </span>
                 )}
@@ -108,58 +109,54 @@ const LogItem = React.memo(({
     }
 
     return (
-        <motion.div
-            layout={effectiveSmooth ? "position" : undefined}
-            initial={effectiveSmooth && isNewLog ? { opacity: 0, x: -10 } : false}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.15 }}
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${isNewLog ? 'animate-flash-new' : ''} border border-transparent`}
+        <div
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${(effectiveSmooth && isNewLog) ? 'animate-slide-in-up' : ''} border border-transparent`}
             style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'var(--selection-background)' } as any}
             onContextMenu={(e) => onContextMenu(e, log)}
         >
             {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                <div className="shrink-0 flex items-center h-[1.6em] gap-1.5">
+                <div className="shrink-0 flex items-center h-[1.5em] select-none gap-1.5">
                     {showTimestamp && (
-                        <span className="text-[#999] font-mono opacity-90">
-                            [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS')}]
+                        <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                            [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS').trim()}]
                         </span>
                     )}
                     {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                        <span className="h-[18px] flex items-center justify-center text-[11px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-[3px] border border-[#FFD700]/30 min-w-[24px]">
+                        <span className="h-[1.4em] flex items-center justify-center text-[0.8em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.5em] rounded-[0.2em] border border-[#FFD700]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight">
                             x{log.repeatCount}
                         </span>
                     )}
                 </div>
             )}
-            <div className="flex items-center gap-1.5 shrink-0 h-[1.6em]">
+            <div className="flex items-center gap-1.5 shrink-0 h-[1.5em]">
                 {showPacketType && (
-                    <div className={`h-[18px] flex items-center justify-center font-bold font-mono px-2 rounded-[3px] text-[10px] border shadow-sm
+                    <div className={`h-[1.4em] flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-[8.2em] shrink-0 select-none pt-[1px]
                     ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}>
                         {log.type === 'TX' && log.crcStatus === 'none' ? (
-                            <span className="flex items-center gap-1">
-                                <span className="font-extrabold text-[var(--button-background)]">Tcom</span>
-                                <span className="opacity-50 text-[10px] px-0.5">→</span>
-                                <span className="opacity-90">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
-                            </span>
+                            <>
+                                <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">Tcom</span>
+                                <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
+                            </>
                         ) : (
                             log.topic === 'virtual' ? (
-                                <span className="flex items-center gap-1">
-                                    <span className="opacity-90">{virtualSerialPort}</span>
-                                    <span className="opacity-50 text-[10px] px-0.5">→</span>
-                                    <span className="font-extrabold text-[var(--button-background)]">{physicalPortPath}</span>
-                                </span>
+                                <>
+                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerialPort}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                    <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">{physicalPortPath}</span>
+                                </>
                             ) : (
-                                <span className="flex items-center gap-1">
-                                    <span className="font-extrabold text-[var(--st-rx-label)]">{physicalPortPath}</span>
-                                    <span className="opacity-50 text-[10px] px-0.5">→</span>
-                                    <span className="opacity-90">{virtualSerialPort}</span>
-                                </span>
+                                <>
+                                    <span className="font-extrabold text-[var(--st-rx-label)] truncate w-[3.5em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerialPort}</span>
+                                </>
                             )
                         )}
                     </div>
                 )}
                 {showDataLength && (
-                    <span className="h-[18px] flex items-center justify-center font-mono px-1.5 rounded-[3px] text-[11px] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)]">
+                    <span className="h-[1.4em] flex items-center justify-center font-mono select-none px-[0.5em] rounded-[0.2em] text-[0.8em] leading-none min-w-[2.4em] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] pt-[1px] tabular-nums tracking-tight shrink-0">
                         {getDataLengthText(log.data)}
                     </span>
                 )}
@@ -167,7 +164,7 @@ const LogItem = React.memo(({
             <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
                 {renderHighlightedText(log, formatData(log.data, viewMode, encoding))}
             </span>
-        </motion.div>
+        </div>
     );
 });
 
@@ -181,6 +178,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
     const mountTimeRef = useRef(Date.now());
+    const { parseSystemMessage } = useSystemMessage();
 
     const uiState = (config as any).uiState || {};
 
@@ -202,6 +200,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
+    const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>(uiState.sendTarget || 'physical');
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
@@ -332,17 +331,10 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         }
     }, [activeMatchRev]);
 
-    const prevLogsRef = useRef(logs);
-    useEffect(() => {
-        const isNewData = logs !== prevLogsRef.current;
-        prevLogsRef.current = logs;
-        if (isNewData && scrollRef.current && autoScroll) {
-            requestAnimationFrame(() => {
-                if (scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                    scrollPositions.set(session.id, scrollRef.current.scrollHeight);
-                }
-            });
+    useLayoutEffect(() => {
+        if (autoScroll && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollPositions.set(session.id, scrollRef.current.scrollHeight);
         }
     }, [logs, autoScroll, session.id]);
 
@@ -353,7 +345,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     }, [session.id]);
 
     useEffect(() => {
-        if (!scrollRef.current) return;
+        if (!scrollRef.current || !autoScroll) return;
         const observer = new ResizeObserver(() => {
             if (scrollRef.current && scrollRef.current.clientHeight > 0) {
                 if (scrollPositions.has(session.id)) {
@@ -363,12 +355,12 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         });
         observer.observe(scrollRef.current);
         return () => observer.disconnect();
-    }, [session.id]);
+    }, [session.id, autoScroll]);
 
     const handleClearLogs = () => sessionManager.clearLogs(session.id);
 
-    const txBytes = useMemo(() => logs.reduce((acc, log) => (log.type === 'TX' && log.topic === 'virtual' && log.crcStatus === 'ok' ? acc + ((typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length) * (log.repeatCount || 1)) : acc), 0), [logs]);
-    const rxBytes = useMemo(() => logs.reduce((acc, log) => (log.type === 'RX' && log.topic === 'physical' && log.crcStatus === 'ok' ? acc + ((typeof log.data === 'string' ? new TextEncoder().encode(log.data).length : log.data.length) * (log.repeatCount || 1)) : acc), 0), [logs]);
+    const txBytes = session.txBytes || 0;
+    const rxBytes = session.rxBytes || 0;
 
     const handleSend = (data: string | Uint8Array, mode: 'text' | 'hex') => {
         if (!isConnected) { showToast(t('toast.connectFirst'), 'error'); return; }
@@ -403,7 +395,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
             inputHTML: state.html,
             inputTokens: state.tokens,
             inputMode: state.mode,
-            lineEnding: state.lineEnding
+            lineEnding: state.lineEnding,
+            inputTimerInterval: state.timerInterval
         });
     }, [saveUIState]);
 
@@ -500,6 +493,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                                 <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
                                                 <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
                                                 <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
+                                                <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
 
                                                 <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
                                                     <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
@@ -538,7 +532,23 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                     </div>
 
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`} onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}>
+                        <button
+                            className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                            onClick={() => {
+                                const newState = !autoScroll;
+                                setAutoScroll(newState);
+                                saveUIState({ autoScroll: newState });
+                                // If enabling, scroll to bottom immediately
+                                if (newState && scrollRef.current) {
+                                    requestAnimationFrame(() => {
+                                        if (scrollRef.current) {
+                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                        }
+                                    });
+                                }
+                            }}
+                            title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
+                        >
                             <ArrowDownToLine size={14} />
                         </button>
                         <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
@@ -579,12 +589,115 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         regexError={regexError}
                     />
                 </div>
-                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
-                    <AnimatePresence initial={false}>
-                        {filteredLogs.slice(-400).map((log) => (
-                            <LogItem key={log.id} log={log} isNewLog={log.timestamp > mountTimeRef.current} effectiveSmooth={smoothScroll} viewMode={viewMode} encoding={encoding} showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength} mergeRepeats={mergeRepeats} virtualSerialPort={(config as MonitorSessionConfig).virtualSerialPort} physicalPortPath={(config as MonitorSessionConfig).connection?.path || 'DEV'} onContextMenu={handleLogContextMenu} formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText} timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch} />
-                        ))}
-                    </AnimatePresence>
+                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
+                    {filteredLogs.map((log) => {
+                        const isNewLog = log.timestamp > mountTimeRef.current;
+                        const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
+                        const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
+
+                        if (log.type === 'INFO' || log.type === 'ERROR') {
+                            const content = formatData(log.data, 'text', encoding).trim();
+                            const { styleClass, translatedText } = parseSystemMessage(log.type, content);
+                            return (
+                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
+                                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+                                        {translatedText}
+                                    </span>
+                                    {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                                        <span className="h-[1.2em] flex items-center justify-center text-[0.67em] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.4em] rounded-full border border-[#FFD700]/30 min-w-[1.6em]">
+                                            x{log.repeatCount}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div
+                                key={log.id}
+                                className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${(smoothScroll && isNewLog) ? 'animate-slide-in-up' : ''} border border-transparent`}
+                                style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'var(--selection-background)' } as any}
+                                onContextMenu={(e) => handleLogContextMenu(e, log)}
+                            >
+                                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                                    <div className="shrink-0 flex items-center h-[1.5em] select-none gap-1.5">
+                                        {showTimestamp && (
+                                            <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
+                                            </span>
+                                        )}
+                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                                            <span className="h-[1.4em] flex items-center justify-center text-[0.8em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.5em] rounded-[0.2em] border border-[#FFD700]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight">
+                                                x{log.repeatCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5 shrink-0 h-[1.5em]">
+                                    {showPacketType && (
+                                        <div className={`h-[1.4em] flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-[8.2em] shrink-0 select-none pt-[1px]
+                                        ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}>
+                                            {log.type === 'TX' && log.crcStatus === 'none' ? (
+                                                <>
+                                                    <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">Tcom</span>
+                                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerPort : physPort}</span>
+                                                </>
+                                            ) : (
+                                                log.topic === 'virtual' ? (
+                                                    <>
+                                                        <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerPort}</span>
+                                                        <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                                        <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">{physPort}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="font-extrabold text-[var(--st-rx-label)] truncate w-[3.5em] text-center shrink-0">{physPort}</span>
+                                                        <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
+                                                        <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerPort}</span>
+                                                    </>
+                                                )
+                                            )}
+                                        </div>
+                                    )}
+                                    {showDataLength && (
+                                        <span className="h-[1.4em] flex items-center justify-center font-mono select-none px-[0.5em] rounded-[0.2em] text-[0.8em] leading-none min-w-[2.4em] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] pt-[1px] tabular-nums tracking-tight shrink-0">
+                                            {getDataLengthText(log.data)}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
+                                    {(() => {
+                                        const text = formatData(log.data, viewMode, encoding);
+                                        const logMatches = matches.filter(m => m.logId === log.id);
+                                        if (logMatches.length === 0) return text;
+                                        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
+                                        const result: React.ReactNode[] = [];
+                                        let lastIndex = 0;
+                                        sortedMatches.forEach((match, i) => {
+                                            if (match.startIndex > lastIndex) {
+                                                result.push(text.substring(lastIndex, match.startIndex));
+                                            }
+                                            const isActive = activeMatch === match;
+                                            result.push(
+                                                <span
+                                                    key={`${log.id}-match-${i}`}
+                                                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--app-foreground)]'}
+                                                >
+                                                    {text.substring(match.startIndex, match.endIndex)}
+                                                </span>
+                                            );
+                                            lastIndex = match.endIndex;
+                                        });
+                                        if (lastIndex < text.length) {
+                                            result.push(text.substring(lastIndex));
+                                        }
+                                        return result;
+                                    })()}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
 
             </div>
@@ -594,7 +707,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                     <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
                     <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-emerald-500 text-teal-950 shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
-                <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding || '\r\n'} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
+                <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding ?? ''} initialTimerInterval={uiState.inputTimerInterval} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
             </div>
 
             {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: t('common.copy'), icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: t('common.addCommand'), icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}

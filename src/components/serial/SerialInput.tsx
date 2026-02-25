@@ -20,11 +20,12 @@ interface SerialInputProps {
     initialTokens?: Record<string, Token>;
     initialMode?: 'text' | 'hex';
     initialLineEnding?: string;
+    initialTimerInterval?: number;
     isConnected?: boolean;
     fontSize?: number;
     fontFamily?: string;
     onConnectRequest?: () => void;
-    onStateChange?: (state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: string }) => void;
+    onStateChange?: (state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => void;
     /** Hide toolbar, timer, and send button (e.g. for Command Editor) */
     hideExtras?: boolean;
 }
@@ -35,7 +36,8 @@ export const SerialInput = ({
     initialHTML = '',
     initialTokens = {},
     initialMode = 'hex',
-    initialLineEnding = '\r\n',
+    initialLineEnding = '',
+    initialTimerInterval = 1000,
     isConnected = false,
     fontSize = 15,
     fontFamily = 'AppCoreFont',
@@ -50,8 +52,8 @@ export const SerialInput = ({
     const [isEmpty, setIsEmpty] = useState(true);
     const [popover, setPopover] = useState<{ id: string; type: string; x: number; y: number; pos: number } | null>(null);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [timerInterval, setTimerInterval] = useState(1000);
-    const [timerIntervalInput, setTimerIntervalInput] = useState('1000'); // String state for input
+    const [timerInterval, setTimerInterval] = useState(initialTimerInterval);
+    const [timerIntervalInput, setTimerIntervalInput] = useState(initialTimerInterval.toString()); // String state for input
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const isReadyRef = useRef(false);
 
@@ -111,7 +113,8 @@ export const SerialInput = ({
                     html: editor.getHTML(),
                     tokens: tokensMap,
                     mode,
-                    lineEnding
+                    lineEnding,
+                    timerInterval
                 });
             }
         },
@@ -137,14 +140,15 @@ export const SerialInput = ({
             html: editor.getHTML(),
             tokens: tokensMap,
             mode,
-            lineEnding
+            lineEnding,
+            timerInterval
         });
-    }, [editor, onStateChange, mode, lineEnding]);
+    }, [editor, onStateChange, mode, lineEnding, timerInterval]);
 
-    // Sync on mode or lineEnding change
+    // Sync on mode, lineEnding, or timerInterval change
     useEffect(() => {
         syncState();
-    }, [mode, lineEnding, syncState]);
+    }, [mode, lineEnding, timerInterval, syncState]);
 
     // Initial sync once ready
     useEffect(() => {
@@ -313,11 +317,11 @@ export const SerialInput = ({
                                     dropdownWidth={110}
                                     items={[
                                         { value: '', label: 'None' },
-                                        { value: '\\n', label: 'LF (\\n)' },
-                                        { value: '\\r', label: 'CR (\\r)' },
-                                        { value: '\\r\\n', label: 'CRLF (\\r\\n)' }
+                                        { value: '\n', label: 'LF (\\n)' },
+                                        { value: '\r', label: 'CR (\\r)' },
+                                        { value: '\r\n', label: 'CRLF (\\r\\n)' }
                                     ]}
-                                    className="!w-[88px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.truncate]:!text-[10px] [&_input]:!text-[10px]"
+                                    className="!w-[88px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.text-ellipsis]:!text-[10px] [&_input]:!text-[10px]"
                                 />
                                 <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] ml-1" />
                             </div>

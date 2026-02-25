@@ -561,7 +561,6 @@ class MonitorService {
 
   // Write directly (Injection)
   async write(sessionId: string, target: 'virtual' | 'physical', data: string | number[]) {
-    console.log(`[Monitor] Write request: Session=${sessionId}, Target=${target}, DataLen=${data.length}`);
     const session = this.sessions.get(sessionId);
     if (!session) {
       console.error(`[Monitor] Write failed: Session ${sessionId} not found`);
@@ -1387,7 +1386,7 @@ function createWindow() {
 
   const { exec } = require('node:child_process');
 
-  ipcMain.handle('com0com:exec', async (_event, command: string) => {
+  ipcMain.handle('com0com:exec', async (_event, command: string, silent: boolean = false) => {
     // Check admin privileges first for non-list commands
     if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
       const isAdmin = await new Promise((resolve) => {
@@ -1403,7 +1402,7 @@ function createWindow() {
       return { success: false, error: 'Unauthorized command' };
     }
 
-    const runWithSpawn = (fullCmd: string) => {
+    const runWithSpawn = (fullCmd: string, isSilent: boolean) => {
       return new Promise((resolve) => {
         const { spawn } = require('node:child_process');
 
@@ -1431,7 +1430,7 @@ function createWindow() {
         const args = argsString ? argsString.split(/\s+/) : [];
         const cwd = exePath.includes('\\') || exePath.includes('/') ? path.dirname(exePath) : undefined;
 
-        console.log(`[com0com] Spawning: ${exePath} in ${cwd || 'default'} with args:`, args);
+        if (!isSilent) console.log(`[com0com] Spawning: ${exePath} in ${cwd || 'default'} with args:`, args);
 
         const child = spawn(exePath, args, {
           cwd,
@@ -1447,7 +1446,7 @@ function createWindow() {
         child.stderr.on('data', (d: any) => stderr += d.toString());
 
         child.on('error', (err: any) => {
-          console.error(`[com0com] Spawn error:`, err);
+          if (!isSilent) console.error(`[com0com] Spawn error:`, err);
           resolve({ success: false, error: err.message });
         });
 
@@ -1458,7 +1457,7 @@ function createWindow() {
             // Check if we need to fallback
             if (exePath === 'setupc' || exePath === 'setupc.exe') {
               const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
-              console.log(`[com0com] Global failed, trying local path: ${localSetupc}`);
+              if (!isSilent) console.log(`[com0com] Global failed, trying local path: ${localSetupc}`);
 
               // Second attempt with local path
               const localChild = spawn(localSetupc, args, {
@@ -1486,7 +1485,7 @@ function createWindow() {
       });
     };
 
-    return runWithSpawn(command);
+    return runWithSpawn(command, silent);
   });
 
   // com0com:name - Set Friendly Name for a COM port

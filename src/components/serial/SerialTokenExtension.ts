@@ -73,13 +73,13 @@ export const SerialToken = Node.create<SerialTokenOptions>({
 
             // Create container
             const dom = document.createElement('span');
-            dom.className = 'inline select-none mx-[1px] align-baseline';
+            dom.className = 'inline select-none mx-[0.1em] align-baseline';
 
             // Create content wrapper
             const span = document.createElement('span');
             span.className = `
                 inline-block
-                rounded-[2px] text-[13px] font-[family-name:var(--font-mono)] font-normal leading-none
+                rounded-[0.2em] text-[1em] font-[family-name:var(--font-mono)] font-normal leading-none
                 cursor-pointer transition-colors
             `;
 
@@ -114,7 +114,7 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                     label = `Val:${config.currentValue || config.defaultValue || '00'}`;
                 }
 
-                span.innerHTML = `<span class="opacity-50 mr-[1px]">/</span><span class="${type === 'crc' ? 'font-medium' : ''}">${label}</span>`;
+                span.innerHTML = `<span class="opacity-50 mr-[0.1em]">/</span><span class="${type === 'crc' ? 'font-medium' : ''}">${label}</span>`;
             };
 
             updateLabel(node.attrs);

@@ -219,6 +219,7 @@ export const zhCN = {
         fontFamily: '字体',
         systemFonts: '系统字体',
         smoothAnimation: '平滑滚动',
+        flashNewMessage: '新消息闪烁',
         timestamp: '显示时间戳',
         dataLength: '显示数据长度',
         mergeRepeats: '合并重复消息',

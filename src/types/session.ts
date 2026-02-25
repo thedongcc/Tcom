@@ -49,6 +49,7 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         inputTokens?: Record<string, any>; // Persist token configurations. Type 'any' to avoid circular dependency if possible, or import Token
         inputMode?: 'text' | 'hex';
         lineEnding?: '' | '\n' | '\r' | '\r\n';
+        inputTimerInterval?: number;
         // Display area
         viewMode?: 'text' | 'hex';
         filterMode?: 'all' | 'rx' | 'tx';
@@ -61,6 +62,7 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         chunkTimeout?: number; // ms to merge consecutive RX chunks
         mergeRepeats?: boolean; // Merge identical consecutive logs
         smoothScroll?: boolean;
+        flashNewMessage?: boolean;
         // Search State
         searchOpen?: boolean;
         searchQuery?: string;
@@ -101,6 +103,7 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         showAllFonts?: boolean;
         filterMode?: 'all' | 'rx' | 'tx';
         smoothScroll?: boolean;
+        flashNewMessage?: boolean;
         connectionExpanded?: boolean;
         // Search State
         searchOpen?: boolean;
@@ -135,6 +138,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         showDataLength?: boolean;
         autoScroll?: boolean;
         smoothScroll?: boolean;
+        flashNewMessage?: boolean;
         mergeRepeats?: boolean;
         filterMode?: 'all' | 'rx' | 'tx';
         inputContent?: string;
@@ -146,6 +150,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         fontFamily?: string;
         sendTarget?: 'virtual' | 'physical';
         lineEnding?: string;
+        inputTimerInterval?: number;
         searchOpen?: boolean;
         searchMatchCase?: boolean;
     };
@@ -158,6 +163,8 @@ export interface SessionState {
     config: SessionConfig;
     isConnected: boolean;
     isConnecting: boolean;
+    txBytes: number;
+    rxBytes: number;
     logs: LogEntry[];
     // We can add more runtime state here
 }

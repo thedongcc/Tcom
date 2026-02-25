@@ -43,6 +43,9 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const [scrollRatio, setScrollRatio] = useState(0);
     const [thumbHeight, setThumbHeight] = useState(0);
     const [isScrolling, setIsScrolling] = useState(false);
+    const [lastCustomValue, setLastCustomValue] = useState<string>(() => {
+        return items.some(i => i.value === value) ? '' : value;
+    });
     // 用于 fixed 定位的下拉菜单位置
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
@@ -86,12 +89,19 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 const portal = document.getElementById('custom-select-portal');
                 if (portal && portal.contains(event.target as Node)) return;
                 setIsOpen(false);
-                if (isCustomInput) setIsCustomInput(false);
+                if (isCustomInput) {
+                    if (inputRef.current) {
+                        const val = inputRef.current.value;
+                        setLastCustomValue(val);
+                        onChange(val);
+                    }
+                    setIsCustomInput(false);
+                }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isCustomInput]);
+    }, [isCustomInput, onChange]);
 
     useEffect(() => {
         if (isCustomInput && inputRef.current) {
@@ -169,7 +179,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover-background)')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
-                            <span className="truncate flex-1 py-0.5">Custom...</span>
+                            <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{lastCustomValue ? `Custom: ${lastCustomValue}` : 'Custom...'}</span>
                         </button>
                     )}
                     {items.map((item) => (
@@ -196,7 +206,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                             {showStatus && (
                                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-red-500' : 'bg-green-500'}`} />
                             )}
-                            <span className="truncate flex-1 py-0.5">{item.label}</span>
+                            <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{item.label}</span>
                         </button>
                     ))}
                 </div>
@@ -241,17 +251,21 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                     <input
                         ref={inputRef}
                         type="text"
-                        defaultValue={value}
+                        defaultValue={items.find(i => i.value === value) ? lastCustomValue : value}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                                onChange(e.currentTarget.value);
+                                const val = e.currentTarget.value;
+                                setLastCustomValue(val);
+                                onChange(val);
                                 setIsCustomInput(false);
                             } else if (e.key === 'Escape') {
                                 setIsCustomInput(false);
                             }
                         }}
                         onBlur={(e) => {
-                            onChange(e.target.value);
+                            const val = e.target.value;
+                            setLastCustomValue(val);
+                            onChange(val);
                             setIsCustomInput(false);
                         }}
                         className="w-full bg-transparent border-none outline-none px-2 h-full text-[13px]"
@@ -291,7 +305,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedItem.busy ? 'bg-red-500' : 'bg-green-500'}`}
                             />
                         )}
-                        <span className="truncate">
+                        <span className="overflow-hidden text-ellipsis whitespace-pre">
                             {selectedItem ? selectedItem.label : (allowCustom && value ? value : (placeholder || 'Select...'))}
                         </span>
                     </div>
