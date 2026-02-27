@@ -1,36 +1,12 @@
 import React, {
-    createContext, useContext, useState,
-    ReactNode, useCallback, useEffect, useRef
+    useState, useCallback, useEffect, useRef, type ReactNode
 } from 'react';
 import { Plugin, PluginContextApi, Disposable, SessionInfo, TpkgManifest } from '../types/plugin';
 import { PLUGIN_REGISTRY } from '../plugins/registry';
 import { useToast } from './ToastContext';
 import { useConfirm } from './ConfirmContext';
 import { useSession } from './SessionContext';
-
-// ─── 内部类型 ──────────────────────────────────────────────────────────────────
-
-interface PluginState {
-    plugin: Plugin;
-    isActive: boolean;
-    /** 是否为用户安装的外部插件（非内置） */
-    isExternal: boolean;
-    /** 外部插件的原始 manifest（用于持久化） */
-    manifest?: TpkgManifest;
-}
-
-interface PluginContextType {
-    plugins: PluginState[];
-    registerPlugin: (plugin: Plugin) => void;
-    activatePlugin: (pluginId: string) => void;
-    deactivatePlugin: (pluginId: string) => void;
-    uninstallPlugin: (pluginId: string) => void;
-    getPlugin: (pluginId: string) => Plugin | undefined;
-    /** 从 .tpkg JSON 字符串安装外部插件 */
-    installFromJson: (json: string) => { success: boolean; error?: string };
-}
-
-const PluginContext = createContext<PluginContextType | undefined>(undefined);
+import { PluginContext, PluginState, PluginContextType } from './PluginContextShared';
 
 const STORAGE_KEY = 'tcom:plugins';
 const EXTERNAL_STORAGE_KEY = 'tcom:external-plugins';
@@ -424,13 +400,5 @@ export const PluginProvider = ({ children }: { children: ReactNode }) => {
     );
 };
 
-export const usePluginManager = () => {
-    const context = useContext(PluginContext);
-    if (!context) {
-        throw new Error('usePluginManager must be used within a PluginProvider');
-    }
-    return context;
-};
-
-/** 获取所有已注册命令（供命令面板使用） */
 export { globalEventBus };
+export { usePluginManager } from './PluginContextShared';

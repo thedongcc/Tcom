@@ -373,6 +373,8 @@ export const enUS = {
         sessions: 'Sessions',
         configuration: 'Configuration',
         commands: 'Commands',
+        virtualPort: 'Virtual Port',
+        extensions: 'Extensions',
     },
 
     // Panel area

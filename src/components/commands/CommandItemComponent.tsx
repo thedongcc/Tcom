@@ -65,8 +65,8 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             ref={setNodeRef}
             style={{ ...style, transform: undefined }} // Explicitly disable transform
             className={`group relative flex items-center gap-2 p-1.5 border border-transparent rounded-sm select-none ${selected
-                ? 'bg-[#094771] text-white border-[#094771]'
-                : 'bg-[#2d2d2d] hover:bg-[#2a2d2e] hover:border-[#007acc] text-[#cccccc]'
+                ? 'bg-[var(--list-active-background)] text-[var(--app-foreground)] border-[var(--focus-border-color)]'
+                : 'bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] text-[var(--app-foreground)]'
                 }`}
             onClick={onSelect}
             onDoubleClick={(e) => { e.stopPropagation(); onEdit(item); }}
@@ -75,27 +75,27 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             {/* Top Drop Zone & Line */}
             <div ref={setTopRef} className="absolute top-0 left-0 right-0 h-1/2 z-10 pointer-events-none group-hover/drag:pointer-events-auto" />
             {isOverTop && !isDragging && (
-                <div className="absolute top-[-1px] left-0 right-0 h-[2px] bg-[#007acc] z-20 pointer-events-none shadow-[0_0_4px_#007acc]" />
+                <div className="absolute top-[-1px] left-0 right-0 h-[2px] bg-[var(--accent-color)] z-20 pointer-events-none shadow-[0_0_4px_var(--accent-color)]" />
             )}
 
             {/* Bottom Drop Zone & Line */}
             <div ref={setBottomRef} className="absolute bottom-0 left-0 right-0 h-1/2 z-10 pointer-events-none group-hover/drag:pointer-events-auto" />
             {isOverBottom && !isDragging && (
-                <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#007acc] z-20 pointer-events-none shadow-[0_0_4px_#007acc]" />
+                <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[var(--accent-color)] z-20 pointer-events-none shadow-[0_0_4px_var(--accent-color)]" />
             )}
 
             {/* Drag Handle */}
-            <div {...attributes} {...listeners} className="text-[#666] cursor-grab active:cursor-grabbing hover:text-[#999] opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <div {...attributes} {...listeners} className="text-[var(--activitybar-inactive-foreground)] cursor-grab active:cursor-grabbing hover:text-[var(--app-foreground)] opacity-0 group-hover:opacity-100 transition-opacity z-20">
                 <GripVertical size={12} />
             </div>
 
             {/* Icon */}
-            <div className="text-[#4ec9b0]">
+            <div className="text-[var(--st-token-crc)]">
                 <FileText size={14} />
             </div>
 
             {/* Name */}
-            <div className={`flex-1 text-[13px] truncate font-medium ${selected ? 'text-white' : 'text-[#cccccc]'}`} title={item.payload}>
+            <div className={`flex-1 text-[13px] truncate font-medium ${selected ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`} title={item.payload}>
                 {item.name}
             </div>
 
@@ -103,7 +103,7 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             <div className={`transition-opacity relative z-20 ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0)) ? 'opacity-0 group-hover:opacity-40' : 'opacity-0 group-hover:opacity-100'}`}>
                 <button
                     className={`p-1 rounded transition-colors ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0))
-                        ? 'text-[#666] hover:bg-[#333] hover:text-[#999] cursor-not-allowed'
+                        ? 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)] cursor-not-allowed'
                         : 'hover:bg-[var(--button-hover-background)] text-[var(--app-foreground)] hover:text-[var(--button-foreground)]'}`}
                     title={disabled ? "Click to Connect & Send" : "Send Command"}
                     onClick={(e) => {

@@ -160,7 +160,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
             <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto">
                 {/* 未开启虚拟串口功能时显示提示 */}
                 {(!monitorEnabled || !isAdmin) && (
-                    <div className="p-3 border border-red-500/30 bg-red-500/10 rounded-sm">
+                    <div className="p-3 border border-red-500/40 bg-red-500/10 rounded-sm">
                         <p className="text-[11px] text-[var(--st-error-text)] leading-relaxed">
                             {t('monitor.enableFirst')}
                         </p>
@@ -209,7 +209,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                         </div>
 
                         {monitorConfig.pairedPort && (
-                            <div className="px-2 py-1.5 bg-[var(--input-background)] border border-[var(--border-color)] rounded-[3px] flex items-center justify-between shadow-sm">
+                            <div className="px-2 py-1.5 bg-[var(--input-background)] border border-[var(--widget-border-color)] rounded-[3px] flex items-center justify-between shadow-sm">
                                 <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.internalBridgePort')}</span>
                                 <span className="text-[12px] font-mono text-emerald-600 dark:text-emerald-500 font-bold">{monitorConfig.pairedPort}</span>
                             </div>

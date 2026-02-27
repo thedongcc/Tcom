@@ -41,7 +41,6 @@ interface MonitorTerminalProps {
 const LogItem = React.memo(({
     log,
     isNewLog,
-    effectiveSmooth,
     viewMode,
     encoding,
     showTimestamp,
@@ -57,7 +56,8 @@ const LogItem = React.memo(({
     matches = [],
     activeMatch = null,
     mergeRepeats = true,
-    flashNewMessage
+    flashNewMessage,
+    fontSize = 15
 }: any) => {
     const renderHighlightedText = (log: any, text: string) => {
         const logMatches = matches.filter((m: any) => m.logId === log.id);
@@ -91,16 +91,22 @@ const LogItem = React.memo(({
 
     const { parseSystemMessage } = useSystemMessage();
 
+    const lineHeightPx = Math.floor(fontSize * 1.5);
+    const itemHeightPx = Math.floor(fontSize * 1.4);
+
     if (log.type === 'INFO' || log.type === 'ERROR') {
         const content = formatData(log.data, 'text', encoding).trim();
         const { styleClass, translatedText } = parseSystemMessage(log.type, content);
         return (
-            <div className="flex justify-center my-2 gap-2 items-center">
+            <div className="flex justify-center my-2 gap-2 items-center" style={{ transform: 'translateZ(0)' }}>
                 <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
                     {translatedText}
                 </span>
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                    <span className="h-[1.2em] flex items-center justify-center text-[0.67em] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.4em] rounded-full border border-[#FFD700]/30 min-w-[1.6em]">
+                    <span
+                        className="flex items-center justify-center text-[0.67em] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-[0.4em] rounded-full border border-[var(--button-background)]/30 min-w-[1.6em]"
+                        style={{ height: `${Math.floor(lineHeightPx * 0.8)}px` }}
+                    >
                         x{log.repeatCount}
                     </span>
                 )}
@@ -110,54 +116,70 @@ const LogItem = React.memo(({
 
     return (
         <div
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${(effectiveSmooth && isNewLog) ? 'animate-slide-in-up' : ''} border border-transparent`}
-            style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'var(--selection-background)' } as any}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} border border-transparent`}
+            style={{
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                transform: 'translateZ(0)',
+                lineHeight: `${lineHeightPx}px`,
+                '--flash-color': 'var(--selection-background)'
+            } as any}
             onContextMenu={(e) => onContextMenu(e, log)}
         >
             {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                <div className="shrink-0 flex items-center h-[1.5em] select-none gap-1.5">
+                <div className="shrink-0 flex items-center select-none gap-1.5" style={{ height: `${lineHeightPx}px` }}>
                     {showTimestamp && (
-                        <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                        <span className="text-[var(--activitybar-inactive-foreground)] font-mono tabular-nums tracking-tight">
                             [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS').trim()}]
-                        </span>
-                    )}
-                    {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                        <span className="h-[1.4em] flex items-center justify-center text-[0.8em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.5em] rounded-[0.2em] border border-[#FFD700]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight">
-                            x{log.repeatCount}
                         </span>
                     )}
                 </div>
             )}
-            <div className="flex items-center gap-1.5 shrink-0 h-[1.5em]">
+            <div className="flex items-center gap-1.5 shrink-0" style={{ height: `${lineHeightPx}px` }}>
                 {showPacketType && (
-                    <div className={`h-[1.4em] flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-[8.2em] shrink-0 select-none pt-[1px]
-                    ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}>
+                    <div
+                        className={`flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-auto px-1 min-w-[5.5em] shrink-0 select-none pt-[1px]
+                        ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
                         {log.type === 'TX' && log.crcStatus === 'none' ? (
                             <>
-                                <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">Tcom</span>
-                                <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
+                                <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">Tcom</span>
+                                <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
+                                <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
                             </>
                         ) : (
                             log.topic === 'virtual' ? (
                                 <>
-                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerialPort}</span>
-                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                    <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
+                                    <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-extrabold text-[var(--st-rx-label)] truncate w-[3.5em] text-center shrink-0">{physicalPortPath}</span>
-                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerialPort}</span>
+                                    <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
+                                    <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
                                 </>
                             )
                         )}
                     </div>
                 )}
                 {showDataLength && (
-                    <span className="h-[1.4em] flex items-center justify-center font-mono select-none px-[0.5em] rounded-[0.2em] text-[0.8em] leading-none min-w-[2.4em] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] pt-[1px] tabular-nums tracking-tight shrink-0">
+                    <span
+                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
                         {getDataLengthText(log.data)}
+                    </span>
+                )}
+                {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                    <span
+                        key={log.repeatCount}
+                        className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
+                        x{log.repeatCount}
                     </span>
                 )}
             </div>
@@ -177,6 +199,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const sessionManager = useSession();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
+    const initialLogCountRef = useRef(logs.length);
     const mountTimeRef = useRef(Date.now());
     const { parseSystemMessage } = useSystemMessage();
 
@@ -199,7 +222,6 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     }, [themeConfig.typography.fontSize, uiState.fontSize]);
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
-    const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
     const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>(uiState.sendTarget || 'physical');
@@ -280,7 +302,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         }
     }, []);
 
-    const getDataLengthText = useCallback((data: string | Uint8Array) => `[${(typeof data === 'string' ? new TextEncoder().encode(data).length : data.length)}B]`, []);
+    const getDataLengthText = useCallback((data: string | Uint8Array) => `${(typeof data === 'string' ? new TextEncoder().encode(data).length : data.length)}B`, []);
 
     // Search logic
     const { query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev } = useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData as any, encoding);
@@ -492,7 +514,6 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                                 <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
                                                 <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
                                                 <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
-                                                <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
                                                 <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
 
                                                 <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
@@ -589,113 +610,35 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         regexError={regexError}
                     />
                 </div>
-                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: 'var(--st-line-height, 1.5)' }}>
-                    {filteredLogs.map((log) => {
-                        const isNewLog = log.timestamp > mountTimeRef.current;
+                <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}>
+                    {filteredLogs.map((log, index) => {
+                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
 
-                        if (log.type === 'INFO' || log.type === 'ERROR') {
-                            const content = formatData(log.data, 'text', encoding).trim();
-                            const { styleClass, translatedText } = parseSystemMessage(log.type, content);
-                            return (
-                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
-                                    <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
-                                        {translatedText}
-                                    </span>
-                                    {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                                        <span className="h-[1.2em] flex items-center justify-center text-[0.67em] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.4em] rounded-full border border-[#FFD700]/30 min-w-[1.6em]">
-                                            x{log.repeatCount}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        }
-
                         return (
-                            <div
-                                key={log.id}
-                                className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${(smoothScroll && isNewLog) ? 'animate-slide-in-up' : ''} border border-transparent`}
-                                style={{ fontSize: 'inherit', fontFamily: 'inherit', '--flash-color': 'var(--selection-background)' } as any}
-                                onContextMenu={(e) => handleLogContextMenu(e, log)}
-                            >
-                                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                                    <div className="shrink-0 flex items-center h-[1.5em] select-none gap-1.5">
-                                        {showTimestamp && (
-                                            <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
-                                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
-                                            </span>
-                                        )}
-                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                                            <span className="h-[1.4em] flex items-center justify-center text-[0.8em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.5em] rounded-[0.2em] border border-[#FFD700]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight">
-                                                x{log.repeatCount}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-1.5 shrink-0 h-[1.5em]">
-                                    {showPacketType && (
-                                        <div className={`h-[1.4em] flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-[8.2em] shrink-0 select-none pt-[1px]
-                                        ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}>
-                                            {log.type === 'TX' && log.crcStatus === 'none' ? (
-                                                <>
-                                                    <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">Tcom</span>
-                                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                                    <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerPort : physPort}</span>
-                                                </>
-                                            ) : (
-                                                log.topic === 'virtual' ? (
-                                                    <>
-                                                        <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerPort}</span>
-                                                        <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                                        <span className="font-extrabold text-[var(--button-background)] truncate w-[3.5em] text-center shrink-0">{physPort}</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="font-extrabold text-[var(--st-rx-label)] truncate w-[3.5em] text-center shrink-0">{physPort}</span>
-                                                        <span className="opacity-50 text-[0.8em] shrink-0 mx-0">-&gt;</span>
-                                                        <span className="opacity-90 truncate w-[3.5em] text-center shrink-0">{virtualSerPort}</span>
-                                                    </>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-                                    {showDataLength && (
-                                        <span className="h-[1.4em] flex items-center justify-center font-mono select-none px-[0.5em] rounded-[0.2em] text-[0.8em] leading-none min-w-[2.4em] border border-[var(--border-color)] bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] pt-[1px] tabular-nums tracking-tight shrink-0">
-                                            {getDataLengthText(log.data)}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
-                                    {(() => {
-                                        const text = formatData(log.data, viewMode, encoding);
-                                        const logMatches = matches.filter(m => m.logId === log.id);
-                                        if (logMatches.length === 0) return text;
-                                        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
-                                        const result: React.ReactNode[] = [];
-                                        let lastIndex = 0;
-                                        sortedMatches.forEach((match, i) => {
-                                            if (match.startIndex > lastIndex) {
-                                                result.push(text.substring(lastIndex, match.startIndex));
-                                            }
-                                            const isActive = activeMatch === match;
-                                            result.push(
-                                                <span
-                                                    key={`${log.id}-match-${i}`}
-                                                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--app-foreground)]'}
-                                                >
-                                                    {text.substring(match.startIndex, match.endIndex)}
-                                                </span>
-                                            );
-                                            lastIndex = match.endIndex;
-                                        });
-                                        if (lastIndex < text.length) {
-                                            result.push(text.substring(lastIndex));
-                                        }
-                                        return result;
-                                    })()}
-                                </span>
-                            </div>
+                            <LogItem
+                                key={`${log.id}-${log.repeatCount || 1}`}
+                                log={log}
+                                isNewLog={isNewLog}
+                                viewMode={viewMode}
+                                encoding={encoding}
+                                showTimestamp={showTimestamp}
+                                showPacketType={showPacketType}
+                                showDataLength={showDataLength}
+                                virtualSerialPort={virtualSerPort}
+                                physicalPortPath={physPort}
+                                onContextMenu={handleLogContextMenu}
+                                formatData={formatData}
+                                formatTimestamp={formatTimestamp}
+                                getDataLengthText={getDataLengthText}
+                                timestampFormat={themeConfig.timestampFormat}
+                                matches={matches}
+                                activeMatch={activeMatch}
+                                mergeRepeats={mergeRepeats}
+                                flashNewMessage={flashNewMessage}
+                                fontSize={fontSize}
+                            />
                         );
                     })}
                 </div>

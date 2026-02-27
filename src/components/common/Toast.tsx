@@ -88,9 +88,9 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
         <div
             className={`
                 relative flex items-center gap-3 px-4 py-3 
-                bg-[#252526] border-2
+                bg-[var(--widget-background)] border-2
                 rounded-md min-w-[300px] max-w-[400px]
-                cursor-pointer 
+                cursor-pointer shadow-lg
                 transition-all duration-300 ease-in-out
                 hover:opacity-90 
             `}
@@ -106,10 +106,10 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
             <div className="shrink-0">
                 {styles.icon}
             </div>
-            <span className="text-sm font-medium text-[#e0e0e0] flex-1 break-words leading-tight">
+            <span className="text-sm font-medium text-[var(--app-foreground)] flex-1 break-words leading-tight">
                 {message}
             </span>
-            <X size={14} className="text-[#666] hover:text-[#999] shrink-0" />
+            <X size={14} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] shrink-0" />
         </div>
     );
 };

@@ -13,6 +13,7 @@ interface CommandContextType {
     deleteEntity: (id: string) => void;
     deleteEntities: (ids: string[]) => void;
     duplicateEntity: (id: string, newParentId?: string) => void;
+    duplicateEntities: (ids: string[], newParentId?: string) => void;
     clearAll: () => void;
     setAllCommands: (newCommands: CommandEntity[]) => void;
     importCommands: () => void;
@@ -113,17 +114,24 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
             if (!itemToClone) return prev;
 
             // Recursive Cloner
-            const cloneRecursive = (item: CommandEntity, parentId: string | null): CommandEntity[] => {
+            const cloneRecursive = (item: CommandEntity, parentId: string | null, allCommands: CommandEntity[]): CommandEntity[] => {
                 const newId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
-                // Deep Copy Object
-                // Note: command tokens or other nested objects need explicit copy if not primitive
-                let clone = { ...item, id: newId, parentId };
+                // 在目标 parent 下生成唯一名称
+                const siblings = allCommands.filter(c => c.parentId === parentId);
+                let baseName = item.name;
+                let uniqueName = baseName;
+                let counter = 1;
+                while (siblings.some(s => s.name === uniqueName)) {
+                    uniqueName = `${baseName}_${counter}`;
+                    counter++;
+                }
+
+                let clone = { ...item, id: newId, parentId, name: uniqueName };
 
                 if (clone.type === 'command') {
                     const cmd = clone as CommandItem;
                     if (cmd.tokens) {
-                        // deep copy tokens
                         clone = { ...clone, tokens: JSON.parse(JSON.stringify(cmd.tokens)) } as CommandItem;
                     }
                 }
@@ -134,13 +142,13 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
                 if (item.type === 'group') {
                     const children = prev.filter(c => c.parentId === item.id);
                     children.forEach(child => {
-                        result = [...result, ...cloneRecursive(child, newId)];
+                        result = [...result, ...cloneRecursive(child, newId, [...allCommands, ...result])];
                     });
                 }
                 return result;
             };
 
-            const clones = cloneRecursive(itemToClone, newParentId !== undefined ? newParentId : itemToClone.parentId);
+            const clones = cloneRecursive(itemToClone, newParentId !== undefined ? newParentId : itemToClone.parentId, prev);
 
             // Determine insertion strategy
             // 1. Groups: Always append to end (User preference for ordering)
@@ -162,6 +170,48 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
             }
 
             return [...prev, ...clones];
+        });
+    }, [setCommands]);
+
+    // 批量深复制（一次性在单个历史记录中完成，支持一次撤回）
+    const duplicateEntities = useCallback((ids: string[], newParentId?: string) => {
+        setCommands(prev => {
+            const cloneRecursiveBatch = (item: CommandEntity, parentId: string | null, allCommands: CommandEntity[]): CommandEntity[] => {
+                const newId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const siblings = allCommands.filter(c => c.parentId === parentId);
+                let baseName = item.name;
+                let uniqueName = baseName;
+                let counter = 1;
+                while (siblings.some(s => s.name === uniqueName)) {
+                    uniqueName = `${baseName}_${counter}`;
+                    counter++;
+                }
+                let clone = { ...item, id: newId, parentId, name: uniqueName };
+                if (clone.type === 'command') {
+                    const cmd = clone as CommandItem;
+                    if (cmd.tokens) {
+                        clone = { ...clone, tokens: JSON.parse(JSON.stringify(cmd.tokens)) } as CommandItem;
+                    }
+                }
+                let result = [clone];
+                if (item.type === 'group') {
+                    const children = prev.filter(c => c.parentId === item.id);
+                    children.forEach(child => {
+                        result = [...result, ...cloneRecursiveBatch(child, newId, [...allCommands, ...result])];
+                    });
+                }
+                return result;
+            };
+
+            let accumulated = [...prev];
+            for (const id of ids) {
+                const itemToClone = accumulated.find(c => c.id === id);
+                if (!itemToClone) continue;
+                const targetParent = newParentId !== undefined ? newParentId : itemToClone.parentId;
+                const clones = cloneRecursiveBatch(itemToClone, targetParent, accumulated);
+                accumulated = [...accumulated, ...clones];
+            }
+            return accumulated;
         });
     }, [setCommands]);
 
@@ -236,6 +286,7 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
         deleteEntity,
         deleteEntities,
         duplicateEntity,
+        duplicateEntities,
         clearAll,
         setAllCommands,
         importCommands,

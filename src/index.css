@@ -108,6 +108,14 @@ div[data-direction="vertical"]:hover {
   --menu-border-color: #454545;
 
   --font-mono: 'AppCoreFont', 'Microsoft YaHei', monospace;
+
+  /* JSON Syntax Highlighting - Default (Dark) */
+  --st-json-key: #9cdcfe;
+  --st-json-string: #ce9178;
+  --st-json-number: #b5cea8;
+  --st-json-boolean: #569cd6;
+  --st-json-punctuation: #ffd700;
+  --st-json-null: #569cd6;
 }
 
 
@@ -175,7 +183,7 @@ body {
   }
 
   100% {
-    background-color: rgba(255, 215, 0, 0.1);
+    background-color: transparent;
     box-shadow: none;
     transform: scale(1);
   }
@@ -254,4 +262,28 @@ input::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* 隐藏滚动条但保留滚动效果 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* 移除所有点击或拖拽时的默认焦点橙色/蓝色框 */
+*:focus {
+  outline: none !important;
+}
+
+div[data-handler-id]:focus,
+div[role="button"]:focus,
+div[tabindex]:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }

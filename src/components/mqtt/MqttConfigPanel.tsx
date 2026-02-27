@@ -77,7 +77,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                 </div>
 
                 {isConnectionExpanded && (
-                    <div className="p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 flex flex-col gap-2.5 animate-in slide-in-from-top-2 duration-200">
                         {/* Host */}
                         <div className="flex flex-col gap-1 min-w-0">
                             <label className={labelCls}>{t('mqtt.broker')}</label>
@@ -185,7 +185,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         </div>
 
                         {/* KeepAlive + Timeout */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col gap-1">
                                 <label className={labelCls}>{t('mqtt.keepAlive')}</label>
                                 <input
@@ -261,7 +261,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                     {t('mqtt.subscriptions')}
                 </div>
 
-                <div className="p-4 flex flex-col gap-4 min-h-0">
+                <div className="p-3 flex flex-col gap-3 min-h-0">
                     <div className="flex flex-col gap-2 shrink-0">
                         <input
                             className={inputCls}

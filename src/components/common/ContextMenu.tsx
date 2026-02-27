@@ -48,12 +48,12 @@ export const ContextMenu = ({ x, y, items, onClose }: Props) => {
         <div
 
             ref={ref}
-            className="fixed z-[9999] bg-[#1e1e1e]/95 backdrop-blur-sm border border-[#454545] shadow-xl rounded-md py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-[9999] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-xl rounded-md py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
             style={style}
         >
             {items.map((item, idx) => {
                 if (item.separator) {
-                    return <div key={idx} className="h-[1px] bg-[#454545] my-1" />;
+                    return <div key={idx} className="h-[1px] bg-[var(--menu-border-color)] my-1" />;
                 }
                 return (
                     <div

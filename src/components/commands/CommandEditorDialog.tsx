@@ -81,45 +81,49 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
         }
     };
 
+    // 标题文本：编辑命令 / 编辑分组
+    const dialogTitle = isCommand ? t('command.editCommand') : t('command.editGroup');
+
     return (
         <div
             className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
             onKeyDown={handleKeyDown}
-            onClick={onClose} // Click backdrop to close
+        /* 移除点击蒙版关闭行为 */
         >
             <div
-                className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[600px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+                className="bg-[var(--app-background)] border border-[var(--widget-border-color)] shadow-2xl w-[600px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                 tabIndex={-1}
                 style={{ outline: 'none' }}
-                onClick={(e) => {
-                    // Prevent closing when clicking inside the dialog
-                    e.stopPropagation();
-                }}
+                onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                    <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{t('command.editCommand')} {isCommand ? t('command.commandName') : 'Group'}</span>
+                {/* 标题栏 */}
+                <div className="flex items-center justify-between p-2.5 border-b border-[var(--widget-border-color)] bg-[var(--sidebar-background)]">
+                    <span className="text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wider">{dialogTitle}</span>
                     <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
                         <X size={14} />
                     </button>
                 </div>
 
-                <div className="p-5 flex flex-col gap-5 bg-[#1e1e1e]">
+                {/* 内容区 */}
+                <div className="p-5 flex flex-col gap-5 bg-[var(--app-background)]">
+                    {/* 命令名称 */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">{t('command.commandName')}</label>
+                        <label className="text-[11px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wide">{t('command.commandName')}</label>
                         <input
-                            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--focus-border-color)] text-[13px] transition-all"
+                            className="bg-[var(--input-background)] border border-[var(--widget-border-color)] text-[var(--app-foreground)] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--focus-border-color)] text-[13px] transition-all"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoFocus
                         />
                     </div>
 
+                    {/* 命令内容 - 仅命令类型显示 */}
                     {isCommand && commandItem && (
                         <div className="flex flex-col gap-1.5 pt-1">
-                            <label className="text-[11px] font-bold text-[#969696] uppercase tracking-wide">Content</label>
-                            <div className="border border-[#3c3c3c] rounded-sm bg-[#252526] p-1 shadow-inner">
+                            <label className="text-[11px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wide">Content</label>
+                            <div className="border border-[var(--widget-border-color)] rounded-sm bg-[var(--input-background)] p-1 shadow-inner">
                                 <SerialInput
-                                    onSend={() => { }} // We don't send from editor
+                                    onSend={() => { }} // 编辑器模式不发送
                                     initialContent={commandItem.payload}
                                     initialHTML={commandItem.html}
                                     initialTokens={commandItem.tokens}
@@ -135,15 +139,16 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                     )}
                 </div>
 
-                <div className="p-3 border-t border-[#3c3c3c] flex justify-end gap-2 bg-[#2d2d2d]">
+                {/* 底部按钮 */}
+                <div className="p-3 border-t border-[var(--widget-border-color)] flex justify-end gap-2 bg-[var(--sidebar-background)]">
                     <button
-                        className="px-4 py-1.5 text-xs text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm transition-colors"
+                        className="px-4 py-1.5 text-xs text-[var(--app-foreground)] hover:bg-[var(--hover-background)] rounded-sm transition-colors"
                         onClick={onClose}
                     >
                         {t('common.cancel')}
                     </button>
                     <button
-                        className="px-4 py-1.5 text-xs text-white bg-[#0e639c] hover:bg-[#1177bb] rounded-sm font-medium transition-all shadow-md active:scale-95"
+                        className="px-4 py-1.5 text-xs text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] rounded-sm font-medium transition-all shadow-md active:scale-95"
                         onClick={handleSave}
                     >
                         {t('common.save')}

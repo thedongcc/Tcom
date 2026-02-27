@@ -182,9 +182,9 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                             <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{lastCustomValue ? `Custom: ${lastCustomValue}` : 'Custom...'}</span>
                         </button>
                     )}
-                    {items.map((item) => (
+                    {items.map((item, index) => (
                         <button
-                            key={item.value}
+                            key={`${item.value}-${index}`}
                             type="button"
                             disabled={item.disabled}
                             onClick={() => {

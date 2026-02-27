@@ -7,23 +7,24 @@ import { EditorArea } from './EditorArea';
 import { Panel } from './Panel';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { useSessionManager } from '../../hooks/useSessionManager';
-import { SessionProvider } from '../../context/SessionContext';
-import { SessionConfig } from '../../types/session';
-
-import { PluginProvider } from '../../context/PluginContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 
-export const Layout = ({ children }: { children?: ReactNode }) => {
+interface LayoutProps {
+    children?: ReactNode;
+    sessionManager: ReturnType<typeof useSessionManager>;
+    editorLayout: ReturnType<typeof useEditorLayout>;
+}
+
+export const Layout = ({ children, sessionManager, editorLayout }: LayoutProps) => {
     const { config, updateUI } = useSettings();
     const { t } = useI18n();
     const activeView = config.ui.activeActivityItem;
     const setActiveView = (view: string) => updateUI({ activeActivityItem: view });
 
-    const sessionManager = useSessionManager();
-    const editorLayout = useEditorLayout();
+    // sessionManager and editorLayout now come from props
     const { showUpdateDialog, setShowUpdateDialog } = useAutoUpdate();
     const restoredIdsRef = useRef<Set<string>>(new Set());
 
@@ -97,37 +98,33 @@ export const Layout = ({ children }: { children?: ReactNode }) => {
     };
 
     return (
-        <SessionProvider manager={sessionManager}>
-            <PluginProvider>
-                <div className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden">
-                    <TitleBar />
-                    <div className={`flex-1 flex overflow-hidden ${sidebarAtRight ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <ActivityBar
-                            activeView={activeView}
-                            onViewChange={setActiveView}
-                            onOpenSettings={handleOpenSettings}
-                        />
-                        <SideBar
-                            activeView={activeView}
-                            onViewChange={setActiveView}
-                            sessionManager={sessionManager}
-                            editorLayout={editorLayout}
-                        />
+        <div className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden">
+            <TitleBar />
+            <div className={`flex-1 flex overflow-hidden ${sidebarAtRight ? 'flex-row-reverse' : 'flex-row'}`}>
+                <ActivityBar
+                    activeView={activeView}
+                    onViewChange={setActiveView}
+                    onOpenSettings={handleOpenSettings}
+                />
+                <SideBar
+                    activeView={activeView}
+                    onViewChange={setActiveView}
+                    sessionManager={sessionManager}
+                    editorLayout={editorLayout}
+                />
 
-                        <div className="flex-1 flex flex-col min-w-0">
-                            <EditorArea
-                                sessionManager={sessionManager}
-                                editorLayout={editorLayout}
-                                onShowSettings={setActiveView}
-                            >
-                                {children}
-                            </EditorArea>
-                        </div>
-                    </div>
-                    {config.ui.showStatusBar && <StatusBar />}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <EditorArea
+                        sessionManager={sessionManager}
+                        editorLayout={editorLayout}
+                        onShowSettings={setActiveView}
+                    >
+                        {children}
+                    </EditorArea>
                 </div>
-                {showUpdateDialog && <UpdateDialog onClose={() => setShowUpdateDialog(false)} />}
-            </PluginProvider>
-        </SessionProvider>
+            </div>
+            {config.ui.showStatusBar && <StatusBar />}
+            {showUpdateDialog && <UpdateDialog onClose={() => setShowUpdateDialog(false)} />}
+        </div>
     );
 };

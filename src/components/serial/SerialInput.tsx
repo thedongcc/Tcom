@@ -69,7 +69,7 @@ export const SerialInput = ({
     // Memoize editorProps
     const editorProps = useMemo(() => ({
         attributes: {
-            class: "absolute inset-0 bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-none z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium h-fit flex-1",
+            class: "absolute inset-0 bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-text z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium h-fit flex-1",
             style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)')};`
         },
     }), [fontSize, fontFamily]);
@@ -303,29 +303,29 @@ export const SerialInput = ({
                         HEX
                     </button>
                 </div>
+                {/* Line Ending Selector 始终显示（文本模式下） */}
+                {mode === 'text' && (
+                    <div className="flex items-center gap-1">
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mr-1" />
+                        <CustomSelect
+                            value={lineEnding}
+                            onChange={(val) => setLineEnding(val)}
+                            allowCustom={true}
+                            dropdownWidth={110}
+                            items={[
+                                { value: '', label: 'None' },
+                                { value: '\n', label: 'LF (\\n)' },
+                                { value: '\r', label: 'CR (\\r)' },
+                                { value: '\r\n', label: 'CRLF (\\r\\n)' }
+                            ]}
+                            className="!w-[88px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.text-ellipsis]:!text-[10px] [&_input]:!text-[10px]"
+                        />
+                    </div>
+                )}
+
                 {!hideExtras && (
                     <>
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
-
-                        {/* Line Ending Selector (Only for Text Mode) */}
-                        {mode === 'text' && (
-                            <div className="flex items-center gap-1">
-                                <CustomSelect
-                                    value={lineEnding}
-                                    onChange={(val) => setLineEnding(val)}
-                                    allowCustom={true}
-                                    dropdownWidth={110}
-                                    items={[
-                                        { value: '', label: 'None' },
-                                        { value: '\n', label: 'LF (\\n)' },
-                                        { value: '\r', label: 'CR (\\r)' },
-                                        { value: '\r\n', label: 'CRLF (\\r\\n)' }
-                                    ]}
-                                    className="!w-[88px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.text-ellipsis]:!text-[10px] [&_input]:!text-[10px]"
-                                />
-                                <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] ml-1" />
-                            </div>
-                        )}
 
                         <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="CRC"
                             onClick={() => insertToken('crc')}>
@@ -399,7 +399,7 @@ export const SerialInput = ({
             </div>
 
             {/* Input Area */}
-            <div className="flex gap-2 min-h-[42px]">
+            <div className="flex gap-2 min-h-[80px]">
 
                 <div
                     className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--border-color)] rounded-sm focus-within:border-[var(--focus-border-color)] cursor-text flex flex-col bg-cover bg-center"
@@ -413,12 +413,12 @@ export const SerialInput = ({
                     <button
                         className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
                             ? (isEmpty ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
-                            : 'bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
+                            : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
                         onClick={() => handleSend()}
-                        title={isConnected ? (isEmpty ? 'Type message to send' : 'Send Data') : 'Connect and Send'}
+                        title={isConnected ? (isEmpty ? t('toast.sendEmpty') : t('serial.send')) : t('serial.connect')}
                     >
                         {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]"></div></div>}
-                        <span className="text-[10px]">{isConnected ? 'Send' : 'Connect'}</span>
+                        <span className="text-[10px]">{isConnected ? t('serial.send') : t('serial.connect')}</span>
                     </button>
                 )}
             </div>

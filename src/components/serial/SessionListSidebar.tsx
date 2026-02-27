@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { FolderOpen, Plus, Trash2, Edit2, Network, Cpu, FolderClosed, X, MoreHorizontal, Check } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Edit2, Network, Cpu, FolderClosed, X, MoreHorizontal, Check, RefreshCw } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { NewSessionDialog } from '../session/NewSessionDialog';
@@ -127,6 +127,17 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                             <span className="truncate">{workspaceFolderName}</span>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
+                            <div
+                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
+                                title={t('monitor.refresh')}
+                                onClick={() => {
+                                    if (sessionManager.workspacePath) {
+                                        sessionManager.openWorkspace(sessionManager.workspacePath);
+                                    }
+                                }}
+                            >
+                                <RefreshCw size={13} className="opacity-70 hover:opacity-100" />
+                            </div>
                             <div
                                 ref={recentButtonRef}
                                 className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"

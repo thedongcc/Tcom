@@ -19,7 +19,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
     const { confirm } = useConfirm();
     const { showToast } = useToast();
     const { t } = useI18n();
-    const { ports, isAdmin, monitorEnabled, toggleMonitor, setupcPath, setSetupcPath } = sessionManager;
+    const { ports, isAdmin, monitorEnabled, toggleMonitor, setupcPath, setSetupcPath, sessions } = sessionManager;
 
     const [isCreatingPair, setIsCreatingPair] = useState(false);
     const [newPairExt, setNewPairExt] = useState('COM11');
@@ -135,15 +135,30 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
         }
     };
 
+    // 关闭虚拟串口功能前，检查所有 monitor 会话是否已停止
+    const handleToggleMonitor = (checked: boolean) => {
+        if (!checked) {
+            // 检查是否有 monitor 会话正在运行
+            const runningMonitors = (sessions || []).filter(
+                (s: any) => s.config?.type === 'monitor' && s.isConnected
+            );
+            if (runningMonitors.length > 0) {
+                showToast(t('monitor.stopFirst'), 'warning');
+                return;
+            }
+        }
+        toggleMonitor(checked);
+    };
+
     return (
         <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)] overflow-y-auto w-full">
             <div className="p-4 flex flex-col gap-4">
                 {/* Global Monitor Enable Switch */}
-                <div className="border border-[var(--border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
+                <div className="border border-[var(--widget-border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
                     <Switch
                         label={t('monitor.enableVirtualMonitor')}
                         checked={monitorEnabled}
-                        onChange={(checked) => toggleMonitor(checked)}
+                        onChange={(checked) => handleToggleMonitor(checked)}
                         disabled={!isAdmin}
                     />
                     {!isAdmin && (
@@ -202,7 +217,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                     </div>
 
                     {/* Virtual Pair Management */}
-                    <div className="flex flex-col gap-2 border border-[var(--border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
+                    <div className="flex flex-col gap-2 border border-[var(--widget-border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
                         <div className="text-[11px] text-[var(--activitybar-inactive-foreground)] flex justify-between items-center mb-1 font-medium">
                             <span>{t('monitor.virtualPairs')}</span>
                             <div className="flex gap-1 items-center">

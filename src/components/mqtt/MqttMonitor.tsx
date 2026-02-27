@@ -35,15 +35,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     const { parseSystemMessage } = useSystemMessage();
     const { logs, isConnected, config } = session;
     const scrollRef = useRef<HTMLDivElement>(null);
-    const mountTimeRef = useRef(Date.now());
-
-    // UI States
+    const topicDropdownRef = useRef<HTMLDivElement>(null);
     const uiState = config.uiState || {};
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'json'>(uiState.viewMode || 'text');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
-    const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : false);
     const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 15);
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
@@ -81,22 +78,23 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 ];
 
                 const final = [
-                    { label: '-- Built-in --', value: '', disabled: true },
+                    { label: '-- Built-in --', value: 'header-built-in', disabled: true },
                     ...builtIn,
-                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...mono] : []),
-                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...prop] : [])
+                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: 'header-mono', disabled: true }, ...mono] : []),
+                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: 'header-prop', disabled: true }, ...prop] : [])
                 ];
                 setAvailableFonts(final);
             });
         }
     }, []);
 
-    // Publish Area State
-    const [topic, setTopic] = useState('test/topic');
-    const [payload, setPayload] = useState('{"msg": "hello"}');
+    // Publish Area State（从 uiState 恢复持久化数据）
+    const [topic, setTopic] = useState(uiState.publishTopic || '');
+    const [payload, setPayload] = useState(uiState.publishPayload || '{"msg": "hello"}');
     const [qos, setQos] = useState<0 | 1 | 2>(0);
     const [retain, setRetain] = useState(false);
-    const [publishFormat, setPublishFormat] = useState<'text' | 'hex' | 'json'>('text');
+    const [publishFormat, setPublishFormat] = useState<'text' | 'hex' | 'json' | 'base64'>(uiState.publishFormat || 'text');
+    const [showTopicDropdown, setShowTopicDropdown] = useState(false);
 
     // --- Core Logic ---
 
@@ -112,6 +110,13 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 return JSON.stringify(obj, null, 2);
             } catch { /* fallback */ }
         }
+        if (mode === 'base64') {
+            try {
+                const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+                const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+                return btoa(binString);
+            } catch { return '[Base64 Error]'; }
+        }
         if (typeof data === 'string') return data;
         try {
             return new TextDecoder().decode(data);
@@ -126,12 +131,18 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         onUpdateConfig({
             uiState: {
                 ...currentUI,
-                viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, flashNewMessage,
+                viewMode, showTimestamp, showDataLength, autoScroll, flashNewMessage,
                 fontSize, fontFamily, mergeRepeats, filterMode,
                 ...updates,  // updates 最后展开，确保新值不被旧 state 覆盖
             }
         });
-    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, smoothScroll, flashNewMessage, fontSize, fontFamily, mergeRepeats, filterMode]);
+    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, flashNewMessage, fontSize, fontFamily, mergeRepeats, filterMode]);
+
+    // 已订阅的主题列表，供发送区下拉选择
+    const subscribedTopics = useMemo(() =>
+        (config.topics || []).filter((t: any) => t.subscribed),
+        [config.topics]
+    );
 
     // Search Hook
     const {
@@ -183,6 +194,28 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         }
     }, [activeMatchRev]);
 
+    // 新消息闪烁所需的历史记录屏障
+    const initialLogCountRef = useRef(logs.length);
+    const mountTimeRef = useRef(Date.now());
+
+    useEffect(() => {
+        // 重置 mountTime 仅在初次挂载时
+        mountTimeRef.current = Date.now();
+        initialLogCountRef.current = logs.length;
+    }, []);
+
+    // Topic 下拉框点击外部关闭
+    useEffect(() => {
+        if (!showTopicDropdown) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (topicDropdownRef.current && !topicDropdownRef.current.contains(e.target as Node)) {
+                setShowTopicDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showTopicDropdown]);
+
 
     // --- Render Helpers ---
 
@@ -199,7 +232,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
     const getDataLengthText = (data: string | Uint8Array) => {
         const length = typeof data === 'string' ? new TextEncoder().encode(data).length : data.length;
-        return `[${length}B]`;
+        return `${length}B`;
     };
 
     const renderHighlightedText = (log: LogEntry, text: string) => {
@@ -244,13 +277,13 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')
                     .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[\[\]{}:,])/g, (match) => {
-                        let cls = 'color: #d4d4d4;';
+                        let cls = 'color: var(--st-json-punctuation);';
                         if (/^"/.test(match)) {
-                            cls = /:$/.test(match) ? 'color: #9cdcfe; font-weight: bold;' : 'color: #ce9178;';
-                        } else if (/true|false/.test(match)) cls = 'color: #569cd6; font-weight: bold;';
-                        else if (/null/.test(match)) cls = 'color: #569cd6; font-weight: bold;';
-                        else if (/^-?\d/.test(match)) cls = 'color: #b5cea8;';
-                        else if (/[\[\]{}:,]/.test(match)) cls = 'color: #ffd700; font-weight: bold;';
+                            cls = /:$/.test(match) ? 'color: var(--st-json-key); font-weight: bold;' : 'color: var(--st-json-string);';
+                        } else if (/true|false/.test(match)) cls = 'color: var(--st-json-boolean); font-weight: bold;';
+                        else if (/null/.test(match)) cls = 'color: var(--st-json-null); font-weight: bold;';
+                        else if (/^-?\d/.test(match)) cls = 'color: var(--st-json-number);';
+                        else if (/[\[\]{}:,]/.test(match)) cls = 'color: var(--st-json-punctuation); font-weight: bold;';
                         return `<span style="${cls}">${match}</span>`;
                     });
                 return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
@@ -281,6 +314,16 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 return;
             }
             data = new Uint8Array(cleanHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+        } else if (publishFormat === 'base64') {
+            try {
+                const binaryStr = atob(payload.trim());
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+                data = bytes;
+            } catch {
+                showToast('Invalid Base64', 'error');
+                return;
+            }
         }
         onPublish(topic, data, qos, retain);
     };
@@ -345,7 +388,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             <style>{`
                 @keyframes flash-new { 
                     0% { background-color: rgba(30, 255, 0, 0.2); } 
-                    100% { background-color: var(--editor-background); } 
+                    100% { background-color: var(--input-background); } 
                 } 
                 .animate-flash-new { 
                     animation: flash-new 1s ease-out forwards; 
@@ -389,13 +432,13 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     <div className="flex items-center gap-1.5">
                         {/* View Modes */}
                         <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
-                            {(['hex', 'text', 'json'] as const).map(m => (
+                            {(['hex', 'text', 'json', 'base64'] as const).map(m => (
                                 <button
                                     key={m}
                                     className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
-                                    onClick={() => { setViewMode(m); saveUIState({ viewMode: m }); }}
+                                    onClick={() => { setViewMode(m as any); saveUIState({ viewMode: m }); }}
                                 >
-                                    {m === 'text' ? 'TXT' : m.toUpperCase()}
+                                    {m === 'text' ? 'TXT' : m === 'base64' ? 'B64' : m.toUpperCase()}
                                 </button>
                             ))}
                         </div>
@@ -418,7 +461,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         <div className="space-y-4 px-1">
                                             <div className="space-y-2.5">
                                                 <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                                <Switch label={t('monitor.smoothAnimation')} checked={smoothScroll} onChange={val => { setSmoothScroll(val); saveUIState({ smoothScroll: val }); }} />
                                                 <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
                                                 <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
                                                 <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
@@ -510,9 +552,9 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: '1.5' }}
                 >
-                    {filteredLogs.slice(-100).map((log) => {
+                    {filteredLogs.map((log, index) => {
                         const isTX = log.type === 'TX';
-                        const isNewLog = log.timestamp > mountTimeRef.current;
+                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
                         const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
 
                         if (log.type === 'INFO' || log.type === 'ERROR' || !log.topic) {
@@ -525,7 +567,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         {translatedText}
                                     </span>
                                     {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                                        <span className="h-[18px] flex items-center justify-center text-[10px] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-1.5 rounded-full border border-[#FFD700]/30 min-w-[24px]">
+                                        <span className="h-[18px] flex items-center justify-center text-[10px] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-1.5 rounded-full border border-[var(--button-background)]/30 min-w-[24px]">
                                             x{log.repeatCount}
                                         </span>
                                     )}
@@ -537,22 +579,42 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             <div
                                 key={log.id}
                                 id={`log-${log.id}`}
-                                className={`flex w-full ${(smoothScroll && isNewLog) ? 'animate-slide-in-up' : ''} ${isTX ? 'justify-end' : 'justify-start'}`}
+                                className={`flex w-full ${isTX ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div
                                     key={`${log.id}-${log.repeatCount || 1}`}
-                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage) ? 'animate-flash-new' : 'bg-[#2d2d2d]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
+                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage && isNewLog) ? 'animate-flash-new' : 'bg-[var(--input-background)]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
                                     style={{ borderColor: topicColor + '50' }}
                                 >
-                                    <div className={`flex items-baseline gap-2 mb-1 opacity-80 text-[0.85em] font-mono ${isTX ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {showTimestamp && <span className="tabular-nums tracking-tight">[{formatTimestamp(log.timestamp)}]</span>}
-                                        <span className="px-1.5 rounded-[3px] border border-current opacity-90 text-[0.9em]" style={{ color: topicColor, borderColor: topicColor }}>{log.topic}</span>
+                                    <div className={`flex items-center gap-1.5 shrink-0 mb-1 ${isTX ? 'flex-row-reverse' : 'flex-row'}`} style={{ height: `${Math.floor(fontSize * 1.4)}px` }}>
+                                        {showTimestamp && (
+                                            <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                                                [{formatTimestamp(log.timestamp)}]
+                                            </span>
+                                        )}
+                                        <span
+                                            className="flex items-center justify-center font-bold font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm tracking-wide pt-[1px]"
+                                            style={{ color: topicColor, backgroundColor: `${topicColor}20`, border: `1px solid ${topicColor}40`, height: `${Math.floor(fontSize * 1.4)}px` }}
+                                        >
+                                            {log.topic}
+                                        </span>
                                         {showDataLength && (
-                                            <span className="text-[0.85em] opacity-70 tabular-nums tracking-tight">
+                                            <span
+                                                className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                                                style={{ height: `${Math.floor(fontSize * 1.4)}px` }}
+                                            >
                                                 {getDataLengthText(log.data)}
                                             </span>
                                         )}
-                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && <span className="text-[#FFD700]">x{log.repeatCount}</span>}
+                                        {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                                            <span
+                                                key={log.repeatCount}
+                                                className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                                                style={{ height: `${Math.floor(fontSize * 1.4)}px` }}
+                                            >
+                                                x{log.repeatCount}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className={`whitespace-pre-wrap break-all font-mono ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
                                         {renderPayload(log)}
@@ -565,32 +627,98 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             </div>
 
             {/* Publish Area */}
-            <div className="border-t border-[var(--border-color)] bg-[var(--sidebar-background)] p-2 flex flex-col gap-2 shrink-0">
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded px-2 py-1 flex-1">
-                        <span className="text-[var(--input-placeholder-color)] text-[10px]">Topic</span>
-                        <input className="bg-transparent border-none outline-none text-[var(--input-foreground)] text-[11px] flex-1 font-mono" value={topic} onChange={e => setTopic(e.target.value)} />
+            <div className="border-t border-[var(--border-color)] bg-[var(--sidebar-background)] p-2 flex flex-col gap-2 shrink-0 select-none">
+                {/* 第一行：格式下拉 + Topic 选择 + QoS + Retain */}
+                <div className="flex items-center gap-2 h-[26px]">
+                    {/* 格式选择下拉 (移到 Topic 左侧) */}
+                    <div className="shrink-0">
+                        <CustomSelect
+                            className="!w-[80px] [&_button]:!h-[26px] [&_div.h-7]:!h-[26px] [&_span.text-ellipsis]:!text-[11px]"
+                            items={[
+                                { label: 'Text', value: 'text' },
+                                { label: 'JSON', value: 'json' },
+                                { label: 'Base64', value: 'base64' },
+                                { label: 'HEX', value: 'hex' },
+                            ]}
+                            value={publishFormat}
+                            onChange={(val) => { setPublishFormat(val as any); saveUIState({ publishFormat: val }); }}
+                        />
                     </div>
-                    <div className="flex items-center gap-1">
-                        <span className="text-[#969696] text-[10px]">QoS</span>
-                        <select className="bg-[#3c3c3c] text-[#cccccc] text-[11px] p-0.5 rounded outline-none" value={qos} onChange={e => setQos(Number(e.target.value) as 0 | 1 | 2)}>
-                            <option value={0}>0</option><option value={1}>1</option><option value={2}>2</option>
-                        </select>
+                    {/* Topic 输入框：支持手动输入 + 从已订阅主题中选择 */}
+                    <div className="relative flex-1 h-full" ref={topicDropdownRef}>
+                        <div className="flex items-center gap-1.5 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded px-2 h-full focus-within:border-[var(--focus-border-color)] cursor-text" onClick={() => document.getElementById('mqtt-topic-input')?.focus()}>
+                            <span className="text-[var(--input-placeholder-color)] text-[11px] shrink-0 font-bold">Topic</span>
+                            <div className="w-[1px] h-3 bg-[var(--border-color)]"></div>
+                            <input
+                                id="mqtt-topic-input"
+                                className="bg-transparent border-none outline-none text-[var(--input-foreground)] text-[12px] flex-1 font-mono min-w-0"
+                                value={topic}
+                                onChange={e => { setTopic(e.target.value); saveUIState({ publishTopic: e.target.value }); }}
+                                placeholder="输入或选择主题..."
+                            />
+                            {subscribedTopics.length > 0 && (
+                                <button
+                                    className={`shrink-0 p-0.5 rounded hover:bg-[var(--list-hover-background)] text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] transition-colors ${showTopicDropdown ? 'text-[var(--app-foreground)]' : ''}`}
+                                    onClick={() => setShowTopicDropdown(v => !v)}
+                                    title="选择订阅主题"
+                                >
+                                    <ChevronDown size={12} />
+                                </button>
+                            )}
+                        </div>
+                        {showTopicDropdown && subscribedTopics.length > 0 && (
+                            <div className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded shadow-lg z-50 max-h-40 overflow-auto">
+                                {subscribedTopics.map((t: any) => (
+                                    <div
+                                        key={t.path}
+                                        className={`px-2 py-1.5 text-[11px] font-mono cursor-pointer hover:bg-[var(--list-hover-background)] flex items-center gap-1.5 ${topic === t.path ? 'text-[var(--button-background)] font-bold' : 'text-[var(--app-foreground)]'}`}
+                                        onClick={() => { setTopic(t.path); saveUIState({ publishTopic: t.path }); setShowTopicDropdown(false); }}
+                                    >
+                                        {t.color && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: t.color }} />}
+                                        {t.path}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <label className="flex items-center gap-1 cursor-pointer">
-                        <input type="checkbox" checked={retain} onChange={e => setRetain(e.target.checked)} />
-                        <span className="text-[#969696] text-[10px]">Retain</span>
+                    <div className="shrink-0">
+                        <CustomSelect
+                            className="!w-[68px] [&_button]:!h-[26px] [&_div.h-7]:!h-[26px] [&_span.text-ellipsis]:!text-[11px]"
+                            items={[
+                                { label: 'QoS 0', value: '0' },
+                                { label: 'QoS 1', value: '1' },
+                                { label: 'QoS 2', value: '2' },
+                            ]}
+                            value={String(qos)}
+                            onChange={(val) => setQos(Number(val) as 0 | 1 | 2)}
+                        />
+                    </div>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--input-background)] border border-[var(--input-border-color)] px-2 rounded h-full hover:bg-[var(--list-hover-background)] transition-colors shrink-0">
+                        <input type="checkbox" className="accent-[var(--button-background)] w-3 h-3 cursor-pointer" checked={retain} onChange={e => setRetain(e.target.checked)} />
+                        <span className="text-[var(--app-foreground)] text-[11px]">Retain</span>
                     </label>
                 </div>
-                <div className="flex gap-2 h-16">
-                    <div className="flex flex-col gap-0.5 bg-[var(--input-background)] rounded p-0.5 border border-[var(--border-color)] w-16">
-                        {['text', 'json', 'hex'].map(f => (
-                            <div key={f} className={`text-[9px] text-center cursor-pointer py-0.5 rounded uppercase ${publishFormat === f ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'text-[var(--input-placeholder-color)]'}`} onClick={() => setPublishFormat(f as any)}>{f}</div>
-                        ))}
-                    </div>
-                    <textarea className="flex-1 bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] p-1.5 text-[11px] font-mono outline-none resize-none focus:border-[var(--focus-border-color)]" value={payload} onChange={e => setPayload(e.target.value)} />
-                    <button className={`w-14 flex flex-col items-center justify-center rounded transition-colors ${isConnected ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'bg-[var(--input-background)] text-[var(--input-placeholder-color)]'}`} onClick={handleSend} disabled={session.isConnecting}>
-                        <Send size={14} /> <span className="text-[9px]">{isConnected ? t('mqtt.command') : t('mqtt.connect')}</span>
+                {/* 第二行：输入框 + 发送按钮 */}
+                <div className="flex gap-2 items-stretch">
+                    <textarea
+                        className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--input-border-color)] text-[var(--input-foreground)] p-2 outline-none resize-none focus:border-[var(--focus-border-color)] rounded h-[80px] select-text"
+                        style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)') }}
+                        value={payload}
+                        onChange={e => { setPayload(e.target.value); saveUIState({ publishPayload: e.target.value }); }}
+                    />
+                    <button
+                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
+                            ? (payload.trim() === '' ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
+                            : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'
+                            }`}
+                        onClick={handleSend}
+                        disabled={session.isConnecting}
+                    >
+                        {isConnected
+                            ? <Send size={16} />
+                            : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]" /></div>
+                        }
+                        <span className="text-[10px]">{isConnected ? t('serial.send') : t('mqtt.connect')}</span>
                     </button>
                 </div>
             </div>

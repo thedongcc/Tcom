@@ -19,12 +19,12 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, disabl
             }}
         >
             {label && (
-                <span className="text-[11px] text-[#C0C0C0] group-hover/switch:text-[#ffffff] transition-colors select-none">
+                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] group-hover/switch:text-[var(--app-foreground)] transition-colors select-none">
                     {label}
                 </span>
             )}
             <div
-                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-border-color)] focus-visible:ring-offset-2 ${checked ? 'bg-[#0e639c]' : 'bg-[#3c3c3c]'}`}
+                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-border-color)] focus-visible:ring-offset-2 ${checked ? 'bg-[var(--button-background)]' : 'bg-[var(--input-border-color)]'}`}
             >
                 <span
                     className={`pointer-events-none block h-3 w-3 rounded-full bg-white shadow-lg ring-0 transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`}

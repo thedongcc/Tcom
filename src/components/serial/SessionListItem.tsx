@@ -63,7 +63,7 @@ export const SessionListItem = ({
             style={style}
             {...attributes}
             {...listeners}
-            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 group border-l-4 ${isActive ? 'border-[var(--accent-color)] bg-[var(--list-active-background)]' : 'border-transparent'}`}
+            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 group border-l-4 focus:outline-none outline-none ${isActive ? 'border-[var(--accent-color)] bg-[var(--list-active-background)]' : 'border-transparent'}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
             title="Click to open, Right-click for options. Drag to reorder."

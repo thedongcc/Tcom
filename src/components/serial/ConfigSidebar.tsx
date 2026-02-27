@@ -188,8 +188,8 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
     if (activeSession.config.type === 'settings') {
         return (
             <div className="p-4 text-[#969696] text-xs text-center mt-10">
-                <div className="mb-2 font-bold text-[#cccccc]">{t('configSidebar.globalSettings')}</div>
-                <div className="opacity-60 text-[11px]">{t('configSidebar.globalSettingsDesc')}</div>
+                <div className="mb-2 font-bold text-[#666666]">{t('configSidebar.globalSettings')}</div>
+                <div className="opacity-70 text-[11px]">{t('configSidebar.globalSettingsDesc')}</div>
             </div>
         );
     }

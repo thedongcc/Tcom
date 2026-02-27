@@ -1,5 +1,5 @@
 ﻿import { useRef, useState } from 'react';
-import { usePluginManager } from '../../context/PluginContext';
+import { usePluginManager } from '../../context/PluginContextShared';
 import { Box, Play, Pause, Trash2, Search, FolderOpen, ExternalLink, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { PLUGIN_REGISTRY } from '../../plugins/registry';
 import { useI18n } from '../../context/I18nContext';
@@ -169,7 +169,7 @@ export const ExtensionsSidebar = () => {
         <div className="flex flex-col h-full bg-[var(--sidebar-background)]">
             {/* 搜索栏 */}
             <div className="p-2.5 border-b border-[var(--border-color)]">
-                <div className="bg-[var(--input-background)] flex items-center px-2 py-1 border border-[var(--input-border-color)] focus-within:border-[var(--focus-border-color)] transition-colors">
+                <div className="bg-[var(--input-background)] flex items-center px-2 py-1 border border-[var(--widget-border-color)] focus-within:border-[var(--focus-border-color)] transition-colors">
                     <Search size={14} className="text-[var(--input-placeholder-color)] mr-2 flex-shrink-0" />
                     <input
                         className="bg-transparent border-none outline-none text-[13px] text-[var(--input-foreground)] w-full placeholder-[var(--input-placeholder-color)]"
@@ -184,7 +184,7 @@ export const ExtensionsSidebar = () => {
             <div className="px-3 py-2 border-b border-[var(--border-color)]">
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-[12px] text-[var(--app-foreground)] border border-[var(--border-color)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-[12px] text-[var(--app-foreground)] border border-[var(--widget-border-color)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] transition-colors"
                 >
                     <FolderOpen size={13} />
                     {t('extensions.installFromFile')}

@@ -1,7 +1,7 @@
 ﻿import { type ReactNode, useState, useRef, useEffect, useMemo } from 'react';
 import { Files, Search, GitGraph, Box, Settings, Monitor, Check } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
-import { usePluginManager } from '../../context/PluginContext';
+import { usePluginManager } from '../../context/PluginContextShared';
 import {
     DndContext,
     closestCenter,

@@ -5,7 +5,7 @@ import { SessionListSidebar } from '../serial/SessionListSidebar';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { CommandListSidebar } from '../commands/CommandListSidebar';
-import { usePluginManager } from '../../context/PluginContext';
+import { usePluginManager } from '../../context/PluginContextShared';
 import { ExtensionsSidebar } from '../extensions/ExtensionsSidebar';
 import { useI18n } from '../../context/I18nContext';
 
@@ -82,10 +82,27 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
             className="flex flex-col border-r border-[var(--border-color)] relative shrink-0"
             style={{ width: `${width}px`, backgroundColor: 'var(--sidebar-background)' }}
         >
-            <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--app-foreground)] tracking-wide uppercase shrink-0">
-                <span className="truncate">{activePlugin ? activePlugin.name : activeView === 'explorer' ? t('sidebar.sessions') : activeView === 'serial' ? t('sidebar.configuration') : activeView === 'commands' ? t('sidebar.commands') : activeView}</span>
-                <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
-            </div>
+            {activeView !== 'commands' && (
+                <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--app-foreground)] tracking-wide uppercase shrink-0">
+                    <span className="truncate">
+                        {(() => {
+                            const viewMap: Record<string, string> = {
+                                'explorer': t('sidebar.sessions'),
+                                'serial': t('sidebar.configuration'),
+                                'commands': t('sidebar.commands'),
+                                'virtual-port': t('sidebar.virtualPort'),
+                                'extensions': t('sidebar.extensions')
+                            };
+
+                            const translated = viewMap[activeView];
+                            if (translated) return translated;
+                            if (activePlugin) return activePlugin.name;
+                            return activeView;
+                        })()}
+                    </span>
+                    <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
+                </div>
+            )}
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {activeView === 'explorer' && <SessionListSidebar sessionManager={sessionManager} editorLayout={editorLayout} />}

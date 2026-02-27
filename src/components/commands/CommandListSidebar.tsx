@@ -1,5 +1,5 @@
-import { Plus, FolderPlus, Upload, Trash2, MoreHorizontal, FileText, Folder, Play, CornerDownLeft, Copy } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { Plus, FolderPlus, Upload, Trash2, MoreHorizontal, FileText, Folder, Play, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useCommandManager } from '../../hooks/useCommandManager';
 import { CommandList } from './CommandList';
 import { CommandEntity, CommandItem } from '../../types/command';
@@ -76,7 +76,7 @@ const CommandScrollArea = ({
 const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string) => void }) => {
     const {
         commands, addGroup, addCommand, clearAll, importCommands, exportCommands,
-        setAllCommands, deleteEntity, deleteEntities, updateEntity, duplicateEntity,
+        setAllCommands, deleteEntity, deleteEntities, updateEntity, duplicateEntity, duplicateEntities,
         undo, redo, canUndo, canRedo
     } = useCommandManager();
     const { showToast } = useToast();
@@ -88,10 +88,16 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: CommandEntity | null } | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-    const [clipboard, setClipboard] = useState<CommandEntity | null>(null);
+    const [clipboard, setClipboard] = useState<CommandEntity[]>([]);
+    // 追踪命令菜单是否处于用户交互焦点
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isFocused = useRef(false);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // 只在命令菜单处于焦点状态时才拦截快捷键
+            if (!isFocused.current) return;
+
             const activeEl = document.activeElement;
             const isInput = ['INPUT', 'TEXTAREA'].includes(activeEl?.tagName || '');
             const isContentEditable = activeEl?.getAttribute('contenteditable') === 'true';
@@ -116,16 +122,21 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
 
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                 e.preventDefault();
-                if (lastSelectedId) {
+                if (selectedIds.size > 0) {
+                    // 只复制顶层选中项（过滤掉父级已被选中的子项，避免粘贴时重复）
+                    const selected = commands.filter(c => selectedIds.has(c.id));
+                    const topLevel = selected.filter(c => !selectedIds.has(c.parentId || ''));
+                    if (topLevel.length > 0) setClipboard(topLevel);
+                } else if (lastSelectedId) {
                     const item = commands.find(c => c.id === lastSelectedId);
-                    if (item) setClipboard(item);
+                    if (item) setClipboard([item]);
                 }
                 return;
             }
 
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                 e.preventDefault();
-                if (clipboard) {
+                if (clipboard.length > 0) {
                     let targetId: string | undefined = undefined;
                     if (lastSelectedId) {
                         const sel = commands.find(c => c.id === lastSelectedId);
@@ -135,7 +146,8 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                             targetId = sel.parentId || undefined;
                         }
                     }
-                    duplicateEntity(clipboard.id, targetId);
+                    // 一次性批量粘贴，可一次性撤回
+                    duplicateEntities(clipboard.map(i => i.id), targetId);
                 }
                 return;
             }
@@ -148,8 +160,23 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
             }
         };
 
+        // 点击命令菜单外部时，清除选择状态
+        const handleMouseDown = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                isFocused.current = false;
+                setSelectedIds(new Set());
+                setLastSelectedId(null);
+            } else {
+                isFocused.current = true;
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('mousedown', handleMouseDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('mousedown', handleMouseDown);
+        };
     }, [selectedIds, lastSelectedId, clipboard, commands, undo, redo, canUndo, canRedo, deleteEntities, duplicateEntity]);
 
     const handleItemClick = (e: React.MouseEvent, item: CommandEntity) => {
@@ -391,12 +418,13 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     };
 
     const handleCopy = (item: CommandEntity) => {
-        setClipboard(item);
+        setClipboard([item]);
     };
 
     const handlePaste = (targetParentId?: string) => {
-        if (!clipboard) return;
-        duplicateEntity(clipboard.id, targetParentId);
+        if (clipboard.length === 0) return;
+        // 一次性批量粘贴，可一步撤回
+        duplicateEntities(clipboard.map(i => i.id), targetParentId);
     };
 
     const getMenuItems = () => {
@@ -420,7 +448,7 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                     label: t('common.paste'),
                     icon: <CornerDownLeft size={13} className="rotate-180" />,
                     onClick: () => handlePaste(undefined),
-                    disabled: !clipboard
+                    disabled: clipboard.length === 0
                 }
             ];
         }
@@ -428,11 +456,12 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
         const items: any[] = [
             {
                 label: t('common.edit'),
+                icon: <Pencil size={13} />,
                 onClick: () => setEditingItem(item)
             },
             {
                 label: t('common.duplicate'),
-                icon: <Copy size={13} />,
+                icon: <CopyPlus size={13} />,
                 onClick: () => handleDuplicate(item)
             },
             {
@@ -452,9 +481,10 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
         if (item.type === 'group') {
             items.splice(3, 0, {
                 label: t('common.paste'),
+                icon: <ClipboardPaste size={13} />,
                 onClick: () => handlePaste(item.id),
-                disabled: !clipboard
-            }, { separator: true });
+                disabled: clipboard.length === 0
+            });
 
             items.unshift({ separator: true });
             items.unshift({
@@ -473,7 +503,7 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]" onContextMenu={(e) => { e.preventDefault(); }}>
+        <div ref={containerRef} className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]" onContextMenu={(e) => { e.preventDefault(); }}>
             <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--sidebar-background)] border-b border-[var(--border-color)]">
                 <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
                 <div className="flex items-center gap-1 relative">

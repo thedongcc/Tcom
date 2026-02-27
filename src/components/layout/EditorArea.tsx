@@ -60,10 +60,10 @@ interface TabProps {
 const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabProps) => (
     <div
         onClick={onClick}
-        className={`
-    h-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--border-color)] select-none group
+        className={`focus:outline-none outline-none
+    h-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--widget-border-color)] select-none group
     ${active
-                ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] border-t-[2px] border-t-[var(--accent-color)] font-bold tracking-wide' : 'text-[var(--input-placeholder-color)] border-t-2 border-t-transparent'}`
+                ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
                 : 'bg-[var(--widget-background)] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--app-background)]'
             }
 `}
@@ -102,7 +102,7 @@ const SortableTab = ({ id, ...props }: TabProps & { id: string }) => {
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="h-full">
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="h-full focus:outline-none outline-none">
             <Tab {...props} />
         </div>
     );
@@ -119,7 +119,7 @@ interface GroupHeaderProps {
 const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: GroupHeaderProps) => {
     return (
         <div
-            className={`relative z-50 flex h-9 bg-[var(--sidebar-background)] border-b border-[var(--border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
+            className={`relative z-50 flex h-9 bg-[var(--sidebar-background)] border-b border-[var(--widget-border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
             onClick={() => setActiveGroupId(group.id)}
         >
             {children}
@@ -235,25 +235,23 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                             <div className="h-full w-[3px] relative flex flex-shrink-0 items-center justify-center overflow-visible z-[2000] -ml-[1.5px] pointer-events-none"><DropIndicator /></div>
                         )}
                     </SortableContext>
-
-
-
-                    {/* Actions - Only visible if there are tabs */}
-                    {node.views && node.views.length > 0 && (
-                        <div className="flex items-center px-1 gap-1 ml-auto">
-                            <div
-                                className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)]"
-                                title="Split Editor Right"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    splitGroup(node.id, 'horizontal');
-                                }}
-                            >
-                                <Columns size={14} />
-                            </div>
-                        </div>
-                    )}
                 </HeaderDropZone>
+
+                {/* Actions - Pinned to the right, outside the scrollable zone */}
+                {node.views && node.views.length > 0 && (
+                    <div className="flex items-center px-1 shrink-0 h-full border-l border-[var(--widget-border-color)]">
+                        <div
+                            className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)] focus:outline-none outline-none"
+                            title="Split Editor"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                splitGroup(node.id, 'horizontal');
+                            }}
+                        >
+                            <Columns size={14} />
+                        </div>
+                    </div>
+                )}
             </GroupHeader>
 
             {/* Content */}

@@ -1,4 +1,4 @@
-﻿import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+﻿import { useRef, useState, useEffect, useCallback, useLayoutEffect, memo } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';
 import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter } from 'lucide-react';
@@ -26,6 +26,155 @@ interface SerialMonitorProps {
     onClearLogs?: () => void;
     onConnectRequest?: () => Promise<boolean | void> | void;
 }
+
+// Memoized Log Item Component
+const LogItem = memo(({
+    log,
+    isNewLog,
+    viewMode,
+    encoding,
+    showTimestamp,
+    showPacketType,
+    showDataLength,
+    onContextMenu,
+    formatData,
+    formatTimestamp,
+    getDataLengthText,
+    timestampFormat,
+    matches = [],
+    activeMatch = null,
+    mergeRepeats = true,
+    flashNewMessage,
+    fontSize = 15,
+    rxCRC,
+    crcEnabled
+}: any) => {
+    const renderHighlightedText = (log: any, text: string) => {
+        const logMatches = matches.filter((m: any) => m.logId === log.id);
+        if (logMatches.length === 0) return text;
+
+        const sortedMatches = [...logMatches].sort((a: any, b: any) => a.startIndex - b.startIndex);
+        const result: React.ReactNode[] = [];
+        let lastIndex = 0;
+
+        sortedMatches.forEach((match: any, i: number) => {
+            if (match.startIndex > lastIndex) {
+                result.push(text.substring(lastIndex, match.startIndex));
+            }
+            const isActive = activeMatch === match;
+            result.push(
+                <span
+                    key={`${log.id}-match-${i}`}
+                    className={isActive ? 'bg-[#ff9632] text-black shadow-sm' : 'bg-[#623315] text-[var(--app-foreground)]'}
+                >
+                    {text.substring(match.startIndex, match.endIndex)}
+                </span>
+            );
+            lastIndex = match.endIndex;
+        });
+
+        if (lastIndex < text.length) {
+            result.push(text.substring(lastIndex));
+        }
+        return result;
+    };
+
+    const { parseSystemMessage } = useSystemMessage();
+
+    const lineHeightPx = Math.floor(fontSize * 1.5);
+    const itemHeightPx = Math.floor(fontSize * 1.4);
+
+    if (log.type === 'INFO' || log.type === 'ERROR') {
+        const content = formatData(log.data, 'text', encoding).trim();
+        const { styleClass, translatedText } = parseSystemMessage(log.type, content);
+        return (
+            <div className="flex justify-center my-2 gap-2 items-center" style={{ transform: 'translateZ(0)' }}>
+                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+                    {translatedText}
+                </span>
+                {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                    <span
+                        className="flex items-center justify-center text-[0.67em] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-[0.4em] rounded-full border border-[var(--button-background)]/30 min-w-[1.6em]"
+                        style={{ height: `${Math.floor(lineHeightPx * 0.8)}px` }}
+                    >
+                        x{log.repeatCount}
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            id={`log-${log.id}`}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-red-500/40' : 'border border-transparent'}`}
+            style={{
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                transform: 'translateZ(0)',
+                lineHeight: `${lineHeightPx}px`,
+                '--flash-color': 'var(--selection-background)'
+            } as any}
+            onContextMenu={(e) => onContextMenu(e, log)}
+        >
+            {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
+                <div className="shrink-0 flex items-center select-none gap-1.5" style={{ height: `${lineHeightPx}px` }}>
+                    {showTimestamp && (
+                        <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                            [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS').trim()}]
+                        </span>
+                    )}
+                </div>
+            )}
+            <div className="flex items-center gap-1.5 shrink-0" style={{ height: `${lineHeightPx}px` }}>
+                {showPacketType && (
+                    <span className={`flex items-center justify-center font-bold font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm tracking-wide pt-[1px]
+                    ${log.type === 'TX' ? 'bg-[var(--button-background)]/30 text-[var(--app-foreground)] border border-[var(--button-background)]/40' :
+                            log.type === 'RX' ? 'bg-[var(--st-rx-label)]/30 text-[var(--app-foreground)] border border-[var(--st-rx-label)]/40' :
+                                'bg-white/5 text-[#cccccc] border border-white/10'
+                        }`}
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
+                        {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'SYS'}
+                    </span>
+                )}
+                {showDataLength && (
+                    <span
+                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
+                        {getDataLengthText(log.data)}
+                    </span>
+                )}
+                {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
+                    <span
+                        key={log.repeatCount}
+                        className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                        style={{ height: `${itemHeightPx}px` }}
+                    >
+                        x{log.repeatCount}
+                    </span>
+                )}
+            </div>
+            <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
+                log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
+                    log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
+                        'text-[var(--st-info-text)]'
+                }`}>
+                {renderHighlightedText(log, formatData(log.data, viewMode, encoding))}
+            </span>
+            {log.crcStatus === 'error' && (
+                <span
+                    className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30 flex items-center"
+                    style={{ height: `${itemHeightPx}px` }}
+                >
+                    CRC Error
+                </span>
+            )}
+        </div>
+    );
+});
+
 const scrollPositions = new Map<string, number>();
 
 export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig, onInputStateChange, onClearLogs, onConnectRequest }: SerialMonitorProps) => {
@@ -61,7 +210,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     }, [uiState.fontSize]); */
     const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier' | 'AppCoreFont'>(uiState.fontFamily || 'AppCoreFont');
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
-    const [smoothScroll, setSmoothScroll] = useState(uiState.smoothScroll !== undefined ? uiState.smoothScroll : true);
     const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [showCRCPanel, setShowCRCPanel] = useState(false);
@@ -97,10 +245,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 ];
 
                 const final = [
-                    { label: '-- Built-in --', value: '', disabled: true },
+                    { label: '-- Built-in --', value: 'header-built-in', disabled: true },
                     ...builtIn,
-                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...mono] : []),
-                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...prop] : [])
+                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: 'header-mono', disabled: true }, ...mono] : []),
+                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: 'header-prop', disabled: true }, ...prop] : [])
                 ];
                 setAvailableFonts(final);
             });
@@ -271,7 +419,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         } else {
             length = data.length;
         }
-        return `[${length}B]`;
+        return `${length}B`;
     };
 
     const prevLogsRef = useRef(logs);
@@ -426,7 +574,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     return (
         <div
-            className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center select-none"
+            className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center"
             style={{ backgroundImage: 'var(--st-rx-bg-img)' }}
             onClick={() => setContextMenu(null)}
         >
@@ -577,12 +725,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 />
 
                                                 <Switch
-                                                    label={t('monitor.smoothAnimation')}
-                                                    checked={smoothScroll}
-                                                    onChange={(checked) => { setSmoothScroll(checked); saveUIState({ smoothScroll: checked }); }}
-                                                />
-
-                                                <Switch
                                                     label={t('monitor.flashNewMessage')}
                                                     checked={flashNewMessage}
                                                     onChange={(checked) => { setFlashNewMessage(checked); saveUIState({ flashNewMessage: checked }); }}
@@ -622,16 +764,16 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.startOffset')}:</span>
+                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.startOffset')}:</span>
                                                                 <input
                                                                     type="number"
-                                                                    className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1 focus:border-[var(--focus-border-color)]"
+                                                                    className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[11px] text-[var(--input-foreground)] rounded-sm outline-none px-2 py-1 focus:border-[var(--focus-border-color)]"
                                                                     value={rxCRC.startIndex}
                                                                     onChange={(e) => updateRxCRC({ startIndex: parseInt(e.target.value) || 0 })}
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[#888888] font-medium">{t('monitor.endPosition')}:</span>
+                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.endPosition')}:</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: 'End of Packet', value: '0' },
@@ -651,14 +793,14 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                         {/* Display Settings Section */}
                                         <div className="mb-6 px-1">
-                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[#888888] uppercase tracking-wider">
+                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.typography')}</span>
-                                                <div className="h-[1px] bg-[#3c3c3c] flex-1" />
+                                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
                                             </div>
                                             <div className="space-y-4">
                                                 {/* Font Size */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontSize')}:</span>
+                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.fontSize')}:</span>
                                                     <CustomSelect
                                                         items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                             label: `${size}px`,
@@ -673,7 +815,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                                 {/* Font Family */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.fontFamily')}:</span>
+                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.fontFamily')}:</span>
                                                     <CustomSelect
                                                         items={availableFonts}
                                                         value={fontFamily}
@@ -683,10 +825,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                                                 {/* Chunk Timeout */}
                                                 <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[#aaaaaa]">{t('monitor.packetTimeout')}:</span>
+                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.packetTimeout')}:</span>
                                                     <input
                                                         type="number"
-                                                        className="w-full bg-[#3c3c3c] border border-[#3c3c3c] text-[11px] text-[#cccccc] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--focus-border-color)] transition-colors"
+                                                        className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[11px] text-[var(--input-foreground)] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--focus-border-color)] transition-colors"
                                                         value={uiState.chunkTimeout || 0}
                                                         onChange={(e) => {
                                                             const val = parseInt(e.target.value);
@@ -781,7 +923,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     style={{
                         fontSize: `${fontSize}px`,
                         fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'),
-                        lineHeight: '1.5'
+                        lineHeight: `${Math.floor(fontSize * 1.5)}px`
                     }}
                     ref={scrollRef}
                     onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }}
@@ -791,134 +933,32 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             <p>No data</p>
                         </div>
                     )}
-                    {filteredLogs.map((log) => {
-                        // Animation Logic
-                        const isNewLog = log.timestamp > mountTimeRef.current;
-
-                        // System/Info Messages - Centered Notification Style
-                        if (log.type === 'INFO' || log.type === 'ERROR') {
-                            const content = formatData(log.data, 'text', encoding).trim();
-                            const { styleClass, translatedText } = parseSystemMessage(log.type, content);
-
-                            return (
-                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
-                                    <span className={`px-[0.8em] py-[0.2em] rounded-full text-[0.8em] font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
-                                        {translatedText}
-                                    </span>
-                                    {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                                        <span className="h-[1.2em] flex items-center justify-center text-[0.67em] text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.4em] rounded-full border border-[#FFD700]/30 min-w-[1.6em]">
-                                            x{log.repeatCount}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        }
-
-                        // Standard Data Logs (TX/RX)
-                        const variants = {
-                            hidden: { opacity: 0, x: -20 },
-                            visible: {
-                                opacity: 1,
-                                x: 0,
-                                transition: { duration: 0.15, ease: "easeOut" as any }
-                            }
-                        };
+                    {filteredLogs.map((log, index) => {
+                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
 
                         return (
-                            <div
-                                key={log.id}
-                                id={`log-${log.id}`}
-                                className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${(smoothScroll && isNewLog) ? 'animate-slide-in-up' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-red-500/40' : 'border border-transparent'} ${contextMenu?.log === log ? 'bg-[var(--selection-background)] ring-1 ring-[var(--focus-border-color)]' : ''} ${activeMatch?.logId === log.id ? 'bg-[var(--selection-background)] ring-1 ring-[var(--focus-border-color)]' : ''}`}
-                                style={{
-                                    fontSize: 'inherit',
-                                    fontFamily: 'inherit',
-                                    // @ts-ignore - CSS variables for animation
-                                    '--flash-color': 'var(--selection-background)'
-                                }}
-                                onContextMenu={(e) => handleLogContextMenu(e, log)}
-                            >
-                                {/* Timestamp & Repeat Count Container */}
-                                {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
-                                    <div className="shrink-0 flex items-center h-[1.5em] select-none gap-1.5">
-                                        {showTimestamp && (
-                                            <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
-                                                [{formatTimestamp(log.timestamp, themeConfig.timestampFormat || 'HH:mm:ss.SSS').trim()}]
-                                            </span>
-                                        )}
-                                        {log.repeatCount && log.repeatCount > 1 && (
-                                            <span
-                                                key={log.repeatCount}
-                                                className={`h-[1.4em] flex items-center justify-center text-[0.8em] leading-none text-[#FFD700] font-bold font-mono bg-[#FFD700]/10 px-[0.5em] rounded-[0.2em] border border-[#FFD700]/30 min-w-[1.8em] shadow-sm backdrop-blur-[1px] pt-[1px] ${flashNewMessage ? 'animate-flash-gold' : ''}`}
-                                            >
-                                                x{log.repeatCount}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-1.5 shrink-0 h-[1.5em]">
-                                    {showPacketType && (
-                                        <span className={`h-[1.4em] flex items-center justify-center font-bold font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 tracking-wide pt-[1px]
-                                        ${log.type === 'TX' ? 'bg-[#007acc] text-white' :
-                                                log.type === 'RX' ? 'bg-[#4ec9b0] text-[#1e1e1e]' :
-                                                    'bg-[#454545] text-[#cccccc]'
-                                            }`}>
-                                            {log.type === 'TX' ? 'TX' : log.type === 'RX' ? 'RX' : 'SYS'}
-                                        </span>
-                                    )}
-                                    {showDataLength && (
-                                        <span className="h-[1.4em] flex items-center justify-center font-mono select-none px-[0.5em] rounded-[0.2em] min-w-[2.4em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight">
-                                            {getDataLengthText(log.data)}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
-                                    log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
-                                        log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
-                                            'text-[var(--st-info-text)]'
-                                    }`}>
-                                    {(() => {
-                                        const text = formatData(log.data, viewMode, encoding);
-                                        const logMatches = matches.filter(m => m.logId === log.id);
-                                        if (logMatches.length === 0) return text;
-
-                                        // Sort matches to process from start to end
-                                        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
-
-                                        const result: React.ReactNode[] = [];
-                                        let lastIndex = 0;
-
-                                        sortedMatches.forEach((match, i) => {
-                                            // Add text before match
-                                            if (match.startIndex > lastIndex) {
-                                                result.push(text.substring(lastIndex, match.startIndex));
-                                            }
-                                            // Add highlighted text
-                                            const isActive = activeMatch === match;
-                                            result.push(
-                                                <span
-                                                    key={`${log.id}-match-${i}`}
-                                                    className={isActive ? 'bg-[#ff9632] text-black' : 'bg-[#623315]'}
-                                                >
-                                                    {text.substring(match.startIndex, match.endIndex)}
-                                                </span>
-                                            );
-                                            lastIndex = match.endIndex;
-                                        });
-
-                                        // Add remaining text
-                                        if (lastIndex < text.length) {
-                                            result.push(text.substring(lastIndex));
-                                        }
-
-                                        return result;
-                                    })()}
-                                </span>
-                                {log.crcStatus === 'error' && (
-                                    <span className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30">
-                                        CRC Error
-                                    </span>
-                                )}
-                            </div>
+                            <LogItem
+                                key={`${log.id}-${log.repeatCount || 1}`}
+                                log={log}
+                                isNewLog={isNewLog}
+                                viewMode={viewMode}
+                                encoding={encoding}
+                                showTimestamp={showTimestamp}
+                                showPacketType={showPacketType}
+                                showDataLength={showDataLength}
+                                onContextMenu={handleLogContextMenu}
+                                formatData={formatData}
+                                formatTimestamp={formatTimestamp}
+                                getDataLengthText={getDataLengthText}
+                                timestampFormat={themeConfig.timestampFormat}
+                                matches={matches}
+                                activeMatch={activeMatch}
+                                mergeRepeats={mergeRepeats}
+                                flashNewMessage={flashNewMessage}
+                                fontSize={fontSize}
+                                rxCRC={rxCRC}
+                                crcEnabled={crcEnabled}
+                            />
                         );
                     })}
 

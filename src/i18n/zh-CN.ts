@@ -371,6 +371,8 @@ export const zhCN = {
         sessions: '会话',
         configuration: '配置',
         commands: '命令',
+        virtualPort: '虚拟串口',
+        extensions: '扩展',
     },
 
     // 面板区域
