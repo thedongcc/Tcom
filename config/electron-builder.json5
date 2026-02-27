@@ -35,6 +35,14 @@
     "dist-electron",
     "package.json"
   ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "thedongcc",
+      "repo": "Tcom",
+      "releaseType": "draft"
+    }
+  ],
   "extraResources": [
     {
       "from": "resources",
