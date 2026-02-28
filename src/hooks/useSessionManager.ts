@@ -60,6 +60,10 @@ export const useSessionManager = () => {
     const logBufferRef = useRef<Map<string, LogEntry[]>>(new Map());
     const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+    // --- RX Chunk Buffers ---
+    const rxBuffersRef = useRef<Map<string, Uint8Array[]>>(new Map());
+    const rxTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
     const flushLogBuffer = useCallback(() => {
         if (logBufferRef.current.size === 0) return;
 
@@ -417,8 +421,7 @@ export const useSessionManager = () => {
         const finalData = applyTXCRC(rawData, session.config.txCRC);
         const result = await window.serialAPI.write(sessionId, finalData);
         if (result.success) {
-            const crcStatus = session.config.rxCRC?.enabled ? (validateRXCRC(finalData, session.config.rxCRC) ? 'ok' : 'error') : 'none';
-            addLog(sessionId, 'TX', finalData, crcStatus);
+            addLog(sessionId, 'TX', finalData, 'none');
         } else {
             addLog(sessionId, 'ERROR', `Write failed: ${result.error}`);
         }
@@ -449,10 +452,15 @@ export const useSessionManager = () => {
             workspacePathRef.current = path;
             const sessionsData = await window.workspaceAPI.listSessions(path);
             if (sessionsData.success) {
-                setSavedSessions(sessionsData.data);
+                // Deduplicate sessions by ID to prevent React key warnings if multiple files have same internal ID
+                const uniqueSessions = sessionsData.data.reduce((acc: any[], current: any) => {
+                    if (!acc.find(s => s.id === current.id)) acc.push(current);
+                    return acc;
+                }, []);
+                setSavedSessions(uniqueSessions);
                 // Restore active session ID for this workspace
                 const savedActiveId = localStorage.getItem(`active-session-${path}`);
-                if (savedActiveId) {
+                if (savedActiveId && uniqueSessions.some((s: any) => s.id === savedActiveId)) {
                     setActiveSessionId(savedActiveId);
                 }
             }
@@ -498,7 +506,7 @@ export const useSessionManager = () => {
             baseConfig.name = generateUniqueName(existingNames, 'Serial');
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
             baseConfig.txCRC = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
-            baseConfig.rxCRC = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: -1 };
+            baseConfig.rxCRC = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
         } else if (type === 'mqtt') {
             baseConfig.name = generateUniqueName(existingNames, 'MQTT');
             baseConfig.host = 'broker.emqx.io'; baseConfig.port = 1883; baseConfig.clientId = `client-${Math.random().toString(16).slice(2, 8)}`;
@@ -630,15 +638,39 @@ export const useSessionManager = () => {
         sessions.forEach(session => {
             if (registeredSessions.current.has(session.id)) return;
             window.serialAPI!.onData(session.id, (data) => {
-                const now = Date.now();
                 // Check if chunk timeout is enabled
                 const timeout = (session.config as any).uiState?.chunkTimeout || 0;
                 if (timeout > 0) {
-                    // Fallback to legacy immediate update if timeout logic is needed (rarely batches across frame)
-                    // For performance, we keep chunking synchronous if possible or batch it too
-                    addLog(session.id, 'RX', data, 'none');
+                    let buffer = rxBuffersRef.current.get(session.id);
+                    if (!buffer) {
+                        buffer = [];
+                        rxBuffersRef.current.set(session.id, buffer);
+                    }
+                    buffer.push(data);
+
+                    const existingTimer = rxTimersRef.current.get(session.id);
+                    if (existingTimer) clearTimeout(existingTimer);
+
+                    const newTimer = setTimeout(() => {
+                        const finalBuffer = rxBuffersRef.current.get(session.id);
+                        if (finalBuffer && finalBuffer.length > 0) {
+                            const totalLen = finalBuffer.reduce((acc, curr) => acc + curr.length, 0);
+                            const mergedData = new Uint8Array(totalLen);
+                            let offset = 0;
+                            finalBuffer.forEach(b => {
+                                mergedData.set(b, offset);
+                                offset += b.length;
+                            });
+                            const crcStatus = session.config.rxCRC?.enabled ? (validateRXCRC(mergedData, session.config.rxCRC) ? 'ok' : 'error') : 'none';
+                            addLog(session.id, 'RX', mergedData, crcStatus);
+                            rxBuffersRef.current.delete(session.id);
+                        }
+                        rxTimersRef.current.delete(session.id);
+                    }, timeout);
+                    rxTimersRef.current.set(session.id, newTimer);
                 } else {
-                    addLog(session.id, 'RX', data, 'none');
+                    const crcStatus = session.config.rxCRC?.enabled ? (validateRXCRC(data, session.config.rxCRC) ? 'ok' : 'error') : 'none';
+                    addLog(session.id, 'RX', data, crcStatus);
                 }
             });
             window.serialAPI!.onClosed(session.id, () => { updateSession(session.id, () => ({ isConnected: false })); addLog(session.id, 'INFO', 'Closed'); });

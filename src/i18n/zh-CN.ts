@@ -238,6 +238,10 @@ export const zhCN = {
         algorithm: '算法',
         startOffset: '起始偏移',
         endPosition: '结束位置',
+        crcEndPacket: '报文末尾 (End of Packet)',
+        crcExclude1: '-1 (排除最后 1 字节)',
+        crcExclude2: '-2 (排除最后 2 字节)',
+        crcExclude3: '-3 (排除最后 3 字节)',
         packetTimeout: '包超时 (ms)',
         // 监控配置面板
         settings: '监控设置',

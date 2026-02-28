@@ -652,7 +652,11 @@ let monitorService: MonitorService | null = null
 const stateFile = path.join(app.getPath('userData'), 'window-state.json');
 const saveState = () => {
   if (win && !win.isDestroyed()) {
+    // 在最小化或最大化状态时不保存坐标，避免存入类似 x: -32000 这样的极值从而导致下次“隐身”
+    if (win.isMinimized() || win.isMaximized()) return;
     const bounds = win.getBounds();
+    // 再次过滤异常坐标
+    if (bounds.x < -10000 || bounds.y < -10000) return;
     require('fs').writeFileSync(stateFile, JSON.stringify(bounds));
   }
 };
@@ -1152,7 +1156,7 @@ function createWindow() {
   // =============================================
   const fs = require('fs').promises;
 
-  const workspaceStateFile = path.join(app.getPath('userData'), 'window-state.json');
+  const workspaceStateFile = path.join(app.getPath('userData'), 'workspace.json');
   const defaultWorkspacePath = path.join(app.getPath('userData'), 'DefaultWorkspace');
 
   // Get last opened workspace path

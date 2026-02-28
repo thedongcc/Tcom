@@ -148,10 +148,12 @@ export const ExtensionsSidebar = () => {
                                 {homepage && (
                                     <a
                                         href={homepage}
-                                        target="_blank"
-                                        rel="noreferrer"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.shellAPI?.openExternal(homepage);
+                                        }}
                                         className="flex items-center gap-1 text-[11px] text-[var(--accent-color)] hover:underline"
-                                        onClick={e => e.stopPropagation()}
                                     >
                                         <ExternalLink size={11} />
                                         {homepage}
@@ -309,8 +311,10 @@ export const ExtensionsSidebar = () => {
             <div className="px-4 py-2 border-t border-[var(--border-color)] text-[10px] text-[var(--input-placeholder-color)]">
                 <a
                     href="https://github.com/thedongcc/Tcom/blob/main/PLUGIN_API.md"
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.shellAPI?.openExternal('https://github.com/thedongcc/Tcom/blob/main/PLUGIN_API.md');
+                    }}
                     className="flex items-center gap-1 hover:text-[var(--app-foreground)] transition-colors"
                 >
                     <ExternalLink size={10} />

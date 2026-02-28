@@ -42,6 +42,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const inputRef = useRef<HTMLInputElement>(null);
     const [scrollRatio, setScrollRatio] = useState(0);
     const [thumbHeight, setThumbHeight] = useState(0);
+    const selectedRef = useRef<HTMLButtonElement>(null);
+    const [hoveredValue, setHoveredValue] = useState<string | null>(null);
     const [isScrolling, setIsScrolling] = useState(false);
     const [lastCustomValue, setLastCustomValue] = useState<string>(() => {
         return items.some(i => i.value === value) ? '' : value;
@@ -139,6 +141,13 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     useEffect(() => {
         if (isOpen && scrollRef.current) {
             handleScroll();
+            if (selectedRef.current) {
+                setTimeout(() => {
+                    selectedRef.current?.scrollIntoView({ block: 'center' });
+                }, 10);
+            }
+        } else {
+            setHoveredValue(null);
         }
     }, [isOpen]);
 
@@ -155,6 +164,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
             }}
             className="group/menu"
             onMouseDown={(e) => e.stopPropagation()}
+            onMouseLeave={() => setHoveredValue(null)}
         >
             <div
                 ref={scrollRef}
@@ -174,41 +184,50 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 setIsCustomInput(true);
                                 setIsOpen(false);
                             }}
-                            style={{ borderBottom: '1px solid var(--dropdown-border-color)' }}
+                            style={{
+                                borderBottom: '1px solid var(--dropdown-border-color)',
+                                backgroundColor: hoveredValue === '__custom__' ? 'var(--dropdown-item-hover-background)' : ''
+                            }}
                             className="w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none mb-0.5 text-[var(--input-placeholder-color)] italic"
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover-background)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
+                            onMouseEnter={() => setHoveredValue('__custom__')}
                         >
                             <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{lastCustomValue ? `Custom: ${lastCustomValue}` : 'Custom...'}</span>
                         </button>
                     )}
-                    {items.map((item, index) => (
-                        <button
-                            key={`${item.value}-${index}`}
-                            type="button"
-                            disabled={item.disabled}
-                            onClick={() => {
-                                if (item.disabled) return;
-                                onChange(item.value);
-                                setIsOpen(false);
-                            }}
-                            style={{
-                                color: value === item.value
-                                    ? 'var(--dropdown-item-selected-foreground)'
-                                    : 'var(--app-foreground)',
-                            }}
-                            className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
-                            onMouseEnter={e => {
-                                if (!item.disabled) e.currentTarget.style.backgroundColor = 'var(--dropdown-item-hover-background)';
-                            }}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                        >
-                            {showStatus && (
-                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-red-500' : 'bg-green-500'}`} />
-                            )}
-                            <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{item.label}</span>
-                        </button>
-                    ))}
+                    {items.map((item, index) => {
+                        const isSelected = value === item.value;
+                        const isHovered = hoveredValue === item.value;
+                        const showHighlight = isHovered || (hoveredValue === null && isSelected);
+
+                        return (
+                            <button
+                                key={`${item.value}-${index}`}
+                                ref={isSelected ? selectedRef : null}
+                                type="button"
+                                disabled={item.disabled}
+                                onClick={() => {
+                                    if (item.disabled) return;
+                                    onChange(item.value);
+                                    setIsOpen(false);
+                                }}
+                                style={{
+                                    color: isSelected
+                                        ? 'var(--dropdown-item-selected-foreground)'
+                                        : 'var(--app-foreground)',
+                                    backgroundColor: showHighlight && !item.disabled ? 'var(--dropdown-item-hover-background)' : '',
+                                }}
+                                className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                onMouseEnter={() => {
+                                    if (!item.disabled) setHoveredValue(item.value);
+                                }}
+                            >
+                                {showStatus && (
+                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-red-500' : 'bg-green-500'}`} />
+                                )}
+                                <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{item.label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 

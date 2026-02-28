@@ -107,7 +107,7 @@ const LogItem = memo(({
     return (
         <div
             id={`log-${log.id}`}
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-[#4b1818]/20 border border-red-500/40' : 'border border-transparent'}`}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-red-500/10 border border-red-500/30 dark:bg-red-500/10' : 'border border-transparent'}`}
             style={{
                 fontSize: 'inherit',
                 fontFamily: 'inherit',
@@ -165,7 +165,7 @@ const LogItem = memo(({
             </span>
             {log.crcStatus === 'error' && (
                 <span
-                    className="ml-2 text-[10px] text-[#f48771] bg-[#4b1818] px-1.5 rounded border border-[#f48771]/30 flex items-center"
+                    className="ml-2 text-[10px] text-red-600 dark:text-[#f48771] bg-red-100 dark:bg-[#4b1818] px-1.5 rounded border border-red-200 dark:border-[#f48771]/30 flex items-center shrink-0"
                     style={{ height: `${itemHeightPx}px` }}
                 >
                     CRC Error
@@ -749,7 +749,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     </div>
 
                                                     {showCRCPanel && (
-                                                        <div className="bg-[var(--input-background)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                        <div className="bg-[rgba(128,128,128,0.05)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                             <div className="flex flex-col gap-1.5">
                                                                 <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.algorithm')}:</span>
                                                                 <CustomSelect
@@ -776,10 +776,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.endPosition')}:</span>
                                                                 <CustomSelect
                                                                     items={[
-                                                                        { label: 'End of Packet', value: '0' },
-                                                                        { label: '-1 (Exclude last 1)', value: '-1' },
-                                                                        { label: '-2 (Exclude last 2)', value: '-2' },
-                                                                        { label: '-3 (Exclude last 3)', value: '-3' }
+                                                                        { label: t('monitor.crcEndPacket'), value: '0' },
+                                                                        { label: t('monitor.crcExclude1'), value: '-1' },
+                                                                        { label: t('monitor.crcExclude2'), value: '-2' },
+                                                                        { label: t('monitor.crcExclude3'), value: '-3' }
                                                                     ]}
                                                                     value={(rxCRC.endIndex ?? 0).toString()}
                                                                     onChange={(val) => updateRxCRC({ endIndex: parseInt(val) })}

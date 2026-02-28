@@ -240,6 +240,10 @@ export const enUS = {
         algorithm: 'Algorithm',
         startOffset: 'Start Offset',
         endPosition: 'End Position',
+        crcEndPacket: 'End of Packet',
+        crcExclude1: '-1 (Exclude last 1)',
+        crcExclude2: '-2 (Exclude last 2)',
+        crcExclude3: '-3 (Exclude last 3)',
         packetTimeout: 'Packet Timeout (ms)',
         // Monitor Config Panel
         settings: 'Monitor Settings',
