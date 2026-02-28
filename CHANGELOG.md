@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.3] - 2026-02-28
 ### Added
 - 下拉列表组件增加自动滚动定位功能并优化了悬浮交互高亮效果
+- 新增串口监视区显示命令名称功能,如果发送的是命令菜单中的命令,则会在发送的命令右侧显示命令名称
 
 ### Fixed
 - 修复工作区加载问题

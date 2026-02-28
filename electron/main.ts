@@ -843,7 +843,7 @@ function createWindow() {
     '--menu-background': '#ffffff',
     '--menu-foreground': '#333333',
     '--menu-border-color': '#cecece',
-    '--st-rx-text': '#333333',
+    '--st-rx-text': '#2E8B57',
     '--st-tx-text': '#1486f1',
     '--st-rx-label': '#228B22',
     '--st-tx-label': '#cd3131',

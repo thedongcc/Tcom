@@ -107,7 +107,9 @@ const LogItem = memo(({
     return (
         <div
             id={`log-${log.id}`}
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} ${log.crcStatus === 'error' ? 'bg-red-500/10 border border-red-500/30 dark:bg-red-500/10' : 'border border-transparent'}`}
+            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage && log.crcStatus !== 'error') ? 'animate-flash-new' : ''
+                } ${log.crcStatus === 'error' ? 'bg-[var(--st-error-text)]/10 border border-[var(--st-error-text)]/30 dark:bg-[var(--st-error-text)]/10 dark:border-[var(--st-error-text)]/50' : 'border border-transparent'
+                }`}
             style={{
                 fontSize: 'inherit',
                 fontFamily: 'inherit',
@@ -165,12 +167,27 @@ const LogItem = memo(({
             </span>
             {log.crcStatus === 'error' && (
                 <span
-                    className="ml-2 text-[10px] text-red-600 dark:text-[#f48771] bg-red-100 dark:bg-[#4b1818] px-1.5 rounded border border-red-200 dark:border-[#f48771]/30 flex items-center shrink-0"
+                    className="ml-2 text-[10px] text-red-600 bg-red-900 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-900/50 px-1.5 rounded border flex items-center shrink-0 font-bold"
                     style={{ height: `${itemHeightPx}px` }}
                 >
                     CRC Error
                 </span>
             )}
+            {log.commandName && (() => {
+                const parts = log.commandName.split('::::');
+                const cmdName = parts[0];
+                const cmdGroup = parts[1];
+                const titleStr = cmdGroup ? `${cmdGroup}:${cmdName}` : cmdName;
+                return (
+                    <span
+                        className="ml-2 text-[11px] text-[var(--app-foreground)] flex items-center shrink-0 max-w-[200px] truncate select-none bg-[rgba(128,128,128,0.1)] px-1.5 rounded-[3px] cursor-default"
+                        style={{ height: `${itemHeightPx}px` }}
+                        title={titleStr}
+                    >
+                        {cmdName}
+                    </span>
+                );
+            })()}
         </div>
     );
 });

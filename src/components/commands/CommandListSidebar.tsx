@@ -393,10 +393,18 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                 cmd.lineEnding || ''
             );
             if (!data || data.length === 0) return;
+
+            let groupName = '';
+            if (cmd.parentId) {
+                const parent = commands.find(c => c.id === cmd.parentId);
+                if (parent) groupName = parent.name;
+            }
+            const encodedName = `${cmd.name}::::${groupName}`;
+
             if (session.config.type === 'mqtt') {
-                await publishMqtt(session.id, 'command', data, { qos: 0, retain: false });
+                await publishMqtt(session.id, 'command', data, { qos: 0, retain: false, commandName: encodedName });
             } else {
-                await writeToSession(session.id, data);
+                await writeToSession(session.id, data, { commandName: encodedName });
             }
         } catch (e) {
             console.error('Failed to send command', e);

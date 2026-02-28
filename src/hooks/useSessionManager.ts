@@ -143,8 +143,8 @@ export const useSessionManager = () => {
         }));
     }, []);
 
-    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string) => {
-        const entry: LogEntry = { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic };
+    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string, commandName?: string) => {
+        const entry: LogEntry = { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic, commandName };
 
         let batch = logBufferRef.current.get(sessionId);
         if (!batch) {
@@ -409,7 +409,7 @@ export const useSessionManager = () => {
         addLog(sessionId, 'INFO', 'Disconnected');
     }, [updateSession, addLog, updateSessionConfig]);
 
-    const writeToSession = useCallback(async (sessionId: string, data: string | number[] | Uint8Array) => {
+    const writeToSession = useCallback(async (sessionId: string, data: string | number[] | Uint8Array, options?: { commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || !session.isConnected || !window.serialAPI) return;
 
@@ -421,25 +421,25 @@ export const useSessionManager = () => {
         const finalData = applyTXCRC(rawData, session.config.txCRC);
         const result = await window.serialAPI.write(sessionId, finalData);
         if (result.success) {
-            addLog(sessionId, 'TX', finalData, 'none');
+            addLog(sessionId, 'TX', finalData, 'none', undefined, options?.commandName);
         } else {
             addLog(sessionId, 'ERROR', `Write failed: ${result.error}`);
         }
     }, [addLog]);
 
-    const publishMqtt = useCallback(async (sessionId: string, topic: string, payload: string | Uint8Array, options: { qos: 0 | 1 | 2, retain: boolean }) => {
+    const publishMqtt = useCallback(async (sessionId: string, topic: string, payload: string | Uint8Array, options: { qos: 0 | 1 | 2, retain: boolean, commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || !session.isConnected || session.config.type !== 'mqtt' || !window.mqttAPI) return;
         const result = await window.mqttAPI.publish(sessionId, topic, payload, options);
-        if (result.success) addLog(sessionId, 'TX', payload, 'none', topic);
+        if (result.success) addLog(sessionId, 'TX', payload, 'none', topic, options.commandName);
         else addLog(sessionId, 'ERROR', `Publish failed: ${result.error}`);
     }, [addLog]);
 
-    const writeToMonitor = useCallback(async (sessionId: string, target: 'virtual' | 'physical', data: string | number[] | Uint8Array) => {
+    const writeToMonitor = useCallback(async (sessionId: string, target: 'virtual' | 'physical', data: string | number[] | Uint8Array, options?: { commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || !session.isConnected || session.config.type !== 'monitor' || !(window as any).monitorAPI) return;
         const res = await (window as any).monitorAPI.write(sessionId, target, data as any);
-        if (res.success) addLog(sessionId, 'TX', data as any, 'none', target);
+        if (res.success) addLog(sessionId, 'TX', data as any, 'none', target, options?.commandName);
         else addLog(sessionId, 'ERROR', `Write failed: ${res.error}`);
     }, [addLog]);
 
@@ -638,8 +638,11 @@ export const useSessionManager = () => {
         sessions.forEach(session => {
             if (registeredSessions.current.has(session.id)) return;
             window.serialAPI!.onData(session.id, (data) => {
+                const latestSession = sessionsRef.current.find(s => s.id === session.id);
+                if (!latestSession) return;
+
                 // Check if chunk timeout is enabled
-                const timeout = (session.config as any).uiState?.chunkTimeout || 0;
+                const timeout = (latestSession.config as any).uiState?.chunkTimeout || 0;
                 if (timeout > 0) {
                     let buffer = rxBuffersRef.current.get(session.id);
                     if (!buffer) {
@@ -661,7 +664,7 @@ export const useSessionManager = () => {
                                 mergedData.set(b, offset);
                                 offset += b.length;
                             });
-                            const crcStatus = session.config.rxCRC?.enabled ? (validateRXCRC(mergedData, session.config.rxCRC) ? 'ok' : 'error') : 'none';
+                            const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(mergedData, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
                             addLog(session.id, 'RX', mergedData, crcStatus);
                             rxBuffersRef.current.delete(session.id);
                         }
@@ -669,7 +672,7 @@ export const useSessionManager = () => {
                     }, timeout);
                     rxTimersRef.current.set(session.id, newTimer);
                 } else {
-                    const crcStatus = session.config.rxCRC?.enabled ? (validateRXCRC(data, session.config.rxCRC) ? 'ok' : 'error') : 'none';
+                    const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(data, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
                     addLog(session.id, 'RX', data, crcStatus);
                 }
             });

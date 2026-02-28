@@ -14,6 +14,7 @@ export interface LogEntry {
     crcStatus?: 'ok' | 'error' | 'none';
     topic?: string;
     repeatCount?: number;
+    commandName?: string;
 }
 
 export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'graph' | 'monitor';
