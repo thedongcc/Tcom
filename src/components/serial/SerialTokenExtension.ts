@@ -107,7 +107,7 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 } else if (type === 'flag') {
                     const hex = config.hex || '';
                     const display = hex.length > 20 ? hex.substring(0, 20) + '...' : hex;
-                    label = config.name ? `${config.name}: ${display}` : (hex ? `Flag:${display}` : 'Flag');
+                    label = config.name ? `${config.name}: ${display}` : (hex ? `Custom:${display}` : 'Custom');
                 } else if (type === 'timestamp') {
                     label = config.format === 'milliseconds' ? 'Time:Unix_ms' : 'Time:Unix_s';
                 } else if (type === 'auto_inc') {

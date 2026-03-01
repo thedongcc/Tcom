@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { Cpu, MemoryStick, RefreshCw, Github, ArrowDownCircle } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 export const StatusBar = () => {
     const [version, setVersion] = useState('');
@@ -66,49 +67,55 @@ export const StatusBar = () => {
                 <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* CPU */}
-                <div className="flex items-center gap-1 px-1 rounded-sm" title={`App CPU Usage: ${cpu}%`}>
-                    <Cpu size={11} className="opacity-60" />
-                    <span className={cpu > 30 ? 'text-[#f48771]' : 'opacity-80'}>{cpu}%</span>
-                </div>
+                <Tooltip content={t('statusBar.cpuUsage').replace('{val}', String(cpu))} position="top" wrapperClassName="h-full flex items-center">
+                    <div className="flex items-center gap-1 px-1 rounded-sm">
+                        <Cpu size={11} className="opacity-60" />
+                        <span className={cpu > 30 ? 'text-[#f48771]' : 'opacity-80'}>{cpu}%</span>
+                    </div>
+                </Tooltip>
 
                 {/* Memory */}
-                <div className="flex items-center gap-1 px-1 rounded-sm" title={`App Memory (RSS): ${memUsed} MB`}>
-                    <MemoryStick size={11} className="opacity-60" />
-                    <span className={memUsed > 500 ? 'text-[#f48771]' : 'opacity-80'}>{memUsed} MB</span>
-                </div>
+                <Tooltip content={t('statusBar.memUsage').replace('{val}', String(memUsed))} position="top" wrapperClassName="h-full flex items-center">
+                    <div className="flex items-center gap-1 px-1 rounded-sm">
+                        <MemoryStick size={11} className="opacity-60" />
+                        <span className={memUsed > 500 ? 'text-[#f48771]' : 'opacity-80'}>{memUsed} MB</span>
+                    </div>
+                </Tooltip>
 
                 <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* Check Update */}
-                <div
-                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
-                    onClick={handleCheckUpdate}
-                    title={t('statusBar.checkUpdate')}
-                >
-                    {updateStatus ? (
-                        <>
-                            <ArrowDownCircle size={11} />
-                            <span>{updateStatus}</span>
-                        </>
-                    ) : (
-                        <>
-                            <RefreshCw size={10} className="opacity-60" />
-                            <span className="opacity-80">{t('statusBar.checkUpdate')}</span>
-                        </>
-                    )}
-                </div>
+                <Tooltip content={t('statusBar.checkUpdate')} position="top" wrapperClassName="h-full flex items-center">
+                    <div
+                        className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
+                        onClick={handleCheckUpdate}
+                    >
+                        {updateStatus ? (
+                            <>
+                                <ArrowDownCircle size={11} />
+                                <span>{updateStatus}</span>
+                            </>
+                        ) : (
+                            <>
+                                <RefreshCw size={10} className="opacity-60" />
+                                <span className="opacity-80">{t('statusBar.checkUpdate')}</span>
+                            </>
+                        )}
+                    </div>
+                </Tooltip>
 
                 <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
 
                 {/* GitHub */}
-                <div
-                    className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
-                    onClick={openGitHub}
-                    title="Open project on GitHub"
-                >
-                    <Github size={11} className="opacity-60" />
-                    <span className="opacity-80">GitHub</span>
-                </div>
+                <Tooltip content={t('statusBar.openGithub')} position="top" wrapperClassName="h-full flex items-center">
+                    <div
+                        className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
+                        onClick={openGitHub}
+                    >
+                        <Github size={11} className="opacity-60" />
+                        <span className="opacity-80">GitHub</span>
+                    </div>
+                </Tooltip>
             </div>
 
             {/* Right Section */}

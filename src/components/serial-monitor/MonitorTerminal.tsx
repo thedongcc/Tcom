@@ -30,6 +30,7 @@ import { SessionState, MonitorSessionConfig, LogEntry } from '../../types/sessio
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
+import { Tooltip } from '../common/Tooltip';
 
 interface MonitorTerminalProps {
     session: SessionState;
@@ -457,14 +458,18 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
                 <div className="flex items-center gap-4">
                     <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
-                        <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
-                        </div>
-                        <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                            <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
-                        </div>
+                        <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterVirtualPort')} position="bottom">
+                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                                <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
+                            </div>
+                        </Tooltip>
+                        <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterPhysicalPort')} position="bottom">
+                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                                <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
+                            </div>
+                        </Tooltip>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -553,26 +558,29 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                     </div>
 
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button
-                            className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
-                            onClick={() => {
-                                const newState = !autoScroll;
-                                setAutoScroll(newState);
-                                saveUIState({ autoScroll: newState });
-                                // If enabling, scroll to bottom immediately
-                                if (newState && scrollRef.current) {
-                                    requestAnimationFrame(() => {
-                                        if (scrollRef.current) {
-                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                                        }
-                                    });
-                                }
-                            }}
-                            title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
-                        >
-                            <ArrowDownToLine size={14} />
-                        </button>
-                        <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
+                        <Tooltip content={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`} position="bottom">
+                            <button
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                onClick={() => {
+                                    const newState = !autoScroll;
+                                    setAutoScroll(newState);
+                                    saveUIState({ autoScroll: newState });
+                                    // If enabling, scroll to bottom immediately
+                                    if (newState && scrollRef.current) {
+                                        requestAnimationFrame(() => {
+                                            if (scrollRef.current) {
+                                                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <ArrowDownToLine size={14} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('monitor.clearLogs')} position="bottom">
+                            <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
+                        </Tooltip>
                     </div>
                 </div>
             </div>

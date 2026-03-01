@@ -64,7 +64,7 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
     }));
 
     return (
-        <div className="bg-[#252526] border border-[#454545] rounded-md shadow-lg overflow-hidden min-w-[180px] p-1 flex flex-col gap-0.5">
+        <div className="bg-[var(--sidebar-background)] border border-[var(--widget-border-color)] rounded-md shadow-lg overflow-hidden min-w-[180px] p-1 flex flex-col gap-0.5">
             {props.items.length > 0 ? (
                 props.items.map((item, index) => {
                     const Icon = item.icon || Hash;
@@ -72,19 +72,19 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
                         <button
                             key={index}
                             className={`flex items-center gap-2 px-2 py-1.5 text-xs text-left w-full rounded-sm transition-colors ${index === selectedIndex
-                                    ? 'bg-[#094771] text-white'
-                                    : 'text-[#cccccc] hover:bg-[#2a2d2e]'
+                                ? 'bg-[var(--button-background)] text-[var(--button-foreground)]'
+                                : 'text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'
                                 }`}
                             onClick={() => selectItem(index)}
                         >
-                            <Icon size={14} className={index === selectedIndex ? 'text-white' : item.iconColor || 'text-[#cccccc]'} />
+                            <Icon size={14} className={index === selectedIndex ? 'text-[var(--button-foreground)]' : item.iconColor || 'text-[var(--activitybar-inactive-foreground)]'} />
                             <span className="flex-1 font-mono">{item.title}</span>
                             {item.shortcut && <span className="opacity-50 text-[10px]">{item.shortcut}</span>}
                         </button>
                     );
                 })
             ) : (
-                <div className="px-2 py-1.5 text-xs text-[#969696] italic">No match found</div>
+                <div className="px-2 py-1.5 text-xs text-[var(--input-placeholder-color)] italic">No match found</div>
             )}
         </div>
     );

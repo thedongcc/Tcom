@@ -106,6 +106,9 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         smoothScroll?: boolean;
         flashNewMessage?: boolean;
         connectionExpanded?: boolean;
+        publishTopic?: string;
+        publishPayload?: string;
+        publishFormat?: 'text' | 'hex' | 'json' | 'base64';
         // Search State
         searchOpen?: boolean;
         searchQuery?: string;

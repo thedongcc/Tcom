@@ -10,6 +10,7 @@ import { SessionListItem } from './SessionListItem';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 interface SessionListSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -119,45 +120,49 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             <div className="px-3 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)]">
                 {sessionManager.workspacePath ? (
                     <div className="flex items-center justify-between">
-                        <div
-                            className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-80 min-w-0 flex-1 cursor-default"
-                            title={sessionManager.workspacePath}
-                        >
-                            <FolderOpen size={13} className="shrink-0 opacity-70" />
-                            <span className="truncate">{workspaceFolderName}</span>
-                        </div>
+                        <Tooltip content={sessionManager.workspacePath} position="bottom" wrapperClassName="min-w-0 flex-1 flex">
+                            <div
+                                className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-80 min-w-0 flex-1 cursor-default"
+                            >
+                                <FolderOpen size={13} className="shrink-0 opacity-70" />
+                                <span className="truncate">{workspaceFolderName}</span>
+                            </div>
+                        </Tooltip>
                         <div className="flex items-center gap-0.5 shrink-0">
-                            <div
-                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                title={t('monitor.refresh')}
-                                onClick={() => {
-                                    if (sessionManager.workspacePath) {
-                                        sessionManager.openWorkspace(sessionManager.workspacePath);
-                                    }
-                                }}
-                            >
-                                <RefreshCw size={13} className="opacity-70 hover:opacity-100" />
-                            </div>
-                            <div
-                                ref={recentButtonRef}
-                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                title={t('session.recentWorkspaces')}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const rect = recentButtonRef.current?.getBoundingClientRect();
-                                    if (rect) setRecentMenu({ x: rect.left, y: rect.bottom + 5 });
-                                }}
-                            >
-                                <MoreHorizontal size={14} className="opacity-70 hover:opacity-100" />
-                            </div>
-                            <div
-                                ref={addButtonRef}
-                                className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                title={t('session.newSession')}
-                                onClick={() => setShowNewSessionDialog(true)}
-                            >
-                                <Plus size={14} className="opacity-70 hover:opacity-100" />
-                            </div>
+                            <Tooltip content={t('monitor.refresh')} position="bottom">
+                                <div
+                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
+                                    onClick={() => {
+                                        if (sessionManager.workspacePath) {
+                                            sessionManager.openWorkspace(sessionManager.workspacePath);
+                                        }
+                                    }}
+                                >
+                                    <RefreshCw size={13} className="opacity-70 hover:opacity-100" />
+                                </div>
+                            </Tooltip>
+                            <Tooltip content={t('session.recentWorkspaces')} position="bottom">
+                                <div
+                                    ref={recentButtonRef}
+                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = recentButtonRef.current?.getBoundingClientRect();
+                                        if (rect) setRecentMenu({ x: rect.left, y: rect.bottom + 5 });
+                                    }}
+                                >
+                                    <MoreHorizontal size={14} className="opacity-70 hover:opacity-100" />
+                                </div>
+                            </Tooltip>
+                            <Tooltip content={t('session.newSession')} position="bottom">
+                                <div
+                                    ref={addButtonRef}
+                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
+                                    onClick={() => setShowNewSessionDialog(true)}
+                                >
+                                    <Plus size={14} className="opacity-70 hover:opacity-100" />
+                                </div>
+                            </Tooltip>
                         </div>
                     </div>
                 ) : (
@@ -193,9 +198,11 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                                 setRecentMenu(null);
                             }}
                         >
-                            <span className="truncate flex-1" title={ws}>
-                                {ws.split(/[\\/]/).pop()}
-                            </span>
+                            <Tooltip content={ws} position="right" wrapperClassName="truncate flex-1" className="max-w-[300px] whitespace-normal">
+                                <span className="truncate flex-1">
+                                    {ws.split(/[\\/]/).pop()}
+                                </span>
+                            </Tooltip>
                             {sessionManager.workspacePath === ws && <Check size={12} className="opacity-70" />}
                         </div>
                     ))}

@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 interface MonitorConfigPanelProps {
     session: any;
@@ -221,9 +222,11 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                     <div className="flex flex-col gap-1">
                         <label className="text-[11px] text-[var(--app-foreground)] font-medium flex justify-between">
                             {t('monitor.physicalPort')}
-                            <button onClick={listPorts} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors" title={t('monitor.refreshPorts')}>
-                                <RefreshCw size={12} />
-                            </button>
+                            <Tooltip content={t('monitor.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
+                                <button onClick={listPorts} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors">
+                                    <RefreshCw size={12} />
+                                </button>
+                            </Tooltip>
                         </label>
                         <CustomSelect
                             items={ports.filter(p => !(p.manufacturer === 'com0com' || p.friendlyName?.includes('com0com') || p.friendlyName?.includes('Virtual')))

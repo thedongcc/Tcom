@@ -4,6 +4,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
+import { Tooltip } from '../common/Tooltip';
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="mb-8">
@@ -188,29 +189,31 @@ export const SettingsEditor = () => {
                                     onChange={(val) => setTheme(val)}
                                 />
                             </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    (window as any).themeAPI?.openFolder();
-                                }}
-                                className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
-                                title="打开配色文件所在文件夹"
-                            >
-                                <FolderOpen size={14} />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const currentDef = availableThemes.find(t => t.id === config.theme);
-                                    if (currentDef) {
-                                        (window as any).themeAPI?.openFile(currentDef.id);
-                                    }
-                                }}
-                                className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
-                                title="打开当前配置文件"
-                            >
-                                <FileJson size={14} />
-                            </button>
+                            <Tooltip content={t('settings.openThemeFolder')} position="top">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        (window as any).themeAPI?.openFolder();
+                                    }}
+                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                >
+                                    <FolderOpen size={14} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('settings.openThemeFile')} position="top">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentDef = availableThemes.find(t => t.id === config.theme);
+                                        if (currentDef) {
+                                            (window as any).themeAPI?.openFile(currentDef.id);
+                                        }
+                                    }}
+                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                >
+                                    <FileJson size={14} />
+                                </button>
+                            </Tooltip>
                         </div>
                     ),
                 },
@@ -358,29 +361,32 @@ export const SettingsEditor = () => {
                 <span className="text-[13px] font-semibold text-[var(--app-foreground)]">{t('settings.title')}</span>
                 <div className="flex items-center gap-1">
 
-                    <button
-                        onClick={handleDownload}
-                        className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        title={t('settings.exportTooltip')}
-                    >
-                        <Download size={14} />
-                    </button>
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        title={t('settings.importTooltip')}
-                    >
-                        <Upload size={14} />
-                    </button>
+                    <Tooltip content={t('settings.exportTooltip')} position="bottom">
+                        <button
+                            onClick={handleDownload}
+                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                        >
+                            <Download size={14} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('settings.importTooltip')} position="bottom">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                        >
+                            <Upload size={14} />
+                        </button>
+                    </Tooltip>
                     <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
                     <div className="w-[1px] h-4 bg-[var(--border-color)] mx-1" />
-                    <button
-                        onClick={handleReset}
-                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        title={t('settings.resetTooltip')}
-                    >
-                        <RotateCcw size={14} />
-                    </button>
+                    <Tooltip content={t('settings.resetTooltip')} position="bottom">
+                        <button
+                            onClick={handleReset}
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                        >
+                            <RotateCcw size={14} />
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
 

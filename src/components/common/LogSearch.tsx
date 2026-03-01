@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, X, ChevronUp, ChevronDown, Regex } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip } from './Tooltip';
+import { useI18n } from '../../context/I18nContext';
 
 export interface SearchMatch {
     logId: string;
@@ -229,6 +231,8 @@ export const LogSearch: React.FC<LogSearchProps> = ({
     totalMatches,
     regexError
 }) => {
+    const { t } = useI18n();
+
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -287,69 +291,74 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         </div>
 
                         <div className="flex items-center space-x-0.5 px-0.5">
-                            <button
-                                onClick={() => onMatchCaseChange(!isMatchCase)}
-                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
-                                style={isMatchCase ? {} : { color: 'var(--input-placeholder-color)' }}
-                                onMouseEnter={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
-                                onMouseLeave={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
-                                title="Match Case"
-                            >
-                                <span className="font-sans font-medium text-[13px] leading-none tracking-tight">Aa</span>
-                            </button>
-                            <button
-                                onClick={() => onRegexChange(!isRegex)}
-                                className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
-                                style={isRegex ? {} : { color: 'var(--input-placeholder-color)' }}
-                                onMouseEnter={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
-                                onMouseLeave={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
-                                title="Use Regular Expression"
-                            >
-                                <span className="font-mono font-bold text-[14px] leading-none tracking-widest pl-[1px] transform -translate-y-[1px]">.*</span>
-                            </button>
+                            <Tooltip content={t('search.matchCase')} position="bottom" wrapperClassName="flex items-center">
+                                <button
+                                    onClick={() => onMatchCaseChange(!isMatchCase)}
+                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                    style={isMatchCase ? {} : { color: 'var(--input-placeholder-color)' }}
+                                    onMouseEnter={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                                    onMouseLeave={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
+                                >
+                                    <span className="font-sans font-medium text-[13px] leading-none tracking-tight">Aa</span>
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('search.useRegex')} position="bottom" wrapperClassName="flex items-center">
+                                <button
+                                    onClick={() => onRegexChange(!isRegex)}
+                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                    style={isRegex ? {} : { color: 'var(--input-placeholder-color)' }}
+                                    onMouseEnter={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                                    onMouseLeave={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
+                                >
+                                    <span className="font-mono font-bold text-[14px] leading-none tracking-widest pl-[1px] transform -translate-y-[1px]">.*</span>
+                                </button>
+                            </Tooltip>
                         </div>
 
                         <div className="w-[1px] h-4 mx-1" style={{ backgroundColor: 'var(--widget-border-color)' }} />
 
-                        <button
-                            onClick={onPrev}
-                            disabled={totalMatches === 0}
-                            className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
-                            style={{ color: 'var(--focus-border-color)' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
-                            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
-                            title="Previous Match (Shift+Enter)"
-                        >
-                            <ChevronUp size={14} />
-                        </button>
-                        <button
-                            onClick={onNext}
-                            disabled={totalMatches === 0}
-                            className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
-                            style={{ color: 'var(--focus-border-color)' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
-                            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
-                            title="Next Match (Enter)"
-                        >
-                            <ChevronDown size={14} />
-                        </button>
+                        <Tooltip content={t('search.prevMatch')} position="bottom" wrapperClassName="flex items-center">
+                            <button
+                                onClick={onPrev}
+                                disabled={totalMatches === 0}
+                                className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
+                                style={{ color: 'var(--focus-border-color)' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
+                            >
+                                <ChevronUp size={14} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('search.nextMatch')} position="bottom" wrapperClassName="flex items-center">
+                            <button
+                                onClick={onNext}
+                                disabled={totalMatches === 0}
+                                className="p-1 disabled:opacity-30 transition-colors rounded-[4px]"
+                                style={{ color: 'var(--focus-border-color)' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''}
+                            >
+                                <ChevronDown size={14} />
+                            </button>
+                        </Tooltip>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <button
-                onClick={onToggle}
-                className="p-1.5 rounded transition-colors"
-                style={isOpen
-                    ? { backgroundColor: 'var(--accent-color)', color: 'var(--button-foreground)' }
-                    : { color: 'var(--input-placeholder-color)' }
-                }
-                onMouseEnter={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
-                onMouseLeave={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
-                title="Find (Ctrl+F)"
-            >
-                {isOpen ? <X size={16} /> : <Search size={16} />}
-            </button>
+            <Tooltip content={t('search.closeSearch')} position="bottom">
+                <button
+                    onClick={onToggle}
+                    className="p-1.5 rounded transition-colors"
+                    style={isOpen
+                        ? { backgroundColor: 'var(--accent-color)', color: 'var(--button-foreground)' }
+                        : { color: 'var(--input-placeholder-color)' }
+                    }
+                    onMouseEnter={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
+                    onMouseLeave={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
+                >
+                    {isOpen ? <X size={16} /> : <Search size={16} />}
+                </button>
+            </Tooltip>
         </div>
     );
 };

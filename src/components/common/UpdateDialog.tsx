@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Download, Info, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 interface UpdateStatus {
     type: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'idle';
@@ -119,9 +120,11 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
 
                         <div className="flex justify-end gap-2 mt-2">
                             <button onClick={onClose} className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs">稍后再说</button>
-                            <button onClick={handleManualDownload} className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs flex items-center gap-1" title="若自动下载失败请尝试此选项">
-                                手动下载
-                            </button>
+                            <Tooltip content="若自动下载失败请尝试此选项" position="bottom" wrapperClassName="flex">
+                                <button onClick={handleManualDownload} className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs flex items-center gap-1">
+                                    手动下载
+                                </button>
+                            </Tooltip>
                             <button onClick={handleDownload} className="px-4 py-1.5 bg-[#007acc] text-white rounded-sm text-xs hover:bg-[#0098ff] flex items-center gap-2">
                                 <Download size={14} /> 立即下载
                             </button>

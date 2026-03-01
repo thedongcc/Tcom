@@ -6,6 +6,8 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { GraphCanvas } from './GraphCanvas';
 import { GraphLayout } from './GraphStyles';
 import { Plus, Trash2, Layout, ZoomIn, ZoomOut, Link, Network } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
+import { useI18n } from '../../context/I18nContext';
 
 interface GraphEditorProps {
     sessionId?: string;
@@ -13,6 +15,7 @@ interface GraphEditorProps {
 
 export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
     const { confirm } = useConfirm();
+    const { t } = useI18n();
     // Local state for UI responsiveness, synced with Service
     const [nodes, setNodes] = useState<IGraphNode[]>([]);
     const [edges, setEdges] = useState<IGraphEdge[]>([]);
@@ -296,23 +299,33 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
 
             {/* Toolbar */}
             <div className="absolute top-4 left-4 z-50 flex gap-2">
-                <div className="flex bg-[#252526] rounded-md border border-[#3c3c3c] overflow-hidden shadow-lg">
-                    <button onClick={() => addNode('virtual')} className="p-2 hover:bg-[#3c3c3c] text-[#4ec9b0]" title="添加虚拟节点">
-                        <Plus size={16} />
-                    </button>
-                    <button onClick={() => addNode('physical')} className="p-2 hover:bg-[#3c3c3c] text-[#ce9178]" title="添加物理节点">
-                        <Plus size={16} />
-                    </button>
-                    <button onClick={() => addNode('pair')} className="p-2 hover:bg-[#3c3c3c] text-[#c586c0]" title="添加配对节点">
-                        <Link size={16} />
-                    </button>
-                    <button onClick={() => addNode('bus')} className="p-2 hover:bg-[#3c3c3c] text-[#dcdcaa]" title="添加共享总线">
-                        <Network size={16} />
-                    </button>
+                <div className="flex bg-[#252526] rounded-md border border-[#3c3c3c] overflow-hidden shadow-lg [&_button]:flex">
+                    <Tooltip content={t('graph.addVirtual')} position="bottom">
+                        <button onClick={() => addNode('virtual')} className="p-2 hover:bg-[#3c3c3c] text-[#4ec9b0]">
+                            <Plus size={16} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('graph.addPhysical')} position="bottom">
+                        <button onClick={() => addNode('physical')} className="p-2 hover:bg-[#3c3c3c] text-[#ce9178]">
+                            <Plus size={16} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('graph.addPair')} position="bottom">
+                        <button onClick={() => addNode('pair')} className="p-2 hover:bg-[#3c3c3c] text-[#c586c0]">
+                            <Link size={16} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('graph.addBus')} position="bottom">
+                        <button onClick={() => addNode('bus')} className="p-2 hover:bg-[#3c3c3c] text-[#dcdcaa]">
+                            <Network size={16} />
+                        </button>
+                    </Tooltip>
                     <div className="w-[1px] bg-[#3c3c3c]"></div>
-                    <button onClick={clearGraph} className="p-2 hover:bg-red-900/50 text-red-400" title="清空图形">
-                        <Trash2 size={16} />
-                    </button>
+                    <Tooltip content={t('graph.clearGraph')} position="bottom">
+                        <button onClick={clearGraph} className="p-2 hover:bg-red-900/50 text-red-400">
+                            <Trash2 size={16} />
+                        </button>
+                    </Tooltip>
                 </div>
 
                 <div className="flex bg-[#252526] rounded-md border border-[#3c3c3c] overflow-hidden shadow-lg ml-4">

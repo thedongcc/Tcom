@@ -2,6 +2,8 @@
 import { Files, Search, GitGraph, Box, Settings, Monitor, Check } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { usePluginManager } from '../../context/PluginContextShared';
+import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 import {
     DndContext,
     closestCenter,
@@ -23,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface ActivityItemProps {
     id?: string;
     icon: ReactNode;
+    label?: string;
     active?: boolean;
     onClick?: () => void;
     className?: string;
@@ -30,15 +33,27 @@ interface ActivityItemProps {
     onContextMenu?: (e: React.MouseEvent) => void;
 }
 
-const ActivityItem = ({ icon, active, onClick, className, onContextMenu }: ActivityItemProps) => (
-    <div
-        className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--app-foreground)] transition-colors border-l-4 ${active ? 'text-[var(--app-foreground)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
-        onClick={onClick}
-        onContextMenu={onContextMenu}
-    >
-        {icon}
-    </div>
-);
+const ActivityItem = ({ icon, label, active, onClick, className, onContextMenu }: ActivityItemProps) => {
+    const content = (
+        <div
+            className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--app-foreground)] transition-colors border-l-4 ${active ? 'text-[var(--app-foreground)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
+            onClick={onClick}
+            onContextMenu={onContextMenu}
+        >
+            {icon}
+        </div>
+    );
+
+    if (label) {
+        return (
+            <Tooltip content={label} position="right" delay={300}>
+                {content}
+            </Tooltip>
+        );
+    }
+
+    return content;
+};
 
 // Sortable Wrapper
 const SortableActivityItem = ({ id, ...props }: ActivityItemProps & { id: string }) => {
@@ -79,11 +94,21 @@ const DEFAULT_ITEMS = [
 
 export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
     const { plugins } = usePluginManager();
+    const { t } = useI18n();
 
     // --- State for Drag & Drop and Visibility ---
     // Merge default items + plugin items
     // Using a simple state initialization for now. In a real app we might persist this.
     const allKnownItems = useMemo(() => {
+        // Translate default items dynamically
+        const translatedDefaults = DEFAULT_ITEMS.map(item => {
+            let translatedLabel = item.label;
+            if (item.id === 'explorer') translatedLabel = t('sidebar.sessions');
+            else if (item.id === 'serial') translatedLabel = t('sidebar.virtualPort');
+            else if (item.id === 'extensions') translatedLabel = t('sidebar.extensions');
+            return { ...item, label: translatedLabel };
+        });
+
         const pluginItems = plugins
             .filter(p => p.isActive && p.plugin.sidebarComponent)
             .map(p => ({
@@ -91,8 +116,8 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                 icon: p.plugin.icon ? <p.plugin.icon size={24} /> : <Box size={24} />,
                 label: p.plugin.name || p.plugin.id
             }));
-        return [...DEFAULT_ITEMS, ...pluginItems];
-    }, [plugins]);
+        return [...translatedDefaults, ...pluginItems];
+    }, [plugins, t]);
 
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
     const [visibleIds, setVisibleIds] = useState<Record<string, boolean>>({});
@@ -213,6 +238,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                                     key={id}
                                     id={id}
                                     icon={itemDef.icon}
+                                    label={itemDef.label}
                                     active={activeView === id}
                                     onClick={() => onViewChange(activeView === id ? '' : id)}
                                 />
@@ -226,6 +252,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
             <div className="flex flex-col gap-0">
                 <ActivityItem
                     icon={<Settings size={24} />}
+                    label={t('configSidebar.settings')}
                     active={false}
                     onClick={() => {
                         if (onOpenSettings) onOpenSettings();

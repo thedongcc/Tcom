@@ -2,6 +2,7 @@
 import { Plus, Trash2, Play, Square, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 interface MqttConfigPanelProps {
     config: MqttSessionConfig;
@@ -148,14 +149,15 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                         onChange={(e) => onUpdate({ clientId: e.target.value })}
                                         disabled={isLocked}
                                     />
-                                    <button
-                                        className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
-                                        onClick={() => onUpdate({ clientId: `client-${Math.random().toString(16).substring(2, 8)}` })}
-                                        title={t('mqtt.generateId')}
-                                        disabled={isLocked}
-                                    >
-                                        ↻
-                                    </button>
+                                    <Tooltip content={t('mqtt.generateId')} position="bottom" wrapperClassName="flex">
+                                        <button
+                                            className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
+                                            onClick={() => onUpdate({ clientId: `client-${Math.random().toString(16).substring(2, 8)}` })}
+                                            disabled={isLocked}
+                                        >
+                                            ↻
+                                        </button>
+                                    </Tooltip>
                                 </div>
                             </div>
                         </div>
@@ -309,13 +311,14 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     />
 
                                     {/* Subscribe Toggle */}
-                                    <button
-                                        className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[#10b981]' : 'bg-[var(--input-border-color)]'}`}
-                                        onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}
-                                        title={topic.subscribed ? '已订阅并显示在监视器' : '暂停订阅并从监视器隐藏'}
-                                    >
-                                        <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${topic.subscribed ? 'translate-x-4' : 'translate-x-0'}`} />
-                                    </button>
+                                    <Tooltip content={topic.subscribed ? '已订阅并显示在监视器' : '暂停订阅并从监视器隐藏'} position="bottom" wrapperClassName="flex items-center px-0.5">
+                                        <button
+                                            className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[#10b981]' : 'bg-[var(--input-border-color)]'}`}
+                                            onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}
+                                        >
+                                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${topic.subscribed ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </button>
+                                    </Tooltip>
 
                                     {/* Delete */}
                                     <Trash2

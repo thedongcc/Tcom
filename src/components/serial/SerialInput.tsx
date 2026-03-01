@@ -12,6 +12,7 @@ import { SuggestionExtension, getSuggestionOptions } from './SuggestionExtension
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
+import { Tooltip } from '../common/Tooltip';
 
 interface SerialInputProps {
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
@@ -327,52 +328,63 @@ export const SerialInput = ({
                     <>
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
 
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="CRC"
-                            onClick={() => insertToken('crc')}>
-                            <Plus size={14} className="text-emerald-500" />
-                            <span>CRC</span>
-                        </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Flag"
-                            onClick={() => insertToken('flag')}>
-                            <Flag size={14} className="text-blue-400" />
-                            <span>Flag</span>
-                        </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Time"
-                            onClick={() => insertToken('timestamp')}>
-                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-blue-400 text-blue-400 text-[9px] font-mono rounded-[2px] leading-none">T</div>
-                            <span>Time</span>
-                        </button>
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap" title="Auto"
-                            onClick={() => insertToken('auto_inc' as any)}>
-                            <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
-                            <span>Auto</span>
-                        </button>
+                        <Tooltip content={t('serial.insertFlag')} position="bottom" wrapperClassName="flex">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                                onClick={() => insertToken('flag')}>
+                                <Flag size={14} className="text-blue-400" />
+                                <span>Custom</span>
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('serial.insertCRC')} position="bottom" wrapperClassName="flex">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                                onClick={() => insertToken('crc')}>
+                                <Plus size={14} className="text-emerald-500" />
+                                <span>CRC</span>
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('serial.insertTime')} position="bottom" wrapperClassName="flex">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                                onClick={() => insertToken('timestamp')}>
+                                <div className="flex items-center justify-center w-[14px] h-[14px] border border-blue-400 text-blue-400 text-[9px] font-mono rounded-[2px] leading-none">T</div>
+                                <span>Time</span>
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('serial.insertAuto')} position="bottom" wrapperClassName="flex">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                                onClick={() => insertToken('auto_inc' as any)}>
+                                <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
+                                <span>Auto</span>
+                            </button>
+                        </Tooltip>
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
-                        <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap" title="Load File">
-                            <Upload size={14} />
-                            <span>File</span>
-                        </button>
+                        <Tooltip content={t('serial.loadFile')} position="bottom" wrapperClassName="flex">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
+                                <Upload size={14} />
+                                <span>File</span>
+                            </button>
+                        </Tooltip>
                         <div className="flex-1 shrink min-w-0" />
                         {/* Timed Send: flat toggle + input */}
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)]" />
                         <div className="shrink-0 flex items-center gap-1.5">
-                            <button
-                                className={`flex items-center gap-1 px-2 py-0.5 text-[12px] rounded-sm transition-colors cursor-pointer whitespace-nowrap ${isTimerRunning
-                                    ? 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
-                                    : ((!isTimerRunning && isEmpty) ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-secondary-background)] text-[var(--button-foreground)] hover:bg-[var(--button-secondary-hover-background)]')
-                                    }`}
-                                onClick={() => {
-                                    if (!isTimerRunning && isEmpty) {
-                                        showToast(t('toast.sendEmpty'), 'warning');
-                                        return;
-                                    }
-                                    setIsTimerRunning(!isTimerRunning);
-                                }}
-                                title={isTimerRunning ? 'Stop Timed Send' : (isEmpty ? 'Type message to start timer' : 'Start Timed Send')}
-                            >
-                                <Timer size={14} />
-                                <span>{isTimerRunning ? 'Stop' : 'Timed'}</span>
-                            </button>
+                            <Tooltip content={isTimerRunning ? t('serial.stopTimer') : (isEmpty ? t('serial.timerEmpty') : t('serial.startTimer'))} position="bottom" wrapperClassName="flex">
+                                <button
+                                    className={`flex items-center gap-1 px-2 py-0.5 text-[12px] rounded-sm transition-colors cursor-pointer whitespace-nowrap ${isTimerRunning
+                                        ? 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
+                                        : ((!isTimerRunning && isEmpty) ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-secondary-background)] text-[var(--button-foreground)] hover:bg-[var(--button-secondary-hover-background)]')
+                                        }`}
+                                    onClick={() => {
+                                        if (!isTimerRunning && isEmpty) {
+                                            showToast(t('toast.sendEmpty'), 'warning');
+                                            return;
+                                        }
+                                        setIsTimerRunning(!isTimerRunning);
+                                    }}
+                                >
+                                    <Timer size={14} />
+                                    <span>{isTimerRunning ? 'Stop' : 'Timed'}</span>
+                                </button>
+                            </Tooltip>
                             <input
                                 type="text"
                                 className="w-12 h-[22px] bg-[var(--input-background)] border border-[var(--border-color)] text-[var(--app-foreground)] text-[11px] px-1 rounded-sm focus:border-[var(--focus-border-color)] outline-none text-center font-mono"
@@ -410,16 +422,17 @@ export const SerialInput = ({
                 </div>
 
                 {!hideExtras && (
-                    <button
-                        className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                            ? (isEmpty ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
-                            : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
-                        onClick={() => handleSend()}
-                        title={isConnected ? (isEmpty ? t('toast.sendEmpty') : t('serial.send')) : t('serial.connect')}
-                    >
-                        {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]"></div></div>}
-                        <span className="text-[10px]">{isConnected ? t('serial.send') : t('serial.connect')}</span>
-                    </button>
+                    <Tooltip content={isConnected ? (isEmpty ? t('toast.sendEmpty') : t('serial.send')) : t('serial.connect')} position="left" wrapperClassName="flex items-stretch">
+                        <button
+                            className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
+                                ? (isEmpty ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
+                                : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
+                            onClick={() => handleSend()}
+                        >
+                            {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]"></div></div>}
+                            <span className="text-[10px]">{isConnected ? t('serial.send') : t('serial.connect')}</span>
+                        </button>
+                    </Tooltip>
                 )}
             </div>
 

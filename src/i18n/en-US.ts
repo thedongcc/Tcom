@@ -31,6 +31,8 @@ export const enUS = {
         exportTooltip: 'Export settings (settings.json)',
         importTooltip: 'Import settings',
         resetTooltip: 'Reset to defaults',
+        openThemeFolder: 'Open theme folder',
+        openThemeFile: 'Open current theme file',
         resetTitle: 'Reset Settings',
         resetMessage: 'Are you sure you want to reset all settings to their defaults? This includes theme, colors, fonts, and UI layout preferences, and cannot be undone.',
         resetConfirm: 'Reset to Defaults',
@@ -106,7 +108,7 @@ export const enUS = {
         // Token colors
         tokens: {
             crc: 'CRC Token',
-            flag: 'Flag Token',
+            flag: 'Custom Placeholder',
             accent: 'Accent / Highlight',
         },
 
@@ -175,6 +177,15 @@ export const enUS = {
         connected: 'Connected',
         disconnected: 'Disconnected',
         connecting: 'Connecting...',
+        // Token insert button tooltips
+        insertCRC: 'Insert CRC Token',
+        insertFlag: 'Insert Custom Placeholder',
+        insertTime: 'Insert Timestamp Token',
+        insertAuto: 'Insert Auto-Increment Token',
+        loadFile: 'Load File',
+        startTimer: 'Start Timed Send',
+        stopTimer: 'Stop Timed Send',
+        timerEmpty: 'Type a message first to start timed send',
     },
 
     // MQTT
@@ -228,6 +239,14 @@ export const enUS = {
         exportLog: 'Export Log',
         clearLogs: 'Clear Logs',
         autoScroll: 'Auto-Scroll',
+        autoScrollOn: 'Auto-Scroll: On',
+        autoScrollOff: 'Auto-Scroll: Off',
+        filterTxOnly: 'Click to filter TX only',
+        filterRxOnly: 'Click to filter RX only',
+        cancelFilter: 'Click to cancel filter',
+        crcConfig: 'CRC Configuration',
+        filterVirtualPort: 'Click to show virtual port data only',
+        filterPhysicalPort: 'Click to show physical port data only',
         packetType: 'Packet Type',
         partnerNotOpen: 'Data will back-log while partner program hasn\'t opened port {port}.',
         switchPhysical: 'Switch Physical',
@@ -305,8 +324,11 @@ export const enUS = {
         commandNameExists: 'This name is already in use',
         send: 'Send',
         sendAll: 'Send All',
+        sendCommand: 'Send Command',
+        connectToSend: 'Click to connect & send',
         noCommands: 'No commands.',
         noCommandsHint: 'Use the menu to add groups or commands.',
+        menu: 'Command Menu',
         // Context menu
         edit: 'Edit',
         duplicate: 'Duplicate',
@@ -345,6 +367,9 @@ export const enUS = {
         readyToInstall: 'Ready to install',
         updateFailed: 'Update failed',
         checkFailed: 'Check failed',
+        cpuUsage: 'App CPU Usage: {val}%',
+        memUsage: 'App Memory (RSS): {val} MB',
+        openGithub: 'Open project on GitHub',
     },
 
     // Toast messages
@@ -370,6 +395,27 @@ export const enUS = {
         noEditorDesc: 'Select a session from the sidebar or create a new one to get started',
         sessionNotFound: 'Session not found',
         settingsTabName: 'Settings',
+        splitEditor: 'Split Editor',
+    },
+
+    // Search
+    search: {
+        matchCase: 'Match Case',
+        useRegex: 'Use Regular Expression',
+        prevMatch: 'Previous Match (Shift+Enter)',
+        nextMatch: 'Next Match (Enter)',
+        closeSearch: 'Close Search',
+    },
+
+    // Graph editor
+    graph: {
+        addVirtual: 'Add Virtual Node',
+        addPhysical: 'Add Physical Node',
+        addPair: 'Add Pair Node',
+        addBus: 'Add Shared Bus',
+        clearGraph: 'Clear Graph',
+        portInput: 'Input (RX)',
+        portOutput: 'Output (TX)',
     },
 
     // Sidebar titles

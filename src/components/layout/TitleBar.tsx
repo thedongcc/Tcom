@@ -1,6 +1,7 @@
 ﻿import { Menu, Pin, PinOff } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 interface TitleBarProps {
   workspaceName?: string | null;
@@ -56,22 +57,23 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
           marginRight: `${NATIVE_CONTROLS_WIDTH}px`,
         } as any}
       >
-        <button
-          onClick={togglePin}
-          title={isPinned ? t('titleBar.unpinWindow') : t('titleBar.pinWindow')}
-          className={[
-            'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
-            isPinned
-              ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
-              : 'text-[var(--app-foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
-          ].join(' ')}
-        >
-          {isPinned ? (
-            <Pin size={14} className="rotate-45" />
-          ) : (
-            <PinOff size={14} />
-          )}
-        </button>
+        <Tooltip content={isPinned ? t('titleBar.unpinWindow') : t('titleBar.pinWindow')} position="bottom" wrapperClassName="h-full">
+          <button
+            className={[
+              'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
+              isPinned
+                ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
+                : 'text-[var(--app-foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
+            ].join(' ')}
+            onClick={togglePin}
+          >
+            {isPinned ? (
+              <Pin size={14} className="rotate-45" />
+            ) : (
+              <PinOff size={14} />
+            )}
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

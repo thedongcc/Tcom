@@ -2,6 +2,8 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Network, Monitor, Link } from 'lucide-react';
 import { GraphLayout } from './GraphStyles';
+import { Tooltip } from '../common/Tooltip';
+import { useI18n } from '../../context/I18nContext';
 
 interface GraphNodeProps {
     id: string;
@@ -17,6 +19,7 @@ interface GraphNodeProps {
 }
 
 export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onSelect, onHandleMouseDown }: GraphNodeProps) => {
+    const { t } = useI18n();
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: id,
         data: { type: 'node', id } // Identify as node for DND
@@ -79,9 +82,11 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
                     <span className="font-mono text-[10px] uppercase opacity-50" style={{ color: GraphLayout.COLOR_TEXT_MAIN }}>In</span>
 
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#111] border border-[#333]">
-                        <span className="font-bold truncate max-w-[90px]" style={{ color: GraphLayout.COLOR_TEXT_MAIN }} title={portPath}>
-                            {type === 'pair' ? 'Bridge' : type === 'bus' ? 'Shared Bus' : portPath}
-                        </span>
+                        <Tooltip content={portPath} position="bottom" wrapperClassName="flex">
+                            <span className="font-bold truncate max-w-[90px]" style={{ color: GraphLayout.COLOR_TEXT_MAIN }}>
+                                {type === 'pair' ? 'Bridge' : type === 'bus' ? 'Shared Bus' : portPath}
+                            </span>
+                        </Tooltip>
                     </div>
 
                     <span className="font-mono text-[10px] uppercase opacity-50" style={{ color: GraphLayout.COLOR_TEXT_MAIN }}>Out</span>
@@ -89,41 +94,37 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
             </div>
 
             {/* Input Handle (Left) */}
-            <div
-                className="absolute w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] z-20 cursor-crosshair transition-all"
-                style={{
-                    backgroundColor: '#222',
-                    left: -6,
-                    top: portY,
-                    marginTop: -6
-                }}
-                title="Input (RX)"
-                onPointerDown={(e) => {
-                    e.stopPropagation();
-                    onHandleMouseDown?.(id, 'target');
-                }}
-                data-handle-id={id}
-                data-handle-type="target"
-            />
+            <div className="absolute z-20" style={{ left: -6, top: portY, marginTop: -6 }}>
+                <Tooltip content={t('graph.portInput')} position="left" wrapperClassName="flex">
+                    <div
+                        className="w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] cursor-crosshair transition-all"
+                        style={{ backgroundColor: '#222' }}
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onHandleMouseDown?.(id, 'target');
+                        }}
+                        data-handle-id={id}
+                        data-handle-type="target"
+                    />
+                </Tooltip>
+            </div>
 
 
             {/* Output Handle (Right) - Circle Overlay */}
-            <div
-                className="absolute w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] z-20 cursor-crosshair transition-all"
-                style={{
-                    backgroundColor: '#222',
-                    left: GraphLayout.NODE_WIDTH - 6, // Centered on right border
-                    top: portY,
-                    marginTop: -6
-                }}
-                title="Output (TX)"
-                onPointerDown={(e) => {
-                    e.stopPropagation();
-                    onHandleMouseDown?.(id, 'source');
-                }}
-                data-handle-id={id}
-                data-handle-type="source"
-            />
+            <div className="absolute z-20" style={{ left: GraphLayout.NODE_WIDTH - 6, top: portY, marginTop: -6 }}>
+                <Tooltip content={t('graph.portOutput')} position="right" wrapperClassName="flex">
+                    <div
+                        className="w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] cursor-crosshair transition-all"
+                        style={{ backgroundColor: '#222' }}
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onHandleMouseDown?.(id, 'source');
+                        }}
+                        data-handle-id={id}
+                        data-handle-type="source"
+                    />
+                </Tooltip>
+            </div>
         </div>
     );
 };

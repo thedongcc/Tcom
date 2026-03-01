@@ -31,6 +31,8 @@ export const zhCN = {
         exportTooltip: '导出设置 (settings.json)',
         importTooltip: '导入设置',
         resetTooltip: '恢复默认设置',
+        openThemeFolder: '打开配色文件所在文件夹',
+        openThemeFile: '打开当前配置文件',
         resetTitle: '重置设置',
         resetMessage: '您确定要将所有设置恢复为默认值吗？此操作包含主题、颜色、字体及 UI 布局偏好，且无法撤销。',
         resetConfirm: '恢复默认',
@@ -46,7 +48,7 @@ export const zhCN = {
             appearance: '外观方案',
             layout: '界面布局',
             serialColors: '串口日志颜色',
-            tokenColors: '令牌标记颜色',
+            tokenColors: '占位符颜色',
             typography: '字体排版',
             logFormat: '日志格式化',
             customThemes: '自定义主题',
@@ -103,10 +105,10 @@ export const zhCN = {
             error: '错误提示颜色',
         },
 
-        // 令牌标记颜色
+        // 占位符颜色
         tokens: {
-            crc: 'CRC 校验令牌',
-            flag: 'Flag 标志令牌',
+            crc: 'CRC 校验占位符',
+            flag: '自定义占位符',
             accent: '强调/高亮色',
         },
 
@@ -173,6 +175,15 @@ export const zhCN = {
         connected: '已连接',
         disconnected: '已断开',
         connecting: '连接中...',
+        // 占位符插入按钮 Tooltip
+        insertCRC: '插入 CRC 占位符',
+        insertFlag: '插入自定义占位符',
+        insertTime: '插入时间戳占位符',
+        insertAuto: '插入自增占位符',
+        loadFile: '上传文件',
+        startTimer: '开始定时发送',
+        stopTimer: '停止定时发送',
+        timerEmpty: '请输入内容后再开始定时发送',
     },
 
     // MQTT
@@ -226,6 +237,14 @@ export const zhCN = {
         exportLog: '导出日志',
         clearLogs: '清空日志',
         autoScroll: '自动滚动',
+        autoScrollOn: '自动滚动：开启',
+        autoScrollOff: '自动滚动：关闭',
+        filterTxOnly: '点击筛选：只显示发送',
+        filterRxOnly: '点击筛选：只显示接收',
+        cancelFilter: '点击取消筛选',
+        crcConfig: 'CRC 配置',
+        filterVirtualPort: '点击筛选：只显示虚拟串口数据',
+        filterPhysicalPort: '点击筛选：只显示物理串口数据',
         packetType: '显示报文方向',
         partnerNotOpen: '对端程序尚未打开端口 {port}。数据将积压。',
         switchPhysical: '切换物理端',
@@ -303,8 +322,11 @@ export const zhCN = {
         commandNameExists: '该名称已被使用',
         send: '发送',
         sendAll: '全部发送',
+        sendCommand: '发送命令',
+        connectToSend: '点击连接并发送',
         noCommands: '暂无命令。',
         noCommandsHint: '使用菜单添加分组或命令。',
+        menu: '命令菜单',
         // 右键菜单
         edit: '编辑',
         duplicate: '复制',
@@ -343,6 +365,9 @@ export const zhCN = {
         readyToInstall: '准备安装',
         updateFailed: '更新失败',
         checkFailed: '检查失败',
+        cpuUsage: 'CPU 占用率: {val}%',
+        memUsage: '内存占用 (RSS): {val} MB',
+        openGithub: '在 GitHub 上查看项目',
     },
 
     // Toast 消息
@@ -368,6 +393,27 @@ export const zhCN = {
         noEditorDesc: '从侧边栏选择会话或新建会话以开始',
         sessionNotFound: '会话未找到',
         settingsTabName: '设置',
+        splitEditor: '分栏编辑',
+    },
+
+    // 搜索
+    search: {
+        matchCase: '区分大小写',
+        useRegex: '使用正则表达式',
+        prevMatch: '上一个匹配项 (Shift+Enter)',
+        nextMatch: '下一个匹配项 (Enter)',
+        closeSearch: '关闭搜索',
+    },
+
+    // 图形编辑器
+    graph: {
+        addVirtual: '添加虚拟节点',
+        addPhysical: '添加物理节点',
+        addPair: '添加配对节点',
+        addBus: '添加共享总线',
+        clearGraph: '清空图形',
+        portInput: '输入 (RX)',
+        portOutput: '输出 (TX)',
     },
 
     // 侧边栏标题

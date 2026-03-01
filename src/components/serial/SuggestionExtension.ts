@@ -81,7 +81,7 @@ export const getSuggestionOptions = () => ({
                 },
             },
             {
-                title: 'Flag',
+                title: 'Custom',
                 type: 'flag',
                 config: { hex: 'AA55' }, // Default placeholder
                 icon: Flag,

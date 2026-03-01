@@ -13,6 +13,7 @@ import { MessagePipeline } from '../../services/MessagePipeline';
 import { useToast } from '../../context/ToastContext';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 // Helper component for the scrollable list area
 const CommandScrollArea = ({
@@ -515,13 +516,14 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
             <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--sidebar-background)] border-b border-[var(--border-color)]">
                 <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
                 <div className="flex items-center gap-1 relative">
-                    <button
-                        className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)]"
-                        title="Menu"
-                        onClick={() => setShowMenu(!showMenu)}
-                    >
-                        <MoreHorizontal size={14} />
-                    </button>
+                    <Tooltip content={t('command.menu')} position="bottom">
+                        <button
+                            className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)]"
+                            onClick={() => setShowMenu(!showMenu)}
+                        >
+                            <MoreHorizontal size={14} />
+                        </button>
+                    </Tooltip>
 
                     {showMenu && (
                         <>

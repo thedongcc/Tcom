@@ -1,6 +1,7 @@
 ﻿import React, { type ReactNode, useState } from 'react';
 import { useI18n } from '../../context/I18nContext';
 import { X, LayoutTemplate, Plus, Columns } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
 // Use legacy matching imports to ensure compatibility with user's environment
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { SerialMonitor } from '../serial/SerialMonitor';
@@ -58,29 +59,31 @@ interface TabProps {
 }
 
 const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabProps) => (
-    <div
-        onClick={onClick}
-        className={`focus:outline-none outline-none
-    h-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--widget-border-color)] select-none group
-    ${active
-                ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
-                : 'bg-[var(--widget-background)] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--app-background)]'
-            }
-`}
-        title={label}
-    >
-        <div className="flex items-center gap-2 truncate flex-1">
-            <span className="text-[13px] truncate">{label}</span>
-            {unsaved && <div className="w-2 h-2 rounded-full bg-white opacity-60"></div>}
-        </div>
-        <div className="flex items-center">
-            <div
-                onClick={onClose}
-                className="p-0.5 rounded-md hover:bg-[var(--hover-background)]">
-                <X size={14} />
+    <Tooltip content={label} position="bottom" wrapperClassName="h-full flex-shrink-0 min-w-0" className="max-w-[300px] whitespace-normal">
+        <div
+            onClick={onClick}
+            className={`focus:outline-none outline-none
+        h-full w-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--widget-border-color)] select-none group
+        ${active
+                    ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
+                    : 'bg-[var(--widget-background)] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--app-background)]'
+                }
+    `}
+        >
+            <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                <span className="text-[13px] truncate leading-none">{label}</span>
+                {unsaved && <div className="w-2 h-2 rounded-full bg-white opacity-60 shrink-0"></div>}
+            </div>
+            <div className="flex items-center shrink-0 ml-2">
+                <div
+                    onClick={onClose}
+                    className="p-0.5 rounded-md hover:bg-[var(--hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]"
+                >
+                    <X size={14} />
+                </div>
             </div>
         </div>
-    </div>
+    </Tooltip>
 );
 
 // --- Sortable Tab Wrapper ---
@@ -240,16 +243,17 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                 {/* Actions - Pinned to the right, outside the scrollable zone */}
                 {node.views && node.views.length > 0 && (
                     <div className="flex items-center px-1 shrink-0 h-full border-l border-[var(--widget-border-color)]">
-                        <div
-                            className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)] focus:outline-none outline-none"
-                            title="Split Editor"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                splitGroup(node.id, 'horizontal');
-                            }}
-                        >
-                            <Columns size={14} />
-                        </div>
+                        <Tooltip content={t('editor.splitEditor')} position="bottom" wrapperClassName="h-full flex items-center px-1">
+                            <div
+                                className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)] focus:outline-none outline-none"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    splitGroup(node.id, 'horizontal');
+                                }}
+                            >
+                                <Columns size={14} />
+                            </div>
+                        </Tooltip>
                     </div>
                 )}
             </GroupHeader>

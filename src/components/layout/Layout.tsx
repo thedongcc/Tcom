@@ -11,6 +11,7 @@ import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
+import { SessionConfig } from '../../types/session';
 
 interface LayoutProps {
     children?: ReactNode;

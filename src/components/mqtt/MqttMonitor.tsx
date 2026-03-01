@@ -10,6 +10,7 @@ import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
+import { Tooltip } from '../common/Tooltip';
 
 interface MqttMonitorProps {
     session: {
@@ -98,7 +99,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
     // --- Core Logic ---
 
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'json') => {
+    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'json' | 'base64') => {
         if (mode === 'hex') {
             const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
             return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
@@ -408,24 +409,28 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 <div className="flex items-center gap-4">
                     {/* Stats */}
                     <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
-                        <div
-                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
-                            onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
-                        >
-                            <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
-                                {logs.filter(l => l.type === 'TX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
-                            </span>
-                        </div>
-                        <div
-                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
-                            onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
-                        >
-                            <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
-                                {logs.filter(l => l.type === 'RX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
-                            </span>
-                        </div>
+                        <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
+                            <div
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
+                            >
+                                <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
+                                    {logs.filter(l => l.type === 'TX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
+                                </span>
+                            </div>
+                        </Tooltip>
+                        <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterRxOnly')} position="bottom">
+                            <div
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
+                            >
+                                <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">
+                                    {logs.filter(l => l.type === 'RX').reduce((s, l) => s + (typeof l.data === 'string' ? l.data.length : l.data.length), 0).toLocaleString()}
+                                </span>
+                            </div>
+                        </Tooltip>
                     </div>
 
                     {/* Mode Toggle & Options Group */}
@@ -448,7 +453,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             <button
                                 className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
                                 onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-                                title="Options"
                             >
                                 <Menu size={14} />
                                 <span className="text-[11px] font-medium">{t('monitor.options')}</span>
@@ -505,20 +509,22 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button
-                            className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
-                            onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}
-                            title="Auto Scroll"
-                        >
-                            <ArrowDownToLine size={14} />
-                        </button>
-                        <button
-                            className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
-                            onClick={() => onClearLogs?.()}
-                            title="Clear Logs"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
+                            <button
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}
+                            >
+                                <ArrowDownToLine size={14} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('monitor.clearLogs')} position="bottom">
+                            <button
+                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
+                                onClick={() => onClearLogs?.()}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
             </div>
@@ -657,13 +663,14 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                 placeholder="输入或选择主题..."
                             />
                             {subscribedTopics.length > 0 && (
-                                <button
-                                    className={`shrink-0 p-0.5 rounded hover:bg-[var(--list-hover-background)] text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] transition-colors ${showTopicDropdown ? 'text-[var(--app-foreground)]' : ''}`}
-                                    onClick={() => setShowTopicDropdown(v => !v)}
-                                    title="选择订阅主题"
-                                >
-                                    <ChevronDown size={12} />
-                                </button>
+                                <Tooltip content={t('mqtt.addTopic')} position="top" wrapperClassName="shrink-0 flex items-center">
+                                    <button
+                                        className={`shrink-0 p-0.5 rounded hover:bg-[var(--list-hover-background)] text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] transition-colors ${showTopicDropdown ? 'text-[var(--app-foreground)]' : ''}`}
+                                        onClick={() => setShowTopicDropdown(v => !v)}
+                                    >
+                                        <ChevronDown size={12} />
+                                    </button>
+                                </Tooltip>
                             )}
                         </div>
                         {showTopicDropdown && subscribedTopics.length > 0 && (

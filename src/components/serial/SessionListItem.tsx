@@ -2,6 +2,7 @@
 import { CSS } from '@dnd-kit/utilities';
 import { SessionConfig, SessionType } from '../../types/session';
 import { FolderOpen, Network, Cpu } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
 
 import { SerialPortInfo } from '../../vite-env';
 import { formatPortInfo } from '../../utils/format';
@@ -66,7 +67,6 @@ export const SessionListItem = ({
             className={`px-4 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 group border-l-4 focus:outline-none outline-none ${isActive ? 'border-[var(--accent-color)] bg-[var(--list-active-background)]' : 'border-transparent'}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
-            title="Click to open, Right-click for options. Drag to reorder."
         >
             <span className={`${session.type === 'mqtt' ? 'text-[#4ec9b0]' : 'text-[#e8b575]'}`}>
                 {getIconForType(session.type)}
@@ -94,10 +94,11 @@ export const SessionListItem = ({
                     <div className="flex items-center gap-1.5 overflow-hidden min-h-[16px]">
                         {session.type === 'serial' && portInfo && (
                             <span className="flex items-center justify-center flex-shrink-0 mb-[1.5px]">
-                                <span
-                                    className={`size-1.5 rounded-full ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
-                                    title={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')}
-                                />
+                                <Tooltip content={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')} position="top" wrapperClassName="flex items-center justify-center">
+                                    <span
+                                        className={`size-1.5 rounded-full ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
+                                    />
+                                </Tooltip>
                             </span>
                         )}
                         <span className="text-[10px] text-[#858585] truncate font-mono opacity-80 leading-tight">

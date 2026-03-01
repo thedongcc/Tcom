@@ -16,6 +16,7 @@ import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
+import { Tooltip } from '../common/Tooltip';
 
 interface SerialMonitorProps {
     session: SessionState;
@@ -179,13 +180,14 @@ const LogItem = memo(({
                 const cmdGroup = parts[1];
                 const titleStr = cmdGroup ? `${cmdGroup}:${cmdName}` : cmdName;
                 return (
-                    <span
-                        className="ml-2 text-[11px] text-[var(--app-foreground)] flex items-center shrink-0 max-w-[200px] truncate select-none bg-[rgba(128,128,128,0.1)] px-1.5 rounded-[3px] cursor-default"
-                        style={{ height: `${itemHeightPx}px` }}
-                        title={titleStr}
-                    >
-                        {cmdName}
-                    </span>
+                    <Tooltip content={titleStr} position="top" wrapperClassName="ml-2 flex items-center shrink-0">
+                        <span
+                            className="text-[11px] text-[var(--app-foreground)] max-w-[200px] truncate select-none bg-[rgba(128,128,128,0.1)] px-1.5 rounded-[3px] cursor-default"
+                            style={{ height: `${itemHeightPx}px` }}
+                        >
+                            {cmdName}
+                        </span>
+                    </Tooltip>
                 );
             })()}
         </div>
@@ -628,22 +630,24 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 <div className="flex items-center gap-4">
                     {/* Stats Display - Refined JetBrains Style */}
                     <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
-                        <div
-                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
-                            title="Click to filter TX only"
-                            onClick={() => toggleFilter('tx')}
-                        >
-                            <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
-                        </div>
-                        <div
-                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
-                            title="Click to filter RX only"
-                            onClick={() => toggleFilter('rx')}
-                        >
-                            <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
-                        </div>
+                        <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
+                            <div
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                onClick={() => toggleFilter('tx')}
+                            >
+                                <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
+                            </div>
+                        </Tooltip>
+                        <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterRxOnly')} position="bottom">
+                            <div
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                onClick={() => toggleFilter('rx')}
+                            >
+                                <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
+                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
+                            </div>
+                        </Tooltip>
                     </div>
                     {/* Mode Toggle & Options Group */}
                     <div className="flex items-center gap-1.5">
@@ -679,7 +683,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             <button
                                 className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
                                 onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-                                title="Options"
                             >
                                 <Menu size={14} />
                                 <span className="text-[11px] font-medium">{t('monitor.options')}</span>
@@ -756,13 +759,14 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                             onChange={toggleCRC}
                                                             className="flex-1"
                                                         />
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
-                                                            className={`p-1 rounded hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
-                                                            title="CRC Configuration"
-                                                        >
-                                                            <Settings size={12} />
-                                                        </button>
+                                                        <Tooltip content={t('monitor.crcConfig')} position="bottom">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
+                                                                className={`p-1 rounded hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                                            >
+                                                                <Settings size={12} />
+                                                            </button>
+                                                        </Tooltip>
                                                     </div>
 
                                                     {showCRCPanel && (
@@ -882,32 +886,31 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <button
-                            className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
-                            onClick={() => {
-                                const newState = !autoScroll;
-                                setAutoScroll(newState);
-                                saveUIState({ autoScroll: newState });
-                                // If enabling, scroll to bottom immediately
-                                if (newState && scrollRef.current) {
-                                    requestAnimationFrame(() => {
-                                        if (scrollRef.current) {
-                                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                                        }
-                                    });
-                                }
-                            }}
-                            title={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`}
-                        >
-                            <ArrowDownToLine size={14} />
-                        </button>
-                        <button
-                            className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
-                            onClick={handleClearLogs}
-                            title="Clear Logs"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
+                            <button
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                onClick={() => {
+                                    const newState = !autoScroll;
+                                    setAutoScroll(newState);
+                                    saveUIState({ autoScroll: newState });
+                                    if (newState && scrollRef.current) {
+                                        requestAnimationFrame(() => {
+                                            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                                        });
+                                    }
+                                }}
+                            >
+                                <ArrowDownToLine size={14} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip content={t('monitor.clearLogs')} position="bottom">
+                            <button
+                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
+                                onClick={handleClearLogs}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
             </div>

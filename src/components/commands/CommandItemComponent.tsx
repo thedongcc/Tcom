@@ -4,6 +4,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Play, FileText, GripVertical } from 'lucide-react';
 import { CommandItem } from '../../types/command';
 import { useToast } from '../../context/ToastContext';
+import { Tooltip } from '../common/Tooltip';
+import { useI18n } from '../../context/I18nContext';
 
 interface Props {
     item: CommandItem;
@@ -17,6 +19,64 @@ interface Props {
 
 export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disabled, selected, onSelect }: Props) => {
     const { showToast } = useToast();
+    const { t } = useI18n();
+
+    // 将 item.html 解析成包含占位符可读标签的预览字符串
+    const buildPreview = (item: any): string => {
+        if (!item.html) return item.payload || '';
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(item.html, 'text/html');
+            let result = '';
+            doc.body.childNodes.forEach((node: any) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    result += node.textContent;
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    // 递归处理 p / div 包裹
+                    const process = (el: Element) => {
+                        el.childNodes.forEach((child: any) => {
+                            if (child.nodeType === Node.TEXT_NODE) {
+                                result += child.textContent;
+                            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                                const tokenType = child.getAttribute?.('data-token-type');
+                                if (tokenType) {
+                                    // 解析 token config
+                                    let label = '';
+                                    try {
+                                        const configRaw = child.getAttribute('data-token-config');
+                                        const cfg = configRaw ? JSON.parse(decodeURIComponent(configRaw)) : {};
+                                        if (tokenType === 'crc') {
+                                            label = cfg.algorithm === 'modbus-crc16' ? '[CRC16-Modbus]'
+                                                : cfg.algorithm === 'ccitt-crc16' ? '[CRC16-CCITT]'
+                                                    : `[CRC:${cfg.algorithm || ''}]`;
+                                        } else if (tokenType === 'flag') {
+                                            const hex = cfg.hex || '';
+                                            label = cfg.name ? `[${cfg.name}:${hex}]` : `[Custom:${hex}]`;
+                                        } else if (tokenType === 'timestamp') {
+                                            label = cfg.format === 'milliseconds' ? '[Time:ms]' : '[Time:s]';
+                                        } else if (tokenType === 'auto_inc') {
+                                            label = `[Auto:${cfg.defaultValue || '00'}]`;
+                                        } else {
+                                            label = `[${tokenType}]`;
+                                        }
+                                    } catch {
+                                        label = `[${tokenType}]`;
+                                    }
+                                    result += label;
+                                } else {
+                                    process(child);
+                                }
+                            }
+                        });
+                    };
+                    process(node);
+                }
+            });
+            return result.trim() || item.payload || '';
+        } catch {
+            return item.payload || '';
+        }
+    };
 
     // Standard Sortable (for dragging THIS item)
     const {
@@ -95,34 +155,37 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             </div>
 
             {/* Name */}
-            <div className={`flex-1 text-[13px] truncate font-medium ${selected ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`} title={item.payload}>
-                {item.name}
-            </div>
+            <Tooltip content={buildPreview(item)} position="top" wrapperClassName={`flex-1 min-w-0 ${selected ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`}>
+                <div className={`text-[13px] truncate font-medium`}>
+                    {item.name}
+                </div>
+            </Tooltip>
 
             {/* Send Button */}
             <div className={`transition-opacity relative z-20 ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0)) ? 'opacity-0 group-hover:opacity-40' : 'opacity-0 group-hover:opacity-100'}`}>
-                <button
-                    className={`p-1 rounded transition-colors ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0))
-                        ? 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)] cursor-not-allowed'
-                        : 'hover:bg-[var(--button-hover-background)] text-[var(--app-foreground)] hover:text-[var(--button-foreground)]'}`}
-                    title={disabled ? "Click to Connect & Send" : "Send Command"}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        // Always allow click, parent handles auto-connect logic
-                        // But if empty, parent handles blocking too.
-                        const isEmpty = !item.payload && (!item.tokens || Object.keys(item.tokens).length === 0);
-                        if (isEmpty) {
-                            showToast('发送内容不能为空', 'warning');
-                            return;
-                        }
+                <Tooltip content={disabled ? t('command.connectToSend') : t('command.sendCommand')} position="bottom" wrapperClassName="flex items-center">
+                    <button
+                        className={`p-1 rounded transition-colors ${disabled || (!item.payload && (!item.tokens || Object.keys(item.tokens).length === 0))
+                            ? 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)] cursor-not-allowed'
+                            : 'hover:bg-[var(--button-hover-background)] text-[var(--app-foreground)] hover:text-[var(--button-foreground)]'}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            // Always allow click, parent handles auto-connect logic
+                            // But if empty, parent handles blocking too.
+                            const isEmpty = !item.payload && (!item.tokens || Object.keys(item.tokens).length === 0);
+                            if (isEmpty) {
+                                showToast('发送内容不能为空', 'warning');
+                                return;
+                            }
 
-                        console.log('Send button clicked via UI', item.name);
-                        onSend(item);
-                    }}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                >
-                    <Play size={12} fill="currentColor" />
-                </button>
+                            console.log('Send button clicked via UI', item.name);
+                            onSend(item);
+                        }}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                    >
+                        <Play size={12} fill="currentColor" />
+                    </button>
+                </Tooltip>
             </div>
         </div>
     );

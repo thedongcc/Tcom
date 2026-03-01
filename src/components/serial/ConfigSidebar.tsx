@@ -6,6 +6,7 @@ import { MqttConfigPanel } from '../mqtt/MqttConfigPanel';
 import { MonitorConfigPanel } from '../serial-monitor/MonitorConfig';
 import { CustomSelect } from '../common/CustomSelect';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 interface ConfigSidebarProps {
     sessionManager: ReturnType<typeof useSessionManager>;
@@ -53,9 +54,13 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
 
     return (
         <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
-            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wide">
+            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wide flex items-center">
                 <span>{t('configSidebar.settings')}</span>
-                {session.unsaved && <span className="ml-2 w-2 h-2 rounded-full bg-white opacity-50 inline-block" title={t('configSidebar.unsavedChanges')}></span>}
+                {session.unsaved && (
+                    <Tooltip content={t('configSidebar.unsavedChanges')} position="bottom" wrapperClassName="flex items-center">
+                        <span className="ml-2 w-2 h-2 rounded-full bg-white opacity-50 inline-block"></span>
+                    </Tooltip>
+                )}
             </div>
 
             <div className="px-4 py-2 flex flex-col gap-3">
@@ -65,9 +70,11 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                         <div className="flex items-center gap-1.5">
                             {t('serial.portLabel')}
                         </div>
-                        <button onClick={listPorts} className="hover:text-[var(--button-foreground)]" title={t('configSidebar.refreshPorts')}>
-                            <RefreshCw size={12} />
-                        </button>
+                        <Tooltip content={t('configSidebar.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
+                            <button onClick={listPorts} className="hover:text-[var(--button-foreground)]">
+                                <RefreshCw size={12} />
+                            </button>
+                        </Tooltip>
                     </label>
                     <CustomSelect
                         items={portItems}

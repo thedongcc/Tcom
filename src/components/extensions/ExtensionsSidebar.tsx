@@ -3,6 +3,7 @@ import { usePluginManager } from '../../context/PluginContextShared';
 import { Box, Play, Pause, Trash2, Search, FolderOpen, ExternalLink, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { PLUGIN_REGISTRY } from '../../plugins/registry';
 import { useI18n } from '../../context/I18nContext';
+import { Tooltip } from '../common/Tooltip';
 
 export const ExtensionsSidebar = () => {
     const { plugins, activatePlugin, deactivatePlugin, uninstallPlugin, registerPlugin, installFromJson } =
@@ -235,30 +236,33 @@ export const ExtensionsSidebar = () => {
                                 actions={
                                     <>
                                         {isActive ? (
-                                            <button
-                                                onClick={() => deactivatePlugin(plugin.id)}
-                                                title={t('extensions.disable')}
-                                                className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
-                                            >
-                                                <Pause size={14} />
-                                            </button>
+                                            <Tooltip content={t('extensions.disable')} position="bottom" wrapperClassName="flex">
+                                                <button
+                                                    onClick={() => deactivatePlugin(plugin.id)}
+                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
+                                                >
+                                                    <Pause size={14} />
+                                                </button>
+                                            </Tooltip>
                                         ) : (
-                                            <button
-                                                onClick={() => activatePlugin(plugin.id)}
-                                                title={t('extensions.enable')}
-                                                className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
-                                            >
-                                                <Play size={14} />
-                                            </button>
+                                            <Tooltip content={t('extensions.enable')} position="bottom" wrapperClassName="flex">
+                                                <button
+                                                    onClick={() => activatePlugin(plugin.id)}
+                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
+                                                >
+                                                    <Play size={14} />
+                                                </button>
+                                            </Tooltip>
                                         )}
                                         {isExternal && (
-                                            <button
-                                                onClick={() => uninstallPlugin(plugin.id)}
-                                                title={t('extensions.uninstall')}
-                                                className="p-1 hover:bg-[#c53030] hover:text-white rounded text-[var(--app-foreground)] opacity-70 transition-colors"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <Tooltip content={t('extensions.uninstall')} position="bottom" wrapperClassName="flex">
+                                                <button
+                                                    onClick={() => uninstallPlugin(plugin.id)}
+                                                    className="p-1 hover:bg-[#c53030] hover:text-white rounded text-[var(--app-foreground)] opacity-70 transition-colors"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </Tooltip>
                                         )}
                                     </>
                                 }
