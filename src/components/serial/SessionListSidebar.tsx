@@ -115,9 +115,9 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
         : null;
 
     return (
-        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)] relative">
+        <div className="flex flex-col h-full bg-[var(--session-list-sidebar-bg)] text-[var(--session-list-sidebar-text)] relative" data-component="session-list-sidebar">
             {/* Workspace Header */}
-            <div className="px-3 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)]">
+            <div className="px-3 py-2 border-b border-[var(--session-list-sidebar-border)] bg-[var(--session-list-sidebar-header-bg)]">
                 {sessionManager.workspacePath ? (
                     <div className="flex items-center justify-between">
                         <Tooltip content={sessionManager.workspacePath} position="bottom" wrapperClassName="min-w-0 flex-1 flex">
@@ -182,7 +182,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Recent Workspaces Menu */}
             {recentMenu && (
                 <div
-                    className="fixed z-50 bg-[var(--app-background)] border border-[var(--widget-border-color)] shadow-lg rounded py-1 min-w-[200px]"
+                    className="fixed z-50 bg-[var(--st-menu-bg)] border border-[var(--widget-border-color)] shadow-lg rounded py-1 min-w-[200px]"
                     style={{ top: recentMenu.y, left: recentMenu.x }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -192,7 +192,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                     {sessionManager.recentWorkspaces.map(ws => (
                         <div
                             key={ws}
-                            className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
+                            className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
                             onClick={() => {
                                 sessionManager.openWorkspace(ws);
                                 setRecentMenu(null);
@@ -210,7 +210,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                         <div className="h-[1px] bg-[var(--border-color)] my-1 opacity-50" />
                     )}
                     <div
-                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer"
+                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer"
                         onClick={() => {
                             sessionManager.browseAndOpenWorkspace();
                             setRecentMenu(null);
@@ -277,11 +277,11 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
             {/* Context Menu */}
             {contextMenu && (
                 <div
-                    className="fixed z-[5000] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-2xl rounded-sm py-1 w-[160px] animate-in fade-in zoom-in-95 duration-100"
+                    className="fixed z-[5000] bg-[var(--st-menu-bg)] border border-[var(--menu-border-color)] shadow-2xl rounded-sm py-1 w-[160px] animate-in fade-in zoom-in-95 duration-100"
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                 >
                     <div
-                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer transition-colors group"
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer transition-colors group"
                         onClick={() => {
                             const session = sessionManager.savedSessions.find(s => s.id === contextMenu.sessionId);
                             if (session) startEditing(session);

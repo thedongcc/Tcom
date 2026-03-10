@@ -81,9 +81,10 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
         <div
             className="flex flex-col border-r border-[var(--border-color)] relative shrink-0"
             style={{ width: `${width}px`, backgroundColor: 'var(--sidebar-background)' }}
+            data-component="sidebar"
         >
             {activeView !== 'commands' && (
-                <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--app-foreground)] tracking-wide uppercase shrink-0">
+                <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--st-sidebar-title-text)] tracking-wide uppercase shrink-0">
                     <span className="truncate">
                         {(() => {
                             const viewMap: Record<string, string> = {
@@ -100,13 +101,13 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
                             return activeView;
                         })()}
                     </span>
-                    <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
+                    <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--st-sidebar-action-hover)]" />
                 </div>
             )}
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {activeView === 'explorer' && <SessionListSidebar sessionManager={sessionManager} editorLayout={editorLayout} />}
-                {activeView === 'search' && <div className="p-4 text-xs text-[#969696]">Search not implemented</div>}
+                {activeView === 'search' && <div className="p-4 text-xs text-[var(--st-sidebar-muted-text)]">Search not implemented</div>}
                 {activeView === 'serial' && <ConfigSidebar sessionManager={sessionManager} />}
                 {activeView === 'extensions' && <ExtensionsSidebar />}
 

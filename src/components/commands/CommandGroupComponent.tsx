@@ -120,8 +120,8 @@ export const CommandGroupComponent = ({ group, onEdit, onSend, onContextMenu, ca
                     */}
                     <div
                         className={`flex items-center gap-2 p-1.5 border border-transparent rounded-sm cursor-pointer select-none relative z-20 ${selectedIds.has(group.id)
-                                ? 'bg-[var(--list-active-background)] text-[var(--list-active-foreground,var(--app-foreground))] ring-1 ring-[var(--focus-border-color)]/50'
-                                : 'hover:bg-[var(--list-hover-background)] hover:border-[var(--widget-border-color)]'
+                            ? 'bg-[var(--list-active-background)] text-[var(--list-active-foreground,var(--app-foreground))] ring-1 ring-[var(--focus-border-color)]/50'
+                            : 'hover:bg-[var(--list-hover-background)] hover:border-[var(--widget-border-color)]'
                             }`}
                         onClick={(e) => onSelect(e, group)}
                         onDoubleClick={(e) => {
@@ -129,7 +129,7 @@ export const CommandGroupComponent = ({ group, onEdit, onSend, onContextMenu, ca
                             toggleOpen();
                         }}
                     >
-                        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing ${selectedIds.has(group.id) ? 'text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]'}`}>
+                        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing ${selectedIds.has(group.id) ? 'text-[var(--st-sidebar-text)]' : 'text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-sidebar-text)]'}`}>
                             <GripVertical size={12} />
                         </div>
 
@@ -137,16 +137,16 @@ export const CommandGroupComponent = ({ group, onEdit, onSend, onContextMenu, ca
                             className="cursor-pointer p-0.5 rounded hover:bg-black/10"
                             onClick={toggleOpen}
                         >
-                            <div className={selectedIds.has(group.id) ? 'text-[var(--app-foreground)]' : 'text-[var(--st-accent)]'}>
+                            <div className={selectedIds.has(group.id) ? 'text-[var(--st-sidebar-text)]' : 'text-[var(--st-accent)]'}>
                                 {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             </div>
                         </div>
 
                         <div className="flex items-center gap-1 flex-1 overflow-hidden">
-                            <div className={selectedIds.has(group.id) ? 'text-[var(--app-foreground)]' : 'text-[var(--st-accent)]'}>
+                            <div className={selectedIds.has(group.id) ? 'text-[var(--st-sidebar-text)]' : 'text-[var(--st-accent)]'}>
                                 <Folder size={14} fill="currentColor" fillOpacity={0.2} />
                             </div>
-                            <div className={`flex-1 text-[13px] font-bold truncate ${selectedIds.has(group.id) ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`}>
+                            <div className={`flex-1 text-[13px] font-bold truncate ${selectedIds.has(group.id) ? 'text-[var(--st-sidebar-text)]' : 'text-[var(--st-sidebar-text)]'}`}>
                                 {group.name}
                             </div>
                         </div>

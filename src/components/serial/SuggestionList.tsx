@@ -64,7 +64,7 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
     }));
 
     return (
-        <div className="bg-[var(--sidebar-background)] border border-[var(--widget-border-color)] rounded-md shadow-lg overflow-hidden min-w-[180px] p-1 flex flex-col gap-0.5">
+        <div className="bg-[var(--st-dropdown-bg)] border border-[var(--widget-border-color)] rounded-md shadow-lg overflow-hidden min-w-[180px] p-1 flex flex-col gap-0.5">
             {props.items.length > 0 ? (
                 props.items.map((item, index) => {
                     const Icon = item.icon || Hash;
@@ -73,7 +73,7 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
                             key={index}
                             className={`flex items-center gap-2 px-2 py-1.5 text-xs text-left w-full rounded-sm transition-colors ${index === selectedIndex
                                 ? 'bg-[var(--button-background)] text-[var(--button-foreground)]'
-                                : 'text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]'
+                                : 'text-[var(--st-input-btn-text)] hover:bg-[var(--list-hover-background)]'
                                 }`}
                             onClick={() => selectItem(index)}
                         >

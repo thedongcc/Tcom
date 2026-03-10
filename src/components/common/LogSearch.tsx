@@ -280,7 +280,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             onKeyDown={handleKeyDown}
                             placeholder="Find..."
                             className="bg-transparent border-none outline-none text-xs px-2 w-48 h-full font-mono"
-                            style={{ color: 'var(--app-foreground)' }}
+                            style={{ color: 'var(--st-search-text)' }}
                         />
 
                         <div
@@ -294,7 +294,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             <Tooltip content={t('search.matchCase')} position="bottom" wrapperClassName="flex items-center">
                                 <button
                                     onClick={() => onMatchCaseChange(!isMatchCase)}
-                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isMatchCase ? 'bg-[var(--logsearch-btn-match-case-active-bg)] text-white' : ''}`}
                                     style={isMatchCase ? {} : { color: 'var(--input-placeholder-color)' }}
                                     onMouseEnter={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
                                     onMouseLeave={e => { if (!isMatchCase) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
@@ -305,7 +305,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             <Tooltip content={t('search.useRegex')} position="bottom" wrapperClassName="flex items-center">
                                 <button
                                     onClick={() => onRegexChange(!isRegex)}
-                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
+                                    className={`flex items-center justify-center w-5 h-5 transition-colors rounded-[4px] ${isRegex ? 'bg-[var(--logsearch-btn-regex-active-bg)] text-white' : ''}`}
                                     style={isRegex ? {} : { color: 'var(--input-placeholder-color)' }}
                                     onMouseEnter={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}
                                     onMouseLeave={e => { if (!isRegex) (e.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
@@ -350,7 +350,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                     onClick={onToggle}
                     className="p-1.5 rounded transition-colors"
                     style={isOpen
-                        ? { backgroundColor: 'var(--accent-color)', color: 'var(--button-foreground)' }
+                        ? { backgroundColor: 'var(--logsearch-nav-active-bg)', color: 'white' }
                         : { color: 'var(--input-placeholder-color)' }
                     }
                     onMouseEnter={e => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--hover-background)'; }}

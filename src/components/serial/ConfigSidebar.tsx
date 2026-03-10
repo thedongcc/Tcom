@@ -53,8 +53,11 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
     }));
 
     return (
-        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
-            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wide flex items-center">
+        <div
+            className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]"
+            data-component="serial-config"
+        >
+            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--serial-config-bg)] text-[11px] font-bold text-[var(--serial-config-text)] uppercase tracking-wide flex items-center">
                 <span>{t('configSidebar.settings')}</span>
                 {session.unsaved && (
                     <Tooltip content={t('configSidebar.unsavedChanges')} position="bottom" wrapperClassName="flex items-center">
@@ -66,7 +69,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
             <div className="px-4 py-2 flex flex-col gap-3">
                 {/* Port Selector */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium flex justify-between items-center">
+                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
                             {t('serial.portLabel')}
                         </div>
@@ -88,7 +91,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
 
                 {/* Baud Rate Selector */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('serial.baudRate')}</label>
+                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.baudRate')}</label>
                     <CustomSelect
                         items={COMMON_BAUD_RATES.map(rate => ({
                             label: String(rate),
@@ -105,7 +108,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                 {/* Data Bits */}
                 <div className="flex gap-2">
                     <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('serial.dataBits')}</label>
+                        <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.dataBits')}</label>
                         <CustomSelect
                             items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.dataBits)}
@@ -115,7 +118,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                     </div>
 
                     <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('serial.stopBits')}</label>
+                        <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.stopBits')}</label>
                         <CustomSelect
                             items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.stopBits)}
@@ -127,7 +130,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
 
                 {/* Parity */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('serial.parity')}</label>
+                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.parity')}</label>
                     <CustomSelect
                         items={[
                             { label: t('serial.none'), value: 'none' },
@@ -146,10 +149,10 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                 <div className="space-y-2 mt-auto pt-2">
                     <button
                         className={`w-full py-1.5 px-3 text-white text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
-                            ? 'bg-[#a1260d] hover:bg-[#c93f24]'
+                            ? 'bg-[var(--st-danger-bg)] hover:bg-[var(--st-danger-hover-bg)]'
                             : (highlight
-                                ? 'bg-[#0e639c] ring-2 ring-yellow-400 animate-pulse'
-                                : 'bg-[#0e639c] hover:bg-[#1177bb] disabled:opacity-50 disabled:cursor-not-allowed')
+                                ? 'bg-[var(--button-background)] ring-2 ring-[var(--focus-border-color)] animate-pulse'
+                                : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed')
                             }`}
                         disabled={!connection.path && !isConnected}
                         onClick={handleToggleConnection}
@@ -159,12 +162,12 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                     </button>
 
                     {isConnected ? (
-                        <div className="flex items-center gap-2 justify-center text-[11px] text-[#4ec9b0]">
-                            <div className="w-2 h-2 rounded-full bg-[#4ec9b0] animate-pulse"></div>
+                        <div className="flex items-center gap-2 justify-center text-[11px] text-[var(--st-config-success-text)]">
+                            <div className="w-2 h-2 rounded-full bg-[var(--st-config-success-bg)] animate-pulse"></div>
                             <span>{t('configSidebar.monitoringActive')}</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 justify-center text-[11px] text-[#969696]">
+                        <div className="flex items-center gap-2 justify-center text-[11px] text-[var(--st-config-muted-text)]">
                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
                             <span>{t('serial.disconnected')}</span>
                         </div>
@@ -184,7 +187,7 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
 
     if (!activeSession) {
         return (
-            <div className="p-4 text-[#969696] text-xs text-center mt-10">
+            <div className="p-4 text-[var(--st-config-muted-text)] text-xs text-center mt-10">
                 {t('configSidebar.noActiveSession')}<br />
                 {t('configSidebar.clickToCreate')}
             </div>
@@ -194,8 +197,8 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
     // 显式处理设置会话
     if (activeSession.config.type === 'settings') {
         return (
-            <div className="p-4 text-[#969696] text-xs text-center mt-10">
-                <div className="mb-2 font-bold text-[#666666]">{t('configSidebar.globalSettings')}</div>
+            <div className="p-4 text-[var(--st-config-muted-text)] text-xs text-center mt-10">
+                <div className="mb-2 font-bold text-[var(--st-config-title-text)]">{t('configSidebar.globalSettings')}</div>
                 <div className="opacity-70 text-[11px]">{t('configSidebar.globalSettingsDesc')}</div>
             </div>
         );
@@ -216,7 +219,7 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
 
     if (activeSession.config.type === 'graph') {
         return (
-            <div className="p-4 text-[#969696] text-xs text-center mt-10">
+            <div className="p-4 text-[var(--st-config-muted-text)] text-xs text-center mt-10">
                 {t('configSidebar.graphActive')}<br />
                 {t('configSidebar.noSidebarSettings')}
             </div>

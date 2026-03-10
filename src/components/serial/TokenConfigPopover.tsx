@@ -400,7 +400,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
     return (
         <div
             ref={popoverRef}
-            className="fixed z-50 bg-[var(--menu-background)] border border-[var(--widget-border-color)] shadow-xl rounded-md flex flex-col text-[var(--app-foreground)] select-none"
+            className="fixed z-50 bg-[var(--menu-background)] border border-[var(--widget-border-color)] shadow-xl rounded-md flex flex-col text-[var(--st-dialog-text)] select-none"
             style={{
                 left: pos.x,
                 top: pos.y,
@@ -430,21 +430,21 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                             token.type === 'auto_inc' ? 'Auto Token' :
                                 'Custom Flag'}
                 </span>
-                <X size={14} className="cursor-pointer hover:text-[var(--app-foreground)] text-[var(--activitybar-inactive-foreground)] transition-colors" onClick={onClose} />
+                <X size={14} className="cursor-pointer hover:text-[var(--st-dialog-text)] text-[var(--activitybar-inactive-foreground)] transition-colors" onClick={onClose} />
             </div>
 
             <div className="flex-1 overflow-auto p-4 flex flex-col custom-scrollbar">
                 {renderContent()}
 
-                <div className="mt-8 pt-4 flex items-center justify-between border-t border-[#333]">
+                <div className="mt-8 pt-4 flex items-center justify-between border-t border-[var(--st-token-divider)]">
                     <button
-                        className="px-2 py-1 text-[11px] text-[#f48771] hover:bg-[#4b1818] rounded-[4px] transition-colors"
+                        className="px-2 py-1 text-[11px] text-[var(--st-error-text)] hover:bg-[var(--st-error-text)]/20 rounded-[4px] transition-colors"
                         onClick={() => { onDelete(token.id); onClose(); }}
                     >
                         Delete
                     </button>
                     <button
-                        className="px-4 py-1.5 bg-[#0e639c] text-white text-[12px] font-medium rounded-[4px] hover:bg-[#1177bb] transition-colors flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[12px] font-medium rounded-[4px] hover:bg-[var(--button-hover-background)] transition-colors flex items-center gap-1.5 shadow-sm"
                         onClick={handleSave}
                     >
                         <Check size={14} /> Apply
@@ -457,7 +457,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                 className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-50 flex items-center justify-center opacity-50 hover:opacity-100"
                 onMouseDown={handleMouseDownResize}
             >
-                <div className="w-2 h-2 border-r-2 border-b-2 border-[#666]" />
+                <div className="w-2 h-2 border-r-2 border-b-2 border-[var(--st-token-arrow)]" />
             </div>
         </div>
     );

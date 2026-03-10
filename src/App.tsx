@@ -8,10 +8,22 @@ import { SessionProvider } from './context/SessionContext'
 import { PluginProvider } from './context/PluginContext'
 import { useSessionManager } from './hooks/useSessionManager'
 import { useEditorLayout } from './hooks/useEditorLayout'
+import { ThemeColorEditor } from './components/theme/ThemeColorEditor'
 
 function App() {
   const sessionManager = useSessionManager();
   const editorLayout = useEditorLayout();
+
+  // 拦截独立的主题编辑器窗口渲染
+  if (window.location.hash.includes('/theme-editor')) {
+    return (
+      <SettingsProvider>
+        <I18nProvider>
+          <ThemeColorEditor isOpen={true} onClose={() => { (window as any).themeAPI?.closeThemeEditor(); }} />
+        </I18nProvider>
+      </SettingsProvider>
+    );
+  }
 
   return (
     <SettingsProvider>
@@ -24,7 +36,7 @@ function App() {
                   <Layout sessionManager={sessionManager} editorLayout={editorLayout}>
                     <div className="flex flex-1 items-center justify-center h-full">
                       <div className="flex flex-col items-center max-w-md text-center">
-                        <h1 className="text-4xl font-bold mb-4 text-[var(--app-foreground)]">Tcom</h1>
+                        <h1 className="text-4xl font-bold mb-4 text-[var(--st-panel-header-text)]">Tcom</h1>
                         <p className="text-lg text-[var(--input-placeholder-color)] mb-8">VS Code Style Serial Debug Assistant</p>
 
                         <div className="flex gap-4">

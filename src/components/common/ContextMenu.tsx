@@ -48,17 +48,18 @@ export const ContextMenu = ({ x, y, items, onClose }: Props) => {
         <div
 
             ref={ref}
-            className="fixed z-[9999] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-xl rounded-md py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-[9999] bg-[var(--context-menu-bg)] border border-[var(--context-menu-border)] shadow-xl rounded-md py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
             style={style}
+            data-component="context-menu"
         >
             {items.map((item, idx) => {
                 if (item.separator) {
-                    return <div key={idx} className="h-[1px] bg-[var(--menu-border-color)] my-1" />;
+                    return <div key={idx} className="h-[1px] bg-[var(--context-menu-border)] my-1" />;
                 }
                 return (
                     <div
                         key={idx}
-                        className={`px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2 transition-colors ${item.color === 'red' ? 'text-[var(--st-error-text)]' : 'text-[var(--menu-foreground)]'}`}
+                        className={`px-3 py-1.5 text-[13px] hover:bg-[var(--context-menu-item-hover)] hover:text-[var(--st-contextmenu-text-hover)] cursor-pointer flex items-center gap-2 transition-colors ${item.color === 'red' ? 'text-[var(--st-error-text)]' : 'text-[var(--context-menu-text)]'}`}
                         onClick={() => {
                             item.onClick();
                             onClose();

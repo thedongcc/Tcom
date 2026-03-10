@@ -281,7 +281,7 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full bg-[#1e1e1e] overflow-hidden"
+            className="relative w-full h-full bg-[var(--st-graph-canvas-bg)] overflow-hidden"
             onContextMenu={e => e.preventDefault()} // Block context menu
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -299,28 +299,28 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
 
             {/* Toolbar */}
             <div className="absolute top-4 left-4 z-50 flex gap-2">
-                <div className="flex bg-[#252526] rounded-md border border-[#3c3c3c] overflow-hidden shadow-lg [&_button]:flex">
+                <div className="flex bg-[var(--st-graph-toolbar-bg)] rounded-md border border-[var(--st-graph-toolbar-border)] overflow-hidden shadow-lg [&_button]:flex">
                     <Tooltip content={t('graph.addVirtual')} position="bottom">
-                        <button onClick={() => addNode('virtual')} className="p-2 hover:bg-[#3c3c3c] text-[#4ec9b0]">
+                        <button onClick={() => addNode('virtual')} className="p-2 hover:bg-[var(--st-graph-divider)] text-[var(--st-graph-icon-virtual)]">
                             <Plus size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip content={t('graph.addPhysical')} position="bottom">
-                        <button onClick={() => addNode('physical')} className="p-2 hover:bg-[#3c3c3c] text-[#ce9178]">
+                        <button onClick={() => addNode('physical')} className="p-2 hover:bg-[var(--st-graph-divider)] text-[var(--st-graph-icon-physical)]">
                             <Plus size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip content={t('graph.addPair')} position="bottom">
-                        <button onClick={() => addNode('pair')} className="p-2 hover:bg-[#3c3c3c] text-[#c586c0]">
+                        <button onClick={() => addNode('pair')} className="p-2 hover:bg-[var(--st-graph-divider)] text-[var(--st-graph-icon-pair)]">
                             <Link size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip content={t('graph.addBus')} position="bottom">
-                        <button onClick={() => addNode('bus')} className="p-2 hover:bg-[#3c3c3c] text-[#dcdcaa]">
+                        <button onClick={() => addNode('bus')} className="p-2 hover:bg-[var(--st-graph-divider)] text-[var(--st-graph-icon-bus)]">
                             <Network size={16} />
                         </button>
                     </Tooltip>
-                    <div className="w-[1px] bg-[#3c3c3c]"></div>
+                    <div className="w-[1px] bg-[var(--st-graph-divider)]"></div>
                     <Tooltip content={t('graph.clearGraph')} position="bottom">
                         <button onClick={clearGraph} className="p-2 hover:bg-red-900/50 text-red-400">
                             <Trash2 size={16} />
@@ -328,11 +328,11 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
                     </Tooltip>
                 </div>
 
-                <div className="flex bg-[#252526] rounded-md border border-[#3c3c3c] overflow-hidden shadow-lg ml-4">
-                    <button onClick={() => setScale(s => s + 0.1)} className="p-2 hover:bg-[#3c3c3c] text-gray-400"><ZoomIn size={16} /></button>
+                <div className="flex bg-[var(--st-graph-toolbar-bg)] rounded-md border border-[var(--st-graph-toolbar-border)] overflow-hidden shadow-lg ml-4">
+                    <button onClick={() => setScale(s => s + 0.1)} className="p-2 hover:bg-[var(--st-graph-divider)] text-gray-400"><ZoomIn size={16} /></button>
                     <span className="p-2 px-3 text-xs text-gray-500 font-mono flex items-center">{Math.round(scale * 100)}%</span>
-                    <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-[#3c3c3c] text-gray-400"><ZoomOut size={16} /></button>
-                    <button onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }} className="p-2 hover:bg-[#3c3c3c] text-gray-400"><Layout size={16} /></button>
+                    <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 hover:bg-[var(--st-graph-divider)] text-gray-400"><ZoomOut size={16} /></button>
+                    <button onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }} className="p-2 hover:bg-[var(--st-graph-divider)] text-gray-400"><Layout size={16} /></button>
                 </div>
             </div>
 

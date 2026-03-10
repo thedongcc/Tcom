@@ -63,10 +63,10 @@ const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabPro
         <div
             onClick={onClick}
             className={`focus:outline-none outline-none
-        h-full w-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--widget-border-color)] select-none group
+        h-full w-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--st-tab-border)] select-none group
         ${active
-                    ? `bg-[var(--app-background)] ${isGroupActive ? 'text-[var(--app-foreground)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
-                    : 'bg-[var(--widget-background)] text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--app-background)]'
+                    ? `bg-[var(--st-tab-active-bg)] ${isGroupActive ? 'text-[var(--st-tab-active-text)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
+                    : 'bg-[var(--st-tab-inactive-bg)] text-[var(--st-tab-inactive-text)] hover:bg-[var(--st-tab-active-bg)]'
                 }
     `}
         >
@@ -77,7 +77,7 @@ const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }: TabPro
             <div className="flex items-center shrink-0 ml-2">
                 <div
                     onClick={onClose}
-                    className="p-0.5 rounded-md hover:bg-[var(--hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]"
+                    className="p-0.5 rounded-md hover:bg-[var(--hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-panel-action-hover)]"
                 >
                     <X size={14} />
                 </div>
@@ -122,7 +122,7 @@ interface GroupHeaderProps {
 const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: GroupHeaderProps) => {
     return (
         <div
-            className={`relative z-50 flex h-9 bg-[var(--sidebar-background)] border-b border-[var(--widget-border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
+            className={`relative z-50 flex h-9 bg-[var(--st-editor-tabs-bg)] border-b border-[var(--widget-border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
             onClick={() => setActiveGroupId(group.id)}
         >
             {children}
@@ -245,7 +245,7 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                     <div className="flex items-center px-1 shrink-0 h-full border-l border-[var(--widget-border-color)]">
                         <Tooltip content={t('editor.splitEditor')} position="bottom" wrapperClassName="h-full flex items-center px-1">
                             <div
-                                className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--app-foreground)] focus:outline-none outline-none"
+                                className="p-1 hover:bg-[var(--hover-background)] rounded cursor-pointer text-[var(--st-panel-action-hover)] focus:outline-none outline-none"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     splitGroup(node.id, 'horizontal');
@@ -312,8 +312,8 @@ const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutActions, o
                     })()
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40 select-none pointer-events-none text-center p-4">
-                        <LayoutTemplate size={64} className="mb-4 text-[var(--app-foreground)] opacity-50" />
-                        <p className="text-lg font-medium text-[var(--app-foreground)]">{t('editor.noEditorOpen')}</p>
+                        <LayoutTemplate size={64} className="mb-4 text-[var(--st-panel-header-text)] opacity-50" />
+                        <p className="text-lg font-medium text-[var(--st-panel-header-text)]">{t('editor.noEditorOpen')}</p>
                         <p className="text-sm text-[var(--activitybar-inactive-foreground)] mt-2 max-w-[300px]">{t('editor.noEditorDesc')}</p>
                     </div>
                 )}
@@ -594,7 +594,7 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex-1 flex flex-col bg-[var(--app-background)] overflow-hidden">
+            <div className="flex-1 flex flex-col bg-[var(--editor-area-bg)] overflow-hidden" data-component="editor-area">
                 {layout ? (
                     <LayoutRenderer
                         node={layout}
@@ -642,7 +642,7 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
                     }
                 ]}>
                     {activeDragId ? (
-                        <div className="h-full px-3 bg-[var(--widget-background)] text-[var(--app-foreground)] border-t-2 border-[var(--accent-color)] flex items-center min-w-[120px] pointer-events-none shadow-lg opacity-90">
+                        <div className="h-full px-3 bg-[var(--widget-background)] text-[var(--st-panel-header-text)] border-t-2 border-[var(--accent-color)] flex items-center min-w-[120px] pointer-events-none shadow-lg opacity-90">
                             <span className="text-[13px]">
                                 {(() => {
                                     const parsed = parseCompositeId(activeDragId);

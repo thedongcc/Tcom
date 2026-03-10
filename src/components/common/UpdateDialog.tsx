@@ -70,16 +70,16 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
             case 'checking':
                 return (
                     <div className="flex flex-col items-center justify-center p-8 gap-4">
-                        <Loader2 className="animate-spin text-[#007acc]" size={32} />
-                        <span className="text-[13px] text-[#cccccc]">正在检查更新...</span>
+                        <Loader2 className="animate-spin text-[var(--st-update-spinner)]" size={32} />
+                        <span className="text-[13px] text-[var(--st-update-text)]">正在检查更新...</span>
                     </div>
                 );
             case 'not-available':
                 return (
                     <div className="flex flex-col items-center justify-center p-8 gap-4">
                         <CheckCircle2 className="text-green-500" size={32} />
-                        <span className="text-[13px] text-[#cccccc]">您的软件已是最新版本 (v{status.version})</span>
-                        <button onClick={onClose} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c]">关闭</button>
+                        <span className="text-[13px] text-[var(--st-update-text)]">您的软件已是最新版本 (v{status.version})</span>
+                        <button onClick={onClose} className="px-4 py-1.5 bg-[var(--st-update-btn-bg)] text-[var(--st-update-btn-text)] rounded-sm text-xs hover:bg-[var(--st-update-btn-hover)]">关闭</button>
                     </div>
                 );
             case 'error':
@@ -87,15 +87,15 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
                     <div className="flex flex-col items-center justify-center p-8 gap-4">
                         <AlertCircle className="text-red-500" size={32} />
                         <div className="text-center">
-                            <p className="text-[13px] text-[#cccccc]">检查更新时出错</p>
+                            <p className="text-[13px] text-[var(--st-update-text)]">检查更新时出错</p>
                             <p className="text-[11px] text-red-400 mt-1 max-w-[300px] break-words">{status.error}</p>
-                            <p className="text-[11px] text-[#969696] mt-2">若是网络问题，请尝试手动下载</p>
+                            <p className="text-[11px] text-[var(--input-placeholder-color)] mt-2">若是网络问题，请尝试手动下载</p>
                         </div>
                         <div className="flex gap-2 mt-2">
-                            <button onClick={handleManualDownload} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c] flex items-center gap-1">
+                            <button onClick={handleManualDownload} className="px-4 py-1.5 bg-[var(--st-update-btn-bg)] text-[var(--st-update-btn-text)] rounded-sm text-xs hover:bg-[var(--st-update-btn-hover)] flex items-center gap-1">
                                 <Download size={14} /> 手动下载
                             </button>
-                            <button onClick={onClose} className="px-4 py-1.5 bg-[#3c3c3c] text-white rounded-sm text-xs hover:bg-[#4c4c4c]">关闭</button>
+                            <button onClick={onClose} className="px-4 py-1.5 bg-[var(--st-update-btn-bg)] text-[var(--st-update-btn-text)] rounded-sm text-xs hover:bg-[var(--st-update-btn-hover)]">关闭</button>
                         </div>
                     </div>
                 );
@@ -182,12 +182,12 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div
-                className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in fade-in zoom-in duration-200"
+                className="bg-[var(--st-popover-bg)] border border-[var(--st-popover-border)] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in fade-in zoom-in duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between p-3 border-b border-[#3c3c3c] bg-[#2d2d2d]">
                     <span className="text-xs font-bold text-[#cccccc] uppercase tracking-wider">软件更新</span>
-                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
+                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-icon-hover)] transition-colors">
                         <X size={16} />
                     </button>
                 </div>

@@ -641,39 +641,152 @@ export const useSessionManager = () => {
                 const latestSession = sessionsRef.current.find(s => s.id === session.id);
                 if (!latestSession) return;
 
-                // Check if chunk timeout is enabled
-                const timeout = (latestSession.config as any).uiState?.chunkTimeout || 0;
-                if (timeout > 0) {
-                    let buffer = rxBuffersRef.current.get(session.id);
-                    if (!buffer) {
-                        buffer = [];
-                        rxBuffersRef.current.set(session.id, buffer);
+                // Handle advanced RX Packet Modes (timeout, delimiter, fixedLength, delimiterWithTimeout)
+                const uiState = (latestSession.config as any).uiState || {};
+                const packetMode = uiState.rxPacketMode || 'none';
+
+                // Fallback to old behavior if mode is 'none' but chunkTimeout is set
+                const legacyTimeout = uiState.chunkTimeout || 0;
+
+                if (packetMode === 'none' && legacyTimeout === 0) {
+                    // Direct flush
+                    const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(data, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
+                    addLog(session.id, 'RX', data, crcStatus);
+                    return;
+                }
+
+                let buffer = rxBuffersRef.current.get(session.id);
+                if (!buffer) {
+                    buffer = [];
+                    rxBuffersRef.current.set(session.id, buffer);
+                }
+                buffer.push(data);
+
+                const existingTimer = rxTimersRef.current.get(session.id);
+                if (existingTimer) clearTimeout(existingTimer);
+
+                const flushBuffer = () => {
+                    const finalBuffer = rxBuffersRef.current.get(session.id);
+                    if (finalBuffer && finalBuffer.length > 0) {
+                        const totalLen = finalBuffer.reduce((acc, curr) => acc + curr.length, 0);
+                        const mergedData = new Uint8Array(totalLen);
+                        let offset = 0;
+                        finalBuffer.forEach(b => {
+                            mergedData.set(b, offset);
+                            offset += b.length;
+                        });
+                        const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(mergedData, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
+                        addLog(session.id, 'RX', mergedData, crcStatus);
+                        rxBuffersRef.current.set(session.id, []); // Clear buffer
                     }
-                    buffer.push(data);
+                    rxTimersRef.current.delete(session.id);
+                };
 
-                    const existingTimer = rxTimersRef.current.get(session.id);
-                    if (existingTimer) clearTimeout(existingTimer);
+                const currentBufferLen = buffer.reduce((acc, curr) => acc + curr.length, 0);
+                let shouldFlush = false;
 
-                    const newTimer = setTimeout(() => {
-                        const finalBuffer = rxBuffersRef.current.get(session.id);
-                        if (finalBuffer && finalBuffer.length > 0) {
-                            const totalLen = finalBuffer.reduce((acc, curr) => acc + curr.length, 0);
-                            const mergedData = new Uint8Array(totalLen);
+                if (packetMode === 'fixedLength') {
+                    const fixedLen = uiState.rxFixedLength || 0;
+                    if (fixedLen > 0 && currentBufferLen >= fixedLen) {
+                        // Extract frames of fixed length
+                        let remainingBuffer = [];
+                        let mergedData = new Uint8Array(currentBufferLen);
+                        let offset = 0;
+                        buffer.forEach(b => {
+                            mergedData.set(b, offset);
+                            offset += b.length;
+                        });
+
+                        let processOffset = 0;
+                        while (processOffset + fixedLen <= currentBufferLen) {
+                            const frame = mergedData.slice(processOffset, processOffset + fixedLen);
+                            const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(frame, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
+                            addLog(session.id, 'RX', frame, crcStatus);
+                            processOffset += fixedLen;
+                        }
+
+                        if (processOffset < currentBufferLen) {
+                            remainingBuffer.push(mergedData.slice(processOffset));
+                        }
+                        rxBuffersRef.current.set(session.id, remainingBuffer);
+                        return; // Done processing for now
+                    }
+                } else if (packetMode === 'delimiter' || packetMode === 'delimiterWithTimeout') {
+                    const delimStr = uiState.rxDelimiter || '';
+                    if (delimStr) {
+                        // Parse delimiter (handle hex like "0D 0A" or escape chars like "\r\n")
+                        let delimBytes: number[] = [];
+                        if (/^([0-9a-fA-F]{2}\s*)+$/.test(delimStr.trim())) {
+                            delimBytes = delimStr.trim().split(/\s+/).map(h => parseInt(h, 16));
+                        } else {
+                            const parsedStr = delimStr.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+                            const encoder = new TextEncoder();
+                            delimBytes = Array.from(encoder.encode(parsedStr));
+                        }
+
+                        if (delimBytes.length > 0) {
+                            let mergedData = new Uint8Array(currentBufferLen);
                             let offset = 0;
-                            finalBuffer.forEach(b => {
+                            buffer.forEach(b => {
                                 mergedData.set(b, offset);
                                 offset += b.length;
                             });
-                            const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(mergedData, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                            addLog(session.id, 'RX', mergedData, crcStatus);
-                            rxBuffersRef.current.delete(session.id);
+
+                            let startIdx = 0;
+                            let remainingBuffer = [];
+
+                            for (let i = 0; i <= currentBufferLen - delimBytes.length; i++) {
+                                let match = true;
+                                for (let j = 0; j < delimBytes.length; j++) {
+                                    if (mergedData[i + j] !== delimBytes[j]) {
+                                        match = false;
+                                        break;
+                                    }
+                                }
+                                if (match) {
+                                    const frame = mergedData.slice(startIdx, i + delimBytes.length);
+                                    const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(frame, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
+                                    addLog(session.id, 'RX', frame, crcStatus);
+                                    startIdx = i + delimBytes.length;
+                                    i = startIdx - 1; // Advance
+                                }
+                            }
+
+                            if (startIdx < currentBufferLen) {
+                                remainingBuffer.push(mergedData.slice(startIdx));
+                            }
+                            rxBuffersRef.current.set(session.id, remainingBuffer);
+
+                            // If pure delimiter mode, we don't start a timer.
+                            if (packetMode === 'delimiter') {
+                                return;
+                            }
                         }
-                        rxTimersRef.current.delete(session.id);
-                    }, timeout);
+                    }
+                }
+
+                // Setup timer for 'timeout', 'delimiterWithTimeout', or legacy mode
+                const timeoutMs = packetMode === 'timeout' || packetMode === 'delimiterWithTimeout' ? (uiState.rxTimeoutMs || 50) : legacyTimeout;
+
+                if (timeoutMs > 0) {
+                    const newTimer = setTimeout(flushBuffer, timeoutMs);
                     rxTimersRef.current.set(session.id, newTimer);
-                } else {
-                    const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(data, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                    addLog(session.id, 'RX', data, crcStatus);
+                }
+
+                // Fallback direct emit context for timeout=0?
+                // Wait, if packetMode is 'timeout' etc and no timeout timer, do nothing (accumulate)
+                // If it's a condition where we immediately emit:
+                // Actually, if timeoutMs > 0, we started a timer, so we return here to accumulate buffer
+                // If no timer was started AND pure delimiter mode is not handled, we might just emit?
+                // NO! We should only emit here if packetMode === 'none' && chunkTimeout === 0 (which is handled at the top)
+                // BUT for compatibility, previously if no timeout was set, data was emitted immediately.
+                // Let's handle it properly:
+                if (packetMode === 'none' && uiState.chunkTimeout === 0) {
+                    // This was already returned at the top!
+                    // Wait, so what runs here?
+                    // If timeout=0 but packetMode is timeout? Then we never flush except when session closes. That's a misconfiguration.
+                    // To be safe and identical to before, if it reaches here, it means we accumulated to buffer.
+                    // We don't need to addLog again.
                 }
             });
             window.serialAPI!.onClosed(session.id, () => { updateSession(session.id, () => ({ isConnected: false })); addLog(session.id, 'INFO', 'Closed'); });

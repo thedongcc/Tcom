@@ -1,7 +1,7 @@
 ﻿import { useRef, useState, useEffect, useCallback, useLayoutEffect, memo } from 'react';
 import { SessionState, SessionConfig } from '../../types/session';
 import { SerialInput } from './SerialInput';
-import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter, Info } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
@@ -48,11 +48,59 @@ const LogItem = memo(({
     flashNewMessage,
     fontSize = 15,
     rxCRC,
+    showControlChars,
     crcEnabled
 }: any) => {
+
+    const renderControlChars = (str: string, show: boolean) => {
+        if (!show) return str;
+        const parts: React.ReactNode[] = [];
+        let lastIndex = 0;
+        const regex = /[\r\n\t\0]/g;
+        let match;
+        let k = 0;
+        while ((match = regex.exec(str)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push(str.substring(lastIndex, match.index));
+            }
+            const char = match[0];
+            let label = '';
+            if (char === '\r') label = 'CR';
+            else if (char === '\n') label = 'LF';
+            else if (char === '\t') label = 'TAB';
+            else if (char === '\0') label = 'NUL';
+
+            parts.push(
+                <span key={`ctrl-${k++}`}
+                    className="inline-flex items-center justify-center font-bold text-[0.72em] mx-[2px] px-[4px] py-0 rounded-[3px] select-none border"
+                    style={{
+                        height: '1.5em',
+                        verticalAlign: 'middle',
+                        transform: 'translateY(-1px)',
+                        color: 'var(--st-ctrl-char-fg, currentColor)',
+                        backgroundColor: 'var(--st-ctrl-char-bg, rgba(128,128,128,0.12))',
+                        borderColor: 'var(--st-ctrl-char-border, currentColor)',
+                    }}>
+                    {label}
+                </span>
+            );
+
+            // keep actual char for formatting
+            if (char === '\n') parts.push('\n');
+            else if (char === '\t') parts.push('\t');
+            // \r usually doesn't need to be kept visually unless followed by \n, which naturally works out.
+
+            lastIndex = match.index + 1;
+        }
+        if (lastIndex < str.length) {
+            parts.push(str.substring(lastIndex));
+        }
+        return parts.length > 0 ? parts : str;
+    };
+
     const renderHighlightedText = (log: any, text: string) => {
         const logMatches = matches.filter((m: any) => m.logId === log.id);
-        if (logMatches.length === 0) return text;
+        if (logMatches.length === 0) return renderControlChars(text, showControlChars);
 
         const sortedMatches = [...logMatches].sort((a: any, b: any) => a.startIndex - b.startIndex);
         const result: React.ReactNode[] = [];
@@ -60,22 +108,22 @@ const LogItem = memo(({
 
         sortedMatches.forEach((match: any, i: number) => {
             if (match.startIndex > lastIndex) {
-                result.push(text.substring(lastIndex, match.startIndex));
+                result.push(renderControlChars(text.substring(lastIndex, match.startIndex), showControlChars));
             }
             const isActive = activeMatch === match;
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[#ff9632] text-black shadow-sm' : 'bg-[#623315] text-[var(--app-foreground)]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-toolbar-foreground)]'}
                 >
-                    {text.substring(match.startIndex, match.endIndex)}
+                    {renderControlChars(text.substring(match.startIndex, match.endIndex), showControlChars)}
                 </span>
             );
             lastIndex = match.endIndex;
         });
 
         if (lastIndex < text.length) {
-            result.push(text.substring(lastIndex));
+            result.push(renderControlChars(text.substring(lastIndex), showControlChars));
         }
         return result;
     };
@@ -89,13 +137,13 @@ const LogItem = memo(({
         const content = formatData(log.data, 'text', encoding).trim();
         const { styleClass, translatedText } = parseSystemMessage(log.type, content);
         return (
-            <div className="flex justify-center my-2 gap-2 items-center" style={{ transform: 'translateZ(0)' }}>
-                <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
+            <div className="flex justify-center my-2 gap-2 items-center" style={{ transform: 'translateZ(0)' }} data-component="system-message">
+                <span className={`px-4 py-1 rounded-full text-xs font-medium border border-[var(--st-msg-bubble-border)] shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
                     {translatedText}
                 </span>
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span
-                        className="flex items-center justify-center text-[0.67em] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-[0.4em] rounded-full border border-[var(--button-background)]/30 min-w-[1.6em]"
+                        className="flex items-center justify-center text-[0.67em] text-[var(--st-monitor-repeat-badge-text)] font-bold font-mono bg-[var(--st-monitor-repeat-badge-bg)] px-[0.4em] rounded-full border border-[var(--st-monitor-repeat-badge-bg)]/30 min-w-[1.6em]"
                         style={{ height: `${Math.floor(lineHeightPx * 0.8)}px` }}
                     >
                         x{log.repeatCount}
@@ -119,11 +167,12 @@ const LogItem = memo(({
                 '--flash-color': 'var(--selection-background)'
             } as any}
             onContextMenu={(e) => onContextMenu(e, log)}
+            data-component="monitor-bubble"
         >
             {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (
                 <div className="shrink-0 flex items-center select-none gap-1.5" style={{ height: `${lineHeightPx}px` }}>
                     {showTimestamp && (
-                        <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                        <span className="text-[var(--st-monitor-timestamp)] font-mono opacity-90 tabular-nums tracking-tight">
                             [{formatTimestamp(log.timestamp, timestampFormat || 'HH:mm:ss.SSS').trim()}]
                         </span>
                     )}
@@ -132,9 +181,9 @@ const LogItem = memo(({
             <div className="flex items-center gap-1.5 shrink-0" style={{ height: `${lineHeightPx}px` }}>
                 {showPacketType && (
                     <span className={`flex items-center justify-center font-bold font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm tracking-wide pt-[1px]
-                    ${log.type === 'TX' ? 'bg-[var(--button-background)]/30 text-[var(--app-foreground)] border border-[var(--button-background)]/40' :
-                            log.type === 'RX' ? 'bg-[var(--st-rx-label)]/30 text-[var(--app-foreground)] border border-[var(--st-rx-label)]/40' :
-                                'bg-white/5 text-[#cccccc] border border-white/10'
+                    ${log.type === 'TX' ? 'bg-[var(--monitor-tx-label-bg)] text-[var(--st-monitor-tx-label-text)] border border-[var(--monitor-tx-label-border)]' :
+                            log.type === 'RX' ? 'bg-[var(--monitor-rx-label-bg)] text-[var(--st-monitor-rx-label-text)] border border-[var(--monitor-rx-label-border)]' :
+                                'bg-[var(--st-monitor-sys-bg)] text-[var(--st-monitor-sys-text)] border border-[var(--st-monitor-sys-border)]'
                         }`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
@@ -143,7 +192,7 @@ const LogItem = memo(({
                 )}
                 {showDataLength && (
                     <span
-                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-[var(--st-monitor-tag-border)] bg-[var(--st-monitor-tag-bg)] text-[var(--st-monitor-tag-text)] pt-[1px] tabular-nums tracking-tight shrink-0"
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         {getDataLengthText(log.data)}
@@ -152,7 +201,7 @@ const LogItem = memo(({
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span
                         key={log.repeatCount}
-                        className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                        className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         x{log.repeatCount}
@@ -182,7 +231,7 @@ const LogItem = memo(({
                 return (
                     <Tooltip content={titleStr} position="top" wrapperClassName="ml-2 flex items-center shrink-0">
                         <span
-                            className="text-[11px] text-[var(--app-foreground)] max-w-[200px] truncate select-none bg-[rgba(128,128,128,0.1)] px-1.5 rounded-[3px] cursor-default"
+                            className="text-[11px] text-[var(--st-monitor-toolbar-foreground)] max-w-[200px] truncate select-none bg-[rgba(128,128,128,0.1)] px-1.5 rounded-[3px] cursor-default"
                             style={{ height: `${itemHeightPx}px` }}
                         >
                             {cmdName}
@@ -215,6 +264,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
+    const [showControlChars, setShowControlChars] = useState(uiState.showControlChars !== undefined ? uiState.showControlChars : true);
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
     const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
@@ -233,6 +283,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+    const [optionsMenuPos, setOptionsMenuPos] = useState({ top: 0, right: 0 });
+    const optionsButtonRef = useRef<HTMLButtonElement>(null);
     // Search State
     const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
 
@@ -593,9 +645,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     return (
         <div
-            className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center"
+            className="absolute inset-0 flex flex-col bg-[var(--st-monitor-rx-bg)] bg-cover bg-center"
             style={{ backgroundImage: 'var(--st-rx-bg-img)' }}
             onClick={() => setContextMenu(null)}
+            data-component="serial-monitor"
         >
             {/* ... styles ... */}
             <style>
@@ -612,13 +665,13 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             </style>
 
             {/* ... Toolbar ... */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
                 {/* ... existing toolbar code ... */}
-                <div className="text-sm font-medium text-[var(--app-foreground)] flex items-center gap-2">
+                <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                     {isConnected ? (
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} />
                     ) : (
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />
                     )}
 
                     {config.type === 'serial' ?
@@ -629,10 +682,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
                 <div className="flex items-center gap-4">
                     {/* Stats Display - Refined JetBrains Style */}
-                    <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
+                    <div className="flex items-center border border-[var(--st-serial-filter-group-border)] rounded-[3px] divide-x divide-[var(--st-serial-filter-group-divider)] overflow-hidden h-[26px] bg-[var(--st-serial-filter-group-bg)]">
                         <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
                             <div
-                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-serial-btn-filter-tx-active-bg)] text-[var(--st-serial-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-serial-btn-filter-tx-hover-bg)] text-[var(--st-serial-btn-filter-tx-text)] bg-[var(--st-serial-btn-filter-tx-bg)]'}`}
                                 onClick={() => toggleFilter('tx')}
                             >
                                 <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
@@ -641,7 +694,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         </Tooltip>
                         <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterRxOnly')} position="bottom">
                             <div
-                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[var(--st-serial-btn-filter-rx-active-bg)] text-[var(--st-serial-btn-filter-rx-active-text)] shadow-sm' : 'hover:bg-[var(--st-serial-btn-filter-rx-hover-bg)] text-[var(--st-serial-btn-filter-rx-text)] bg-[var(--st-serial-btn-filter-rx-bg)]'}`}
                                 onClick={() => toggleFilter('rx')}
                             >
                                 <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
@@ -652,9 +705,9 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     {/* Mode Toggle & Options Group */}
                     <div className="flex items-center gap-1.5">
                         {/* Hex/Text Display Mode */}
-                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--st-serial-view-group-border)] bg-[var(--st-serial-view-group-bg)] h-[26px]">
                             <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--st-serial-btn-view-active-bg)] text-[var(--st-serial-btn-view-active-text)] shadow-sm' : 'text-[var(--st-serial-btn-view-text)] hover:bg-[var(--st-serial-btn-view-hover-bg)] bg-[var(--st-serial-btn-view-bg)]'}`}
                                 onClick={() => {
                                     if (viewMode === 'hex') return; // Cannot unselect the only active mode
                                     const newMode = viewMode === 'both' ? 'text' : 'both';
@@ -665,7 +718,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                 HEX
                             </button>
                             <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--st-serial-btn-view-active-bg)] text-[var(--st-serial-btn-view-active-text)] shadow-sm' : 'text-[var(--st-serial-btn-view-text)] hover:bg-[var(--st-serial-btn-view-hover-bg)] bg-[var(--st-serial-btn-view-bg)]'}`}
                                 onClick={() => {
                                     if (viewMode === 'text') return; // Cannot unselect the only active mode
                                     const newMode = viewMode === 'both' ? 'hex' : 'both';
@@ -681,8 +734,18 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         {/* Options Menu Button and Panel */}
                         <div className="relative">
                             <button
-                                className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
-                                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                                ref={optionsButtonRef}
+                                className={`h-[26px] px-2 hover:bg-[var(--st-serial-options-hover-bg)] rounded-[3px] text-[var(--st-serial-btn-options-text)] bg-[var(--st-serial-btn-options-bg)] border-[var(--st-serial-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--st-serial-options-hover-bg)] text-[var(--st-serial-btn-options-text)]' : ''}`}
+                                onClick={() => {
+                                    if (!showOptionsMenu && optionsButtonRef.current) {
+                                        const rect = optionsButtonRef.current.getBoundingClientRect();
+                                        setOptionsMenuPos({
+                                            top: rect.bottom + 4,
+                                            right: window.innerWidth - rect.right
+                                        });
+                                    }
+                                    setShowOptionsMenu(!showOptionsMenu);
+                                }}
                             >
                                 <Menu size={14} />
                                 <span className="text-[11px] font-medium">{t('monitor.options')}</span>
@@ -690,31 +753,39 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                             {showOptionsMenu && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                    <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
-                                            <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
-                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
-                                        </div>
-
+                                    <div
+                                        className="fixed bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[280px] flex flex-col"
+                                        style={{
+                                            top: optionsMenuPos.top,
+                                            right: optionsMenuPos.right,
+                                            maxHeight: `calc(100vh - ${optionsMenuPos.top + 10}px)`,
+                                            overflowY: 'auto'
+                                        }}
+                                    >
                                         {/* Encoding Section */}
-                                        <div className="mb-4 px-1">
-                                            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
+                                        <div className="mb-3 px-1">
+                                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.encoding')}</span>
                                                 <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
                                             </div>
-                                            <CustomSelect
-                                                items={[
-                                                    { label: 'UTF-8', value: 'utf-8' },
-                                                    { label: 'GBK', value: 'gbk' },
-                                                    { label: 'ASCII', value: 'ascii' }
-                                                ]}
-                                                value={encoding}
-                                                onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }}
-                                            />
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.encoding')}</span>
+                                                <div className="flex-1 max-w-[150px]">
+                                                    <CustomSelect
+                                                        items={[
+                                                            { label: 'UTF-8', value: 'utf-8' },
+                                                            { label: 'GBK', value: 'gbk' },
+                                                            { label: 'ASCII', value: 'ascii' }
+                                                        ]}
+                                                        value={encoding}
+                                                        onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Features Section */}
-                                        <div className="mb-4 px-1">
+                                        <div className="mb-3 px-1">
                                             <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.logFeatures')}</span>
                                                 <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
@@ -730,6 +801,12 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                     label={t('monitor.packetType')}
                                                     checked={showPacketType}
                                                     onChange={(checked) => { setShowPacketType(checked); saveUIState({ showPacketType: checked }); }}
+                                                />
+
+                                                <Switch
+                                                    label={t('monitor.showControlChars') || '控制字符可视化'}
+                                                    checked={showControlChars}
+                                                    onChange={(checked) => { setShowControlChars(checked); saveUIState({ showControlChars: checked }); }}
                                                 />
 
                                                 <Switch
@@ -751,28 +828,41 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                 />
 
                                                 {/* CRC */}
-                                                <div className="space-y-2 pt-1 border-t border-[var(--menu-border-color)] mt-1">
-                                                    <div className="flex items-center gap-2 group/crc">
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between gap-4 group/crc">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.crcCheck')}</span>
+                                                            <Tooltip content={t('monitor.crcConfig')} position="bottom">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
+                                                                    className={`p-1 rounded hover:bg-[var(--st-serial-options-hover-bg)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-monitor-btn-text)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--st-serial-btn-crc-active-bg)] text-white' : ''}`}
+                                                                >
+                                                                    <Settings size={12} />
+                                                                </button>
+                                                            </Tooltip>
+                                                        </div>
                                                         <Switch
-                                                            label={t('monitor.crcCheck')}
                                                             checked={crcEnabled}
                                                             onChange={toggleCRC}
-                                                            className="flex-1"
                                                         />
-                                                        <Tooltip content={t('monitor.crcConfig')} position="bottom">
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
-                                                                className={`p-1 rounded hover:bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : ''}`}
-                                                            >
-                                                                <Settings size={12} />
-                                                            </button>
-                                                        </Tooltip>
                                                     </div>
 
                                                     {showCRCPanel && (
                                                         <div className="bg-[rgba(128,128,128,0.05)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.algorithm')}:</span>
+                                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">校验对象</span>
+                                                                <CustomSelect
+                                                                    items={[
+                                                                        { label: '仅接收 (RX)', value: 'rx' },
+                                                                        { label: '仅发送 (TX)', value: 'tx' },
+                                                                        { label: '发送与接收 (TX+RX)', value: 'both' }
+                                                                    ]}
+                                                                    value={uiState.crcTarget || 'rx'}
+                                                                    onChange={(val) => saveUIState({ crcTarget: val })}
+                                                                />
+                                                            </div>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.algorithm')}</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: 'Modbus CRC16', value: 'modbus-crc16' },
@@ -785,7 +875,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.startOffset')}:</span>
+                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.startOffset')}</span>
                                                                 <input
                                                                     type="number"
                                                                     className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[11px] text-[var(--input-foreground)] rounded-sm outline-none px-2 py-1 focus:border-[var(--focus-border-color)]"
@@ -794,7 +884,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.endPosition')}:</span>
+                                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.endPosition')}</span>
                                                                 <CustomSelect
                                                                     items={[
                                                                         { label: t('monitor.crcEndPacket'), value: '0' },
@@ -812,55 +902,127 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                             </div>
                                         </div>
 
-                                        {/* Display Settings Section */}
-                                        <div className="mb-6 px-1">
+                                        {/* Typography & RX Display Section */}
+                                        <div className="mb-4 px-1">
                                             <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
                                                 <span>{t('monitor.typography')}</span>
                                                 <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
                                             </div>
-                                            <div className="space-y-4">
+                                            <div className="space-y-3">
                                                 {/* Font Size */}
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.fontSize')}:</span>
-                                                    <CustomSelect
-                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                            label: `${size}px`,
-                                                            value: size.toString()
-                                                        }))}
-                                                        value={fontSize.toString()}
-                                                        onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
-                                                    />
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.fontSize')}</span>
+                                                    <div className="flex-1 max-w-[150px]">
+                                                        <CustomSelect
+                                                            items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
+                                                                label: `${size}px`,
+                                                                value: size.toString()
+                                                            }))}
+                                                            value={fontSize.toString()}
+                                                            onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
+                                                        />
+                                                    </div>
                                                 </div>
-
-                                                {/* Font FontFamily */}
 
                                                 {/* Font Family */}
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.fontFamily')}:</span>
-                                                    <CustomSelect
-                                                        items={availableFonts}
-                                                        value={fontFamily}
-                                                        onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val as any }); }}
-                                                    />
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.fontFamily')}</span>
+                                                    <div className="flex-1 max-w-[150px]">
+                                                        <CustomSelect
+                                                            items={availableFonts}
+                                                            value={fontFamily}
+                                                            onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val as any }); }}
+                                                        />
+                                                    </div>
                                                 </div>
 
-                                                {/* Chunk Timeout */}
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)]">{t('monitor.packetTimeout')}:</span>
-                                                    <input
-                                                        type="number"
-                                                        className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[11px] text-[var(--input-foreground)] rounded-sm outline-none px-2 py-1.5 focus:border-[var(--focus-border-color)] transition-colors"
-                                                        value={uiState.chunkTimeout || 0}
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value);
-                                                            const newTimeout = isNaN(val) ? 0 : Math.max(0, val);
-                                                            if (onUpdateConfig) {
-                                                                const currentUIState = (config as any).uiState || {};
-                                                                onUpdateConfig({ uiState: { ...currentUIState, chunkTimeout: newTimeout } } as any);
-                                                            }
-                                                        }}
-                                                        placeholder="0 (Disabled)"
-                                                    />
+                                                {/* 接收分包策略 (下拉框方式) */}
+                                                <div className="flex flex-col gap-1.5 mt-2">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.rxPacketSection')}</span>
+                                                        <div className="flex-1 max-w-[150px]">
+                                                            <CustomSelect
+                                                                items={[
+                                                                    { label: t('monitor.rxPacketMode_none' as any), value: 'none', description: t('monitor.rxPacketMode_none_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_timeout' as any), value: 'timeout', description: t('monitor.rxPacketMode_timeout_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_delimiter' as any), value: 'delimiter', description: t('monitor.rxPacketMode_delimiter_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_fixedLength' as any), value: 'fixedLength', description: t('monitor.rxPacketMode_fixedLength_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_delimiterWithTimeout' as any), value: 'delimiterWithTimeout', description: t('monitor.rxPacketMode_delimiterWithTimeout_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_fixedLengthWithTimeout' as any), value: 'fixedLengthWithTimeout', description: t('monitor.rxPacketMode_fixedLengthWithTimeout_tip' as any) },
+                                                                ]}
+                                                                value={uiState.rxPacketMode || 'none'}
+                                                                onChange={(val) => saveUIState({ rxPacketMode: val as any })}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 展开的参数配置行 */}
+                                                    {uiState.rxPacketMode && uiState.rxPacketMode !== 'none' && (
+                                                        <div className="flex flex-col gap-2 mt-1">
+                                                            {(uiState.rxPacketMode === 'delimiter' || uiState.rxPacketMode === 'delimiterWithTimeout') && (
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxDelimiterLabel')}>{t('monitor.rxDelimiterLabel')}</span>
+                                                                    <div className="flex-1 max-w-[150px]">
+                                                                        <CustomSelect
+                                                                            items={[
+                                                                                { label: '\\r\\n (CRLF)', value: '\\r\\n' },
+                                                                                { label: '\\n (LF)', value: '\\n' },
+                                                                                { label: '\\r (CR)', value: '\\r' },
+                                                                                { label: '\\t (TAB)', value: '\\t' },
+                                                                            ]}
+                                                                            value={uiState.rxDelimiter ?? '\\r\\n'}
+                                                                            onChange={(val) => saveUIState({ rxDelimiter: val })}
+                                                                            allowCustom={true}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {(uiState.rxPacketMode === 'fixedLength' || uiState.rxPacketMode === 'fixedLengthWithTimeout') && (
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxFixedLengthLabel')}>{t('monitor.rxFixedLengthLabel')}</span>
+                                                                    <div className="flex-1 max-w-[150px]">
+                                                                        <CustomSelect
+                                                                            items={[
+                                                                                { label: '8', value: '8' },
+                                                                                { label: '16', value: '16' },
+                                                                                { label: '32', value: '32' },
+                                                                                { label: '64', value: '64' },
+                                                                                { label: '128', value: '128' },
+                                                                            ]}
+                                                                            value={(uiState.rxFixedLength ?? 8).toString()}
+                                                                            onChange={(val) => {
+                                                                                const num = parseInt(val);
+                                                                                if (!isNaN(num) && num > 0) saveUIState({ rxFixedLength: num });
+                                                                            }}
+                                                                            allowCustom={true}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {(uiState.rxPacketMode === 'timeout' || uiState.rxPacketMode === 'delimiterWithTimeout' || uiState.rxPacketMode === 'fixedLengthWithTimeout') && (
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxTimeoutMsLabel')}>{t('monitor.rxTimeoutMsLabel')}</span>
+                                                                    <div className="flex-1 max-w-[150px]">
+                                                                        <CustomSelect
+                                                                            items={[
+                                                                                { label: '20', value: '20' },
+                                                                                { label: '50', value: '50' },
+                                                                                { label: '100', value: '100' },
+                                                                                { label: '200', value: '200' },
+                                                                                { label: '500', value: '500' },
+                                                                            ]}
+                                                                            value={(uiState.rxTimeoutMs ?? 50).toString()}
+                                                                            onChange={(val) => {
+                                                                                const num = parseInt(val);
+                                                                                if (!isNaN(num) && num > 0) saveUIState({ rxTimeoutMs: num });
+                                                                            }}
+                                                                            allowCustom={true}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -868,7 +1030,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                         {/* Action Items */}
                                         <div className="pt-2 border-t border-[#3c3c3c]">
                                             <button
-                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#007acc] hover:bg-[#0062a3] text-white text-[11px] rounded transition-colors"
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--st-btn-primary-bg)] hover:bg-[var(--st-btn-primary-hover)] text-white text-[11px] rounded transition-colors"
                                                 onClick={() => {
                                                     handleSaveLogs();
                                                     setShowOptionsMenu(false);
@@ -885,10 +1047,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
+                    <div className="flex items-center gap-1 border-l border-[var(--st-serial-toolbar-divider)] pl-2">
                         <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
                             <button
-                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--st-serial-btn-autoscroll-active-bg)] text-[var(--st-serial-btn-autoscroll-active-text)] shadow-sm' : 'text-[var(--st-serial-btn-autoscroll-icon)] hover:bg-[var(--st-serial-btn-autoscroll-hover-bg)] bg-[var(--st-serial-btn-autoscroll-bg)] border border-[var(--st-serial-btn-autoscroll-border)]'}`}
                                 onClick={() => {
                                     const newState = !autoScroll;
                                     setAutoScroll(newState);
@@ -905,7 +1067,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         </Tooltip>
                         <Tooltip content={t('monitor.clearLogs')} position="bottom">
                             <button
-                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
+                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--st-serial-btn-clear-icon)] hover:bg-[var(--st-serial-btn-clear-hover-bg)] bg-[var(--st-serial-btn-clear-bg)] border border-[var(--st-serial-btn-clear-border)]"
                                 onClick={handleClearLogs}
                             >
                                 <Trash2 size={14} />
@@ -949,7 +1111,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }}
                 >
                     {filteredLogs.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-[#666]">
+                        <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]">
                             <p>No data</p>
                         </div>
                     )}
@@ -976,6 +1138,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                 mergeRepeats={mergeRepeats}
                                 flashNewMessage={flashNewMessage}
                                 fontSize={fontSize}
+                                showControlChars={showControlChars}
                                 rxCRC={rxCRC}
                                 crcEnabled={crcEnabled}
                             />

@@ -36,7 +36,7 @@ interface ActivityItemProps {
 const ActivityItem = ({ icon, label, active, onClick, className, onContextMenu }: ActivityItemProps) => {
     const content = (
         <div
-            className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--app-foreground)] transition-colors border-l-4 ${active ? 'text-[var(--app-foreground)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
+            className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--st-activitybar-icon-hover)] transition-colors border-l-4 ${active ? 'text-[var(--st-activitybar-icon-active)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
         >
@@ -220,6 +220,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
         <div
             className="w-[48px] bg-[var(--activitybar-background)] flex flex-col justify-between py-2 border-r border-[var(--border-color)] z-40"
             onContextMenu={handleContextMenu}
+            data-component="activitybar"
         >
             <DndContext
                 sensors={sensors}
@@ -270,7 +271,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                     {allKnownItems.map(item => (
                         <div
                             key={item.id}
-                            className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--app-foreground)]"
+                            className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--st-activitybar-menu-text)]"
                             onClick={() => toggleVisibility(item.id)}
                         >
                             <div className={`w-4 flex items-center justify-center opacity-80`}>
@@ -281,7 +282,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                     ))}
                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1 opacity-50"></div>
                     <div
-                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--app-foreground)]"
+                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--st-activitybar-menu-text)]"
                         onClick={() => {
                             // Reset everything
                             const defaultOrder = allKnownItems.map(i => i.id);

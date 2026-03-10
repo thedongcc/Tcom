@@ -91,26 +91,26 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
         /* 移除点击蒙版关闭行为 */
         >
             <div
-                className="bg-[var(--app-background)] border border-[var(--widget-border-color)] shadow-2xl w-[600px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+                className="bg-[var(--st-dialog-content-bg)] border border-[var(--widget-border-color)] shadow-2xl w-[600px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                 tabIndex={-1}
                 style={{ outline: 'none' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 标题栏 */}
-                <div className="flex items-center justify-between p-2.5 border-b border-[var(--widget-border-color)] bg-[var(--sidebar-background)]">
-                    <span className="text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wider">{dialogTitle}</span>
-                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
+                <div className="flex items-center justify-between p-2.5 border-b border-[var(--widget-border-color)] bg-[var(--st-dialog-header-bg)]">
+                    <span className="text-[11px] font-bold text-[var(--st-dialog-text)] uppercase tracking-wider">{dialogTitle}</span>
+                    <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)] transition-colors">
                         <X size={14} />
                     </button>
                 </div>
 
                 {/* 内容区 */}
-                <div className="p-5 flex flex-col gap-5 bg-[var(--app-background)]">
+                <div className="p-5 flex flex-col gap-5 bg-[var(--st-dialog-content-bg)]">
                     {/* 命令名称 */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[11px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wide">{t('command.commandName')}</label>
                         <input
-                            className="bg-[var(--input-background)] border border-[var(--widget-border-color)] text-[var(--app-foreground)] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--focus-border-color)] text-[13px] transition-all"
+                            className="bg-[var(--input-background)] border border-[var(--widget-border-color)] text-[var(--st-dialog-text)] rounded-sm px-3 py-1.5 outline-none focus:border-[var(--focus-border-color)] text-[13px] transition-all"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoFocus
@@ -140,9 +140,9 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                 </div>
 
                 {/* 底部按钮 */}
-                <div className="p-3 border-t border-[var(--widget-border-color)] flex justify-end gap-2 bg-[var(--sidebar-background)]">
+                <div className="p-3 border-t border-[var(--widget-border-color)] flex justify-end gap-2 bg-[var(--st-dialog-footer-bg)]">
                     <button
-                        className="px-4 py-1.5 text-xs text-[var(--app-foreground)] hover:bg-[var(--hover-background)] rounded-sm transition-colors"
+                        className="px-4 py-1.5 text-xs text-[var(--st-dialog-text)] hover:bg-[var(--hover-background)] rounded-sm transition-colors"
                         onClick={onClose}
                     >
                         {t('common.cancel')}

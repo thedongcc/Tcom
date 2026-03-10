@@ -76,7 +76,7 @@ const LogItem = React.memo(({
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--app-foreground)]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-[var(--st-monitor-tab-active-text)] shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-tab-inactive-text)]'}
                 >
                     {text.substring(match.startIndex, match.endIndex)}
                 </span>
@@ -105,7 +105,7 @@ const LogItem = React.memo(({
                 </span>
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span
-                        className="flex items-center justify-center text-[0.67em] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-[0.4em] rounded-full border border-[var(--button-background)]/30 min-w-[1.6em]"
+                        className="flex items-center justify-center text-[0.67em] text-[var(--st-monitor-repeat-badge-text)] font-bold font-mono bg-[var(--st-monitor-repeat-badge-bg)] px-[0.4em] rounded-full border border-[var(--st-monitor-repeat-badge-bg)]/30 min-w-[1.6em]"
                         style={{ height: `${Math.floor(lineHeightPx * 0.8)}px` }}
                     >
                         x{log.repeatCount}
@@ -140,12 +140,12 @@ const LogItem = React.memo(({
                 {showPacketType && (
                     <div
                         className={`flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-auto px-1 min-w-[5.5em] shrink-0 select-none pt-[1px]
-                        ${log.topic === 'virtual' ? 'bg-[var(--button-background)]/20 text-[var(--app-foreground)] border-[var(--button-background)]/40' : 'bg-[var(--st-rx-label)]/20 text-[var(--app-foreground)] border-[var(--st-rx-label)]/40'}`}
+                        ${log.topic === 'virtual' ? 'bg-[var(--st-monitor-log-tx-label-bg)] text-[var(--st-monitor-virtual-label-text)] border-[var(--st-monitor-log-tx-label-bg)]/40' : 'bg-[var(--st-monitor-log-rx-label-bg)] text-[var(--st-monitor-rx-label-text)] border-[var(--st-monitor-log-rx-label-bg)]/40'}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         {log.type === 'TX' && log.crcStatus === 'none' ? (
                             <>
-                                <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">Tcom</span>
+                                <span className="font-extrabold text-[var(--st-monitor-tx-label-text)] truncate max-w-[3em] text-center shrink-0">Tcom</span>
                                 <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
                                 <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
                             </>
@@ -154,11 +154,11 @@ const LogItem = React.memo(({
                                 <>
                                     <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
                                     <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
-                                    <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="font-extrabold text-[var(--st-monitor-virtual-label-text)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-extrabold text-[var(--app-foreground)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="font-extrabold text-[var(--st-monitor-rx-label-text)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
                                     <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
                                     <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
                                 </>
@@ -168,7 +168,7 @@ const LogItem = React.memo(({
                 )}
                 {showDataLength && (
                     <span
-                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                        className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-[var(--st-monitor-tag-border)] bg-[var(--st-monitor-tag-bg)] text-[var(--st-monitor-tag-text)] pt-[1px] tabular-nums tracking-tight shrink-0"
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         {getDataLengthText(log.data)}
@@ -177,7 +177,7 @@ const LogItem = React.memo(({
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span
                         key={log.repeatCount}
-                        className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                        className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         x{log.repeatCount}
@@ -444,12 +444,12 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-[var(--app-background)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }} onClick={() => setContextMenu(null)}>
+        <div className="absolute inset-0 flex flex-col bg-[var(--monitor-terminal-bg)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }} onClick={() => setContextMenu(null)} data-component="monitor-terminal">
             <style>{`@keyframes flash-new { 0% { background-color: var(--flash-color); } 100% { background-color: transparent; } } .animate-flash-new { animation: flash-new 1s ease-out forwards; }`}</style>
 
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
-                <div className="text-sm font-medium text-[var(--app-foreground)] flex items-center gap-2">
-                    {isConnected ? <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" /> : <div className="w-2 h-2 rounded-full bg-red-500" />}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--st-widget-border)] bg-[var(--st-toolbar-bg)] shrink-0">
+                <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
+                    {isConnected ? <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} /> : <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />}
                     <span className="opacity-80">Monitor: </span>
                     <span className="text-blue-400 font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
                     <span className="text-gray-600 px-1">⟷</span>
@@ -457,15 +457,15 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
+                    <div className="flex items-center border border-[var(--st-ter-filter-group-border)] rounded-[3px] divide-x divide-[var(--st-ter-filter-group-divider)] overflow-hidden h-[26px] bg-[var(--st-ter-filter-group-bg)]">
                         <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterVirtualPort')} position="bottom">
-                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-monitor-btn-filter-tx-active-bg)] text-[var(--st-ter-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-ter-btn-filter-tx-hover-bg)] text-[var(--st-ter-btn-filter-tx-text)] bg-[var(--st-ter-btn-filter-tx-bg)]'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
                                 <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
                                 <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                             </div>
                         </Tooltip>
                         <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterPhysicalPort')} position="bottom">
-                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
+                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[var(--st-monitor-btn-filter-rx-active-bg)] text-[var(--st-ter-btn-filter-rx-active-text)] shadow-sm' : 'hover:bg-[var(--st-ter-btn-filter-rx-hover-bg)] text-[var(--st-ter-btn-filter-rx-text)] bg-[var(--st-ter-btn-filter-rx-bg)]'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
                                 <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
                                 <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
                             </div>
@@ -473,9 +473,9 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--st-ter-view-group-border)] bg-[var(--st-ter-view-group-bg)] h-[26px]">
                             <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--st-monitor-btn-view-hex-active-bg)] text-[var(--st-ter-btn-view-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-view-text)] hover:bg-[var(--st-ter-btn-view-hover-bg)] bg-[var(--st-ter-btn-view-bg)]'}`}
                                 onClick={() => {
                                     if (viewMode === 'hex') return;
                                     const newMode = viewMode === 'both' ? 'text' : 'both';
@@ -486,7 +486,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                 HEX
                             </button>
                             <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--st-monitor-btn-view-txt-active-bg)] text-[var(--st-ter-btn-view-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-view-text)] hover:bg-[var(--st-ter-btn-view-hover-bg)] bg-[var(--st-ter-btn-view-bg)]'}`}
                                 onClick={() => {
                                     if (viewMode === 'text') return;
                                     const newMode = viewMode === 'both' ? 'hex' : 'both';
@@ -499,7 +499,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         </div>
 
                         <div className="relative">
-                            <button className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
+                            <button className={`h-[26px] px-2 hover:bg-[var(--monitor-options-hover-bg)] rounded-[3px] text-[var(--st-ter-btn-options-text)] bg-[var(--st-ter-btn-options-bg)] border-[var(--st-ter-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--monitor-options-hover-bg)] text-[var(--st-ter-btn-options-text)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
                                 <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                             </button>
                             {showOptionsMenu && (
@@ -507,8 +507,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                     <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                     <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
                                         <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
-                                            <div className="text-[12px] text-[var(--app-foreground)] font-bold">{t('monitor.logSettings')}</div>
-                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)]" onClick={() => setShowOptionsMenu(false)} />
+                                            <div className="text-[12px] text-[var(--menu-foreground)] font-bold">{t('monitor.logSettings')}</div>
+                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--menu-foreground)]" onClick={() => setShowOptionsMenu(false)} />
                                         </div>
                                         <div className="space-y-4 px-1">
                                             <div className="space-y-2.5">
@@ -546,7 +546,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                             </div>
 
                                             <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--st-monitor-btn-export-bg)] text-white text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
                                                     <Download size={14} /> {t('monitor.exportLog')}
                                                 </button>
                                             </div>
@@ -557,10 +557,10 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
-                        <Tooltip content={`Auto Scroll: ${autoScroll ? 'On' : 'Off'}`} position="bottom">
+                    <div className="flex items-center gap-1 border-l border-[var(--st-ter-toolbar-divider)] pl-2">
+                        <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
                             <button
-                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--st-monitor-btn-autoscroll-active-bg)] text-[var(--st-ter-btn-autoscroll-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-autoscroll-icon)] hover:bg-[var(--st-ter-btn-autoscroll-hover-bg)] bg-[var(--st-ter-btn-autoscroll-bg)] border border-[var(--st-ter-btn-autoscroll-border)]'}`}
                                 onClick={() => {
                                     const newState = !autoScroll;
                                     setAutoScroll(newState);
@@ -579,7 +579,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                             </button>
                         </Tooltip>
                         <Tooltip content={t('monitor.clearLogs')} position="bottom">
-                            <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
+                            <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--st-ter-btn-clear-icon)] hover:bg-[var(--st-ter-btn-clear-hover-bg)] bg-[var(--st-ter-btn-clear-bg)] border border-[var(--st-ter-btn-clear-border)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
                         </Tooltip>
                     </div>
                 </div>
@@ -655,8 +655,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
 
             <div className="bg-[var(--app-background)] border-t border-[var(--border-color)]">
                 <div className="flex items-center bg-[var(--widget-background)]/30 px-3 py-1 border-y border-white/5 gap-2">
-                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
-                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-emerald-500 text-teal-950 shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
+                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--st-monitor-btn-target-virtual-active-bg)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
+                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[var(--st-monitor-btn-target-physical-active-bg)] text-white shadow-md' : 'bg-[var(--button-secondary-background)] text-[var(--st-monitor-btn-text)] hover:text-white hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
                 <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding ?? ''} initialTimerInterval={uiState.inputTimerInterval} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
             </div>

@@ -694,6 +694,12 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win?.show();
+    // 主窗口显示后 1 秒在后台预创建主题编辑器，消除首次打开的冷启动延迟
+    setTimeout(() => {
+      if (!themeEditorWindow) {
+        prewarmThemeEditor();
+      }
+    }, 1000);
   });
 
   win.on('resize', () => saveState());
@@ -737,126 +743,835 @@ function createWindow() {
 
   // Theme IPC
   const DEFAULT_DARK_COLORS = {
-    '--app-background': '#1e1e1e',
-    '--app-foreground': '#cccccc',
-    '--sidebar-background': '#252526',
-    '--activitybar-background': '#333333',
-    '--statusbar-background': '#252526',
-    '--statusbar-debugging-background': '#cc6633',
-    '--titlebar-background': '#3c3c3c',
-    '--panel-background': '#1e1e1e',
-    '--border-color': '#2b2b2b',
-    '--widget-border-color': '#454545',
-    '--input-background': '#3c3c3c',
-    '--input-foreground': '#cccccc',
-    '--input-border-color': '#3c3c3c',
-    '--input-placeholder-color': '#a6a6a6',
-    '--hover-background': '#2a2d2e',
-    '--selection-background': '#094771',
-    '--accent-color': '#007acc',
-    '--focus-border-color': '#007acc',
-    '--list-hover-background': '#2a2d2e',
-    '--list-active-background': '#37373d',
-    '--editor-background': '#1e1e1e',
-    '--widget-background': '#252526',
-    '--dropdown-background': '#1f1f1f',
-    '--dropdown-border-color': '#454545',
-    '--dropdown-item-hover-background': '#094771',
-    '--dropdown-item-selected-foreground': '#ffffff',
-    '--checkbox-background': '#007acc',
-    '--checkbox-border-color': '#007acc',
-    '--checkbox-foreground': '#ffffff',
-    '--settings-header-background': '#252526',
-    '--settings-row-hover-background': '#2a2d2e',
-    '--scrollbar-shadow-color': '#000000',
-    '--scrollbar-slider-color': '#79797966',
-    '--scrollbar-slider-hover-color': '#646464bb',
-    '--scrollbar-slider-active-color': '#bfbfbf66',
-    '--button-background': '#0e639c',
-    '--button-foreground': '#ffffff',
-    '--button-hover-background': '#1177bb',
-    '--button-secondary-background': '#3c3c3c',
-    '--button-secondary-hover-background': '#4a4a4a',
-    '--link-foreground': '#3794ff',
-    '--activitybar-inactive-foreground': '#858585',
-    '--menu-background': '#252526',
-    '--menu-foreground': '#cccccc',
-    '--menu-border-color': '#454545',
-    '--st-rx-text': '#8FBC8F',
-    '--st-tx-text': '#5487ec',
-    '--st-rx-label': '#6a9955',
-    '--st-tx-label': '#d16969',
-    '--st-info-text': '#9cdcfe',
-    '--st-error-text': '#f48771',
-    '--st-timestamp': '#569cd6',
-    '--st-rx-bg': '#1e1e1e',
-    '--st-input-bg': '#1e1e1e',
-    '--st-input-text': '#d4d4d4',
-    '--st-token-crc': '#4ec9b0',
-    '--st-token-flag': '#c586c0',
-    '--st-accent': '#007acc'
+    "--app-background": "#1e1e1e",
+    "--app-foreground": "#cccccc",
+    "--sidebar-background": "#252526",
+    "--activitybar-background": "#333333",
+    "--statusbar-background": "#252526",
+    "--titlebar-background": "#3c3c3c",
+    "--panel-background": "#1e1e1e",
+    "--border-color": "#2b2b2b",
+    "--widget-border-color": "#454545",
+    "--input-background": "#3c3c3c",
+    "--input-foreground": "#cccccc",
+    "--input-border-color": "#3c3c3c",
+    "--input-placeholder-color": "#a6a6a6",
+    "--hover-background": "#2a2d2e",
+    "--selection-background": "#094771",
+    "--accent-color": "#007acc",
+    "--focus-border-color": "#007acc",
+    "--list-hover-background": "#2a2d2e",
+    "--list-active-background": "#37373d",
+    "--editor-background": "#1e1e1e",
+    "--widget-background": "#252526",
+    "--dropdown-background": "#1f1f1f",
+    "--dropdown-border-color": "#454545",
+    "--dropdown-item-hover-background": "#094771",
+    "--dropdown-item-selected-foreground": "#ffffff",
+    "--checkbox-background": "#007acc",
+    "--checkbox-border-color": "#007acc",
+    "--checkbox-foreground": "#ffffff",
+    "--settings-header-background": "#252526",
+    "--settings-row-hover-background": "#2a2d2e",
+    "--scrollbar-slider-color": "#79797966",
+    "--scrollbar-slider-hover-color": "#646464bb",
+    "--scrollbar-slider-active-color": "#bfbfbf66",
+    "--button-background": "#0e639c",
+    "--button-foreground": "#ffffff",
+    "--button-hover-background": "#1177bb",
+    "--button-secondary-background": "#3c3c3c",
+    "--button-secondary-hover-background": "#4a4a4a",
+    "--link-foreground": "#3794ff",
+    "--activitybar-inactive-foreground": "#858585",
+    "--menu-background": "#252526",
+    "--menu-foreground": "#cccccc",
+    "--menu-border-color": "#454545",
+    "--st-rx-text": "#8FBC8F",
+    "--st-tx-text": "#5487ec",
+    "--st-info-text": "#9cdcfe",
+    "--st-error-text": "#f48771",
+    "--st-timestamp": "#569cd6",
+    "--st-input-bg": "#1e1e1e",
+    "--st-input-text": "#d4d4d4",
+    "--st-token-crc": "#4ec9b0",
+    "--st-token-flag": "#c586c0",
+    "--st-accent": "#007acc",
+    "--st-ctrl-char-fg": "#858585",
+    "--st-ctrl-char-bg": "rgba(128, 128, 128, 0.1)",
+    "--st-ctrl-char-border": "rgba(128, 128, 128, 0.2)",
+    "--st-sidebar-title-text": "#cccccc",
+    "--st-sidebar-text": "#cccccc",
+    "--st-sidebar-action-hover": "#cccccc",
+    "--st-titlebar-text": "#cccccc",
+    "--st-titlebar-icon": "#cccccc",
+    "--st-titlebar-icon-hover": "#ffffff",
+    "--st-statusbar-text": "#cccccc",
+    "--st-statusbar-divider": "#cccccc",
+    "--statusbar-debugging-background": "#cc6633",
+    "--st-activitybar-icon-hover": "#cccccc",
+    "--st-activitybar-icon-active": "#ffffff",
+    "--activitybar-active-border": "#007acc",
+    "--st-activitybar-menu-text": "#cccccc",
+    "--st-panel-header-text": "#cccccc",
+    "--st-panel-action-hover": "#cccccc",
+    "--st-sidebar-panel-bg": "#252526",
+    "--editor-area-tabs-bg": "#1e1e1e",
+    "--extensions-sidebar-text": "#cccccc",
+    "--session-list-sidebar-muted": "#858585",
+    "--st-list-item-bg": "transparent",
+    "--st-terminal-bg": "#1e1e1e",
+    "--st-monitor-tag-bg": "#ffffff1a",
+    "--st-monitor-tag-text": "#AAAAAA",
+    "--st-monitor-tag-border": "#ffffff1a",
+    "--st-monitor-rx-label-text": "#AAAAAA",
+    "--st-monitor-tx-label-text": "#AAAAAA",
+    "--st-monitor-virtual-label-text": "#cccccc",
+    "--st-monitor-config-text": "#cccccc",
+    "--st-monitor-config-label": "#cccccc",
+    "--st-monitor-toolbar-foreground": "#cccccc",
+    "--st-monitor-tab-active-text": "#ffffff",
+    "--st-monitor-tab-inactive-text": "#cccccc",
+    "--st-monitor-btn-text": "#cccccc",
+    "--st-monitor-status-online": "#22c55e",
+    "--st-monitor-status-offline": "#ef4444",
+    "--st-monitor-gold-flash": "#ff9632",
+    "--st-monitor-gold-flash-bg": "#ff96321a",
+    "--st-monitor-gold-flash-border": "#ff96324d",
+    "--st-monitor-log-bg": "#1e1e1e",
+    "--st-monitor-toolbar-border": "#454545",
+    "--st-mqtt-toolbar-border": "#454545",
+    "--monitor-terminal-toolbar-bg": "#252526",
+    "--monitor-terminal-toolbar-border": "#454545",
+    "--monitor-terminal-toolbar-text": "#cccccc",
+    "--st-serial-btn-options-hover-bg": "#094771",
+    "--st-input-btn-text": "#cccccc",
+    "--st-danger-bg": "#a1260d",
+    "--st-danger-hover-bg": "#c93f24",
+    "--st-danger-text": "#ffffff",
+    "--input-focus-border-color": "#007acc",
+    "--st-btn-switch-active-bg": "#007acc",
+    "--st-btn-send-bg": "#0e639c",
+    "--st-rx-bg": "rgba(0, 0, 0, 0.2)",
+    "--st-tx-bg": "rgba(255, 255, 255, 0.05)",
+    "--sys-msg-default-bg": "#333333",
+    "--sys-msg-connected-bg": "rgba(34, 197, 94, 0.1)",
+    "--sys-msg-error-text": "#f48771",
+    "--sys-msg-error-border": "rgba(239, 68, 68, 0.3)",
+    "--sys-msg-error-bg": "rgba(239, 68, 68, 0.1)",
+    "--sys-msg-bridge-bg": "rgba(128, 128, 128, 0.1)",
+    "--sys-msg-device-bg": "rgba(128, 128, 128, 0.1)",
+    "--serial-config-label": "#cccccc",
+    "--mqtt-config-input-bg": "#3c3c3c",
+    "--mqtt-config-input-text": "#cccccc",
+    "--scrollbar-shadow-color": "#000000",
+    "--st-status-success": "#22c55e",
+    "--st-status-error": "#ef4444",
+    "--st-vport-alert-bg": "rgba(239, 68, 68, 0.1)",
+    "--st-vport-alert-border": "rgba(239, 68, 68, 0.3)",
+    "--st-vport-alert-text": "#f48771",
+    "--st-conn-start-bg": "#0e639c",
+    "--st-conn-start-hover": "#1177bb",
+    "--st-conn-stop-bg": "#a1260d",
+    "--st-conn-stop-hover": "#c93f24",
+    "--st-conn-disabled-bg": "#3c3c3c",
+    "--st-conn-disabled-text": "#858585",
+    "--st-dialog-icon-hover": "#ffffff",
+    "--st-toast-text": "#cccccc",
+    "--st-toast-icon-hover": "#ffffff",
+    "--st-tooltip-bg": "#252526",
+    "--st-tooltip-text": "#cccccc",
+    "--st-tooltip-border": "#454545",
+    "--st-switch-text-hover": "#ffffff",
+    "--st-contextmenu-text-hover": "#ffffff",
+    "--st-select-item-text": "#cccccc",
+    "--st-search-text": "#cccccc",
+    "--st-dialog-text": "#cccccc",
+    "--st-settings-text": "#cccccc",
+    "--st-settings-title-text": "#cccccc",
+    "--st-widget-border": "#454545",
+    "--st-input-border": "#3c3c3c",
+    "--st-input-focus-border": "#007acc",
+    "--st-monitor-timestamp": "#999999",
+    "--st-monitor-sys-bg": "#ffffff0d",
+    "--st-monitor-sys-text": "#cccccc",
+    "--st-monitor-sys-border": "#ffffff1a",
+    "--st-monitor-empty-text": "#666666",
+    "--st-input-timer-unit-text": "#666666",
+    "--st-btn-primary-bg": "#007acc",
+    "--st-btn-primary-hover": "#0062a3",
+    "--st-status-danger-text": "#f48771",
+    "--st-config-success-bg": "#4ec9b0",
+    "--st-config-success-text": "#4ec9b0",
+    "--st-config-muted-text": "#969696",
+    "--st-config-title-text": "#666666",
+    "--st-settings-danger-bg": "#a1260d",
+    "--st-settings-danger-hover": "#c93f24",
+    "--st-settings-danger-text": "#ffffff",
+    "--st-popover-bg": "#252526",
+    "--st-popover-border": "#3c3c3c",
+    "--st-settings-danger-bg-subtle": "rgba(161, 38, 13, 0.2)",
+    "--st-settings-danger-title": "#f48771",
+    "--st-settings-text-hover": "#ffffff",
+    "--st-settings-footer-bg": "#1e1e1e",
+    "--st-settings-footer-border": "#3c3c3c",
+    "--st-settings-btn-disabled-bg": "#3c3c3c",
+    "--st-settings-btn-disabled-text": "#888888",
+    "--st-settings-btn-cancel-hover": "#3c3c3c",
+    "--st-token-divider": "#333333",
+    "--st-token-arrow": "#666666",
+    "--st-token-timestamp": "#4fc1ff",
+    "--st-token-auto-inc": "#c586c0",
+    "--st-session-serial-text": "#e8b575",
+    "--st-sidebar-muted-text": "#969696",
+    "--st-panel-muted-text": "#969696",
+    "--st-graph-node-title": "#e0e0e0",
+    "--st-graph-subnode-bg": "#111111",
+    "--st-graph-subnode-border": "#333333",
+    "--st-graph-port-border": "#666666",
+    "--st-graph-port-hover-border": "#ffffff",
+    "--st-graph-port-hover-bg": "#555555",
+    "--st-graph-canvas-bg": "#1e1e1e",
+    "--st-graph-toolbar-bg": "#252526",
+    "--st-graph-toolbar-border": "#3c3c3c",
+    "--st-graph-icon-virtual": "#4ec9b0",
+    "--st-graph-icon-physical": "#ce9178",
+    "--st-graph-icon-pair": "#c586c0",
+    "--st-graph-icon-bus": "#dcdcaa",
+    "--st-graph-divider": "#3c3c3c",
+    "--st-extension-active-text": "#4ec9b0",
+    "--st-extension-user-text": "#ce9178",
+    "--st-extension-warning-text": "#f48771",
+    "--st-extension-warning-bg": "#5a1d1d",
+    "--st-extension-danger-hover": "#c53030",
+    "--st-update-spinner": "#007acc",
+    "--st-update-text": "#cccccc",
+    "--st-update-btn-bg": "#3c3c3c",
+    "--st-update-btn-hover": "#4c4c4c",
+    "--st-update-btn-text": "#ffffff",
+    "--session-item-hover-bg": "#2a2d2e",
+    "--session-item-active-bg": "#37373d",
+    "--session-item-active-border": "#007acc",
+    "--session-item-foreground": "#cccccc",
+    "--context-menu-hover-bg": "#094771",
+    "--st-monitor-log-tx-label-bg": "#d1696933",
+    "--st-monitor-log-rx-label-bg": "#6a995533",
+    "--st-monitor-btn-filter-tx-active-bg": "#d16969",
+    "--st-monitor-btn-filter-rx-active-bg": "#22c55e",
+    "--st-monitor-btn-view-hex-active-bg": "#0e639c",
+    "--st-monitor-btn-view-txt-active-bg": "#0e639c",
+    "--st-monitor-btn-autoscroll-active-bg": "#0e639c",
+    "--st-monitor-btn-target-virtual-active-bg": "#0e639c",
+    "--st-monitor-btn-target-physical-active-bg": "#22c55e",
+    "--st-input-btn-mode-hex-active-bg": "#0e639c",
+    "--st-input-btn-mode-txt-active-bg": "#0e639c",
+    "--st-input-btn-timer-active-bg": "#0e639c",
+    "--st-input-btn-send-bg": "#0e639c",
+    "--st-monitor-repeat-badge-bg": "#0e639c",
+    "--st-monitor-repeat-badge-text": "#ffffff",
+    "--st-monitor-btn-export-bg": "#0e639c",
+    "--st-mqtt-btn-filter-tx-active-bg": "#d16969",
+    "--st-mqtt-btn-filter-rx-active-bg": "#22c55e",
+    "--st-mqtt-btn-view-active-bg": "#0e639c",
+    "--st-mqtt-btn-autoscroll-active-bg": "#0e639c",
+    "--st-mqtt-btn-send-bg": "#0e639c",
+    "--st-mqtt-topic-selected-text": "#4ec9b0",
+    "--st-mqtt-topic-default-tx-color": "#007acc",
+    "--st-mqtt-topic-default-rx-color": "#4ec9b0",
+    "--st-command-drop-indicator": "#007acc",
+    "--st-command-empty-text": "#969696",
+    "--monitor-rx-label-bg": "#6A99554D",
+    "--monitor-rx-label-border": "#6a995566",
+    "--monitor-tx-label-bg": "#0E639C4D",
+    "--monitor-tx-label-border": "#0E639C66",
+    "--monitor-bubble-rx-border": "#6a9955",
+    "--monitor-bubble-tx-border": "#d16969",
+    "--st-serial-btn-filter-tx-active-bg": "#0e639c",
+    "--st-serial-btn-filter-rx-active-bg": "#6a9955",
+    "--st-serial-btn-view-active-bg": "#0e639c",
+    "--st-serial-btn-autoscroll-active-bg": "#0e639c",
+    "--st-serial-btn-crc-active-bg": "#0e639c",
+    "--st-serial-options-hover-bg": "#4a4a4a",
+    "--sys-msg-default-border": "#e4e4e4",
+    "--sys-msg-connected-text": "#10b981",
+    "--sys-msg-connected-border": "#10b981",
+    "--sys-msg-bridge-text": "#007acc",
+    "--sys-msg-bridge-border": "#007acc",
+    "--sys-msg-device-text": "#22c55e",
+    "--sys-msg-device-border": "#22c55e",
+    "--logsearch-btn-match-case-active-bg": "#007acc",
+    "--logsearch-btn-regex-active-bg": "#007acc",
+    "--logsearch-nav-active-bg": "#007fd4",
+    "--switch-active-bg": "#007acc",
+    "--st-mqtt-options-hover-bg": "#4a4a4a",
+    "--monitor-options-hover-bg": "#4a4a4a",
+    "--st-serial-toolbar-divider": "#454545",
+    "--st-serial-filter-group-bg": "#1e1e1e",
+    "--st-serial-filter-group-border": "#454545",
+    "--st-serial-filter-group-divider": "#454545",
+    "--st-serial-btn-filter-tx-text": "#cccccc",
+    "--st-serial-btn-filter-tx-bg": "transparent",
+    "--st-serial-btn-filter-tx-hover-bg": "#3c3c3c",
+    "--st-serial-btn-filter-tx-active-text": "#ffffff",
+    "--st-serial-btn-filter-rx-text": "#cccccc",
+    "--st-serial-btn-filter-rx-bg": "transparent",
+    "--st-serial-btn-filter-rx-hover-bg": "#3c3c3c",
+    "--st-serial-btn-filter-rx-active-text": "#ffffff",
+    "--st-serial-view-group-bg": "#1e1e1e",
+    "--st-serial-view-group-border": "#454545",
+    "--st-serial-btn-view-text": "#cccccc",
+    "--st-serial-btn-view-bg": "transparent",
+    "--st-serial-btn-view-hover-bg": "#3c3c3c",
+    "--st-serial-btn-view-active-text": "#ffffff",
+    "--st-serial-btn-options-text": "#cccccc",
+    "--st-serial-btn-options-bg": "transparent",
+    "--st-serial-btn-autoscroll-bg": "transparent",
+    "--st-serial-btn-autoscroll-border": "transparent",
+    "--st-serial-btn-autoscroll-icon": "#cccccc",
+    "--st-serial-btn-autoscroll-hover-bg": "#3c3c3c",
+    "--st-serial-btn-autoscroll-active-text": "#ffffff",
+    "--st-serial-btn-clear-bg": "transparent",
+    "--st-serial-btn-clear-border": "transparent",
+    "--st-serial-btn-clear-icon": "#cccccc",
+    "--st-serial-btn-clear-hover-bg": "#3c3c3c",
+    "--st-mqtt-toolbar-divider": "#454545",
+    "--st-mqtt-filter-group-bg": "#1e1e1e",
+    "--st-mqtt-filter-group-border": "#454545",
+    "--st-mqtt-filter-group-divider": "#454545",
+    "--st-msg-bubble-border": "rgba(255,255,255,0.1)",
+    "--st-mqtt-btn-filter-tx-text": "#cccccc",
+    "--st-mqtt-btn-filter-tx-bg": "transparent",
+    "--st-mqtt-btn-filter-tx-hover-bg": "#3c3c3c",
+    "--st-mqtt-btn-filter-tx-active-text": "#ffffff",
+    "--st-mqtt-btn-filter-rx-text": "#cccccc",
+    "--st-mqtt-btn-filter-rx-bg": "transparent",
+    "--st-mqtt-btn-filter-rx-hover-bg": "#3c3c3c",
+    "--st-mqtt-btn-filter-rx-active-text": "#ffffff",
+    "--st-mqtt-view-group-bg": "#1e1e1e",
+    "--st-mqtt-view-group-border": "#454545",
+    "--st-mqtt-btn-view-text": "#cccccc",
+    "--st-mqtt-btn-view-bg": "transparent",
+    "--st-mqtt-btn-view-hover-bg": "#3c3c3c",
+    "--st-mqtt-btn-view-active-text": "#ffffff",
+    "--st-mqtt-btn-options-text": "#cccccc",
+    "--st-mqtt-btn-options-bg": "transparent",
+    "--st-mqtt-btn-autoscroll-bg": "transparent",
+    "--st-mqtt-btn-autoscroll-border": "transparent",
+    "--st-mqtt-btn-autoscroll-icon": "#cccccc",
+    "--st-mqtt-btn-autoscroll-hover-bg": "#3c3c3c",
+    "--st-mqtt-btn-autoscroll-active-text": "#ffffff",
+    "--st-mqtt-btn-clear-bg": "transparent",
+    "--st-mqtt-btn-clear-border": "transparent",
+    "--st-mqtt-btn-clear-icon": "#cccccc",
+    "--st-mqtt-btn-clear-hover-bg": "#3c3c3c",
+    "--st-ter-toolbar-divider": "#454545",
+    "--st-ter-filter-group-bg": "#1e1e1e",
+    "--st-ter-filter-group-border": "#454545",
+    "--st-ter-filter-group-divider": "#454545",
+    "--st-ter-btn-filter-tx-text": "#cccccc",
+    "--st-ter-btn-filter-tx-bg": "transparent",
+    "--st-ter-btn-filter-tx-hover-bg": "#3c3c3c",
+    "--st-ter-btn-filter-tx-active-text": "#ffffff",
+    "--st-ter-btn-filter-rx-text": "#cccccc",
+    "--st-ter-btn-filter-rx-bg": "transparent",
+    "--st-ter-btn-filter-rx-hover-bg": "#3c3c3c",
+    "--st-ter-btn-filter-rx-active-text": "#ffffff",
+    "--st-ter-view-group-bg": "#1e1e1e",
+    "--st-ter-view-group-border": "#454545",
+    "--st-ter-btn-view-text": "#cccccc",
+    "--st-ter-btn-view-bg": "transparent",
+    "--st-ter-btn-view-hover-bg": "#3c3c3c",
+    "--st-ter-btn-view-active-text": "#ffffff",
+    "--st-ter-btn-options-text": "#cccccc",
+    "--st-ter-btn-options-bg": "transparent",
+    "--st-ter-btn-autoscroll-bg": "transparent",
+    "--st-ter-btn-autoscroll-border": "transparent",
+    "--st-ter-btn-autoscroll-icon": "#cccccc",
+    "--st-ter-btn-autoscroll-hover-bg": "#3c3c3c",
+    "--st-ter-btn-autoscroll-active-text": "#ffffff",
+    "--st-ter-btn-clear-bg": "transparent",
+    "--st-ter-btn-clear-border": "transparent",
+    "--st-ter-btn-clear-icon": "#cccccc",
+    "--st-ter-btn-clear-hover-bg": "#3c3c3c",
+    "--st-toolbar-bg": "#252526",
+    "--st-sendarea-bg": "#252526",
+    "--st-dialog-header-bg": "#252526",
+    "--st-dialog-content-bg": "#1e1e1e",
+    "--st-dialog-footer-bg": "#252526",
+    "--st-dropdown-bg": "#252526",
+    "--st-menu-bg": "#1e1e1e",
+    "--st-editor-tabs-bg": "#252526",
+    "--st-monitor-rx-bg": "#1e1e1e",
+    "--st-tab-active-bg": "#1e1e1e",
+    "--st-tab-inactive-bg": "#252526",
+    "--st-tab-active-text": "#cccccc",
+    "--st-tab-inactive-text": "#858585",
+    "--st-tab-border": "#454545",
+    "--st-config-item-bg": "#3c3c3c",
+    "--st-btn-secondary-bg": "#3c3c3c",
+    "--list-active-foreground": "#cccccc",
+    "--command-sidebar-bg": "#252526",
+    "--command-sidebar-text": "#cccccc",
+    "--command-sidebar-border": "#454545",
+    "--context-menu-bg": "#1f1f1f",
+    "--context-menu-border": "#454545",
+    "--context-menu-item-hover": "#094771",
+    "--context-menu-text": "#cccccc",
+    "--extensions-sidebar-bg": "#252526",
+    "--editor-area-bg": "#1e1e1e",
+    "--mqtt-config-bg": "#252526",
+    "--st-mqtt-monitor-bg": "#1e1e1e",
+    "--mqtt-config-text": "#cccccc",
+    "--st-mqtt-btn-options-border": "transparent",
+    "--serial-config-bg": "#252526",
+    "--serial-config-text": "#cccccc",
+    "--st-serial-btn-options-border": "transparent",
+    "--session-list-sidebar-bg": "#252526",
+    "--session-list-sidebar-text": "#cccccc",
+    "--session-list-sidebar-border": "#454545",
+    "--session-list-sidebar-header-bg": "#252526",
+    "--monitor-terminal-bg": "#1e1e1e",
+    "--st-ter-btn-options-border": "transparent",
+    "--new-session-dialog-bg": "#252526",
+    "--new-session-dialog-border": "#454545",
+    "--new-session-dialog-text": "#cccccc",
+    "--settings-editor-bg": "#1e1e1e",
+    "--theme-editor-bg": "#1e1e1e",
+    "--theme-editor-border": "rgba(255, 255, 255, 0.08)",
+    "--theme-editor-card-bg": "rgba(255, 255, 255, 0.02)",
+    "--theme-editor-card-border": "rgba(255, 255, 255, 0.06)",
+    "--theme-editor-card-hover": "rgba(255, 255, 255, 0.04)",
+    "--theme-editor-input-bg": "rgba(255, 255, 255, 0.04)",
+    "--theme-editor-input-border": "rgba(255, 255, 255, 0.1)",
+    "--theme-editor-input-focus": "rgba(255, 255, 255, 0.06)",
+    "--theme-editor-btn-bg": "rgba(255, 255, 255, 0.04)",
+    "--theme-editor-btn-hover": "rgba(255, 255, 255, 0.07)",
+    "--theme-editor-inspect-bg": "rgba(79, 70, 229, 0.1)",
+    "--theme-editor-inspect-border": "rgba(79, 70, 229, 0.2)",
+    "--theme-editor-inspect-text": "#818cf8",
+    "--theme-editor-inspect-hover": "rgba(79, 70, 229, 0.2)",
+    "--theme-editor-match-bg": "rgba(167, 139, 250, 0.08)",
+    "--theme-editor-match-border": "rgba(167, 139, 250, 0.2)",
+    "--theme-editor-match-text": "#c084fc",
+    "--theme-editor-scrollbar-thumb": "rgba(255, 255, 255, 0.1)",
+    "--theme-editor-scrollbar-hover": "rgba(255, 255, 255, 0.15)"
   };
 
   const DEFAULT_LIGHT_COLORS = {
-    '--app-background': '#ffffff',
-    '--app-foreground': '#333333',
-    '--sidebar-background': '#f3f3f3',
-    '--activitybar-background': '#F8F8F8',
-    '--statusbar-background': '#e8e8e8',
-    '--statusbar-debugging-background': '#cc6633',
-    '--titlebar-background': '#dddddd',
-    '--panel-background': '#ffffff',
-    '--border-color': '#e4e4e4',
-    '--widget-border-color': '#e4e4e4',
-    '--input-background': '#ffffff',
-    '--input-foreground': '#333333',
-    '--input-border-color': '#cecece',
-    '--input-placeholder-color': '#a6a6a6',
-    '--hover-background': '#e8e8e8',
-    '--selection-background': '#add6ff',
-    '--accent-color': '#007acc',
-    '--focus-border-color': '#0090f1',
-    '--list-hover-background': '#e8e8e8',
-    '--list-active-background': '#e4e6f1',
-    '--editor-background': '#ffffff',
-    '--widget-background': '#f3f3f3',
-    '--dropdown-background': '#f3f3f3',
-    '--dropdown-border-color': '#d4d4d4',
-    '--dropdown-item-hover-background': '#add6ff',
-    '--dropdown-item-selected-foreground': '#000000',
-    '--checkbox-background': '#007acc',
-    '--checkbox-border-color': '#007acc',
-    '--checkbox-foreground': '#ffffff',
-    '--settings-header-background': '#f8f8f8',
-    '--settings-row-hover-background': '#e8e8e8',
-    '--scrollbar-shadow-color': '#dddddd',
-    '--scrollbar-slider-color': '#64646466',
-    '--scrollbar-slider-hover-color': '#646464bb',
-    '--scrollbar-slider-active-color': '#00000099',
-    '--button-background': '#007acc',
-    '--button-foreground': '#ffffff',
-    '--button-hover-background': '#0062a3',
-    '--button-secondary-background': '#e4e4e4',
-    '--button-secondary-hover-background': '#d4d4d4',
-    '--link-foreground': '#006ab1',
-    '--activitybar-inactive-foreground': '#858585',
-    '--menu-background': '#ffffff',
-    '--menu-foreground': '#333333',
-    '--menu-border-color': '#cecece',
-    '--st-rx-text': '#2E8B57',
-    '--st-tx-text': '#1486f1',
-    '--st-rx-label': '#228B22',
-    '--st-tx-label': '#cd3131',
-    '--st-info-text': '#0000ff',
-    '--st-error-text': '#cd3131',
-    '--st-timestamp': '#0000ff',
-    '--st-rx-bg': '#ffffff',
-    '--st-input-bg': '#ffffff',
-    '--st-input-text': '#333333',
-    '--st-token-crc': '#008000',
-    '--st-token-flag': '#800080',
-    '--st-accent': '#007acc'
+    "--app-background": "#ffffff",
+    "--app-foreground": "#333333",
+    "--sidebar-background": "#f3f3f3",
+    "--activitybar-background": "#F8F8F8",
+    "--statusbar-background": "#e8e8e8",
+    "--titlebar-background": "#dddddd",
+    "--panel-background": "#ffffff",
+    "--border-color": "#e4e4e4",
+    "--widget-border-color": "#e4e4e4",
+    "--input-background": "#ffffff",
+    "--input-foreground": "#333333",
+    "--input-border-color": "#cecece",
+    "--input-placeholder-color": "#a6a6a6",
+    "--hover-background": "#e8e8e8",
+    "--selection-background": "#add6ff",
+    "--accent-color": "#007acc",
+    "--focus-border-color": "#0090f1",
+    "--list-hover-background": "#e8e8e8",
+    "--list-active-background": "#e4e6f1",
+    "--editor-background": "#ffffff",
+    "--widget-background": "#f3f3f3",
+    "--dropdown-background": "#f3f3f3",
+    "--dropdown-border-color": "#d4d4d4",
+    "--dropdown-item-hover-background": "#add6ff",
+    "--dropdown-item-selected-foreground": "#000000",
+    "--checkbox-background": "#007acc",
+    "--checkbox-border-color": "#007acc",
+    "--checkbox-foreground": "#ffffff",
+    "--settings-header-background": "#f8f8f8",
+    "--settings-row-hover-background": "#e8e8e8",
+    "--scrollbar-slider-color": "#64646466",
+    "--scrollbar-slider-hover-color": "#646464bb",
+    "--scrollbar-slider-active-color": "#00000099",
+    "--button-background": "#007acc",
+    "--button-foreground": "#ffffff",
+    "--button-hover-background": "#0062a3",
+    "--button-secondary-background": "#e4e4e4",
+    "--button-secondary-hover-background": "#d4d4d4",
+    "--link-foreground": "#006ab1",
+    "--activitybar-inactive-foreground": "#858585",
+    "--menu-background": "#ffffff",
+    "--menu-foreground": "#333333",
+    "--menu-border-color": "#cecece",
+    "--st-rx-text": "#2E8B57",
+    "--st-tx-text": "#1486f1",
+    "--st-info-text": "#0000ff",
+    "--st-error-text": "#cd3131",
+    "--st-timestamp": "#0000ff",
+    "--st-input-bg": "#ffffff",
+    "--st-input-text": "#333333",
+    "--st-token-crc": "#008000",
+    "--st-token-flag": "#800080",
+    "--st-accent": "#007acc",
+    "--st-ctrl-char-fg": "#666666",
+    "--st-ctrl-char-bg": "rgba(128, 128, 128, 0.1)",
+    "--st-ctrl-char-border": "rgba(128, 128, 128, 0.2)",
+    "--st-sidebar-title-text": "#333333",
+    "--st-sidebar-text": "#333333",
+    "--st-sidebar-action-hover": "#333333",
+    "--st-titlebar-text": "#333333",
+    "--st-titlebar-icon": "#333333",
+    "--st-titlebar-icon-hover": "#000000",
+    "--st-statusbar-text": "#333333",
+    "--st-statusbar-divider": "#333333",
+    "--st-activitybar-icon-hover": "#333333",
+    "--st-activitybar-icon-active": "#000000",
+    "--st-activitybar-menu-text": "#333333",
+    "--st-panel-header-text": "#333333",
+    "--st-panel-action-hover": "#333333",
+    "--st-terminal-bg": "#ffffff",
+    "--st-monitor-tag-bg": "#FFFFFF",
+    "--st-monitor-tag-text": "#777777",
+    "--st-monitor-tag-border": "#0000001a",
+    "--st-monitor-rx-label-text": "#777777",
+    "--st-monitor-tx-label-text": "#777777",
+    "--st-monitor-virtual-label-text": "#333333",
+    "--st-monitor-config-text": "#333333",
+    "--st-monitor-config-label": "#333333",
+    "--st-monitor-toolbar-foreground": "#333333",
+    "--st-monitor-tab-active-text": "#ffffff",
+    "--st-monitor-tab-inactive-text": "#333333",
+    "--st-monitor-btn-text": "#333333",
+    "--st-monitor-status-online": "#22c55e",
+    "--st-monitor-status-offline": "#ef4444",
+    "--statusbar-debugging-background": "#f28b54",
+    "--activitybar-active-border": "#007acc",
+    "--st-sidebar-panel-bg": "#f3f3f3",
+    "--editor-area-tabs-bg": "#ffffff",
+    "--extensions-sidebar-text": "#616161",
+    "--session-list-sidebar-muted": "#a3a3a3",
+    "--st-list-item-bg": "transparent",
+    "--st-monitor-gold-flash": "#f28b54",
+    "--st-monitor-gold-flash-bg": "rgba(242, 139, 84, 0.1)",
+    "--st-monitor-gold-flash-border": "rgba(242, 139, 84, 0.3)",
+    "--st-monitor-log-bg": "#ffffff",
+    "--st-monitor-toolbar-border": "#e0e0e0",
+    "--st-mqtt-toolbar-border": "#e0e0e0",
+    "--monitor-terminal-toolbar-bg": "#f3f3f3",
+    "--monitor-terminal-toolbar-border": "#e0e0e0",
+    "--monitor-terminal-toolbar-text": "#616161",
+    "--st-serial-btn-options-hover-bg": "#e8f2fc",
+    "--input-focus-border-color": "#007acc",
+    "--st-btn-switch-active-bg": "#007acc",
+    "--st-btn-send-bg": "#007acc",
+    "--st-rx-bg": "rgba(0, 0, 0, 0.05)",
+    "--st-tx-bg": "rgba(0, 122, 204, 0.05)",
+    "--sys-msg-default-bg": "#f3f3f3",
+    "--sys-msg-connected-bg": "rgba(34, 197, 94, 0.1)",
+    "--sys-msg-error-text": "#CD3131",
+    "--sys-msg-error-border": "rgba(239, 68, 68, 0.3)",
+    "--sys-msg-error-bg": "rgba(239, 68, 68, 0.1)",
+    "--sys-msg-bridge-bg": "rgba(128, 128, 128, 0.1)",
+    "--sys-msg-device-bg": "rgba(128, 128, 128, 0.1)",
+    "--serial-config-label": "#616161",
+    "--mqtt-config-input-bg": "#ffffff",
+    "--mqtt-config-input-text": "#333333",
+    "--scrollbar-shadow-color": "rgba(0,0,0,0.1)",
+    "--st-status-success": "#16a34a",
+    "--st-status-error": "#dc2626",
+    "--st-vport-alert-bg": "rgba(239, 68, 68, 0.1)",
+    "--st-vport-alert-border": "rgba(239, 68, 68, 0.3)",
+    "--st-vport-alert-text": "#dc2626",
+    "--st-conn-start-bg": "#007acc",
+    "--st-conn-start-hover": "#0062a3",
+    "--st-conn-stop-bg": "#d32f2f",
+    "--st-conn-stop-hover": "#b71c1c",
+    "--st-conn-disabled-bg": "#e0e0e0",
+    "--st-conn-disabled-text": "#a3a3a3",
+    "--st-settings-btn-disabled-bg": "#e0e0e0",
+    "--st-settings-btn-disabled-text": "#a3a3a3",
+    "--st-input-btn-text": "#333333",
+    "--st-danger-bg": "#d32f2f",
+    "--st-danger-hover-bg": "#b71c1c",
+    "--st-danger-text": "#ffffff",
+    "--st-dialog-icon-hover": "#000000",
+    "--st-toast-text": "#333333",
+    "--st-toast-icon-hover": "#000000",
+    "--st-tooltip-bg": "#f3f3f3",
+    "--st-tooltip-text": "#333333",
+    "--st-tooltip-border": "#cecece",
+    "--st-switch-text-hover": "#000000",
+    "--st-contextmenu-text-hover": "#000000",
+    "--st-select-item-text": "#333333",
+    "--st-search-text": "#333333",
+    "--st-dialog-text": "#333333",
+    "--st-settings-text": "#333333",
+    "--st-settings-title-text": "#333333",
+    "--st-widget-border": "#e4e4e4",
+    "--st-input-border": "#cecece",
+    "--st-input-focus-border": "#007acc",
+    "--st-monitor-timestamp": "#999999",
+    "--st-monitor-sys-bg": "#0000000d",
+    "--st-monitor-sys-text": "#333333",
+    "--st-monitor-sys-border": "#0000001a",
+    "--st-monitor-empty-text": "#666666",
+    "--st-input-timer-unit-text": "#666666",
+    "--st-btn-primary-bg": "#007acc",
+    "--st-btn-primary-hover": "#0062a3",
+    "--st-status-danger-text": "#d32f2f",
+    "--st-config-success-bg": "#4ec9b0",
+    "--st-config-success-text": "#4ec9b0",
+    "--st-config-muted-text": "#969696",
+    "--st-config-title-text": "#666666",
+    "--st-settings-danger-bg": "#d32f2f",
+    "--st-settings-danger-hover": "#b71c1c",
+    "--st-settings-danger-text": "#ffffff",
+    "--st-popover-bg": "#f3f3f3",
+    "--st-popover-border": "#cecece",
+    "--st-settings-danger-bg-subtle": "rgba(211, 47, 47, 0.1)",
+    "--st-settings-danger-title": "#d32f2f",
+    "--st-settings-text-hover": "#000000",
+    "--st-settings-footer-bg": "#e4e4e4",
+    "--st-settings-footer-border": "#cecece",
+    "--st-settings-btn-cancel-hover": "#e4e4e4",
+    "--st-token-divider": "#cecece",
+    "--st-token-arrow": "#999999",
+    "--st-token-timestamp": "#007acc",
+    "--st-token-auto-inc": "#a31515",
+    "--st-session-serial-text": "#b87c2b",
+    "--st-sidebar-muted-text": "#969696",
+    "--st-panel-muted-text": "#969696",
+    "--st-graph-node-title": "#333333",
+    "--st-graph-subnode-bg": "#f0f0f0",
+    "--st-graph-subnode-border": "#cecece",
+    "--st-graph-port-border": "#999999",
+    "--st-graph-port-hover-border": "#000000",
+    "--st-graph-port-hover-bg": "#e4e4e4",
+    "--st-graph-canvas-bg": "#ffffff",
+    "--st-graph-toolbar-bg": "#f3f3f3",
+    "--st-graph-toolbar-border": "#cecece",
+    "--st-graph-icon-virtual": "#007acc",
+    "--st-graph-icon-physical": "#22c55e",
+    "--st-graph-icon-pair": "#a31515",
+    "--st-graph-icon-bus": "#b87c2b",
+    "--st-graph-divider": "#cecece",
+    "--st-extension-active-text": "#007acc",
+    "--st-extension-user-text": "#b87c2b",
+    "--st-extension-warning-text": "#d32f2f",
+    "--st-extension-warning-bg": "#ffcccc",
+    "--st-extension-danger-hover": "#b71c1c",
+    "--st-update-spinner": "#007acc",
+    "--st-update-text": "#333333",
+    "--st-update-btn-bg": "#e4e4e4",
+    "--st-update-btn-hover": "#d4d4d4",
+    "--st-update-btn-text": "#333333",
+    "--session-item-hover-bg": "#e8e8e8",
+    "--session-item-active-bg": "#e4e6f1",
+    "--session-item-active-border": "#007acc",
+    "--session-item-foreground": "#333333",
+    "--context-menu-hover-bg": "#add6ff",
+    "--st-monitor-log-tx-label-bg": "#cd313133",
+    "--st-monitor-log-rx-label-bg": "#228B2233",
+    "--st-monitor-btn-filter-tx-active-bg": "#cd3131",
+    "--st-monitor-btn-filter-rx-active-bg": "#22c55e",
+    "--st-monitor-btn-view-hex-active-bg": "#007acc",
+    "--st-monitor-btn-view-txt-active-bg": "#007acc",
+    "--st-monitor-btn-autoscroll-active-bg": "#007acc",
+    "--st-monitor-btn-target-virtual-active-bg": "#007acc",
+    "--st-monitor-btn-target-physical-active-bg": "#22c55e",
+    "--st-input-btn-mode-hex-active-bg": "#007acc",
+    "--st-input-btn-mode-txt-active-bg": "#007acc",
+    "--st-input-btn-timer-active-bg": "#007acc",
+    "--st-input-btn-send-bg": "#007acc",
+    "--st-monitor-repeat-badge-bg": "#007acc",
+    "--st-monitor-repeat-badge-text": "#ffffff",
+    "--st-monitor-btn-export-bg": "#007acc",
+    "--st-mqtt-btn-filter-tx-active-bg": "#cd3131",
+    "--st-mqtt-btn-filter-rx-active-bg": "#22c55e",
+    "--st-mqtt-btn-view-active-bg": "#007acc",
+    "--st-mqtt-btn-autoscroll-active-bg": "#007acc",
+    "--st-mqtt-btn-send-bg": "#007acc",
+    "--st-mqtt-topic-selected-text": "#0062a3",
+    "--st-mqtt-topic-default-tx-color": "#007acc",
+    "--st-mqtt-topic-default-rx-color": "#008000",
+    "--st-command-drop-indicator": "#007acc",
+    "--st-command-empty-text": "#858585",
+    "--monitor-rx-label-bg": "#22c55e4D",
+    "--monitor-rx-label-border": "#22c55e66",
+    "--monitor-tx-label-bg": "#007ACC4D",
+    "--monitor-tx-label-border": "#007ACC66",
+    "--monitor-bubble-rx-border": "#228B22",
+    "--monitor-bubble-tx-border": "#cd3131",
+    "--st-serial-btn-filter-tx-active-bg": "#007acc",
+    "--st-serial-btn-filter-rx-active-bg": "#22c55e",
+    "--st-serial-btn-view-active-bg": "#007acc",
+    "--st-serial-btn-autoscroll-active-bg": "#007acc",
+    "--st-serial-btn-crc-active-bg": "#007acc",
+    "--st-serial-options-hover-bg": "#d4d4d4",
+    "--sys-msg-default-text": "#333333",
+    "--sys-msg-default-border": "#cecece",
+    "--sys-msg-connected-text": "#10b981",
+    "--sys-msg-connected-border": "#10b981",
+    "--sys-msg-bridge-text": "#007acc",
+    "--sys-msg-bridge-border": "#007acc",
+    "--sys-msg-device-text": "#22c55e",
+    "--sys-msg-device-border": "#22c55e",
+    "--logsearch-btn-match-case-active-bg": "#007acc",
+    "--logsearch-btn-regex-active-bg": "#007acc",
+    "--logsearch-nav-active-bg": "#007fd4",
+    "--switch-active-bg": "#007acc",
+    "--st-mqtt-options-hover-bg": "#d4d4d4",
+    "--monitor-options-hover-bg": "#d4d4d4",
+    "--st-serial-toolbar-divider": "#e4e4e4",
+    "--st-serial-filter-group-bg": "#ffffff",
+    "--st-serial-filter-group-border": "#e4e4e4",
+    "--st-serial-filter-group-divider": "#e4e4e4",
+    "--st-serial-btn-filter-tx-text": "#333333",
+    "--st-serial-btn-filter-tx-bg": "transparent",
+    "--st-serial-btn-filter-tx-hover-bg": "#e8e8e8",
+    "--st-serial-btn-filter-tx-active-text": "#ffffff",
+    "--st-serial-btn-filter-rx-text": "#333333",
+    "--st-serial-btn-filter-rx-bg": "transparent",
+    "--st-serial-btn-filter-rx-hover-bg": "#e8e8e8",
+    "--st-serial-btn-filter-rx-active-text": "#ffffff",
+    "--st-serial-view-group-bg": "#ffffff",
+    "--st-serial-view-group-border": "#e4e4e4",
+    "--st-serial-btn-view-text": "#333333",
+    "--st-serial-btn-view-bg": "transparent",
+    "--st-serial-btn-view-hover-bg": "#e8e8e8",
+    "--st-serial-btn-view-active-text": "#ffffff",
+    "--st-serial-btn-options-text": "#333333",
+    "--st-serial-btn-options-bg": "transparent",
+    "--st-serial-btn-autoscroll-bg": "transparent",
+    "--st-serial-btn-autoscroll-border": "transparent",
+    "--st-serial-btn-autoscroll-icon": "#333333",
+    "--st-serial-btn-autoscroll-hover-bg": "#e8e8e8",
+    "--st-serial-btn-autoscroll-active-text": "#ffffff",
+    "--st-serial-btn-clear-bg": "transparent",
+    "--st-serial-btn-clear-border": "transparent",
+    "--st-serial-btn-clear-icon": "#333333",
+    "--st-serial-btn-clear-hover-bg": "#e8e8e8",
+    "--st-mqtt-toolbar-divider": "#e4e4e4",
+    "--st-mqtt-filter-group-bg": "#ffffff",
+    "--st-mqtt-filter-group-border": "#e4e4e4",
+    "--st-mqtt-filter-group-divider": "#e4e4e4",
+    "--st-msg-bubble-border": "rgba(0,0,0,0.1)",
+    "--st-mqtt-btn-filter-tx-text": "#333333",
+    "--st-mqtt-btn-filter-tx-bg": "transparent",
+    "--st-mqtt-btn-filter-tx-hover-bg": "#e8e8e8",
+    "--st-mqtt-btn-filter-tx-active-text": "#ffffff",
+    "--st-mqtt-btn-filter-rx-text": "#333333",
+    "--st-mqtt-btn-filter-rx-bg": "transparent",
+    "--st-mqtt-btn-filter-rx-hover-bg": "#e8e8e8",
+    "--st-mqtt-btn-filter-rx-active-text": "#ffffff",
+    "--st-mqtt-view-group-bg": "#ffffff",
+    "--st-mqtt-view-group-border": "#e4e4e4",
+    "--st-mqtt-btn-view-text": "#333333",
+    "--st-mqtt-btn-view-bg": "transparent",
+    "--st-mqtt-btn-view-hover-bg": "#e8e8e8",
+    "--st-mqtt-btn-view-active-text": "#ffffff",
+    "--st-mqtt-btn-options-text": "#333333",
+    "--st-mqtt-btn-options-bg": "transparent",
+    "--st-mqtt-btn-autoscroll-bg": "transparent",
+    "--st-mqtt-btn-autoscroll-border": "transparent",
+    "--st-mqtt-btn-autoscroll-icon": "#333333",
+    "--st-mqtt-btn-autoscroll-hover-bg": "#e8e8e8",
+    "--st-mqtt-btn-autoscroll-active-text": "#ffffff",
+    "--st-mqtt-btn-clear-bg": "transparent",
+    "--st-mqtt-btn-clear-border": "transparent",
+    "--st-mqtt-btn-clear-icon": "#333333",
+    "--st-mqtt-btn-clear-hover-bg": "#e8e8e8",
+    "--st-ter-toolbar-divider": "#e4e4e4",
+    "--st-ter-filter-group-bg": "#ffffff",
+    "--st-ter-filter-group-border": "#e4e4e4",
+    "--st-ter-filter-group-divider": "#e4e4e4",
+    "--st-ter-btn-filter-tx-text": "#333333",
+    "--st-ter-btn-filter-tx-bg": "transparent",
+    "--st-ter-btn-filter-tx-hover-bg": "#e8e8e8",
+    "--st-ter-btn-filter-tx-active-text": "#ffffff",
+    "--st-ter-btn-filter-rx-text": "#333333",
+    "--st-ter-btn-filter-rx-bg": "transparent",
+    "--st-ter-btn-filter-rx-hover-bg": "#e8e8e8",
+    "--st-ter-btn-filter-rx-active-text": "#ffffff",
+    "--st-ter-view-group-bg": "#ffffff",
+    "--st-ter-view-group-border": "#e4e4e4",
+    "--st-ter-btn-view-text": "#333333",
+    "--st-ter-btn-view-bg": "transparent",
+    "--st-ter-btn-view-hover-bg": "#e8e8e8",
+    "--st-ter-btn-view-active-text": "#ffffff",
+    "--st-ter-btn-options-text": "#333333",
+    "--st-ter-btn-options-bg": "transparent",
+    "--st-ter-btn-autoscroll-bg": "transparent",
+    "--st-ter-btn-autoscroll-border": "transparent",
+    "--st-ter-btn-autoscroll-icon": "#333333",
+    "--st-ter-btn-autoscroll-hover-bg": "#e8e8e8",
+    "--st-ter-btn-autoscroll-active-text": "#ffffff",
+    "--st-ter-btn-clear-bg": "transparent",
+    "--st-ter-btn-clear-border": "transparent",
+    "--st-ter-btn-clear-icon": "#333333",
+    "--st-ter-btn-clear-hover-bg": "#e8e8e8",
+    "--st-toolbar-bg": "#f3f3f3",
+    "--st-sendarea-bg": "#f3f3f3",
+    "--st-dialog-header-bg": "#f3f3f3",
+    "--st-dialog-content-bg": "#ffffff",
+    "--st-dialog-footer-bg": "#f3f3f3",
+    "--st-dropdown-bg": "#f3f3f3",
+    "--st-menu-bg": "#ffffff",
+    "--st-editor-tabs-bg": "#f3f3f3",
+    "--st-monitor-rx-bg": "#ffffff",
+    "--st-tab-active-bg": "#ffffff",
+    "--st-tab-inactive-bg": "#f3f3f3",
+    "--st-tab-active-text": "#333333",
+    "--st-tab-inactive-text": "#858585",
+    "--st-tab-border": "#cecece",
+    "--st-config-item-bg": "#ffffff",
+    "--st-btn-secondary-bg": "#ffffff",
+    "--list-active-foreground": "#ffffff",
+    "--command-sidebar-bg": "#f3f3f3",
+    "--command-sidebar-text": "#333333",
+    "--command-sidebar-border": "#e4e4e4",
+    "--context-menu-bg": "#ffffff",
+    "--context-menu-border": "#cecece",
+    "--context-menu-item-hover": "#add6ff",
+    "--context-menu-text": "#333333",
+    "--extensions-sidebar-bg": "#f3f3f3",
+    "--editor-area-bg": "#ffffff",
+    "--mqtt-config-bg": "#f3f3f3",
+    "--st-mqtt-monitor-bg": "#ffffff",
+    "--mqtt-config-text": "#333333",
+    "--st-mqtt-btn-options-border": "transparent",
+    "--serial-config-bg": "#f3f3f3",
+    "--serial-config-text": "#333333",
+    "--st-serial-btn-options-border": "transparent",
+    "--session-list-sidebar-bg": "#f3f3f3",
+    "--session-list-sidebar-text": "#333333",
+    "--session-list-sidebar-border": "#e4e4e4",
+    "--session-list-sidebar-header-bg": "#f3f3f3",
+    "--monitor-terminal-bg": "#ffffff",
+    "--st-ter-btn-options-border": "transparent",
+    "--new-session-dialog-bg": "#f3f3f3",
+    "--new-session-dialog-border": "#e4e4e4",
+    "--new-session-dialog-text": "#333333",
+    "--settings-editor-bg": "#ffffff",
+    "--theme-editor-bg": "#f3f4f6",
+    "--theme-editor-border": "rgba(0, 0, 0, 0.08)",
+    "--theme-editor-card-bg": "rgba(255, 255, 255, 0.6)",
+    "--theme-editor-card-border": "rgba(0, 0, 0, 0.06)",
+    "--theme-editor-card-hover": "rgba(255, 255, 255, 0.9)",
+    "--theme-editor-input-bg": "rgba(0, 0, 0, 0.03)",
+    "--theme-editor-input-border": "rgba(0, 0, 0, 0.1)",
+    "--theme-editor-input-focus": "rgba(0, 0, 0, 0.06)",
+    "--theme-editor-btn-bg": "rgba(0, 0, 0, 0.04)",
+    "--theme-editor-btn-hover": "rgba(0, 0, 0, 0.08)",
+    "--theme-editor-inspect-bg": "rgba(79, 70, 229, 0.1)",
+    "--theme-editor-inspect-border": "rgba(79, 70, 229, 0.3)",
+    "--theme-editor-inspect-text": "#4338ca",
+    "--theme-editor-inspect-hover": "rgba(79, 70, 229, 0.15)",
+    "--theme-editor-match-bg": "rgba(167, 139, 250, 0.15)",
+    "--theme-editor-match-border": "rgba(167, 139, 250, 0.3)",
+    "--theme-editor-match-text": "#7e22ce",
+    "--theme-editor-scrollbar-thumb": "rgba(0, 0, 0, 0.15)",
+    "--theme-editor-scrollbar-hover": "rgba(0, 0, 0, 0.25)"
   };
+
+
 
   const createThemeTemplate = (title: string, colors: Record<string, string>) => `{
   // === ${title} ===
@@ -1358,16 +2073,249 @@ function createWindow() {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
   })
 
-  // Check if current user has administrator privileges
-  ipcMain.handle('app:is-admin', async () => {
-    if (process.platform !== 'win32') return true;
-    return new Promise((resolve) => {
-      const { exec } = require('node:child_process');
-      // 'net session' command only succeeds if run as administrator
-      exec('net session', (err: any) => {
-        resolve(!err);
+  // ==============================================================================================
+  // Check if current user has administrator privileges (Cached to avoid repetitive slow process spawning)
+  // ==============================================================================================
+  let _isAdminPromise: Promise<boolean> | null = null;
+  const checkIsAdmin = (): Promise<boolean> => {
+    if (process.platform !== 'win32') return Promise.resolve(true);
+    if (!_isAdminPromise) {
+      _isAdminPromise = new Promise((resolve) => {
+        const { exec } = require('node:child_process');
+        // 'net session' command only succeeds if run as administrator
+        exec('net session', { windowsHide: true }, (err: any) => resolve(!err));
       });
+    }
+    return _isAdminPromise;
+  };
+
+  ipcMain.handle('app:is-admin', async () => {
+    return checkIsAdmin();
+  });
+
+  let themeEditorWindow: BrowserWindow | null = null;
+  const themeEditorStateFile = path.join(app.getPath('userData'), 'theme-editor-state.json');
+
+  const saveThemeEditorState = () => {
+    if (themeEditorWindow && !themeEditorWindow.isDestroyed()) {
+      if (!themeEditorWindow.isMinimized()) {
+        const bounds = themeEditorWindow.getBounds();
+        if (bounds.x > -5000 && bounds.y > -5000) {
+          fsSync.writeFileSync(themeEditorStateFile, JSON.stringify(bounds));
+        }
+      }
+    }
+  };
+
+  /**
+   * 创建编辑器窗口并完成页面加载，但不显示
+   * 可在后台预热，使首次打开接近瞬响
+   */
+  const prewarmThemeEditor = () => {
+    if (themeEditorWindow && !themeEditorWindow.isDestroyed()) return;
+
+    // 读取上次保存的窗口位置
+    let bounds: any = null;
+    try {
+      if (fsSync.existsSync(themeEditorStateFile)) {
+        bounds = JSON.parse(fsSync.readFileSync(themeEditorStateFile, 'utf8'));
+      }
+    } catch { /* ignore */ }
+
+    const width = 380;
+    const height = 660;
+
+    if (!bounds && win) {
+      const winBounds = win.getBounds();
+      bounds = {
+        x: Math.round(winBounds.x + (winBounds.width - width) / 2),
+        y: Math.round(winBounds.y + (winBounds.height - height) / 2),
+        width,
+        height
+      };
+    } else if (!bounds) {
+      bounds = { width, height };
+    }
+
+    const newWin = new BrowserWindow({
+      ...bounds,
+      width: bounds.width || width,
+      height: bounds.height || height,
+      minWidth: 320,
+      minHeight: 500,
+      parent: win || undefined,
+      modal: false,
+      frame: false,
+      transparent: false,
+      backgroundColor: '#1e1e1e',
+      fullscreenable: false,
+      maximizable: false,
+      resizable: true,
+      hasShadow: true,
+      show: false, // 后台静默加载，不立即显示
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        webSecurity: true,
+      },
     });
+
+    newWin.on('resize', () => saveThemeEditorState());
+    newWin.on('move', () => saveThemeEditorState());
+    newWin.on('closed', () => {
+      saveThemeEditorState();
+      themeEditorWindow = null;
+      win?.webContents.send('theme-editor:status-changed', false);
+      // 关闭后 50ms 重新预热，确保下次快速点击也是秒弹
+      setTimeout(() => {
+        if (!themeEditorWindow) {
+          prewarmThemeEditor();
+        }
+      }, 50);
+    });
+
+    if (VITE_DEV_SERVER_URL) {
+      newWin.loadURL(`${VITE_DEV_SERVER_URL}#/theme-editor`);
+    } else {
+      newWin.loadFile(path.join(RENDERER_DIST, 'index.html'), { hash: 'theme-editor' });
+    }
+
+    themeEditorWindow = newWin;
+  };
+
+  ipcMain.handle('theme-editor:open', async () => {
+    if (themeEditorWindow && !themeEditorWindow.isDestroyed()) {
+      if (themeEditorWindow.isVisible()) {
+        // 已打开：再次点击则切换关闭（与原行为一致）
+        themeEditorWindow.close();
+        return;
+      }
+      // 预热完毕的窗口：直接显示，接近瞬开
+      themeEditorWindow.show();
+      themeEditorWindow.focus();
+      win?.webContents.send('theme-editor:status-changed', true);
+      return;
+    }
+
+    // 保底路径：若预热失败则同步创建
+    prewarmThemeEditor();
+    if (themeEditorWindow) {
+      themeEditorWindow.once('ready-to-show', () => themeEditorWindow?.show());
+      win?.webContents.send('theme-editor:status-changed', true);
+    }
+  });
+
+  ipcMain.handle('theme-editor:close', async () => {
+    if (themeEditorWindow) {
+      themeEditorWindow.close();
+      themeEditorWindow = null;
+    }
+  });
+
+  ipcMain.handle('theme-editor:is-open', async () => {
+    return themeEditorWindow !== null && !themeEditorWindow.isDestroyed();
+  });
+
+  // --- Theme Editor State & Communication ---
+  let pendingEditsMap: Record<string, Record<string, string>> = {};
+  let expandedGroupsSettings: Record<string, boolean> = {};
+
+  ipcMain.on('theme-editor:preview', (event, edits) => {
+    BrowserWindow.getAllWindows().forEach(w => {
+      if (w.webContents.id !== event.sender.id) {
+        w.webContents.send('theme:apply-preview', edits);
+      }
+    });
+  });
+
+  ipcMain.handle('theme-editor:get-pending', async (_, themeId) => pendingEditsMap[themeId] || null);
+  ipcMain.handle('theme-editor:get-all-pending', async () => pendingEditsMap);
+  ipcMain.handle('theme-editor:clear-all-pending', async () => { pendingEditsMap = {}; });
+  ipcMain.on('theme-editor:set-pending', (_, { themeId, edits }) => {
+    if (edits) pendingEditsMap[themeId] = edits;
+    else delete pendingEditsMap[themeId];
+  });
+
+  ipcMain.handle('theme-editor:get-expanded-groups', async () => expandedGroupsSettings);
+  ipcMain.on('theme-editor:set-expanded-groups', (_, groups) => {
+    expandedGroupsSettings = groups;
+  });
+
+  // 合并初始化数据接口：一次往返获取编辑器所需的全部初始数据，减少串行 IPC 开销
+  ipcMain.handle('theme-editor:init-data', async () => {
+    return {
+      pendingEdits: pendingEditsMap,
+      expandedGroups: expandedGroupsSettings,
+    };
+  });
+
+  ipcMain.handle('theme-editor:save', async (_, { id, themeDef }) => {
+    try {
+      const fs = require('fs/promises');
+      const storePath = path.join(app.getPath('userData'), 'themes');
+      await fs.mkdir(storePath, { recursive: true });
+      const filePath = path.join(storePath, `${id}.json`);
+      await fs.writeFile(filePath, JSON.stringify(themeDef, null, 2), 'utf-8');
+      delete pendingEditsMap[id];
+      win?.webContents.send('theme:reload'); // Inform main window
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Inspector Mode Broadcasting
+  ipcMain.on('theme-editor:start-inspector', () => {
+    // 确保所有窗口（包括编辑器窗口自身）都收到指令。
+    // 编辑器窗口需要收到指令来启动其 SettingsContext 中的 DOM 监听。
+    BrowserWindow.getAllWindows().forEach(w => {
+      w.webContents.send('theme-editor:start-inspector');
+    });
+  });
+
+  ipcMain.on('theme-editor:stop-inspector', () => {
+    BrowserWindow.getAllWindows().forEach(w => {
+      w.webContents.send('theme-editor:stop-inspector');
+    });
+    // 同时也通知编辑器本身停止状态
+    themeEditorWindow?.webContents.send('theme-editor:inspector-stopped');
+    win?.webContents.send('theme-editor:inspector-stopped');
+  });
+
+  ipcMain.on('theme-editor:component-picked', (_, data) => {
+    themeEditorWindow?.webContents.send('theme-editor:component-picked', data);
+  });
+
+  // Eyedropper Forwarding
+  ipcMain.handle('eyedropper:pick', async () => {
+    if (!win) return { success: false };
+    // 此处通常需要调用原生或 CDP 逻辑，此处先保证调用链路通畅
+    return { success: false, message: 'Native picking not implemented in this build' };
+  });
+
+  ipcMain.handle('eyedropper:watch-start', async () => {
+    win?.webContents.send('eyedropper:start');
+    return { success: true };
+  });
+
+  ipcMain.handle('eyedropper:watch-stop', async () => {
+    win?.webContents.send('eyedropper:stop');
+    return { success: true };
+  });
+
+  // 透传吸管选中的颜色至编辑器
+  ipcMain.on('eyedropper:color-update', (_, color) => {
+    themeEditorWindow?.webContents.send('eyedropper:color', color);
+  });
+
+  ipcMain.on('eyedropper:done', (_, color) => {
+    themeEditorWindow?.webContents.send('eyedropper:picked', color);
+  });
+
+  ipcMain.on('eyedropper:cancel', () => {
+    themeEditorWindow?.webContents.send('eyedropper:canceled');
   });
 
   // Com0Com Integration
@@ -1393,10 +2341,7 @@ function createWindow() {
   ipcMain.handle('com0com:exec', async (_event, command: string, silent: boolean = false) => {
     // Check admin privileges first for non-list commands
     if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
-      const isAdmin = await new Promise((resolve) => {
-        const { exec: adminExec } = require('node:child_process');
-        adminExec('net session', (err: any) => resolve(!err));
-      });
+      const isAdmin = await checkIsAdmin();
       if (!isAdmin) {
         return { success: false, error: 'Administrator privileges required for this operation' };
       }
@@ -1559,10 +2504,7 @@ function createWindow() {
   ipcMain.handle('com0com:install', async () => {
     // Check admin privileges first
     if (process.platform === 'win32') {
-      const isAdmin = await new Promise((resolve) => {
-        const { exec } = require('node:child_process');
-        exec('net session', (err: any) => resolve(!err));
-      });
+      const isAdmin = await checkIsAdmin();
       if (!isAdmin) {
         return { success: false, error: 'Administrator privileges required for installation' };
       }

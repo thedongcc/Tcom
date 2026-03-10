@@ -68,7 +68,7 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
         >
             {/* Header */}
             <div
-                className="h-[30px] px-3 flex items-center gap-2 rounded-t-[5px] font-bold text-[#e0e0e0]"
+                className="h-[30px] px-3 flex items-center gap-2 rounded-t-[5px] font-bold text-[var(--st-graph-node-title)]"
                 style={{ backgroundColor: '#1a1a1a', borderBottom: `1px solid ${GraphLayout.COLOR_BORDER}` }}
             >
                 <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: headerColor }} />
@@ -81,7 +81,7 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
                 <div className="flex items-center justify-between h-[24px]">
                     <span className="font-mono text-[10px] uppercase opacity-50" style={{ color: GraphLayout.COLOR_TEXT_MAIN }}>In</span>
 
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#111] border border-[#333]">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--st-graph-subnode-bg)] border border-[var(--st-graph-subnode-border)]">
                         <Tooltip content={portPath} position="bottom" wrapperClassName="flex">
                             <span className="font-bold truncate max-w-[90px]" style={{ color: GraphLayout.COLOR_TEXT_MAIN }}>
                                 {type === 'pair' ? 'Bridge' : type === 'bus' ? 'Shared Bus' : portPath}
@@ -97,7 +97,7 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
             <div className="absolute z-20" style={{ left: -6, top: portY, marginTop: -6 }}>
                 <Tooltip content={t('graph.portInput')} position="left" wrapperClassName="flex">
                     <div
-                        className="w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] cursor-crosshair transition-all"
+                        className="w-[12px] h-[12px] rounded-full border border-[var(--st-graph-port-border)] hover:border-[var(--st-graph-port-hover-border)] hover:bg-[var(--st-graph-port-hover-bg)] cursor-crosshair transition-all"
                         style={{ backgroundColor: '#222' }}
                         onPointerDown={(e) => {
                             e.stopPropagation();
@@ -114,7 +114,7 @@ export const GraphNode = ({ id, type, portPath, x, y, scale = 1, isSelected, onS
             <div className="absolute z-20" style={{ left: GraphLayout.NODE_WIDTH - 6, top: portY, marginTop: -6 }}>
                 <Tooltip content={t('graph.portOutput')} position="right" wrapperClassName="flex">
                     <div
-                        className="w-[12px] h-[12px] rounded-full border border-[#666] hover:border-white hover:bg-[#555] cursor-crosshair transition-all"
+                        className="w-[12px] h-[12px] rounded-full border border-[var(--st-graph-port-border)] hover:border-[var(--st-graph-port-hover-border)] hover:bg-[var(--st-graph-port-hover-bg)] cursor-crosshair transition-all"
                         style={{ backgroundColor: '#222' }}
                         onPointerDown={(e) => {
                             e.stopPropagation();

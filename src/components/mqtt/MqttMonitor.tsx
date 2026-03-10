@@ -252,7 +252,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[#ff9632] text-black' : 'bg-[#623315] text-[#ce9178]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-toolbar-foreground)]'}
                 >
                     {text.substring(match.startIndex, match.endIndex)}
                 </span>
@@ -385,7 +385,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     }, [session.id]);
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-[var(--editor-background)] select-none">
+        <div
+            className="absolute inset-0 flex flex-col bg-[var(--st-mqtt-monitor-bg)] select-none"
+            data-component="mqtt-monitor"
+        >
             <style>{`
                 @keyframes flash-new { 
                     0% { background-color: rgba(30, 255, 0, 0.2); } 
@@ -396,8 +399,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 }
             `}</style>
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] shrink-0">
-                <div className="text-sm font-medium text-[var(--app-foreground)] flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
+                <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                     {isConnected ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
                     ) : (
@@ -408,10 +411,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
 
                 <div className="flex items-center gap-4">
                     {/* Stats */}
-                    <div className="flex items-center border border-[var(--widget-border-color)] rounded-[3px] divide-x divide-[var(--widget-border-color)] overflow-hidden h-[26px] bg-[rgba(128,128,128,0.1)]">
+                    <div className="flex items-center border border-[var(--st-mqtt-filter-group-border)] rounded-[3px] divide-x divide-[var(--st-mqtt-filter-group-divider)] overflow-hidden h-[26px] bg-[var(--st-mqtt-filter-group-bg)]">
                         <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
                             <div
-                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-mqtt-btn-filter-tx-active-bg)] text-[var(--st-mqtt-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-mqtt-btn-filter-tx-hover-bg)] text-[var(--st-mqtt-btn-filter-tx-text)] bg-[var(--st-mqtt-btn-filter-tx-bg)]'}`}
                                 onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                             >
                                 <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
@@ -422,7 +425,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         </Tooltip>
                         <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterRxOnly')} position="bottom">
                             <div
-                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-emerald-500 text-white shadow-sm' : 'hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] bg-transparent'}`}
+                                className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[var(--st-mqtt-btn-filter-rx-active-bg)] text-[var(--st-mqtt-btn-filter-rx-active-text)] shadow-sm' : 'hover:bg-[var(--st-mqtt-btn-filter-rx-hover-bg)] text-[var(--st-mqtt-btn-filter-rx-text)] bg-[var(--st-mqtt-btn-filter-rx-bg)]'}`}
                                 onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}
                             >
                                 <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
@@ -436,11 +439,11 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     {/* Mode Toggle & Options Group */}
                     <div className="flex items-center gap-1.5">
                         {/* View Modes */}
-                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--widget-border-color)] bg-[rgba(128,128,128,0.1)] h-[26px]">
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--st-mqtt-view-group-border)] bg-[var(--st-mqtt-view-group-bg)] h-[26px]">
                             {(['hex', 'text', 'json', 'base64'] as const).map(m => (
                                 <button
                                     key={m}
-                                    className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--button-background)] text-[var(--button-foreground)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)]'}`}
+                                    className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === m ? 'bg-[var(--st-mqtt-btn-view-active-bg)] text-[var(--st-mqtt-btn-view-active-text)] shadow-sm' : 'text-[var(--st-mqtt-btn-view-text)] hover:bg-[var(--st-mqtt-btn-view-hover-bg)] bg-[var(--st-mqtt-btn-view-bg)]'}`}
                                     onClick={() => { setViewMode(m as any); saveUIState({ viewMode: m }); }}
                                 >
                                     {m === 'text' ? 'TXT' : m === 'base64' ? 'B64' : m.toUpperCase()}
@@ -451,7 +454,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         {/* Options */}
                         <div className="relative">
                             <button
-                                className={`h-[26px] px-2 hover:bg-[var(--button-secondary-hover-background)] rounded-[3px] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)]' : ''}`}
+                                className={`h-[26px] px-2 hover:bg-[var(--st-mqtt-options-hover-bg)] rounded-[3px] text-[var(--st-mqtt-btn-options-text)] bg-[var(--st-mqtt-btn-options-bg)] border-[var(--st-mqtt-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--st-mqtt-options-hover-bg)] text-[var(--st-mqtt-btn-options-text)]' : ''}`}
                                 onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                             >
                                 <Menu size={14} />
@@ -461,7 +464,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
                                     <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                        <div className="text-[12px] text-[var(--app-foreground)] font-bold mb-4 pb-1 border-b border-[var(--menu-border-color)]">{t('monitor.logSettings')}</div>
+                                        <div className="text-[12px] text-[var(--st-monitor-btn-text)] font-bold mb-4 pb-1 border-b border-[var(--menu-border-color)]">{t('monitor.logSettings')}</div>
                                         <div className="space-y-4 px-1">
                                             <div className="space-y-2.5">
                                                 <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
@@ -474,7 +477,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                     <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
                                                     <div className="flex flex-col gap-2">
                                                         <div className="flex flex-col gap-2">
-                                                            <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
+                                                            <span className="text-[11px] text-[var(--st-monitor-toolbar-foreground)]">{t('monitor.fontFamily')}:</span>
                                                             <CustomSelect
                                                                 items={availableFonts}
                                                                 value={fontFamily}
@@ -483,7 +486,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col gap-2 mt-2">
-                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
+                                                        <span className="text-[11px] text-[var(--st-monitor-toolbar-foreground)]">{t('monitor.fontSize')}:</span>
                                                         <CustomSelect
                                                             items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
                                                                 label: `${size}px`,
@@ -496,7 +499,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                                 </div>
                                             </div>
                                             <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
+                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--st-monitor-btn-export-bg)] text-white text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
                                                     <Download size={14} /> {t('monitor.exportLog')}
                                                 </button>
                                             </div>
@@ -508,10 +511,10 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-1 border-l border-[#3c3c3c] pl-2">
+                    <div className="flex items-center gap-1 border-l border-[var(--st-mqtt-toolbar-divider)] pl-2">
                         <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
                             <button
-                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'text-[var(--button-foreground)] bg-[var(--button-background)] shadow-sm' : 'text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]'}`}
+                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--st-mqtt-btn-autoscroll-active-bg)] text-[var(--st-mqtt-btn-autoscroll-active-text)] shadow-sm' : 'text-[var(--st-mqtt-btn-autoscroll-icon)] hover:bg-[var(--st-mqtt-btn-autoscroll-hover-bg)] bg-[var(--st-mqtt-btn-autoscroll-bg)] border border-[var(--st-mqtt-btn-autoscroll-border)]'}`}
                                 onClick={() => { setAutoScroll(!autoScroll); saveUIState({ autoScroll: !autoScroll }); }}
                             >
                                 <ArrowDownToLine size={14} />
@@ -519,7 +522,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                         </Tooltip>
                         <Tooltip content={t('monitor.clearLogs')} position="bottom">
                             <button
-                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--app-foreground)] hover:bg-[var(--button-secondary-hover-background)] bg-[rgba(128,128,128,0.1)] border border-[var(--widget-border-color)]"
+                                className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--st-mqtt-btn-clear-icon)] hover:bg-[var(--st-mqtt-btn-clear-hover-bg)] bg-[var(--st-mqtt-btn-clear-bg)] border border-[var(--st-mqtt-btn-clear-border)]"
                                 onClick={() => onClearLogs?.()}
                             >
                                 <Trash2 size={14} />
@@ -561,19 +564,19 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     {filteredLogs.map((log, index) => {
                         const isTX = log.type === 'TX';
                         const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
-                        const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? '#007acc' : '#4ec9b0');
+                        const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? 'var(--st-mqtt-topic-default-tx-color)' : 'var(--st-mqtt-topic-default-rx-color)');
 
                         if (log.type === 'INFO' || log.type === 'ERROR' || !log.topic) {
                             const content = formatData(log.data, 'text').trim();
                             const { styleClass, translatedText } = parseSystemMessage(log.type, content);
 
                             return (
-                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center">
+                                <div key={log.id} className="flex justify-center my-2 gap-2 items-center" data-component="system-message">
                                     <span className={`px-4 py-1 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 select-text cursor-text ${styleClass}`}>
                                         {translatedText}
                                     </span>
                                     {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
-                                        <span className="h-[18px] flex items-center justify-center text-[10px] text-[var(--button-background)] font-bold font-mono bg-[var(--button-background)]/10 px-1.5 rounded-full border border-[var(--button-background)]/30 min-w-[24px]">
+                                        <span className="h-[18px] flex items-center justify-center text-[10px] text-[var(--st-monitor-repeat-badge-text)] font-bold font-mono bg-[var(--st-monitor-repeat-badge-bg)] px-1.5 rounded-full border border-[var(--st-monitor-repeat-badge-bg)]/30 min-w-[24px]">
                                             x{log.repeatCount}
                                         </span>
                                     )}
@@ -589,12 +592,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             >
                                 <div
                                     key={`${log.id}-${log.repeatCount || 1}`}
-                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage && isNewLog) ? 'animate-flash-new' : 'bg-[var(--input-background)]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[#ff9632]' : ''}`}
-                                    style={{ borderColor: topicColor + '50' }}
+                                    className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage && isNewLog) ? 'animate-flash-new' : 'bg-[var(--input-background)]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[var(--st-monitor-gold-flash)]' : ''}`}
+                                    style={{ borderColor: isTX ? 'var(--monitor-bubble-tx-border)' : 'var(--monitor-bubble-rx-border)' }}
                                 >
                                     <div className={`flex items-center gap-1.5 shrink-0 mb-1 ${isTX ? 'flex-row-reverse' : 'flex-row'}`} style={{ height: `${Math.floor(fontSize * 1.4)}px` }}>
                                         {showTimestamp && (
-                                            <span className="text-[#999] font-mono opacity-90 tabular-nums tracking-tight">
+                                            <span className="text-[var(--st-monitor-timestamp)] font-mono opacity-90 tabular-nums tracking-tight">
                                                 [{formatTimestamp(log.timestamp)}]
                                             </span>
                                         )}
@@ -606,7 +609,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         </span>
                                         {showDataLength && (
                                             <span
-                                                className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-white/10 bg-white/5 text-[#aaaaaa] pt-[1px] tabular-nums tracking-tight shrink-0"
+                                                className="flex items-center justify-center font-mono select-none px-[0.4em] rounded-[0.2em] min-w-[2.8em] text-[0.8em] leading-none shadow-sm border border-[var(--st-monitor-tag-border)] bg-[var(--st-monitor-tag-bg)] text-[var(--st-monitor-tag-text)] pt-[1px] tabular-nums tracking-tight shrink-0"
                                                 style={{ height: `${Math.floor(fontSize * 1.4)}px` }}
                                             >
                                                 {getDataLengthText(log.data)}
@@ -614,15 +617,14 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                         )}
                                         {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                                             <span
-                                                key={log.repeatCount}
-                                                className={`flex items-center justify-center text-[0.8em] leading-none text-[#ff9632] font-bold font-mono bg-[#ff9632]/10 px-[0.5em] rounded-[0.2em] border border-[#ff9632]/30 min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                                                className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
                                                 style={{ height: `${Math.floor(fontSize * 1.4)}px` }}
                                             >
                                                 x{log.repeatCount}
                                             </span>
                                         )}
                                     </div>
-                                    <div className={`whitespace-pre-wrap break-all font-mono ${isTX ? 'text-[#e0e0e0]' : 'text-[#ce9178]'}`}>
+                                    <div className={`whitespace-pre-wrap break-all font-mono ${isTX ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
                                         {renderPayload(log)}
                                     </div>
                                 </div>
@@ -633,7 +635,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             </div>
 
             {/* Publish Area */}
-            <div className="border-t border-[var(--border-color)] bg-[var(--sidebar-background)] p-2 flex flex-col gap-2 shrink-0 select-none">
+            <div className="border-t border-[var(--st-widget-border)] bg-[var(--st-sendarea-bg)] p-2 flex flex-col gap-2 shrink-0 select-none">
                 {/* 第一行：格式下拉 + Topic 选择 + QoS + Retain */}
                 <div className="flex items-center gap-2 h-[26px]">
                     {/* 格式选择下拉 (移到 Topic 左侧) */}
@@ -654,7 +656,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     <div className="relative flex-1 h-full" ref={topicDropdownRef}>
                         <div className="flex items-center gap-1.5 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded px-2 h-full focus-within:border-[var(--focus-border-color)] cursor-text" onClick={() => document.getElementById('mqtt-topic-input')?.focus()}>
                             <span className="text-[var(--input-placeholder-color)] text-[11px] shrink-0 font-bold">Topic</span>
-                            <div className="w-[1px] h-3 bg-[var(--border-color)]"></div>
+                            <div className="w-[1px] h-3 bg-[var(--st-widget-border)]"></div>
                             <input
                                 id="mqtt-topic-input"
                                 className="bg-transparent border-none outline-none text-[var(--input-foreground)] text-[12px] flex-1 font-mono min-w-0"
@@ -665,7 +667,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                             {subscribedTopics.length > 0 && (
                                 <Tooltip content={t('mqtt.addTopic')} position="top" wrapperClassName="shrink-0 flex items-center">
                                     <button
-                                        className={`shrink-0 p-0.5 rounded hover:bg-[var(--list-hover-background)] text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] transition-colors ${showTopicDropdown ? 'text-[var(--app-foreground)]' : ''}`}
+                                        className={`shrink-0 p-0.5 rounded hover:bg-[var(--list-hover-background)] text-[var(--input-placeholder-color)] hover:text-[var(--input-foreground)] transition-colors ${showTopicDropdown ? 'text-[var(--input-foreground)]' : ''}`}
                                         onClick={() => setShowTopicDropdown(v => !v)}
                                     >
                                         <ChevronDown size={12} />
@@ -678,7 +680,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                                 {subscribedTopics.map((t: any) => (
                                     <div
                                         key={t.path}
-                                        className={`px-2 py-1.5 text-[11px] font-mono cursor-pointer hover:bg-[var(--list-hover-background)] flex items-center gap-1.5 ${topic === t.path ? 'text-[var(--button-background)] font-bold' : 'text-[var(--app-foreground)]'}`}
+                                        className={`px-2 py-1.5 text-[11px] font-mono cursor-pointer hover:bg-[var(--list-hover-background)] flex items-center gap-1.5 ${topic === t.path ? 'text-[var(--st-mqtt-topic-selected-text)] font-bold' : 'text-[var(--input-foreground)]'}`}
                                         onClick={() => { setTopic(t.path); saveUIState({ publishTopic: t.path }); setShowTopicDropdown(false); }}
                                     >
                                         {t.color && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: t.color }} />}
@@ -702,7 +704,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </div>
                     <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--input-background)] border border-[var(--input-border-color)] px-2 rounded h-full hover:bg-[var(--list-hover-background)] transition-colors shrink-0">
                         <input type="checkbox" className="accent-[var(--button-background)] w-3 h-3 cursor-pointer" checked={retain} onChange={e => setRetain(e.target.checked)} />
-                        <span className="text-[var(--app-foreground)] text-[11px]">Retain</span>
+                        <span className="text-[var(--input-foreground)] text-[11px]">Retain</span>
                     </label>
                 </div>
                 {/* 第二行：输入框 + 发送按钮 */}
@@ -715,8 +717,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     />
                     <button
                         className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                            ? (payload.trim() === '' ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
-                            : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'
+                            ? (payload.trim() === '' ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--st-mqtt-btn-send-bg)] hover:bg-[var(--button-hover-background)] text-white')
+                            : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--st-monitor-btn-text)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'
                             }`}
                         onClick={handleSend}
                         disabled={session.isConnecting}
@@ -729,6 +731,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

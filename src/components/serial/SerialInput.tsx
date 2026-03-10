@@ -287,18 +287,21 @@ export const SerialInput = ({
     }, [isTimerRunning, timerInterval]);
 
     return (
-        <div className={`${hideExtras ? '' : 'border-t border-[var(--border-color)]'} bg-[var(--sidebar-background)] p-2 flex flex-col gap-2 shrink-0 select-none`}>
+        <div
+            className={`${hideExtras ? '' : 'border-t border-[var(--st-widget-border)]'} bg-[var(--st-sendarea-bg)] p-2 flex flex-col gap-2 shrink-0 select-none`}
+            data-component="serial-input"
+        >
             {/* Mode Switcher - always visible */}
             <div className="flex items-center gap-2 h-6 overflow-x-auto scrollbar-none">
-                <div className="shrink-0 flex items-center gap-[1px] bg-[var(--input-background)] border border-[var(--border-color)] rounded-sm overflow-hidden p-[2px]">
+                <div className="shrink-0 flex items-center gap-[1px] bg-[var(--st-btn-secondary-bg)] border border-[var(--st-widget-border)] rounded-sm overflow-hidden p-[2px]">
                     <button
-                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
+                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[var(--st-input-btn-mode-txt-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                         onClick={() => setMode('text')}
                     >
                         TXT
                     </button>
                     <button
-                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[var(--button-background)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
+                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[var(--st-input-btn-mode-hex-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                         onClick={() => setMode('hex')}
                     >
                         HEX
@@ -307,7 +310,7 @@ export const SerialInput = ({
                 {/* Line Ending Selector 始终显示（文本模式下） */}
                 {mode === 'text' && (
                     <div className="flex items-center gap-1">
-                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mr-1" />
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mr-1" />
                         <CustomSelect
                             value={lineEnding}
                             onChange={(val) => setLineEnding(val)}
@@ -326,52 +329,52 @@ export const SerialInput = ({
 
                 {!hideExtras && (
                     <>
-                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
 
                         <Tooltip content={t('serial.insertFlag')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
                                 onClick={() => insertToken('flag')}>
                                 <Flag size={14} className="text-blue-400" />
                                 <span>Custom</span>
                             </button>
                         </Tooltip>
                         <Tooltip content={t('serial.insertCRC')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
                                 onClick={() => insertToken('crc')}>
                                 <Plus size={14} className="text-emerald-500" />
                                 <span>CRC</span>
                             </button>
                         </Tooltip>
                         <Tooltip content={t('serial.insertTime')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
                                 onClick={() => insertToken('timestamp')}>
                                 <div className="flex items-center justify-center w-[14px] h-[14px] border border-blue-400 text-blue-400 text-[9px] font-mono rounded-[2px] leading-none">T</div>
                                 <span>Time</span>
                             </button>
                         </Tooltip>
                         <Tooltip content={t('serial.insertAuto')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors whitespace-nowrap"
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
                                 onClick={() => insertToken('auto_inc' as any)}>
                                 <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
                                 <span>Auto</span>
                             </button>
                         </Tooltip>
-                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)] mx-1" />
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
                         <Tooltip content={t('serial.loadFile')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--app-foreground)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
+                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
                                 <Upload size={14} />
                                 <span>File</span>
                             </button>
                         </Tooltip>
                         <div className="flex-1 shrink min-w-0" />
                         {/* Timed Send: flat toggle + input */}
-                        <div className="shrink-0 w-[1px] h-4 bg-[var(--border-color)]" />
+                        <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)]" />
                         <div className="shrink-0 flex items-center gap-1.5">
                             <Tooltip content={isTimerRunning ? t('serial.stopTimer') : (isEmpty ? t('serial.timerEmpty') : t('serial.startTimer'))} position="bottom" wrapperClassName="flex">
                                 <button
                                     className={`flex items-center gap-1 px-2 py-0.5 text-[12px] rounded-sm transition-colors cursor-pointer whitespace-nowrap ${isTimerRunning
-                                        ? 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
-                                        : ((!isTimerRunning && isEmpty) ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-secondary-background)] text-[var(--button-foreground)] hover:bg-[var(--button-secondary-hover-background)]')
+                                        ? 'bg-[var(--st-input-btn-timer-active-bg)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]'
+                                        : ((!isTimerRunning && isEmpty) ? 'bg-[var(--st-btn-secondary-bg)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-secondary-background)] text-[var(--button-foreground)] hover:bg-[var(--button-secondary-hover-background)]')
                                         }`}
                                     onClick={() => {
                                         if (!isTimerRunning && isEmpty) {
@@ -387,7 +390,7 @@ export const SerialInput = ({
                             </Tooltip>
                             <input
                                 type="text"
-                                className="w-12 h-[22px] bg-[var(--input-background)] border border-[var(--border-color)] text-[var(--app-foreground)] text-[11px] px-1 rounded-sm focus:border-[var(--focus-border-color)] outline-none text-center font-mono"
+                                className="w-12 h-[22px] bg-[var(--input-background)] border border-[var(--st-input-border)] text-[var(--st-input-text)] text-[11px] px-1 rounded-sm focus:border-[var(--st-input-focus-border)] outline-none text-center font-mono"
                                 value={timerIntervalInput}
                                 onChange={(e) => {
                                     const val = e.target.value;
@@ -404,7 +407,7 @@ export const SerialInput = ({
                                 }}
                                 placeholder="1000"
                             />
-                            <span className="text-[11px] text-[#666]">ms</span>
+                            <span className="text-[11px] text-[var(--st-input-timer-unit-text)]">ms</span>
                         </div>
                     </>
                 )}
@@ -414,7 +417,7 @@ export const SerialInput = ({
             <div className="flex gap-2 min-h-[80px]">
 
                 <div
-                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--border-color)] rounded-sm focus-within:border-[var(--focus-border-color)] cursor-text flex flex-col bg-cover bg-center"
+                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] rounded-sm focus-within:border-[var(--st-input-focus-border)] cursor-text flex flex-col bg-cover bg-center"
                     onClick={() => editor?.commands.focus()}
                     style={{ backgroundImage: 'var(--st-input-bg-img)' }}
                 >
@@ -425,11 +428,11 @@ export const SerialInput = ({
                     <Tooltip content={isConnected ? (isEmpty ? t('toast.sendEmpty') : t('serial.send')) : t('serial.connect')} position="left" wrapperClassName="flex items-stretch">
                         <button
                             className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                                ? (isEmpty ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
-                                : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--app-foreground)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'}`}
+                                ? (isEmpty ? 'bg-[var(--st-btn-secondary-bg)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--st-input-btn-send-bg)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)]')
+                                : 'bg-[var(--st-btn-secondary-bg)] hover:bg-[var(--list-hover-background)] text-[var(--st-input-btn-text)] cursor-pointer border border-[var(--st-widget-border)] hover:border-[var(--st-input-focus-border)]'}`}
                             onClick={() => handleSend()}
                         >
-                            {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--sidebar-background)]"></div></div>}
+                            {isConnected ? <Send size={16} /> : <div className="relative"><Send size={16} className="opacity-50" /><div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[var(--accent-color)] rounded-full border border-[var(--st-btn-secondary-bg)]"></div></div>}
                             <span className="text-[10px]">{isConnected ? t('serial.send') : t('serial.connect')}</span>
                         </button>
                     </Tooltip>

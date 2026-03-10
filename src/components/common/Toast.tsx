@@ -106,10 +106,10 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
             <div className="shrink-0">
                 {styles.icon}
             </div>
-            <span className="text-sm font-medium text-[var(--app-foreground)] flex-1 break-words leading-tight">
+            <span className="text-sm font-medium text-[var(--st-toast-text)] flex-1 break-words leading-tight">
                 {message}
             </span>
-            <X size={14} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] shrink-0" />
+            <X size={14} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-toast-icon-hover)] shrink-0" />
         </div>
     );
 };

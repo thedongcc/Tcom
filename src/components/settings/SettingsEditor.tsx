@@ -5,13 +5,14 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
+
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="mb-8">
-        <h3 className="text-[11px] font-bold text-[var(--app-foreground)] opacity-50 uppercase tracking-widest mb-3 px-2 border-l-2 border-[var(--focus-border-color)] ml-[-8px] pl-[6px]">
+        <h3 className="text-[11px] font-bold text-[var(--st-settings-title-text)] opacity-50 uppercase tracking-widest mb-3 px-2 border-l-2 border-[var(--focus-border-color)] ml-[-8px] pl-[6px]">
             {title}
         </h3>
-        <div className="flex flex-col bg-[var(--editor-background)] rounded border border-[var(--border-color)] overflow-hidden">
+        <div className="flex flex-col bg-[var(--settings-editor-bg)] rounded border border-[var(--border-color)] overflow-hidden">
             {children}
         </div>
     </div>
@@ -22,19 +23,21 @@ const SettingRow = ({
     label,
     description,
     children,
+    stackContent = false,
 }: {
     label: string;
     description?: string;
     children: React.ReactNode;
+    stackContent?: boolean;
 }) => (
-    <div className="flex items-center justify-between py-3 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3">
-        <div className="flex flex-col flex-1 mr-4">
-            <label className="text-[13px] text-[var(--app-foreground)] font-medium">{label}</label>
+    <div className={`py-3 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 ${stackContent ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`}>
+        <div className={`flex flex-col ${stackContent ? '' : 'flex-1 mr-4'}`}>
+            <label className="text-[13px] text-[var(--st-settings-text)] font-medium">{label}</label>
             {description && (
                 <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5">{description}</p>
             )}
         </div>
-        <div className="flex-shrink-0">{children}</div>
+        <div className={stackContent ? '' : 'flex-shrink-0'}>{children}</div>
     </div>
 );
 
@@ -195,7 +198,7 @@ export const SettingsEditor = () => {
                                         e.stopPropagation();
                                         (window as any).themeAPI?.openFolder();
                                     }}
-                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
                                 >
                                     <FolderOpen size={14} />
                                 </button>
@@ -209,7 +212,7 @@ export const SettingsEditor = () => {
                                             (window as any).themeAPI?.openFile(currentDef.id);
                                         }
                                     }}
-                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                    className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
                                 >
                                     <FileJson size={14} />
                                 </button>
@@ -327,7 +330,7 @@ export const SettingsEditor = () => {
                                 setResetInput('');
                                 setShowFactoryReset(true);
                             }}
-                            className="bg-[#a1260d] hover:bg-[#c93f24] text-white px-3 py-1.5 rounded-[3px] text-xs transition-colors"
+                            className="bg-[var(--st-settings-danger-bg)] hover:bg-[var(--st-settings-danger-hover)] text-[var(--st-settings-danger-text)] px-3 py-1.5 rounded-[3px] text-xs transition-colors"
                         >
                             {t('settings.factoryResetBtn')}
                         </button>
@@ -355,16 +358,16 @@ export const SettingsEditor = () => {
     const hasResults = filteredSettings.length > 0;
 
     return (
-        <div className="flex flex-col h-full bg-[var(--editor-background)]">
+        <div className="flex flex-col h-full bg-[var(--settings-editor-bg)]" data-component="settings-editor">
             {/* 头部工具栏 */}
             <div className="h-[35px] flex items-center shrink-0 px-4 border-b border-[var(--border-color)] bg-[var(--widget-background)] justify-between">
-                <span className="text-[13px] font-semibold text-[var(--app-foreground)]">{t('settings.title')}</span>
+                <span className="text-[13px] font-semibold text-[var(--st-settings-title-text)]">{t('settings.title')}</span>
                 <div className="flex items-center gap-1">
 
                     <Tooltip content={t('settings.exportTooltip')} position="bottom">
                         <button
                             onClick={handleDownload}
-                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
                         >
                             <Download size={14} />
                         </button>
@@ -372,7 +375,7 @@ export const SettingsEditor = () => {
                     <Tooltip content={t('settings.importTooltip')} position="bottom">
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
                         >
                             <Upload size={14} />
                         </button>
@@ -435,42 +438,42 @@ export const SettingsEditor = () => {
             {showFactoryReset && (
                 <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div
-                        className="bg-[#252526] border border-[#a1260d] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+                        className="bg-[var(--st-popover-bg)] border border-[var(--st-settings-danger-bg)] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between p-3 border-b border-[#3c3c3c] bg-[#a1260d]/20">
-                            <span className="text-[12px] font-bold text-[#f48771] uppercase tracking-wider flex items-center gap-2">
+                        <div className="flex items-center justify-between p-3 border-b border-[var(--st-popover-border)] bg-[var(--st-settings-danger-bg-subtle)]">
+                            <span className="text-[12px] font-bold text-[var(--st-settings-danger-title)] uppercase tracking-wider flex items-center gap-2">
                                 <AlertTriangle size={14} />
                                 {t('settings.factoryResetDialogTitle')}
                             </span>
-                            <button onClick={() => setShowFactoryReset(false)} className="text-[#cccccc] hover:text-white transition-colors">
+                            <button onClick={() => setShowFactoryReset(false)} className="text-[var(--st-settings-text)] hover:text-[var(--st-settings-text-hover)] transition-colors">
                                 <X size={14} />
                             </button>
                         </div>
                         <div className="p-5">
-                            <p className="text-[13px] text-[#cccccc] leading-relaxed whitespace-pre-wrap mb-4">
+                            <p className="text-[13px] text-[var(--st-settings-text)] leading-relaxed whitespace-pre-wrap mb-4">
                                 {t('settings.factoryResetDialogMessage', { keyword: resetKeyword })}
                             </p>
                             <input
                                 autoFocus
                                 type="text"
-                                className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] p-2 text-sm text-[var(--input-foreground)] outline-none focus:border-[#a1260d] rounded"
+                                className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] p-2 text-sm text-[var(--input-foreground)] outline-none focus:border-[var(--st-settings-danger-bg)] rounded"
                                 placeholder={resetKeyword}
                                 value={resetInput}
                                 onChange={e => setResetInput(e.target.value)}
                             />
                         </div>
-                        <div className="flex justify-end gap-2 p-3 bg-[#1e1e1e] border-t border-[#3c3c3c]">
+                        <div className="flex justify-end gap-2 p-3 bg-[var(--st-settings-footer-bg)] border-t border-[var(--st-settings-footer-border)]">
                             <button
                                 onClick={() => setShowFactoryReset(false)}
-                                className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs transition-colors"
+                                className="px-4 py-1.5 text-[var(--st-settings-text)] hover:bg-[var(--st-settings-btn-cancel-hover)] rounded-sm text-xs transition-colors"
                             >
                                 {t('common.cancel')}
                             </button>
                             <button
                                 disabled={!canFactoryReset}
                                 onClick={performFactoryReset}
-                                className={`px-4 py-1.5 text-white rounded-sm text-xs transition-all flex items-center gap-2 ${canFactoryReset ? 'bg-[#a1260d] hover:bg-[#c93f24] cursor-pointer' : 'bg-[#3c3c3c] text-[#888] cursor-not-allowed opacity-50'}`}
+                                className={`px-4 py-1.5 text-[var(--st-settings-danger-text)] rounded-sm text-xs transition-all flex items-center gap-2 ${canFactoryReset ? 'bg-[var(--st-settings-danger-bg)] hover:bg-[var(--st-settings-danger-hover)] cursor-pointer' : 'bg-[var(--st-settings-btn-disabled-bg)] text-[var(--st-settings-btn-disabled-text)] cursor-not-allowed opacity-50'}`}
                             >
                                 {canFactoryReset && <AlertTriangle size={12} />}
                                 {t('settings.factoryResetBtn')}

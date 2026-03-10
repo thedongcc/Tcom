@@ -1,6 +1,7 @@
 ﻿import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 // 全局 portal 容器，避免被父容器 overflow:hidden 截断
 function getPortalContainer(): HTMLElement {
@@ -58,30 +59,33 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
-        const dropdownMaxH = 240; // max-h-60 = 240px
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceAbove = rect.top;
+        const defaultMaxH = 240; // 默认最大高度
+        const spaceBelow = viewportHeight - rect.bottom - 10; // 留 10px 边距
+        const spaceAbove = rect.top - 10;
 
-        // 优先向下展开，空间不足时向上
-        if (spaceBelow >= dropdownMaxH || spaceBelow >= spaceAbove) {
-            setDropdownStyle({
-                position: 'fixed',
-                top: rect.bottom + 2,
-                left: rect.left,
-                width: dropdownWidth || rect.width,
-                minWidth: rect.width,
-                zIndex: 9999,
-            });
+        let top = 0;
+        let bottom: number | string = 'auto';
+        let maxHeight = defaultMaxH;
+
+        // 优先向下展开
+        if (spaceBelow >= defaultMaxH || spaceBelow > spaceAbove) {
+            top = rect.bottom + 2;
+            maxHeight = Math.min(defaultMaxH, spaceBelow);
         } else {
-            setDropdownStyle({
-                position: 'fixed',
-                bottom: viewportHeight - rect.top + 2,
-                left: rect.left,
-                width: dropdownWidth || rect.width,
-                minWidth: rect.width,
-                zIndex: 9999,
-            });
+            // 向上展开
+            top = rect.top - Math.min(defaultMaxH, spaceAbove) - 2;
+            maxHeight = Math.min(defaultMaxH, spaceAbove);
         }
+
+        setDropdownStyle({
+            position: 'fixed',
+            top: top,
+            left: rect.left,
+            width: dropdownWidth || rect.width,
+            minWidth: rect.width,
+            maxHeight: maxHeight,
+            zIndex: 999999, // 提高层级防止遮挡
+        });
     };
 
     useEffect(() => {
@@ -165,11 +169,13 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
             className="group/menu"
             onMouseDown={(e) => e.stopPropagation()}
             onMouseLeave={() => setHoveredValue(null)}
+            data-component="dropdown"
         >
             <div
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className="max-h-60 overflow-y-auto w-full scrollbar-none"
+                className="overflow-y-auto w-full scrollbar-none"
+                style={{ maxHeight: typeof dropdownStyle.maxHeight === 'number' ? `${dropdownStyle.maxHeight}px` : '240px' }}
             >
                 <style dangerouslySetInnerHTML={{
                     __html: `
@@ -199,7 +205,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                         const isHovered = hoveredValue === item.value;
                         const showHighlight = isHovered || (hoveredValue === null && isSelected);
 
-                        return (
+                        const buttonHtml = (
                             <button
                                 key={`${item.value}-${index}`}
                                 ref={isSelected ? selectedRef : null}
@@ -213,7 +219,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 style={{
                                     color: isSelected
                                         ? 'var(--dropdown-item-selected-foreground)'
-                                        : 'var(--app-foreground)',
+                                        : 'var(--st-select-item-text)',
                                     backgroundColor: showHighlight && !item.disabled ? 'var(--dropdown-item-hover-background)' : '',
                                 }}
                                 className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
@@ -227,6 +233,15 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{item.label}</span>
                             </button>
                         );
+
+                        if (item.description) {
+                            return (
+                                <Tooltip key={`${item.value}-${index}`} content={item.description} position="left" wrapperClassName="w-full">
+                                    {buttonHtml}
+                                </Tooltip>
+                            );
+                        }
+                        return buttonHtml;
                     })}
                 </div>
             </div>
@@ -236,7 +251,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 <div
                     className={`absolute right-[2px] transition-opacity duration-300 pointer-events-none ${isScrolling ? 'opacity-100' : 'opacity-0 group-hover/menu:opacity-60'}`}
                     style={{
-                        top: `${scrollRatio * (Math.min((items.length + (allowCustom ? 1 : 0)) * 28, 240) - thumbHeight)}px`,
+                        top: `${scrollRatio * ((dropdownStyle.maxHeight as number || 240) - thumbHeight)}px`,
                         height: `${thumbHeight}px`,
                         width: '4px',
                         backgroundColor: 'var(--scrollbar-slider-hover-color)',

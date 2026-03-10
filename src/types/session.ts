@@ -60,7 +60,11 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         showAllFonts?: boolean;
         showTimestamp?: boolean;
         autoScroll?: boolean;
-        chunkTimeout?: number; // ms to merge consecutive RX chunks
+        chunkTimeout?: number; // ms to merge consecutive RX chunks (legacy, use rxPacketMode instead)
+        rxPacketMode?: 'none' | 'timeout' | 'delimiter' | 'fixedLength' | 'delimiterWithTimeout';
+        rxDelimiter?: string; // 分隔符字符串，支持 \r\n、\n 等转义或 HEX 字符串如 0D0A
+        rxFixedLength?: number; // 定长模式每帧字节数
+        rxTimeoutMs?: number; // 超时/组合模式的超时毫秒数
         mergeRepeats?: boolean; // Merge identical consecutive logs
         smoothScroll?: boolean;
         flashNewMessage?: boolean;

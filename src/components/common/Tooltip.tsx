@@ -59,28 +59,63 @@ export const Tooltip = ({
     const getPositionStyle = (): React.CSSProperties => {
         if (!rect) return {};
         const vw = typeof window !== 'undefined' ? window.innerWidth : 1000;
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 1000;
         const center = rect.left + rect.width / 2;
+        const middle = rect.top + rect.height / 2;
 
+        let style: React.CSSProperties = {};
+
+        // 我们将以像素绝对定位赋予 Tooltip，并借助 CSS max-width 预估范围，
+        // 实际上 framer-motion 会渲染它，这里先给出大致安全区的 transform 和定位点。
         switch (position) {
             case 'right':
-                return { top: rect.top + rect.height / 2, left: rect.right + offset, transform: 'translateY(-50%)' };
+                style = { top: middle, left: rect.right + offset, transform: 'translateY(-50%)' };
+                // 防止右侧溢出：如果距离右侧不够，就强制反转到左侧
+                if (rect.right + offset + 200 > vw) {
+                    style = { top: middle, right: vw - rect.left + offset, left: 'auto', transform: 'translateY(-50%)' };
+                }
+                break;
             case 'left':
-                return { top: rect.top + rect.height / 2, left: rect.left - offset, transform: 'translate(-100%, -50%)' };
+                style = { top: middle, right: vw - rect.left + offset, left: 'auto', transform: 'translateY(-50%)' };
+                if (rect.left - offset - 200 < 0) {
+                    style = { top: middle, left: rect.right + offset, right: 'auto', transform: 'translateY(-50%)' };
+                }
+                break;
             case 'top':
-                if (center > vw - 120)
-                    return { top: rect.top - offset, right: Math.max(4, vw - rect.right), transform: 'translateY(-100%)' };
-                if (center < 120)
-                    return { top: rect.top - offset, left: Math.max(4, rect.left), transform: 'translateY(-100%)' };
-                return { top: rect.top - offset, left: center, transform: 'translate(-50%, -100%)' };
+                style = { top: rect.top - offset, left: center, transform: 'translate(-50%, -100%)' };
+                if (center > vw - 150) {
+                    style = { top: rect.top - offset, right: Math.max(4, vw - rect.right), left: 'auto', transform: 'translateY(-100%)' };
+                } else if (center < 150) {
+                    style = { top: rect.top - offset, left: Math.max(4, rect.left), transform: 'translateY(-100%)' };
+                }
+                // 防止顶部溢出
+                if (rect.top - offset - 50 < 0) {
+                    style.top = rect.bottom + offset;
+                    style.transform = style.transform?.replace('-100%', '0%');
+                }
+                break;
             case 'bottom':
-                if (center > vw - 120)
-                    return { top: rect.bottom + offset, right: Math.max(4, vw - rect.right), transform: 'none' };
-                if (center < 120)
-                    return { top: rect.bottom + offset, left: Math.max(4, rect.left), transform: 'none' };
-                return { top: rect.bottom + offset, left: center, transform: 'translateX(-50%)' };
+                style = { top: rect.bottom + offset, left: center, transform: 'translateX(-50%)' };
+                if (center > vw - 150) {
+                    style = { top: rect.bottom + offset, right: Math.max(4, vw - rect.right), left: 'auto', transform: 'none' };
+                } else if (center < 150) {
+                    style = { top: rect.bottom + offset, left: Math.max(4, rect.left), transform: 'none' };
+                }
+                // 防止底部溢出
+                if (rect.bottom + offset + 50 > vh) {
+                    style.top = rect.top - offset;
+                    style.transform = style.transform?.includes('translateX')
+                        ? 'translate(-50%, -100%)'
+                        : 'translateY(-100%)';
+                }
+                break;
             default:
-                return {};
+                break;
         }
+
+        // 附加最大的安全 z-index 以保证穿透所有面板层级
+        style.zIndex = 99999;
+        return style;
     };
 
     /**
@@ -134,13 +169,14 @@ export const Tooltip = ({
             {typeof document !== 'undefined' && createPortal(
                 <AnimatePresence>
                     {isVisible && content && (
-                        <div style={getPositionStyle()} className="fixed z-[9999] pointer-events-none">
+                        <div style={getPositionStyle()} className="fixed z-[99999] pointer-events-none">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.12 }}
-                                className={`px-2 py-1 text-[12px] font-medium rounded shadow-md whitespace-nowrap bg-[var(--menu-background)] text-[var(--app-foreground)] border border-[var(--menu-border-color)] ${className}`}
+                                className={`px-2 py-1 text-[12px] font-medium rounded shadow-lg bg-[var(--st-tooltip-bg)] text-[var(--st-tooltip-text)] border border-[var(--st-tooltip-border)] max-w-[300px] whitespace-normal break-words text-left leading-relaxed backdrop-blur-md ${className}`}
+                                style={{ textWrap: 'balance' }}
                             >
                                 {content}
                             </motion.div>

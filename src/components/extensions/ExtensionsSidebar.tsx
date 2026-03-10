@@ -65,7 +65,7 @@ export const ExtensionsSidebar = () => {
     }) => (
         <button
             onClick={onToggle}
-            className="w-full flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-wide hover:text-[var(--app-foreground)] transition-colors"
+            className="w-full flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-wide hover:text-[var(--st-sidebar-text)] transition-colors"
         >
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             {title}
@@ -106,15 +106,15 @@ export const ExtensionsSidebar = () => {
                     {/* 图标 */}
                     <div className="pt-0.5 flex-shrink-0">
                         {Icon
-                            ? <Icon size={36} className="text-[var(--app-foreground)] opacity-70" />
-                            : <Box size={36} className="text-[var(--app-foreground)] opacity-40" />
+                            ? <Icon size={36} className="text-[var(--st-sidebar-text)] opacity-70" />
+                            : <Box size={36} className="text-[var(--st-sidebar-text)] opacity-40" />
                         }
                     </div>
 
                     {/* 信息 */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[13px] font-bold text-[var(--app-foreground)] truncate pr-2">{name}</span>
+                            <span className="text-[13px] font-bold text-[var(--st-sidebar-text)] truncate pr-2">{name}</span>
                             <div
                                 className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0"
                                 onClick={e => e.stopPropagation()}
@@ -129,7 +129,7 @@ export const ExtensionsSidebar = () => {
                             {isActive !== undefined && (
                                 <>
                                     <span>•</span>
-                                    <span className={isActive ? 'text-[#4ec9b0]' : 'text-[var(--input-placeholder-color)]'}>
+                                    <span className={isActive ? 'text-[var(--st-extension-active-text)]' : 'text-[var(--input-placeholder-color)]'}>
                                         {isActive ? t('extensions.enabled') : t('extensions.disabled')}
                                     </span>
                                 </>
@@ -137,7 +137,7 @@ export const ExtensionsSidebar = () => {
                             {isExternal && (
                                 <>
                                     <span>•</span>
-                                    <span className="text-[#ce9178]">{t('extensions.userInstalled')}</span>
+                                    <span className="text-[var(--st-extension-user-text)]">{t('extensions.userInstalled')}</span>
                                 </>
                             )}
                         </div>
@@ -145,7 +145,7 @@ export const ExtensionsSidebar = () => {
                         {/* 展开详情 */}
                         {isExpanded && (
                             <div className="mt-2 pt-2 border-t border-[var(--border-color)] space-y-1">
-                                <div className="text-[11px] text-[var(--app-foreground)] opacity-70">ID: <code className="font-mono">{id}</code></div>
+                                <div className="text-[11px] text-[var(--st-sidebar-text)] opacity-70">ID: <code className="font-mono">{id}</code></div>
                                 {homepage && (
                                     <a
                                         href={homepage}
@@ -169,7 +169,7 @@ export const ExtensionsSidebar = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--sidebar-background)]">
+        <div className="flex flex-col h-full bg-[var(--extensions-sidebar-bg)]" data-component="extensions-sidebar">
             {/* 搜索栏 */}
             <div className="p-2.5 border-b border-[var(--border-color)]">
                 <div className="bg-[var(--input-background)] flex items-center px-2 py-1 border border-[var(--widget-border-color)] focus-within:border-[var(--focus-border-color)] transition-colors">
@@ -187,7 +187,7 @@ export const ExtensionsSidebar = () => {
             <div className="px-3 py-2 border-b border-[var(--border-color)]">
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-[12px] text-[var(--app-foreground)] border border-[var(--widget-border-color)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 text-[12px] text-[var(--st-sidebar-text)] border border-[var(--widget-border-color)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] transition-colors"
                 >
                     <FolderOpen size={13} />
                     {t('extensions.installFromFile')}
@@ -202,7 +202,7 @@ export const ExtensionsSidebar = () => {
 
                 {/* 安装错误提示 */}
                 {installError && (
-                    <div className="mt-2 flex items-start gap-1.5 text-[11px] text-[#f48771] bg-[#5a1d1d] px-2 py-1.5 rounded">
+                    <div className="mt-2 flex items-start gap-1.5 text-[11px] text-[var(--st-extension-warning-text)] bg-[var(--st-extension-warning-bg)] px-2 py-1.5 rounded">
                         <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
                         <span>{installError}</span>
                     </div>
@@ -239,7 +239,7 @@ export const ExtensionsSidebar = () => {
                                             <Tooltip content={t('extensions.disable')} position="bottom" wrapperClassName="flex">
                                                 <button
                                                     onClick={() => deactivatePlugin(plugin.id)}
-                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
+                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)] opacity-70 hover:opacity-100"
                                                 >
                                                     <Pause size={14} />
                                                 </button>
@@ -248,7 +248,7 @@ export const ExtensionsSidebar = () => {
                                             <Tooltip content={t('extensions.enable')} position="bottom" wrapperClassName="flex">
                                                 <button
                                                     onClick={() => activatePlugin(plugin.id)}
-                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)] opacity-70 hover:opacity-100"
+                                                    className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)] opacity-70 hover:opacity-100"
                                                 >
                                                     <Play size={14} />
                                                 </button>
@@ -258,7 +258,7 @@ export const ExtensionsSidebar = () => {
                                             <Tooltip content={t('extensions.uninstall')} position="bottom" wrapperClassName="flex">
                                                 <button
                                                     onClick={() => uninstallPlugin(plugin.id)}
-                                                    className="p-1 hover:bg-[#c53030] hover:text-white rounded text-[var(--app-foreground)] opacity-70 transition-colors"
+                                                    className="p-1 hover:bg-[var(--st-extension-danger-hover)] hover:text-white rounded text-[var(--st-sidebar-text)] opacity-70 transition-colors"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -319,7 +319,7 @@ export const ExtensionsSidebar = () => {
                         e.preventDefault();
                         window.shellAPI?.openExternal('https://github.com/thedongcc/Tcom/blob/main/PLUGIN_API.md');
                     }}
-                    className="flex items-center gap-1 hover:text-[var(--app-foreground)] transition-colors"
+                    className="flex items-center gap-1 hover:text-[var(--st-sidebar-text)] transition-colors"
                 >
                     <ExternalLink size={10} />
                     {t('extensions.devDocs')}

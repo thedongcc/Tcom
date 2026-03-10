@@ -232,6 +232,7 @@ export const zhCN = {
         smoothAnimation: '平滑滚动',
         flashNewMessage: '新消息闪烁',
         timestamp: '显示时间戳',
+        showControlChars: '显示隐藏字符 (CR/LF)',
         dataLength: '显示数据长度',
         mergeRepeats: '合并重复消息',
         exportLog: '导出日志',
@@ -262,6 +263,24 @@ export const zhCN = {
         crcExclude2: '-2 (排除最后 2 字节)',
         crcExclude3: '-3 (排除最后 3 字节)',
         packetTimeout: '包超时 (ms)',
+        // 接收分包策略
+        rxPacketSection: '接收分包',
+        rxPacketMode_none: '关闭',
+        rxPacketMode_timeout: '超时',
+        rxPacketMode_delimiter: '字符',
+        rxPacketMode_fixedLength: '定长',
+        rxPacketMode_delimiterWithTimeout: '字符 + 超时',
+        rxPacketMode_fixedLengthWithTimeout: '定长 + 超时',
+        rxPacketMode_fixedLengthWithTimeout_tip: '优先按字节长度分包，若不足长度且超时则强制分流',
+        rxDelimiterLabel: '分隔符',
+        rxFixedLengthLabel: '每帧字节数',
+        rxTimeoutMsLabel: '超时 (ms)',
+        rxDelimiterPlaceholder: '如 \\r\\n 或 0D0A',
+        rxPacketMode_none_tip: '不做任何合并，收到的每批原始数据直接显示为一条记录。适合低速调试或数据量较小的场景。',
+        rxPacketMode_timeout_tip: '指定时间内持续接收的数据会合并为一条记录，超时后自动换行。数值越大合并量越多，适合突发性数据流。',
+        rxPacketMode_delimiter_tip: '收到指定字符/字节序列时换行。支持输入 \\r\\n、\\n 等转义，或直接输入 HEX（如 0D0A）。适合 AT 命令、NMEA、Modbus ASCII 等文本协议。',
+        rxPacketMode_fixedLength_tip: '每收满 N 字节就换一行。适合固定帧长的二进制协议，可保证帧边界绝对对齐。',
+        rxPacketMode_delimiterWithTimeout_tip: '优先以分隔符切包，若超出指定时间仍未收到分隔符则强制换行兜底。是最健壮的方案，可防止硬件丢失结束符导致界面卡死。',
         // 监控配置面板
         settings: '监控设置',
         enableVirtualMonitor: '启用虚拟串口功能',
@@ -403,6 +422,16 @@ export const zhCN = {
         prevMatch: '上一个匹配项 (Shift+Enter)',
         nextMatch: '下一个匹配项 (Enter)',
         closeSearch: '关闭搜索',
+    },
+
+    // 主题颜色编辑器
+    themeEditor: {
+        modifiedCount: '已修改 {count} 项',
+        close: '关闭编辑器',
+        closeInspect: '关闭诊断',
+        screenPicker: '从屏幕取色',
+        copyVar: '点击复制变量名',
+        copied: '已复制！'
     },
 
     // 图形编辑器

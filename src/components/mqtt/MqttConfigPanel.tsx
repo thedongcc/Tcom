@@ -66,11 +66,11 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
     const isLocked = isConnected || isConnecting;
 
     return (
-        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
+        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--mqtt-config-bg)] text-[var(--mqtt-config-text)]" data-component="mqtt-config">
             {/* Connection Settings */}
             <div className="border-b border-[var(--border-color)] shrink-0">
                 <div
-                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--sidebar-background)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
+                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--st-config-item-bg)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
                     onClick={toggleConnectionExpanded}
                 >
                     {isConnectionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -151,7 +151,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     />
                                     <Tooltip content={t('mqtt.generateId')} position="bottom" wrapperClassName="flex">
                                         <button
-                                            className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--app-foreground)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
+                                            className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--st-monitor-config-text)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
                                             onClick={() => onUpdate({ clientId: `client-${Math.random().toString(16).substring(2, 8)}` })}
                                             disabled={isLocked}
                                         >
@@ -237,7 +237,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         <div className="pt-2">
                             <button
                                 className={`w-full py-1.5 px-3 text-white text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
-                                    ? 'bg-[#a1260d] hover:bg-[#c93f24]'
+                                    ? 'bg-[var(--st-danger-bg)] hover:bg-[var(--st-danger-hover-bg)]'
                                     : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed'
                                     }`}
                                 onClick={isConnected ? onDisconnectToken : onConnectToken}
@@ -259,7 +259,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
 
             {/* Subscriptions */}
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--sidebar-background)] sticky top-0 border-b border-[var(--border-color)] shrink-0">
+                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--st-config-item-bg)] sticky top-0 border-b border-[var(--border-color)] shrink-0">
                     {t('mqtt.subscriptions')}
                 </div>
 
@@ -313,7 +313,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     {/* Subscribe Toggle */}
                                     <Tooltip content={topic.subscribed ? '已订阅并显示在监视器' : '暂停订阅并从监视器隐藏'} position="bottom" wrapperClassName="flex items-center px-0.5">
                                         <button
-                                            className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[#10b981]' : 'bg-[var(--input-border-color)]'}`}
+                                            className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[var(--st-config-success-bg)]' : 'bg-[var(--input-border-color)]'}`}
                                             onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}
                                         >
                                             <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${topic.subscribed ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -323,7 +323,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     {/* Delete */}
                                     <Trash2
                                         size={14}
-                                        className="text-[var(--input-placeholder-color)] hover:text-[#f48771] cursor-pointer"
+                                        className="text-[var(--input-placeholder-color)] hover:text-[var(--st-danger-text)] cursor-pointer"
                                         onClick={() => handleRemoveTopic(topic.id)}
                                     />
                                 </div>

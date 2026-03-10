@@ -34,31 +34,31 @@ export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
             {/* Panel Header */}
             <div className="flex items-center justify-between px-4 h-[35px] select-none">
                 <div className="flex items-center gap-6 h-full">
-                    <div className="h-full flex items-center border-b border-[var(--accent-color)] text-[var(--app-foreground)] font-medium text-[11px] uppercase tracking-wide cursor-pointer">
+                    <div className="h-full flex items-center border-b border-[var(--st-accent)] text-[var(--st-panel-header-text)] font-medium text-[11px] uppercase tracking-wide cursor-pointer">
                         {t('panel.terminal')}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-[#969696]">
-                    <Trash2 size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
-                    <Maximize2 size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
-                    <X size={14} className="cursor-pointer hover:text-[var(--app-foreground)]" />
+                <div className="flex items-center gap-2 text-[var(--st-panel-muted-text)]">
+                    <Trash2 size={14} className="cursor-pointer hover:text-[var(--st-panel-action-hover)]" />
+                    <Maximize2 size={14} className="cursor-pointer hover:text-[var(--st-panel-action-hover)]" />
+                    <X size={14} className="cursor-pointer hover:text-[var(--st-panel-action-hover)]" />
                 </div>
             </div>
 
             {/* Panel Content */}
-            <div className="flex-1 overflow-auto p-2 font-mono text-[13px] bg-[var(--app-background)]" ref={scrollRef}>
-                <div className="text-[#969696] mb-2">
+            <div className="flex-1 overflow-auto p-2 font-mono text-[13px] bg-[var(--st-terminal-bg)]" ref={scrollRef}>
+                <div className="text-[var(--st-info-text)] mb-2">
                     {isConnected ? t('panel.connectedTo', { port: currentPort }) : t('panel.disconnected')}
                 </div>
-                {logs.length === 0 && <div className="text-[#666] italic">{t('panel.noData')}</div>}
+                {logs.length === 0 && <div className="text-[var(--st-info-text)] italic opacity-80">{t('panel.noData')}</div>}
                 {logs.map((log, index) => (
-                    <div key={index} className={`whitespace-pre-wrap break-all font-mono ${log.type === 'TX' ? 'text-[#ce9178]' :
-                        log.type === 'RX' ? 'text-[#6a9955]' :
-                            log.type === 'ERROR' ? 'text-[#f48771]' :
-                                'text-[#969696]'
+                    <div key={index} className={`whitespace-pre-wrap break-all font-mono ${log.type === 'TX' ? 'text-[var(--st-tx-text)]' :
+                        log.type === 'RX' ? 'text-[var(--st-rx-text)]' :
+                            log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
+                                'text-[var(--st-info-text)]'
                         }`}>
-                        <span className="text-[#569cd6] text-xs mr-2">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                        <span className="text-[var(--st-timestamp)] text-xs mr-2">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
                         {log.type === 'TX' ? '→ ' : log.type === 'RX' ? '← ' : ''}
                         {/* We always show string here for the mini-terminal, or we could use formatData similar to Monitor */}
                         {typeof log.data === 'string' ? log.data : new TextDecoder().decode(log.data)}

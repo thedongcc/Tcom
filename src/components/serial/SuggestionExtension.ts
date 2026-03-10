@@ -102,7 +102,7 @@ export const getSuggestionOptions = () => ({
                 type: 'timestamp',
                 config: { format: 'seconds' },
                 icon: Clock,
-                iconColor: 'text-[#4fc1ff]',
+                iconColor: 'text-[var(--st-token-timestamp)]',
                 command: ({ editor, range }: any) => {
                     editor
                         .chain()
@@ -117,7 +117,7 @@ export const getSuggestionOptions = () => ({
                 type: 'timestamp',
                 config: { format: 'milliseconds' }, // Correct type literal
                 icon: Clock,
-                iconColor: 'text-[#4fc1ff]',
+                iconColor: 'text-[var(--st-token-timestamp)]',
                 command: ({ editor, range }: any) => {
                     editor
                         .chain()
@@ -132,7 +132,7 @@ export const getSuggestionOptions = () => ({
                 type: 'auto_inc',
                 config: { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 },
                 icon: Settings,
-                iconColor: 'text-[#c586c0]',
+                iconColor: 'text-[var(--st-token-auto-inc)]',
                 command: ({ editor, range }: any) => {
                     editor
                         .chain()

@@ -103,6 +103,38 @@ declare global {
         appAPI: {
             factoryReset: () => Promise<{ success: true } | { success: false; error: string }>;
         }
+        themeAPI: {
+            onStatusChanged: (callback: (isOpen: boolean) => void) => () => void;
+            openThemeEditor: () => Promise<void>;
+            closeThemeEditor: () => Promise<void>;
+            isWindowOpen: () => Promise<boolean>;
+            save?: (id: string, themeDef: any) => Promise<{ success: boolean; error?: string }>;
+            applyPreview?: (edits: Record<string, string>) => void;
+            getPendingEdits?: (themeId: string) => Promise<Record<string, string> | null>;
+            getAllPendingEdits?: () => Promise<Record<string, Record<string, string>>>;
+            clearAllPendingEdits?: () => void;
+            setPendingEdits?: (themeId: string, edits: Record<string, string> | null) => void;
+            startInspectorMode?: () => void;
+            stopInspectorMode?: () => void;
+            stopInspector?: () => void;
+            onComponentPicked?: (callback: (data: { compKey: string | null, className: string, outerHTML: string }) => void) => () => void;
+            onInspectorStopped?: (callback: () => void) => () => void;
+            getExpandedGroups?: () => Promise<Record<string, boolean>>;
+            setExpandedGroups?: (groups: Record<string, boolean>) => void;
+            initData?: () => Promise<{ pendingEdits: Record<string, Record<string, string>>; expandedGroups: Record<string, boolean> }>;
+            onApplyPreview?: (callback: (edits: Record<string, string>) => void) => () => void;
+            onEditorClosed?: (callback: () => void) => () => void;
+            onReload?: (callback: () => void) => () => void;
+        }
+        EyeDropper?: any;
+        eyedropperAPI?: {
+            pick: () => Promise<{ success: boolean; color?: string; error?: string }>;
+            watchStart: () => Promise<{ success: boolean }>;
+            watchStop: () => Promise<{ success: boolean }>;
+            onColor: (cb: (color: string) => void) => () => void;
+            onPicked: (cb: (color: string) => void) => () => void;
+            onCanceled: (cb: () => void) => () => void;
+        }
     }
 }
 

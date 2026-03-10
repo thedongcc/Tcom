@@ -125,8 +125,8 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             ref={setNodeRef}
             style={{ ...style, transform: undefined }} // Explicitly disable transform
             className={`group relative flex items-center gap-2 p-1.5 border border-transparent rounded-sm select-none ${selected
-                ? 'bg-[var(--list-active-background)] text-[var(--app-foreground)] border-[var(--focus-border-color)]'
-                : 'bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] text-[var(--app-foreground)]'
+                ? 'bg-[var(--list-active-background)] text-[var(--st-sidebar-text)] border-[var(--focus-border-color)]'
+                : 'bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] hover:border-[var(--focus-border-color)] text-[var(--st-sidebar-text)]'
                 }`}
             onClick={onSelect}
             onDoubleClick={(e) => { e.stopPropagation(); onEdit(item); }}

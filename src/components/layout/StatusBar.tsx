@@ -56,7 +56,10 @@ export const StatusBar = () => {
     };
 
     return (
-        <div className="h-[22px] bg-[var(--statusbar-background)] flex items-center justify-between px-2 text-[11px] text-[var(--app-foreground)] select-none cursor-default shrink-0 border-t border-[var(--border-color)]">
+        <div
+            className="h-[22px] bg-[var(--statusbar-background)] flex items-center justify-between px-2 text-[11px] text-[var(--st-statusbar-text)] select-none cursor-default shrink-0 border-t border-[var(--border-color)]"
+            data-component="statusbar"
+        >
             {/* Left Section */}
             <div className="flex items-center gap-3">
                 {/* Version (leftmost) */}
@@ -64,13 +67,13 @@ export const StatusBar = () => {
                     <span>v{version || '...'}</span>
                 </div>
 
-                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
 
                 {/* CPU */}
                 <Tooltip content={t('statusBar.cpuUsage').replace('{val}', String(cpu))} position="top" wrapperClassName="h-full flex items-center">
                     <div className="flex items-center gap-1 px-1 rounded-sm">
                         <Cpu size={11} className="opacity-60" />
-                        <span className={cpu > 30 ? 'text-[#f48771]' : 'opacity-80'}>{cpu}%</span>
+                        <span className={cpu > 30 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{cpu}%</span>
                     </div>
                 </Tooltip>
 
@@ -78,11 +81,11 @@ export const StatusBar = () => {
                 <Tooltip content={t('statusBar.memUsage').replace('{val}', String(memUsed))} position="top" wrapperClassName="h-full flex items-center">
                     <div className="flex items-center gap-1 px-1 rounded-sm">
                         <MemoryStick size={11} className="opacity-60" />
-                        <span className={memUsed > 500 ? 'text-[#f48771]' : 'opacity-80'}>{memUsed} MB</span>
+                        <span className={memUsed > 500 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{memUsed} MB</span>
                     </div>
                 </Tooltip>
 
-                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
 
                 {/* Check Update */}
                 <Tooltip content={t('statusBar.checkUpdate')} position="top" wrapperClassName="h-full flex items-center">
@@ -104,7 +107,7 @@ export const StatusBar = () => {
                     </div>
                 </Tooltip>
 
-                <div className="w-[1px] h-3 bg-[var(--app-foreground)] opacity-15" />
+                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
 
                 {/* GitHub */}
                 <Tooltip content={t('statusBar.openGithub')} position="top" wrapperClassName="h-full flex items-center">

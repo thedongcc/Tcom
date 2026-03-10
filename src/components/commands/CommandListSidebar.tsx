@@ -62,11 +62,11 @@ const CommandScrollArea = ({
             />
 
             {showLine && (
-                <div className="mx-1 mt-0.5 h-[2px] bg-[#007acc] shadow-[0_0_4px_#007acc] rounded-full" />
+                <div className="mx-1 mt-0.5 h-[2px] bg-[var(--st-command-drop-indicator)] shadow-[0_0_4px_var(--st-command-drop-indicator)] rounded-full" />
             )}
 
             {items.length === 0 && !showLine && (
-                <div className="p-4 text-center text-[13px] text-[#969696] opacity-60">
+                <div className="p-4 text-center text-[13px] text-[var(--st-command-empty-text)] opacity-60">
                     {t('command.noCommands')}<br />{t('command.noCommandsHint')}
                 </div>
             )}
@@ -512,13 +512,13 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     };
 
     return (
-        <div ref={containerRef} className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]" onContextMenu={(e) => { e.preventDefault(); }}>
-            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--sidebar-background)] border-b border-[var(--border-color)]">
+        <div ref={containerRef} className="flex flex-col h-full bg-[var(--command-sidebar-bg)] text-[var(--command-sidebar-text)]" onContextMenu={(e) => { e.preventDefault(); }} data-component="command-sidebar">
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--command-sidebar-bg)] border-b border-[var(--command-sidebar-border)]">
                 <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
                 <div className="flex items-center gap-1 relative">
                     <Tooltip content={t('command.menu')} position="bottom">
                         <button
-                            className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--app-foreground)]"
+                            className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)]"
                             onClick={() => setShowMenu(!showMenu)}
                         >
                             <MoreHorizontal size={14} />
@@ -530,25 +530,25 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
                             <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-lg rounded-sm z-50 text-[13px]">
                                 <div className="py-1">
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)); setShowMenu(false); }}>
                                         <FolderPlus size={14} /> {t('command.newGroup')}
                                     </div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }); setShowMenu(false); }}>
                                         <FileText size={14} /> {t('command.newCommand')}
                                     </div>
                                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { importCommands(); setShowMenu(false); }}>
                                         <Upload size={14} /> {t('command.import')}
                                     </div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
                                         onClick={() => { exportCommands(); setShowMenu(false); }}>
                                         <Upload size={14} className="rotate-180" /> {t('command.export')}
                                     </div>
                                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--app-foreground)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]"
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]"
                                         onClick={() => { clearAll(); setShowMenu(false); }}>
                                         <Trash2 size={14} /> {t('command.clearAll')}
                                     </div>

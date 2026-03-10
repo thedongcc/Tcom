@@ -4,19 +4,19 @@ export function useSystemMessage() {
     const { t } = useI18n();
 
     const parseSystemMessage = (type: 'INFO' | 'ERROR' | string, content: string) => {
-        let styleClass = "bg-[var(--button-secondary-background)] text-[var(--activitybar-inactive-foreground)] border-[var(--border-color)]";
+        let styleClass = "bg-[var(--sys-msg-default-bg)] text-[var(--sys-msg-default-text)] border-[var(--sys-msg-default-border)]";
         let translatedText = content;
 
         if (type === 'ERROR') {
-            styleClass = "bg-red-500/10 text-[var(--st-error-text)] border-red-500/30 shadow-sm";
+            styleClass = "bg-[var(--sys-msg-error-bg)] text-[var(--sys-msg-error-text)] border-[var(--sys-msg-error-border)] shadow-sm";
         } else if (content.includes('Internal Bridge Port')) {
-            styleClass = "bg-[var(--button-background)]/10 text-[var(--button-background)] border-[var(--button-background)]/30 font-semibold";
+            styleClass = "bg-[var(--sys-msg-bridge-bg)] text-[var(--sys-msg-bridge-text)] border-[var(--sys-msg-bridge-border)] font-semibold";
         } else if (content.includes('Physical Device')) {
-            styleClass = "bg-emerald-500/10 text-[var(--st-rx-label)] border-emerald-500/30 font-semibold";
+            styleClass = "bg-[var(--sys-msg-device-bg)] text-[var(--sys-msg-device-text)] border-[var(--sys-msg-device-border)] font-semibold";
         } else if (content.includes('Open') || content.includes('Connected') || content.includes('Restored') || content.includes('Started') || content.includes('Monitor started')) {
-            styleClass = "bg-emerald-500/10 text-[var(--st-rx-label)] border-emerald-500/30 font-bold";
+            styleClass = "bg-[var(--sys-msg-connected-bg)] text-[var(--sys-msg-connected-text)] border-[var(--sys-msg-connected-border)] font-bold";
         } else if (content.includes('Close') || content.includes('Disconnected') || content.includes('Error') || content.includes('failed')) {
-            styleClass = "bg-red-500/10 text-[var(--st-error-text)] border-red-500/30 font-bold";
+            styleClass = "bg-[var(--sys-msg-error-bg)] text-[var(--sys-msg-error-text)] border-[var(--sys-msg-error-border)] font-bold";
         }
 
         // Try to map English keys to translated text

@@ -47,11 +47,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div
                 className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[420px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                 onClick={e => e.stopPropagation()}
+                data-component="dialog"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
                     <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{title}</span>
-                    <button onClick={() => onResolve(false)} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
+                    <button onClick={() => onResolve(false)} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-icon-hover)] transition-colors">
                         <X size={14} />
                     </button>
                 </div>

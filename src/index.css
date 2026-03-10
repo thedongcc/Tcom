@@ -2,8 +2,8 @@
 
 @font-face {
   font-family: 'AppCoreFont';
+  /* Vite 会自动处理此路径，打包时生成正确的 hash 文件名 */
   src: url('./assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
-  /* 显式映射到 400, 500, 700，因为文件本身是 Medium */
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -44,37 +44,37 @@ div[data-direction="vertical"]:hover {
 
 :root {
   /* Dark+ (Default) */
-  --app-background: #1e1e1e;
-  --sidebar-background: #252526;
+  --app-background: var(--sys-bg-base);
+  --sidebar-background: var(--sys-bg-surface);
   --activitybar-background: #333333;
-  --statusbar-background: #252526;
+  --statusbar-background: var(--sys-bg-surface);
   --statusbar-debugging-background: #cc6633;
-  --titlebar-background: #3c3c3c;
-  --panel-background: #1e1e1e;
-  --border-color: #2b2b2b;
-  --app-foreground: #cccccc;
-  --input-background: #3c3c3c;
-  --input-foreground: #cccccc;
-  --input-border-color: #3c3c3c;
+  --titlebar-background: var(--sys-bg-elevated);
+  --panel-background: var(--sys-bg-base);
+  --border-color: var(--sys-border-base);
+  --app-foreground: var(--sys-text-primary);
+  --input-background: var(--sys-bg-elevated);
+  --input-foreground: var(--sys-text-primary);
+  --input-border-color: var(--sys-bg-elevated);
   --input-placeholder-color: #a6a6a6;
-  --hover-background: #2a2d2e;
+  --hover-background: var(--sys-bg-hover);
   --selection-background: #094771;
-  --accent-color: #007acc;
-  --focus-border-color: #007acc;
-  --list-hover-background: #2a2d2e;
-  --list-active-background: #37373d;
+  --accent-color: var(--sys-color-primary);
+  --focus-border-color: var(--sys-color-primary);
+  --list-hover-background: var(--sys-bg-hover);
+  --list-active-background: var(--sys-bg-active);
 
   /* Editor - Dark */
-  --editor-background: #1e1e1e;
+  --editor-background: var(--sys-bg-base);
 
   /* Checkbox - Dark */
-  --checkbox-background: #007acc;
-  --checkbox-border-color: #007acc;
-  --checkbox-foreground: #ffffff;
+  --checkbox-background: var(--sys-color-primary);
+  --checkbox-border-color: var(--sys-color-primary);
+  --checkbox-foreground: var(--sys-text-inverse);
 
   /* Settings - Dark */
-  --settings-header-background: #252526;
-  --settings-row-hover-background: #2a2d2e;
+  --settings-header-background: var(--sys-bg-surface);
+  --settings-row-hover-background: var(--sys-bg-hover);
 
   /* Scrollbar - Dark */
   --scrollbar-shadow-color: #000000;
@@ -83,31 +83,36 @@ div[data-direction="vertical"]:hover {
   --scrollbar-slider-active-color: #bfbfbf66;
 
   /* Additional Widgets - Dark */
-  --widget-background: #252526;
-  --widget-border-color: #454545;
+  --widget-background: var(--sys-bg-surface);
+  --widget-border-color: var(--sys-border-divider);
 
   /* Dropdown - Dark */
   --dropdown-background: #1f1f1f;
-  --dropdown-border-color: #454545;
+  --dropdown-border-color: var(--sys-border-divider);
   --dropdown-item-hover-background: #094771;
-  --dropdown-item-selected-foreground: #ffffff;
+  --dropdown-item-selected-foreground: var(--sys-text-inverse);
 
   /* Buttons & Links - Dark */
-  --button-background: #0e639c;
-  --button-foreground: #ffffff;
+  --button-background: var(--sys-color-primary-dark);
+  --button-foreground: var(--sys-text-inverse);
   --button-hover-background: #1177bb;
-  --button-secondary-background: #3c3c3c;
+  --button-secondary-background: var(--sys-bg-elevated);
   --button-secondary-hover-background: #4a4a4a;
   --link-foreground: #3794ff;
 
-  --activitybar-inactive-foreground: #858585;
+  --activitybar-inactive-foreground: var(--sys-text-secondary);
 
   /* Menu - Dark */
-  --menu-background: #252526;
-  --menu-foreground: #cccccc;
-  --menu-border-color: #454545;
+  --menu-background: var(--sys-bg-surface);
+  --menu-foreground: var(--sys-text-primary);
+  --menu-border-color: var(--sys-border-divider);
 
   --font-mono: 'AppCoreFont', 'Microsoft YaHei', monospace;
+
+  /* 字体排版默认值：防止 JS 注入前首帧字体大小异常 */
+  --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
+  --st-font-size: 15px;
+  --st-line-height: 1.5;
 
   /* JSON Syntax Highlighting - Default (Dark) */
   --st-json-key: #9cdcfe;
@@ -116,8 +121,159 @@ div[data-direction="vertical"]:hover {
   --st-json-boolean: #569cd6;
   --st-json-punctuation: #ffd700;
   --st-json-null: #569cd6;
-}
 
+  /* Control Characters Styles */
+  --st-ctrl-char-fg: var(--sys-text-secondary);
+  --st-ctrl-char-bg: rgba(128, 128, 128, 0.1);
+  --st-ctrl-char-border: rgba(128, 128, 128, 0.2);
+
+  /* === Component Tokens (Mapped to Semantic) === */
+
+  /* TitleBar */
+  --st-titlebar-text: var(--app-foreground);
+  --st-titlebar-icon: var(--sys-text-secondary);
+  --st-titlebar-icon-hover: var(--app-foreground);
+
+  /* ActivityBar */
+  --st-activitybar-icon-hover: var(--app-foreground);
+  --st-activitybar-icon-active: var(--sys-text-inverse);
+  --activitybar-active-border: var(--sys-color-primary);
+  --st-activitybar-menu-text: var(--app-foreground);
+
+  /* SideBar */
+  --st-sidebar-title-text: var(--sys-text-secondary);
+  --st-sidebar-text: var(--app-foreground);
+  --st-sidebar-muted-text: var(--sys-text-muted);
+  --st-sidebar-action-hover: var(--sys-bg-hover);
+  --st-sidebar-panel-bg: var(--sidebar-background);
+
+  /* StatusBar */
+  --st-statusbar-text: var(--sys-text-inverse);
+  --st-statusbar-divider: rgba(255, 255, 255, 0.2);
+
+  /* Session List Item */
+  --st-list-item-bg: transparent;
+  --session-item-hover-bg: var(--list-hover-background);
+  --session-item-active-bg: var(--list-active-background);
+  --session-item-active-border: var(--sys-color-primary);
+  --session-item-foreground: var(--app-foreground);
+
+  /* Serial Monitor */
+  --st-monitor-log-bg: var(--editor-background);
+  --st-monitor-toolbar-bg: var(--widget-background);
+  --st-monitor-toolbar-border: var(--widget-border-color);
+  --st-monitor-toolbar-foreground: var(--app-foreground);
+  --st-monitor-divider: var(--widget-border-color);
+
+  /* Serial Input */
+  --st-sendarea-bg: var(--widget-background);
+  --input-focus-border-color: var(--focus-border-color);
+
+  /* Monitor Bubble */
+  --st-msg-bubble-border: var(--widget-border-color);
+  --st-rx-bg: rgba(0, 0, 0, 0.2);
+  --st-tx-bg: rgba(255, 255, 255, 0.05);
+  --st-rx-text: var(--app-foreground);
+  --st-tx-text: var(--app-foreground);
+
+  /* MQTT Monitor */
+  --st-mqtt-toolbar-bg: var(--widget-background);
+  --st-mqtt-toolbar-border: var(--widget-border-color);
+
+  /* Theme Editor - Dark (Default) */
+  --theme-editor-bg: #1e1e1e;
+  --theme-editor-border: rgba(255, 255, 255, 0.08);
+  --theme-editor-card-bg: rgba(255, 255, 255, 0.02);
+  --theme-editor-card-border: rgba(255, 255, 255, 0.06);
+  --theme-editor-card-hover: rgba(255, 255, 255, 0.04);
+  --theme-editor-input-bg: rgba(255, 255, 255, 0.04);
+  --theme-editor-input-border: rgba(255, 255, 255, 0.1);
+  --theme-editor-input-focus: rgba(255, 255, 255, 0.06);
+  --theme-editor-btn-bg: rgba(255, 255, 255, 0.04);
+  --theme-editor-btn-hover: rgba(255, 255, 255, 0.07);
+  --theme-editor-inspect-bg: rgba(79, 70, 229, 0.1);
+  --theme-editor-inspect-border: rgba(79, 70, 229, 0.2);
+  --theme-editor-inspect-text: #818cf8;
+  --theme-editor-inspect-hover: rgba(79, 70, 229, 0.2);
+  --theme-editor-match-bg: rgba(167, 139, 250, 0.08);
+  /* 紫色系 */
+  --theme-editor-match-border: rgba(167, 139, 250, 0.2);
+  --theme-editor-match-text: #c084fc;
+
+  /* Dialog */
+  --st-dialog-header-bg: var(--widget-background);
+  --st-dialog-content-bg: var(--app-background);
+  --st-dialog-footer-bg: var(--widget-background);
+  --st-dialog-text: var(--app-foreground);
+
+  /* === 独立专属 Component Tokens（防止修改一个变量误伤多个组件）=== */
+
+  /* 会话列表侧边栏 - 独立于普通 sidebar */
+  --session-list-sidebar-bg: var(--sidebar-background);
+  --session-list-sidebar-text: var(--st-sidebar-text);
+  --session-list-sidebar-muted: var(--st-sidebar-muted-text);
+  --session-list-sidebar-border: var(--border-color);
+  --session-list-sidebar-header-bg: var(--sidebar-background);
+
+  /* 指令侧边栏 - 独立于普通 sidebar */
+  --command-sidebar-bg: var(--sidebar-background);
+  --command-sidebar-text: var(--st-sidebar-text);
+  --command-sidebar-border: var(--border-color);
+  --command-sidebar-empty-text: var(--st-command-empty-text);
+  --command-sidebar-drop-indicator: var(--st-command-drop-indicator);
+
+  /* 扩展侧边栏 - 独立于普通 sidebar */
+  --extensions-sidebar-bg: var(--sidebar-background);
+  --extensions-sidebar-text: var(--st-sidebar-text);
+  --extensions-sidebar-hover: var(--list-hover-background);
+  --extensions-sidebar-active-text: var(--st-extension-active-text);
+  --extensions-sidebar-user-text: var(--st-extension-user-text);
+  --extensions-sidebar-warning-text: var(--st-extension-warning-text);
+
+  /* 串口配置侧边栏 - 独立于普通 sidebar */
+  --serial-config-bg: var(--sidebar-background);
+  --serial-config-text: var(--st-monitor-config-text);
+  --serial-config-label: var(--st-monitor-config-label);
+
+  /* MQTT 配置面板 - 独立于 serial 配置 */
+  --mqtt-config-bg: var(--st-config-item-bg);
+  --mqtt-config-text: var(--st-monitor-config-text);
+  --mqtt-config-input-bg: var(--input-background);
+  --mqtt-config-input-text: var(--input-foreground);
+  --mqtt-config-success-bg: var(--st-config-success-bg);
+
+  /* 虚拟串口终端 - 独立于其他终端 */
+  --monitor-terminal-bg: var(--app-background);
+  --monitor-terminal-toolbar-bg: var(--st-toolbar-bg);
+  --monitor-terminal-toolbar-border: var(--st-widget-border);
+  --monitor-terminal-toolbar-text: var(--st-monitor-toolbar-foreground);
+
+  /* 编辑器主区域 Tab 栏 - 独立于全局背景 */
+  --editor-area-bg: var(--app-background);
+  --editor-area-tabs-bg: var(--st-editor-tabs-bg);
+  --editor-area-tab-border: var(--widget-border-color);
+  --editor-area-tab-text: var(--st-panel-header-text);
+  --editor-area-accent: var(--accent-color);
+
+  /* 右键菜单 - 独立专属（与下拉框分离） */
+  --context-menu-bg: var(--menu-background);
+  --context-menu-text: var(--menu-foreground);
+  --context-menu-border: var(--menu-border-color);
+  --context-menu-item-hover: var(--context-menu-hover-bg);
+
+  /* 设置编辑器 - 独立于编辑器区域 */
+  --settings-editor-bg: var(--editor-background);
+  --settings-editor-toolbar-bg: var(--widget-background);
+  --settings-editor-title-text: var(--st-settings-title-text);
+  --settings-editor-text: var(--st-settings-text);
+  --settings-editor-danger-bg: var(--st-settings-danger-bg);
+
+  /* 新建会话对话框 - 独立于通用 Dialog */
+  --new-session-dialog-bg: var(--st-dialog-content-bg);
+  --new-session-dialog-header-bg: var(--st-dialog-header-bg);
+  --new-session-dialog-text: var(--st-dialog-text);
+  --new-session-dialog-border: var(--menu-border-color);
+}
 
 /* 主题 CSS 变量由 JS 动态注入到 :root（见 src/themes/index.ts applyTheme）*/
 /* :root 中的 Dark 主题变量作为默认值，防止 JS 加载前页面闪烁 */
@@ -238,6 +394,53 @@ body {
 }
 
 /* Fast lightweight DOM slide-in for thousands of entries */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.15s ease-out forwards;
+}
+
+/* VS Code Style react-colorful overrides */
+.vscode-color-picker {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.vscode-color-picker .react-colorful__saturation {
+  border-radius: 4px 4px 0 0 !important;
+  height: 150px !important;
+  border-bottom: 1px solid #111;
+}
+
+.vscode-color-picker .react-colorful__hue,
+.vscode-color-picker .react-colorful__alpha {
+  width: calc(100% - 66px) !important;
+  height: 12px !important;
+  border-radius: 2px !important;
+  margin-left: 56px !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+.vscode-color-picker .react-colorful__alpha {
+  margin-top: 0px !important;
+}
+
+.vscode-color-picker .react-colorful__pointer {
+  width: 16px !important;
+  height: 16px !important;
+}
+
 @keyframes slide-in-up {
   from {
     opacity: 0;
@@ -276,6 +479,22 @@ input[type="number"] {
   /* Firefox */
 }
 
+/* 主题编辑器悬浮滚动条 - 纯 CSS 驱动，零 React 状态 */
+.floating-scrollbar-thumb {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* 滚动容器 hover 时，滚动条半透明显示 */
+.group\/scroll-container:hover .floating-scrollbar-thumb {
+  opacity: 0.4;
+}
+
+/* 滚动中时，滚动条完全显示 */
+.floating-scrollbar-thumb.is-scrolling {
+  opacity: 1 !important;
+}
+
 /* 移除所有点击或拖拽时的默认焦点橙色/蓝色框 */
 *:focus {
   outline: none !important;
@@ -286,4 +505,36 @@ div[role="button"]:focus,
 div[tabindex]:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* ===== 属性检查器颜色选择器 react-colorful 紧凑样式 ===== */
+.inspector-colorful-wrap .react-colorful {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+.inspector-colorful-wrap .react-colorful__saturation {
+  height: 140px !important;
+  border-radius: 0 !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+}
+
+.inspector-colorful-wrap .react-colorful__hue {
+  height: 10px !important;
+  border-radius: 5px !important;
+  margin: 8px 10px 0 10px !important;
+}
+
+.inspector-colorful-wrap .react-colorful__alpha {
+  height: 10px !important;
+  border-radius: 5px !important;
+  margin: 6px 10px 8px 10px !important;
+}
+
+.inspector-colorful-wrap .react-colorful__pointer {
+  width: 14px !important;
+  height: 14px !important;
+  border-width: 2px !important;
 }

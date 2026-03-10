@@ -234,6 +234,7 @@ export const enUS = {
         smoothAnimation: 'Smooth Animation',
         flashNewMessage: 'New Message Flash',
         timestamp: 'Timestamp',
+        showControlChars: 'Show Hidden Chars (CR/LF)',
         dataLength: 'Data Length',
         mergeRepeats: 'Merge Repeats',
         exportLog: 'Export Log',
@@ -264,7 +265,23 @@ export const enUS = {
         crcExclude2: '-2 (Exclude last 2)',
         crcExclude3: '-3 (Exclude last 3)',
         packetTimeout: 'Packet Timeout (ms)',
-        // Monitor Config Panel
+        rxPacketMode_timeout_tip: 'Data received within the timeout window is merged into one entry. A larger value merges more data — ideal for bursty streams.',
+        rxPacketMode_delimiter_tip: 'Split on a specific character or byte sequence. Supports \\r\\n, \\n escape sequences or direct HEX (e.g. 0D0A). Great for AT commands, NMEA, Modbus ASCII.',
+        rxPacketMode_fixedLength_tip: 'Split every N bytes into a new line. Ideal for fixed-frame binary protocols where frame boundaries must be exactly aligned.',
+        rxPacketMode_none: 'Off',
+        rxPacketMode_timeout: 'Timeout',
+        rxPacketMode_delimiter: 'Char',
+        rxPacketMode_fixedLength: 'Fixed Length',
+        rxPacketMode_delimiterWithTimeout: 'Char + Timeout',
+        rxPacketMode_delimiterWithTimeout_tip: 'Splits on delimiter first, then falls back to timeout if no delimiter arrives in time. The most robust option — prevents the UI from stalling if hardware drops the terminator.',
+        rxPacketMode_fixedLengthWithTimeout: 'Fixed Length + Timeout',
+        rxPacketMode_fixedLengthWithTimeout_tip: 'Prioritize fixed length, force packet split if timeout occurs',
+        rxPacketMode_none_tip: 'No merging. Each batch of raw data is displayed as a separate entry. Suitable for low-speed debugging or small data volumes.',
+        rxPacketSection: 'RX Packet Mode',
+        rxDelimiterLabel: 'Delimiter',
+        rxFixedLengthLabel: 'Bytes/Frame',
+        rxTimeoutMsLabel: 'Timeout (ms)',
+        rxDelimiterPlaceholder: 'e.g. \\r\\n or 0D0A',
         settings: 'Monitor Settings',
         enableVirtualMonitor: 'Enable Virtual Serial Port',
         adminRequired: '\u26a0\ufe0f Admin rights required to use virtual serial port. Please restart as administrator.',
@@ -405,6 +422,16 @@ export const enUS = {
         prevMatch: 'Previous Match (Shift+Enter)',
         nextMatch: 'Next Match (Enter)',
         closeSearch: 'Close Search',
+    },
+
+    // Theme Editor
+    themeEditor: {
+        modifiedCount: '{count} Modified',
+        close: 'Close Editor',
+        closeInspect: 'Close Inspect',
+        screenPicker: 'Pick from screen',
+        copyVar: 'Click to copy variable name',
+        copied: 'Copied!'
     },
 
     // Graph editor

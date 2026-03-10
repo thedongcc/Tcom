@@ -85,11 +85,11 @@ export const SerialToken = Node.create<SerialTokenOptions>({
 
             // Apply type-specific colors
             const updateColors = (type: string) => {
-                span.classList.remove('text-[#4ec9b0]', 'text-[#4fc1ff]', 'text-[#c586c0]', 'text-[#f48771]');
-                if (type === 'crc') span.classList.add('text-[#4ec9b0]');
-                else if (type === 'timestamp') span.classList.add('text-[#4fc1ff]');
-                else if (type === 'auto_inc') span.classList.add('text-[#c586c0]');
-                else span.classList.add('text-[#f48771]');
+                span.classList.remove('text-[var(--st-token-crc)]', 'text-[var(--st-token-timestamp)]', 'text-[var(--st-token-auto-inc)]', 'text-[var(--st-token-flag)]');
+                if (type === 'crc') span.classList.add('text-[var(--st-token-crc)]');
+                else if (type === 'timestamp') span.classList.add('text-[var(--st-token-timestamp)]');
+                else if (type === 'auto_inc') span.classList.add('text-[var(--st-token-auto-inc)]');
+                else span.classList.add('text-[var(--st-token-flag)]');
             };
 
             updateColors(node.attrs.type);

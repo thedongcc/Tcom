@@ -64,11 +64,12 @@ export const SessionListItem = ({
             style={style}
             {...attributes}
             {...listeners}
-            className={`px-4 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 group border-l-4 focus:outline-none outline-none ${isActive ? 'border-[var(--accent-color)] bg-[var(--list-active-background)]' : 'border-transparent'}`}
+            className={`px-4 py-1.5 text-[13px] bg-[var(--st-list-item-bg,transparent)] text-[var(--session-item-foreground,inherit)] hover:bg-[var(--session-item-hover-bg)] cursor-pointer flex items-center gap-2 group border-l-4 focus:outline-none outline-none ${isActive ? 'border-[var(--session-item-active-border)] bg-[var(--session-item-active-bg)]' : 'border-transparent'}`}
             onClick={onClick}
             onContextMenu={onContextMenu}
+            data-component="session-list-item"
         >
-            <span className={`${session.type === 'mqtt' ? 'text-[#4ec9b0]' : 'text-[#e8b575]'}`}>
+            <span className={`${session.type === 'mqtt' ? 'text-[var(--st-config-success-text)]' : 'text-[var(--st-session-serial-text)]'}`}>
                 {getIconForType(session.type)}
             </span>
 
@@ -101,7 +102,7 @@ export const SessionListItem = ({
                                 </Tooltip>
                             </span>
                         )}
-                        <span className="text-[10px] text-[#858585] truncate font-mono opacity-80 leading-tight">
+                        <span className="text-[10px] text-[var(--st-config-muted-text)] truncate font-mono opacity-80 leading-tight">
                             {session.type === 'serial'
                                 ? (portInfo
                                     ? formatPortInfo(portInfo)
