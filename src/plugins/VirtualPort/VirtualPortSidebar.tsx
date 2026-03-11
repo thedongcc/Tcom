@@ -198,8 +198,8 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                             filters: [{ name: 'com0com installer (setupc.exe)', extensions: ['exe'] }],
                                             properties: ['openFile']
                                         });
-                                        if (result && !result.canceled && result.filePaths.length > 0) {
-                                            setSetupcPath(result.filePaths[0]);
+                                        if (result && !(result as any).canceled && (result as any).filePaths.length > 0) {
+                                            setSetupcPath((result as any).filePaths[0]);
                                         }
                                     } catch (e) {
                                         console.error(e);

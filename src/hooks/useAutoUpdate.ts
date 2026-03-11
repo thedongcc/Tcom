@@ -23,7 +23,7 @@ export const useAutoUpdate = () => {
 
         checkVersionJump();
 
-        const removeStatusListener = window.updateAPI.onStatus((data) => {
+        const removeStatusListener = window.updateAPI.onStatus((data: any) => {
 
             if (data.type === 'available') {
                 setHasUpdate(true);

@@ -28,7 +28,7 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
             setStatus({ type: 'error', error: err.message, releaseUrl: 'https://github.com/thedongcc/Tcom/releases' });
         });
 
-        const removeStatusListener = window.updateAPI.onStatus((data) => {
+        const removeStatusListener = window.updateAPI.onStatus((data: any) => {
             console.log('Update Status:', data);
             if (data.type === 'available' || data.type === 'downloaded' || data.type === 'error' || data.type === 'checking' || data.type === 'not-available') {
                 setStatus(prev => ({ ...prev, ...data }));
@@ -38,7 +38,7 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
             }
         });
 
-        const removeProgressListener = window.updateAPI.onProgress((data) => {
+        const removeProgressListener = window.updateAPI.onProgress((data: any) => {
             setProgress(data);
             setStatus(prev => ({ ...prev, type: 'downloading' }));
         });

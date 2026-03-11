@@ -46,6 +46,29 @@ process.on('uncaughtException', (error) => {
   // Optional: check if we should app.quit() for other errors
 });
 
+// ⚡ Windows 高精度定时器：将系统 multimedia timer 分辨率从 15.6ms → 1ms
+// 影响进程内所有线程的 setTimeout / Atomics.wait / uv_timer，是实现精准串口定时的前提
+// 其他软件（SerialPort 工具、游戏等）能做到 ±1ms 的根本原因就是调用了这个 API
+// koffi 为纯 JS FFI 库，无需 native 编译，安全用于生产
+if (process.platform === 'win32') {
+  try {
+    const koffi = require('koffi');
+    const winmm = koffi.load('winmm');
+    const timeBeginPeriod = winmm.func('uint __stdcall timeBeginPeriod(uint uPeriod)');
+    const timeEndPeriod = winmm.func('uint __stdcall timeEndPeriod(uint uPeriod)');
+    const result = timeBeginPeriod(1);
+    if (result === 0) {
+      console.log('[Main] High-resolution timer enabled (1ms precision)');
+      // 退出时释放，让系统恢复默认分辨率（节省其他进程的电量）
+      process.on('exit', () => timeEndPeriod(1));
+    } else {
+      console.warn('[Main] timeBeginPeriod(1) returned:', result);
+    }
+  } catch (e) {
+    console.warn('[Main] Could not enable high-resolution timer:', e);
+  }
+}
+
 // --- File Write Queue to prevent corruption during concurrent saves ---
 class FileWriteQueue {
   private static queues: Map<string, Promise<void>> = new Map();
@@ -252,7 +275,8 @@ class SerialService {
           // Setup listeners with connectionId
           port.on('data', (data: any) => {
             if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-              this.mainWindow.webContents.send('serial:data', { connectionId, data });
+              // ⚡ 主进程立即打时间戳，精度高于渲染进程接收时再打
+              this.mainWindow.webContents.send('serial:data', { connectionId, data, timestamp: Date.now() });
             }
           });
 
@@ -312,6 +336,115 @@ class SerialService {
         resolve({ success: false, error: 'Port not open' });
       }
     });
+  }
+
+  // ⚡ 高精度定时发送（Worker Thread 方案）
+  //
+  // 架构：独立 worker 线程完全隔离，主进程事件循环零负担
+  //   粗粒度等待 → Atomics.wait()    ：OS 级阻塞，0% CPU，精度受 OS timer 限制
+  //   最后 5ms   → performance.now() ：worker 线程自旋，精度 ~0.1ms，不影响主线程
+  //   漂移补偿   → 绝对时间轴         ：nextFireTime += interval，确保长期平均准确
+  //
+  // 对比上一方案（setImmediate）：自旋在独立线程，不与 RX 数据处理竞争主线程时间槽
+  private timedSendHandles: Map<string, { worker: any; control: Int32Array }> = new Map();
+
+  startTimedSend(connectionId: string, data: number[], intervalMs: number) {
+    this.stopTimedSend(connectionId);
+
+    const port = this.ports.get(connectionId);
+    if (!port || !port.isOpen) {
+      return { success: false, error: 'Port not open' };
+    }
+
+    const payload = Buffer.from(data);
+    const { Worker } = require('worker_threads');
+
+    // SharedArrayBuffer 作停止信号：control[0] = 0 运行中，1 = 停止
+    const controlBuf = new SharedArrayBuffer(4);
+    const control = new Int32Array(controlBuf);
+
+    // Worker 代码内联，避免打包/路径问题
+    // 全程在独立线程执行，主线程 IPC 接收、数据处理不受干扰
+    const WORKER_CODE = `
+const { workerData, parentPort } = require('worker_threads');
+const { performance } = require('perf_hooks');
+const control = new Int32Array(workerData.controlBuf);
+
+// 提前 N ms 从 Atomics.wait 醒来进入精确自旋
+const LEAD_MS = 5;
+
+// 绝对时间轴，消除累积漂移（不以实际触发时刻为基准）
+let nextFireTime = performance.now() + workerData.intervalMs;
+
+while (true) {
+  const remaining = nextFireTime - performance.now();
+
+  if (remaining > LEAD_MS) {
+    // 粗粒度阻塞等待（OS 级，0% CPU），精确到 OS timer 精度
+    const coarse = Math.floor(remaining - LEAD_MS);
+    if (Atomics.wait(control, 0, 0, coarse) !== 'timed-out') break;
+  }
+
+  // 精确自旋（在 worker 线程）：高 CPU 局限在独立线程，不影响主线程事件循环
+  while (performance.now() < nextFireTime) {
+    if (Atomics.load(control, 0) !== 0) process.exit(0);
+  }
+
+  // 触发：推进绝对时间轴后通知主线程
+  nextFireTime += workerData.intervalMs;
+  parentPort.postMessage(null);
+}
+`;
+
+    const worker = new Worker(WORKER_CODE, {
+      eval: true,
+      workerData: { intervalMs, controlBuf }
+    });
+
+    // 主线程收到 tick：写串口 + 通知渲染进程记录日志
+    worker.on('message', () => {
+      const p = this.ports.get(connectionId);
+      if (!p || !p.isOpen) {
+        this.stopTimedSend(connectionId);
+        return;
+      }
+      const ts = Date.now();
+      p.write(payload, (err: any) => {
+        if (!err && this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('serial:timed-send-tick', {
+            connectionId, data: Array.from(data), timestamp: ts
+          });
+        }
+      });
+    });
+
+    worker.on('error', (err: Error) => {
+      console.error(`[TimedSend] Worker error for ${connectionId}:`, err.message);
+      this.timedSendHandles.delete(connectionId);
+    });
+
+    this.timedSendHandles.set(connectionId, { worker, control });
+    return { success: true };
+  }
+
+  stopTimedSend(connectionId: string) {
+    const handle = this.timedSendHandles.get(connectionId);
+    if (handle) {
+      Atomics.store(handle.control, 0, 1); // 通知 worker 退出
+      Atomics.notify(handle.control, 0);   // 唤醒 Atomics.wait
+      handle.worker.terminate();           // 强制终止（防止自旋阶段无法响应）
+      this.timedSendHandles.delete(connectionId);
+    }
+    return { success: true };
+  }
+
+  stopAllTimedSends() {
+    this.timedSendHandles.forEach((handle) => {
+      Atomics.store(handle.control, 0, 1);
+      Atomics.notify(handle.control, 0);
+      handle.worker.terminate();
+    });
+    this.timedSendHandles.clear();
   }
 }
 
@@ -678,8 +811,8 @@ function createWindow() {
     icon: VITE_DEV_SERVER_URL
       ? path.join(__dirname, '../resources/icons/icon.png')
       : path.join(process.resourcesPath, 'resources/icons/icon.png'),
-    backgroundColor: '#1e1e1e', // Fix white flash
-    show: true, // Show immediately
+    backgroundColor: '#1e1e1e',
+    show: false, // 等 ready-to-show 再显示，彻底消除空白帧
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -726,6 +859,15 @@ function createWindow() {
 
   ipcMain.handle('serial:write', async (_event, { connectionId, data }) => {
     return serialService?.write(connectionId, data)
+  })
+
+  // ⚡ 高精度定时发送：在主进程 Node.js 层执行，精度约 1~2ms（远优于渲染进程 ~15ms）
+  ipcMain.handle('serial:timed-send-start', async (_event, { connectionId, data, intervalMs }) => {
+    return serialService?.startTimedSend(connectionId, data, intervalMs) ?? { success: false, error: 'SerialService not ready' };
+  })
+
+  ipcMain.handle('serial:timed-send-stop', async (_event, { connectionId }) => {
+    return serialService?.stopTimedSend(connectionId) ?? { success: false };
   })
 
   // Monitor IPC
@@ -1672,7 +1814,9 @@ function createWindow() {
   });
 
   // MQTT Service Logic
-  const mqtt = require('mqtt');
+  // ⚡ mqtt 延迟加载：只在首次连接时才 require，避免阻塞主进程启动
+  let _mqttModule: any = null;
+  const getMqtt = () => { if (!_mqttModule) _mqttModule = require('mqtt'); return _mqttModule; };
   const mqttClients = new Map();
   const pendingMqttConnections = new Set();
 
@@ -1744,7 +1888,7 @@ function createWindow() {
       let client: any = null;
 
       try {
-        client = mqtt.connect(url, options);
+        client = getMqtt().connect(url, options);
       } catch (err: any) {
         // Synchronous error (e.g. invalid URL)
         console.error(`[MQTT] Sync Error ${connectionId}:`, err);

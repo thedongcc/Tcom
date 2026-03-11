@@ -94,7 +94,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
     // 初次挂载加载一次及监听 localStorage 同步跨窗口状态
     useEffect(() => {
-        loadThemes();
+        // ⚡ 主题文件延迟加载：首帧已由 useState initializer 注入 CSS 变量，
+        //   放到下一个宏任务，让 React 完成首次渲染后再走 IPC 文件读取
+        const themeLoadTimer = setTimeout(loadThemes, 0);
 
         const handleStorage = (e: StorageEvent) => {
             if (e.key === 'tcom-settings' && e.newValue) {
@@ -110,7 +112,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         };
 
         window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
+        return () => {
+            clearTimeout(themeLoadTimer);
+            window.removeEventListener('storage', handleStorage);
+        };
     }, []);
 
     // ── 主题 CSS 变量注入 ──────────────────────────────────────────────────────
@@ -313,7 +318,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
         // ── 事件订阅 ──
 
-        const unInspectorStart = api.onInspectorStarted?.(() => {
+        const unInspectorStart = (api as any).onInspectorStarted?.(() => {
             document.body.style.cursor = 'crosshair';
             window.addEventListener('mouseover', handleMouseOver, true);
             window.addEventListener('mouseout', handleMouseOut, true);

@@ -18,7 +18,7 @@ export const StatusBar = () => {
     // Poll app-specific stats every 3s
     useEffect(() => {
         const fetchStats = () => {
-            window.updateAPI?.getStats().then(stats => {
+            window.updateAPI?.getStats().then((stats: any) => {
                 setCpu(stats.cpu);
                 setMemUsed(stats.memUsed);
             }).catch(() => { });
@@ -30,7 +30,7 @@ export const StatusBar = () => {
 
     // Listen for update status
     useEffect(() => {
-        const cleanup = window.updateAPI?.onStatus((data) => {
+        const cleanup = window.updateAPI?.onStatus((data: any) => {
             if (data.type === 'checking') setUpdateStatus(t('statusBar.checking'));
             else if (data.type === 'available') setUpdateStatus(`v${data.version} ${t('statusBar.available')}`);
             else if (data.type === 'not-available') {

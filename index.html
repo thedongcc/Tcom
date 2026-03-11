@@ -13,6 +13,29 @@
 </head>
 
 <body>
+  <!-- ⚡ 同步从 localStorage 读取主题颜色，避免 loading 界面颜色闪烁 -->
+  <script>
+    (function () {
+      try {
+        var settings = JSON.parse(localStorage.getItem('tcom-settings') || '{}');
+        var themeId = settings.theme || 'dark';
+        // 根据主题模式设置 loading 骨架颜色
+        var isDark = themeId !== 'light';
+        var bg = isDark ? '#1e1e1e' : '#ffffff';
+        var titlebarBg = isDark ? '#3c3c3c' : '#dddddd';
+        var textColor = isDark ? '#cccccc' : '#616161';
+        var spinnerBorder = isDark ? '#3c3c3c' : '#e0e0e0';
+        // 注入关键颜色变量到 :root
+        var root = document.documentElement;
+        root.style.setProperty('--loading-bg', bg);
+        root.style.setProperty('--loading-titlebar', titlebarBg);
+        root.style.setProperty('--loading-text', textColor);
+        root.style.setProperty('--loading-spinner-track', spinnerBorder);
+        // 更新 meta theme-color（部分平台）
+        document.documentElement.style.backgroundColor = bg;
+      } catch (e) { }
+    })();
+  </script>
   <div id="root">
     <style>
       /* 提前设置字体变量默认值，防止 JS 注入前出现字体大小跳变 */
@@ -21,6 +44,17 @@
         --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
         --st-font-size: 15px;
         --st-line-height: 1.5;
+        /* loading 骨架颜色默认值（被上方内联脚本覆盖为用户主题颜色） */
+        --loading-bg: #1e1e1e;
+        --loading-titlebar: #3c3c3c;
+        --loading-text: #cccccc;
+        --loading-spinner-track: #3c3c3c;
+      }
+
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: var(--loading-bg);
       }
 
       .loading-container {
@@ -28,8 +62,8 @@
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background-color: #1e1e1e;
-        color: #cccccc;
+        background-color: var(--loading-bg);
+        color: var(--loading-text);
         font-family: monospace;
         flex-direction: column;
         gap: 16px;
@@ -44,20 +78,15 @@
         left: 0;
         width: 100%;
         height: 30px;
-        background-color: #3c3c3c;
+        background-color: var(--loading-titlebar);
         -webkit-app-region: drag;
         user-select: none;
-      }
-
-      body {
-        margin: 0;
-        overflow: hidden;
       }
 
       .spinner {
         width: 24px;
         height: 24px;
-        border: 3px solid #3c3c3c;
+        border: 3px solid var(--loading-spinner-track);
         border-top-color: #007acc;
         border-radius: 50%;
         animation: spin 1s linear infinite;

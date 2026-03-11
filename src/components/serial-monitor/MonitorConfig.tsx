@@ -223,7 +223,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                         <label className="text-[11px] text-[var(--app-foreground)] font-medium flex justify-between">
                             {t('monitor.physicalPort')}
                             <Tooltip content={t('monitor.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
-                                <button onClick={listPorts} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors">
+                                <button onClick={() => listPorts()} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors">
                                     <RefreshCw size={12} />
                                 </button>
                             </Tooltip>

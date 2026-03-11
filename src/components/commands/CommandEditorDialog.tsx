@@ -126,11 +126,11 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                                     onSend={() => { }} // 编辑器模式不发送
                                     initialContent={commandItem.payload}
                                     initialHTML={commandItem.html}
-                                    initialTokens={commandItem.tokens}
+                                    initialTokens={commandItem.tokens as any}
                                     initialMode={commandItem.mode}
                                     initialLineEnding={commandItem.lineEnding}
                                     onStateChange={(state) => {
-                                        inputStateRef.current = state;
+                                        inputStateRef.current = state as any;
                                     }}
                                     hideExtras
                                 />

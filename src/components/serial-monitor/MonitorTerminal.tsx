@@ -32,6 +32,13 @@ import { useI18n } from '../../context/I18nContext';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
 import { Tooltip } from '../common/Tooltip';
 
+interface SearchMatch {
+    logId: string;
+    startIndex: number;
+    endIndex: number;
+    [key: string]: any;
+}
+
 interface MonitorTerminalProps {
     session: SessionState;
     onShowSettings?: (view: string) => void;
@@ -58,7 +65,9 @@ const LogItem = React.memo(({
     activeMatch = null,
     mergeRepeats = true,
     flashNewMessage,
-    fontSize = 15
+    fontSize = 15,
+    rxCRC,
+    crcEnabled
 }: any) => {
     const renderHighlightedText = (log: any, text: string) => {
         const logMatches = matches.filter((m: any) => m.logId === log.id);
@@ -237,7 +246,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
         if (queryFonts) {
             queryFonts().then((res: any) => {
-                const fonts = Array.isArray(res) ? res : (res?.fonts || []);
+                const fonts = Array.isArray(res) ? res : ((res as any)?.fonts || []);
                 const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
 
                 const mono: any[] = [];
@@ -424,7 +433,13 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     }, [saveUIState]);
 
     const handleSaveCommand = (updates: any) => {
-        addCommand({ ...updates, parentId: undefined });
+        addCommand({
+            ...updates,
+            payload: updates.payload || '',
+            mode: updates.mode || 'text',
+            tokens: updates.tokens || {},
+            parentId: undefined
+        });
         setShowCommandEditor(null);
     };
 
@@ -623,6 +638,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
+                        const rxCRC = ((config as any).rxCRC as any) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+                        const crcEnabled = rxCRC.enabled || false;
 
                         return (
                             <LogItem
@@ -646,6 +663,8 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                                 mergeRepeats={mergeRepeats}
                                 flashNewMessage={flashNewMessage}
                                 fontSize={fontSize}
+                                rxCRC={rxCRC as any}
+                                crcEnabled={crcEnabled as any}
                             />
                         );
                     })}
@@ -658,11 +677,25 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                     <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--st-monitor-btn-target-virtual-active-bg)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
                     <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[var(--st-monitor-btn-target-physical-active-bg)] text-white shadow-md' : 'bg-[var(--button-secondary-background)] text-[var(--st-monitor-btn-text)] hover:text-white hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
-                <SerialInput key={session.id} onSend={handleSend} initialContent={uiState.inputContent} initialHTML={uiState.inputHTML} initialTokens={uiState.inputTokens} initialMode={uiState.inputMode || 'hex'} initialLineEnding={uiState.lineEnding ?? ''} initialTimerInterval={uiState.inputTimerInterval} onStateChange={handleInputStateChange} isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest} />
+                <SerialInput
+                    key={session.id}
+                    onSend={handleSend as any}
+                    initialContent={uiState.inputContent as string}
+                    initialHTML={uiState.inputHTML as string}
+                    initialTokens={uiState.inputTokens as any}
+                    initialMode={(uiState.inputMode as any) || 'hex'}
+                    initialLineEnding={(uiState.lineEnding as any) ?? ''}
+                    initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
+                    onStateChange={handleInputStateChange}
+                    isConnected={isConnected}
+                    fontSize={fontSize}
+                    fontFamily={fontFamily}
+                    onConnectRequest={onConnectRequest}
+                />
             </div>
 
             {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: t('common.copy'), icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: t('common.addCommand'), icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}
-            {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', ...showCommandEditor }} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
+            {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', name: '', payload: '', mode: 'hex', tokens: {}, parentId: null, ...showCommandEditor } as any} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
         </div >
     );
 };

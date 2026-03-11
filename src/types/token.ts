@@ -10,6 +10,7 @@ export interface CRCConfig {
     // So:
     startIndex: number; // 0-based index from start of message
     endIndex: number; // -1 = End, -2 = End-1, etc.
+    [key: string]: any;
 }
 
 export interface AutoIncConfig {
@@ -17,20 +18,24 @@ export interface AutoIncConfig {
     defaultValue: string; // 默认值 (Hex 字符串)
     currentValue: string; // 当前值 (Hex 字符串)
     step: number; // 偏移量 (可正可负)
+    [key: string]: any;
 }
 
 export interface FlagConfig {
     hex: string; // e.g. "AA BB"
     name?: string; // Optional custom name
+    [key: string]: any;
 }
 
 export interface HexConfig {
     byteWidth: number; // e.g. 1, 3, 5
+    [key: string]: any;
 }
 
 export interface TimestampConfig {
     format: 'milliseconds' | 'seconds';
     byteOrder: 'little' | 'big';
+    [key: string]: any;
 }
 
 export interface Token {

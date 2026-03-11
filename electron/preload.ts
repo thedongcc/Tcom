@@ -28,10 +28,10 @@ contextBridge.exposeInMainWorld('serialAPI', {
   open: (connectionId: string, options: any) => ipcRenderer.invoke('serial:open', { connectionId, options }),
   close: (connectionId: string) => ipcRenderer.invoke('serial:close', { connectionId }),
   write: (connectionId: string, data: string | number[] | Uint8Array) => ipcRenderer.invoke('serial:write', { connectionId, data }),
-  onData: (connectionId: string, callback: (data: Uint8Array) => void) => {
-    const listener = (_: any, args: { connectionId: string, data: Uint8Array }) => {
+  onData: (connectionId: string, callback: (data: Uint8Array, timestamp?: number) => void) => {
+    const listener = (_: any, args: { connectionId: string, data: Uint8Array, timestamp?: number }) => {
       if (args.connectionId === connectionId) {
-        callback(args.data);
+        callback(args.data, args.timestamp);
       }
     };
     ipcRenderer.on('serial:data', listener);
@@ -54,6 +54,20 @@ contextBridge.exposeInMainWorld('serialAPI', {
     };
     ipcRenderer.on('serial:error', listener);
     return () => ipcRenderer.off('serial:error', listener);
+  },
+  // ⚡ 高精度主进程定时发送
+  timedSendStart: (connectionId: string, data: number[], intervalMs: number) =>
+    ipcRenderer.invoke('serial:timed-send-start', { connectionId, data, intervalMs }),
+  timedSendStop: (connectionId: string) =>
+    ipcRenderer.invoke('serial:timed-send-stop', { connectionId }),
+  onTimedSendTick: (connectionId: string, callback: (data: number[], timestamp: number) => void) => {
+    const listener = (_: any, args: { connectionId: string, data: number[], timestamp: number }) => {
+      if (args.connectionId === connectionId) {
+        callback(args.data, args.timestamp);
+      }
+    };
+    ipcRenderer.on('serial:timed-send-tick', listener);
+    return () => ipcRenderer.off('serial:timed-send-tick', listener);
   }
 });
 

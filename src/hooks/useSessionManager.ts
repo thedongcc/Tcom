@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { SessionState, SessionConfig, LogEntry, MqttTopicConfig, MonitorSessionConfig } from '../types/session';
+import { SessionState, SessionConfig, LogEntry, MonitorSessionConfig } from '../types/session';
 import { SerialPortInfo } from '../vite-env';
 import { applyTXCRC, validateRXCRC } from '../utils/crc';
-import { formatPortInfo } from '../utils/format';
 import { Com0Com } from '../utils/com0com';
 import { generateUniqueName } from '../utils/naming';
 
@@ -14,8 +13,8 @@ export const useSessionManager = () => {
     const [savedSessions, setSavedSessions] = useState<SessionConfig[]>([]);
     const [ports, setPorts] = useState<SerialPortInfo[]>([]);
     const [workspacePath, setWorkspacePath] = useState<string | null>(null);
-    const workspacePathRef = useRef<string | null>(null);
     const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
+    const workspacePathRef = useRef<string | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [monitorEnabled, setMonitorEnabled] = useState(() => {
         return localStorage.getItem('tcom-monitor-enabled') !== 'false'; // Default to true
@@ -143,8 +142,9 @@ export const useSessionManager = () => {
         }));
     }, []);
 
-    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string, commandName?: string) => {
-        const entry: LogEntry = { id: crypto.randomUUID(), type, data, timestamp: Date.now(), crcStatus, topic, commandName };
+    const addLog = useCallback((sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus: LogEntry['crcStatus'] = 'none', topic?: string, commandName?: string, tsOverride?: number) => {
+        // ⚡ tsOverride 用于传入主进程打的时间戳，精度优于渲染进程 Date.now()
+        const entry: LogEntry = { id: crypto.randomUUID(), type, data, timestamp: tsOverride ?? Date.now(), crcStatus, topic, commandName };
 
         let batch = logBufferRef.current.get(sessionId);
         if (!batch) {
@@ -173,7 +173,7 @@ export const useSessionManager = () => {
         // Skip if uiState hasn't actually changed (deep check for nested objects if needed, but simple key check for now)
         if (updates.uiState && session.config.uiState) {
             const isDifferent = Object.keys(updates.uiState).some(k =>
-                JSON.stringify((updates.uiState as any)[k]) !== JSON.stringify((session.config.uiState as any)[k])
+                JSON.stringify((updates.uiState as Record<string, unknown>)[k]) !== JSON.stringify((session.config.uiState as Record<string, unknown>)[k])
             );
             if (!isDifferent && Object.keys(updates).length === 1) {
                 return; // Nothing changed in uiState
@@ -183,7 +183,7 @@ export const useSessionManager = () => {
         console.log(`[SessionManager] Updating config for ${sessionId}`, updates);
 
         // 1. Update runtime session (Immediate)
-        updateSession(sessionId, (prev) => ({ config: { ...prev.config, ...updates } as any }));
+        updateSession(sessionId, (prev) => ({ config: { ...prev.config, ...updates } as SessionConfig }));
 
         // 2. Persistence (Debounced)
         const isSaved = currentSaved.some(s => s.id === sessionId);
@@ -199,28 +199,28 @@ export const useSessionManager = () => {
             // Set new timer (1000ms delay)
             debounceTimersRef.current[sessionId] = setTimeout(async () => {
                 const latestSession = sessionsRef.current.find(s => s.id === sessionId);
-                if (!latestSession || !workspacePathRef.current || !window.workspaceAPI) return;
-
-                const oldName = latestSession.config.name; // Use stable name from latest state
-
-                // If name changed, we handle renaming first
-                // (Note: renaming is actually handled immediately usually, but here we group it)
-                if (updates.name && updates.name !== oldName) {
-                    await window.workspaceAPI.renameSession(workspacePathRef.current, oldName, updates.name);
-                }
+                if (!latestSession || !window.workspaceAPI) return;
 
                 console.log(`[SessionManager] Persisting session ${sessionId} to disk...`);
-                await window.workspaceAPI.saveSession(workspacePathRef.current, latestSession.config);
+                // Ensure workspacePathRef.current is not null before passing to Electron
+                const wsPath = workspacePathRef.current;
+                if (wsPath) {
+                    const oldName = latestSession.config.name;
+                    if (updates.name && updates.name !== oldName) {
+                        await window.workspaceAPI.renameSession(wsPath, oldName, updates.name);
+                    }
+                    await window.workspaceAPI.saveSession(wsPath, latestSession.config as any);
+                }
                 delete debounceTimersRef.current[sessionId];
             }, 1000);
         }
     }, [updateSession]);
 
-    const updateUIState = useCallback((sessionId: string, uiStateUpdates: Partial<any>) => {
+    const updateUIState = useCallback((sessionId: string, uiStateUpdates: Partial<Record<string, unknown>>) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session) return;
         const currentUI = session.config.uiState || {};
-        updateSessionConfig(sessionId, { uiState: { ...currentUI, ...uiStateUpdates } } as any);
+        updateSessionConfig(sessionId, { uiState: { ...currentUI, ...uiStateUpdates } } as Partial<SessionConfig>);
     }, [updateSessionConfig]);
 
     // --- Persistence for Active Session ---
@@ -229,11 +229,11 @@ export const useSessionManager = () => {
         return setupcPath;
     }, [setupcPath]);
 
-    const listPorts = useCallback(async (isSilent?: any) => {
+    const listPorts = useCallback(async (isSilent?: boolean) => {
         const silent = isSilent === true;
         let allPorts: SerialPortInfo[] = [];
-        if ((window as any).serialAPI) {
-            const res = await (window as any).serialAPI.listPorts({ includeCom0ComNames: monitorEnabledRef.current });
+        if (window.serialAPI) {
+            const res = await window.serialAPI.listPorts({ includeCom0ComNames: monitorEnabledRef.current });
             if (res.success) allPorts = res.ports;
         }
         const setupcPath = findSetupcPath();
@@ -248,8 +248,8 @@ export const useSessionManager = () => {
                         allPorts.push({ path: pair.portB, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portB})` });
                     }
                 });
-            } catch (e: any) {
-                const errStr = e.message || String(e);
+            } catch (e: unknown) {
+                const errStr = e instanceof Error ? e.message : String(e);
                 if (!errStr.includes('Unauthorized command') && !errStr.includes('Unauthorized')) {
                     console.warn("Failed to list com0com ports", e);
                 }
@@ -274,7 +274,7 @@ export const useSessionManager = () => {
             if (!window.mqttAPI) { addLog(sessionId, 'ERROR', 'MQTT API missing'); return; }
             updateSession(sessionId, () => ({ isConnecting: true }));
             try {
-                const result = await window.mqttAPI.connect(sessionId, session.config);
+                const result = await window.mqttAPI.connect(sessionId, session.config as any);
                 if (result.success) {
                     updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                     addLog(sessionId, 'INFO', `Connected to ${(session.config as any).host}`);
@@ -294,9 +294,9 @@ export const useSessionManager = () => {
                     addLog(sessionId, 'ERROR', `Connection failed: ${result.error}`);
                     return false;
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 updateSession(sessionId, () => ({ isConnecting: false }));
-                addLog(sessionId, 'ERROR', `Connection Error: ${err.message}`);
+                addLog(sessionId, 'ERROR', `Connection Error: ${err instanceof Error ? err.message : String(err)}`);
                 return false;
             }
         }
@@ -327,16 +327,16 @@ export const useSessionManager = () => {
                 updateSession(sessionId, () => ({ isConnecting: false }));
                 return false;
             }
-            if ((window as any).monitorAPI) {
+            if (window.monitorAPI) {
                 try {
-                    const res = await (window as any).monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort });
+                    const res = await window.monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort } as any);
                     if (res.success) {
                         updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                         addLog(sessionId, 'INFO', 'Monitor started');
                         const cleanups: (() => void)[] = [];
                         cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => addLog(sessionId, type, data, 'ok', type === 'TX' ? 'virtual' : 'physical')));
                         cleanups.push(window.monitorAPI.onError(sessionId, (err) => addLog(sessionId, 'ERROR', err)));
-                        cleanups.push(window.monitorAPI.onClosed(sessionId, (data: any) => {
+                        cleanups.push(window.monitorAPI.onClosed(sessionId, (data: { origin: string, path: string }) => {
                             const { origin, path } = data;
                             const label = origin === 'Internal' ? 'Internal Bridge Port' : 'Physical Device';
                             addLog(sessionId, 'INFO', `${label}: ${path} Disconnected`);
@@ -348,8 +348,8 @@ export const useSessionManager = () => {
                         updateSession(sessionId, () => ({ isConnecting: false }));
                         return false;
                     }
-                } catch (err: any) {
-                    addLog(sessionId, 'ERROR', `Monitor Start Error: ${err.message}`);
+                } catch (err: unknown) {
+                    addLog(sessionId, 'ERROR', `Monitor Start Error: ${err instanceof Error ? err.message : String(err)}`);
                     updateSession(sessionId, () => ({ isConnecting: false }));
                     return false;
                 }
@@ -370,12 +370,12 @@ export const useSessionManager = () => {
                 addLog(sessionId, 'ERROR', `Failed: ${result.error}`);
                 return false;
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             updateSession(sessionId, () => ({ isConnecting: false }));
-            addLog(sessionId, 'ERROR', `Serial Open Error: ${err.message}`);
+            addLog(sessionId, 'ERROR', `Serial Open Error: ${err instanceof Error ? err.message : String(err)}`);
             return false;
         }
-    }, [updateSession, addLog, updateSessionConfig]);
+    }, [updateSession, addLog, updateSessionConfig, setupcPath]);
 
     const disconnectSession = useCallback(async (sessionId: string) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
@@ -387,9 +387,9 @@ export const useSessionManager = () => {
             await window.mqttAPI.disconnect(sessionId);
             const cleanups = cleanupRefs.current.get(sessionId);
             if (cleanups) { cleanups.forEach(c => c()); cleanupRefs.current.delete(sessionId); }
-        } else if (session.config.type === 'monitor' && (window as any).monitorAPI) {
+        } else if (session.config.type === 'monitor' && window.monitorAPI) {
             const monitorConfig = session.config as MonitorSessionConfig;
-            await (window as any).monitorAPI.stop(sessionId);
+            await window.monitorAPI.stop(sessionId);
 
             // Clean up IPC listeners
             const cleanups = cleanupRefs.current.get(sessionId);
@@ -407,7 +407,7 @@ export const useSessionManager = () => {
         }
         updateSession(sessionId, () => ({ isConnected: false }));
         addLog(sessionId, 'INFO', 'Disconnected');
-    }, [updateSession, addLog, updateSessionConfig]);
+    }, [updateSession, addLog, updateSessionConfig, setupcPath]);
 
     const writeToSession = useCallback(async (sessionId: string, data: string | number[] | Uint8Array, options?: { commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
@@ -421,7 +421,8 @@ export const useSessionManager = () => {
         const finalData = applyTXCRC(rawData, session.config.txCRC);
         const result = await window.serialAPI.write(sessionId, finalData);
         if (result.success) {
-            addLog(sessionId, 'TX', finalData, 'none', undefined, options?.commandName);
+            // ⚡ write resolve 后再打时间戳，更接近实际写入串口的时刻
+            addLog(sessionId, 'TX', finalData, 'none', undefined, options?.commandName, Date.now());
         } else {
             addLog(sessionId, 'ERROR', `Write failed: ${result.error}`);
         }
@@ -437,9 +438,10 @@ export const useSessionManager = () => {
 
     const writeToMonitor = useCallback(async (sessionId: string, target: 'virtual' | 'physical', data: string | number[] | Uint8Array, options?: { commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
-        if (!session || !session.isConnected || session.config.type !== 'monitor' || !(window as any).monitorAPI) return;
-        const res = await (window as any).monitorAPI.write(sessionId, target, data as any);
-        if (res.success) addLog(sessionId, 'TX', data as any, 'none', target, options?.commandName);
+        if (!session || !session.isConnected || session.config.type !== 'monitor' || !window.monitorAPI) return;
+        const pData = data instanceof Uint8Array ? Array.from(data) : typeof data === 'string' ? data : data;
+        const res = await window.monitorAPI.write(sessionId, target, pData);
+        if (res.success) addLog(sessionId, 'TX', data as Uint8Array, 'none', target, options?.commandName);
         else addLog(sessionId, 'ERROR', `Write failed: ${res.error}`);
     }, [addLog]);
 
@@ -451,19 +453,22 @@ export const useSessionManager = () => {
             setWorkspacePath(path);
             workspacePathRef.current = path;
             const sessionsData = await window.workspaceAPI.listSessions(path);
-            if (sessionsData.success) {
+            if (sessionsData.success && sessionsData.data) {
                 // Deduplicate sessions by ID to prevent React key warnings if multiple files have same internal ID
-                const uniqueSessions = sessionsData.data.reduce((acc: any[], current: any) => {
+                const uniqueSessions = sessionsData.data.reduce((acc: Record<string, unknown>[], current: Record<string, unknown>) => {
                     if (!acc.find(s => s.id === current.id)) acc.push(current);
                     return acc;
                 }, []);
-                setSavedSessions(uniqueSessions);
+                setSavedSessions(uniqueSessions as any as SessionConfig[]);
                 // Restore active session ID for this workspace
                 const savedActiveId = localStorage.getItem(`active-session-${path}`);
-                if (savedActiveId && uniqueSessions.some((s: any) => s.id === savedActiveId)) {
+                if (savedActiveId && uniqueSessions.some(s => s.id === savedActiveId)) {
                     setActiveSessionId(savedActiveId);
                 }
             }
+            // Refresh recent workspaces list
+            const recentRes = await window.workspaceAPI.getRecentWorkspaces();
+            if (recentRes.success) setRecentWorkspaces(recentRes.workspaces);
         }
     }, []);
 
@@ -494,12 +499,12 @@ export const useSessionManager = () => {
             }
             return [...prev, session];
         });
-        await window.workspaceAPI.saveSession(workspacePathRef.current, session);
+        await window.workspaceAPI.saveSession(workspacePathRef.current, session as any);
     }, []);
 
     const createSession = useCallback(async (type: SessionConfig['type'] = 'serial', config?: Partial<SessionConfig>) => {
         const newId = Date.now().toString();
-        let baseConfig: any = { id: newId, type, autoConnect: false, ...config };
+        const baseConfig: Record<string, unknown> = { id: newId, type, autoConnect: false, ...config };
 
         const existingNames = savedSessionsRef.current.map(s => s.name);
         if (type === 'serial') {
@@ -515,11 +520,11 @@ export const useSessionManager = () => {
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
         }
 
-        const newState: SessionState = { id: newId, config: baseConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] };
+        const newState: SessionState = { id: newId, config: baseConfig as unknown as SessionConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] };
         setSessions(prev => [...prev, newState]);
         setActiveSessionId(newId);
-        setSavedSessions(prev => [...prev, baseConfig]);
-        if (workspacePathRef.current) await window.workspaceAPI?.saveSession(workspacePathRef.current, baseConfig);
+        setSavedSessions(prev => [...prev, baseConfig as unknown as SessionConfig]);
+        if (workspacePathRef.current) await window.workspaceAPI?.saveSession(workspacePathRef.current, baseConfig as any);
         return newId;
     }, []);
 
@@ -537,7 +542,7 @@ export const useSessionManager = () => {
         closeSession(sessionId);
 
         // 2. Then delete from persistence
-        const result = await window.workspaceAPI.deleteSession(workspacePathRef.current, session);
+        const result = await window.workspaceAPI.deleteSession(workspacePathRef.current, session as any);
         if (result.success) setSavedSessions(prev => prev.filter(s => s.id !== sessionId));
     }, [closeSession]);
 
@@ -548,8 +553,8 @@ export const useSessionManager = () => {
         const existingNames = savedSessionsRef.current.map(s => s.name);
         const newName = generateUniqueName(existingNames, source.config.name, 'Copy');
         const newConfig = { ...source.config, id: newId, name: newName };
-        setSessions(prev => [...prev, { id: newId, config: newConfig as any, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] }]);
-        setSavedSessions(prev => [...prev, newConfig as any]);
+        setSessions(prev => [...prev, { id: newId, config: newConfig as unknown as SessionConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] }]);
+        setSavedSessions(prev => [...prev, newConfig as unknown as SessionConfig]);
         if (workspacePathRef.current) await window.workspaceAPI?.saveSession(workspacePathRef.current, newConfig as any);
         return newId;
     }, []);
@@ -593,7 +598,9 @@ export const useSessionManager = () => {
 
     // --- Background Tasks ---
     useEffect(() => {
-        listPorts(false);
+        // ⚡ 首次串口扫描延迟 300ms：让 React 完成首屏渲染 + 主题加载后再执行
+        //   注册表查询和串口 busy 检测耗时较长，不应和首次渲染竞争 CPU
+        const firstScanTimer = setTimeout(() => listPorts(false), 300);
         const interval = setInterval(() => listPorts(true), 2000);
         const initWs = async () => {
             let admin = false;
@@ -612,9 +619,15 @@ export const useSessionManager = () => {
             if (!window.workspaceAPI) return;
             const lastWs = await window.workspaceAPI.getLastWorkspace();
             if (lastWs.success && lastWs.path) await openWorkspace(lastWs.path);
+
+            const recentRes = await window.workspaceAPI.getRecentWorkspaces();
+            if (recentRes.success) setRecentWorkspaces(recentRes.workspaces);
         };
         initWs();
-        return () => clearInterval(interval);
+        return () => {
+            clearTimeout(firstScanTimer);
+            clearInterval(interval);
+        };
     }, [listPorts, openWorkspace]);
 
     const toggleMonitor = useCallback((enabled: boolean) => {
@@ -637,12 +650,14 @@ export const useSessionManager = () => {
         if (!window.serialAPI) return;
         sessions.forEach(session => {
             if (registeredSessions.current.has(session.id)) return;
-            window.serialAPI!.onData(session.id, (data) => {
+            window.serialAPI!.onData(session.id, (data, timestamp) => {
+                // ⚡ 使用主进程传入的时间戳（更接近硬件数据到达时间）
+                const rxTs = timestamp ?? Date.now();
                 const latestSession = sessionsRef.current.find(s => s.id === session.id);
                 if (!latestSession) return;
 
                 // Handle advanced RX Packet Modes (timeout, delimiter, fixedLength, delimiterWithTimeout)
-                const uiState = (latestSession.config as any).uiState || {};
+                const uiState = (latestSession.config as any).uiState as Record<string, unknown> || {};
                 const packetMode = uiState.rxPacketMode || 'none';
 
                 // Fallback to old behavior if mode is 'none' but chunkTimeout is set
@@ -651,7 +666,7 @@ export const useSessionManager = () => {
                 if (packetMode === 'none' && legacyTimeout === 0) {
                     // Direct flush
                     const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(data, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                    addLog(session.id, 'RX', data, crcStatus);
+                    addLog(session.id, 'RX', data, crcStatus, undefined, undefined, rxTs);
                     return;
                 }
 
@@ -676,21 +691,21 @@ export const useSessionManager = () => {
                             offset += b.length;
                         });
                         const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(mergedData, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                        addLog(session.id, 'RX', mergedData, crcStatus);
+                        // 包模式合并后，使用当前帧到达时间（第一包时间 rxTs 已过，用 Date.now 更合理）
+                        addLog(session.id, 'RX', mergedData, crcStatus, undefined, undefined, rxTs);
                         rxBuffersRef.current.set(session.id, []); // Clear buffer
                     }
                     rxTimersRef.current.delete(session.id);
                 };
 
                 const currentBufferLen = buffer.reduce((acc, curr) => acc + curr.length, 0);
-                let shouldFlush = false;
 
                 if (packetMode === 'fixedLength') {
-                    const fixedLen = uiState.rxFixedLength || 0;
-                    if (fixedLen > 0 && currentBufferLen >= fixedLen) {
+                    const fixedLen = (uiState.rxFixedLength as any) || 0;
+                    if (fixedLen > 0 && currentBufferLen >= (fixedLen as any)) {
                         // Extract frames of fixed length
-                        let remainingBuffer = [];
-                        let mergedData = new Uint8Array(currentBufferLen);
+                        const remainingBuffer = [];
+                        const mergedData = new Uint8Array(currentBufferLen);
                         let offset = 0;
                         buffer.forEach(b => {
                             mergedData.set(b, offset);
@@ -701,7 +716,7 @@ export const useSessionManager = () => {
                         while (processOffset + fixedLen <= currentBufferLen) {
                             const frame = mergedData.slice(processOffset, processOffset + fixedLen);
                             const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(frame, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                            addLog(session.id, 'RX', frame, crcStatus);
+                            addLog(session.id, 'RX', frame, crcStatus, undefined, undefined, rxTs);
                             processOffset += fixedLen;
                         }
 
@@ -712,11 +727,11 @@ export const useSessionManager = () => {
                         return; // Done processing for now
                     }
                 } else if (packetMode === 'delimiter' || packetMode === 'delimiterWithTimeout') {
-                    const delimStr = uiState.rxDelimiter || '';
+                    const delimStr = (uiState.rxDelimiter as any) || '';
                     if (delimStr) {
                         // Parse delimiter (handle hex like "0D 0A" or escape chars like "\r\n")
                         let delimBytes: number[] = [];
-                        if (/^([0-9a-fA-F]{2}\s*)+$/.test(delimStr.trim())) {
+                        if (/^([0-9a-fA-F]{2}\s*)+$/.test((delimStr as string).trim())) {
                             delimBytes = delimStr.trim().split(/\s+/).map(h => parseInt(h, 16));
                         } else {
                             const parsedStr = delimStr.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
@@ -725,7 +740,7 @@ export const useSessionManager = () => {
                         }
 
                         if (delimBytes.length > 0) {
-                            let mergedData = new Uint8Array(currentBufferLen);
+                            const mergedData = new Uint8Array(currentBufferLen);
                             let offset = 0;
                             buffer.forEach(b => {
                                 mergedData.set(b, offset);
@@ -733,7 +748,7 @@ export const useSessionManager = () => {
                             });
 
                             let startIdx = 0;
-                            let remainingBuffer = [];
+                            const remainingBuffer = [];
 
                             for (let i = 0; i <= currentBufferLen - delimBytes.length; i++) {
                                 let match = true;
@@ -746,7 +761,7 @@ export const useSessionManager = () => {
                                 if (match) {
                                     const frame = mergedData.slice(startIdx, i + delimBytes.length);
                                     const crcStatus = latestSession.config.rxCRC?.enabled ? (validateRXCRC(frame, latestSession.config.rxCRC) ? 'ok' : 'error') : 'none';
-                                    addLog(session.id, 'RX', frame, crcStatus);
+                                    addLog(session.id, 'RX', frame, crcStatus, undefined, undefined, rxTs);
                                     startIdx = i + delimBytes.length;
                                     i = startIdx - 1; // Advance
                                 }
@@ -766,31 +781,19 @@ export const useSessionManager = () => {
                 }
 
                 // Setup timer for 'timeout', 'delimiterWithTimeout', or legacy mode
-                const timeoutMs = packetMode === 'timeout' || packetMode === 'delimiterWithTimeout' ? (uiState.rxTimeoutMs || 50) : legacyTimeout;
+                const timeoutMs = (packetMode === 'timeout' || packetMode === 'delimiterWithTimeout' ? (uiState.rxTimeoutMs as any || 50) : legacyTimeout) as any;
 
                 if (timeoutMs > 0) {
                     const newTimer = setTimeout(flushBuffer, timeoutMs);
                     rxTimersRef.current.set(session.id, newTimer);
                 }
-
-                // Fallback direct emit context for timeout=0?
-                // Wait, if packetMode is 'timeout' etc and no timeout timer, do nothing (accumulate)
-                // If it's a condition where we immediately emit:
-                // Actually, if timeoutMs > 0, we started a timer, so we return here to accumulate buffer
-                // If no timer was started AND pure delimiter mode is not handled, we might just emit?
-                // NO! We should only emit here if packetMode === 'none' && chunkTimeout === 0 (which is handled at the top)
-                // BUT for compatibility, previously if no timeout was set, data was emitted immediately.
-                // Let's handle it properly:
-                if (packetMode === 'none' && uiState.chunkTimeout === 0) {
-                    // This was already returned at the top!
-                    // Wait, so what runs here?
-                    // If timeout=0 but packetMode is timeout? Then we never flush except when session closes. That's a misconfiguration.
-                    // To be safe and identical to before, if it reaches here, it means we accumulated to buffer.
-                    // We don't need to addLog again.
-                }
             });
             window.serialAPI!.onClosed(session.id, () => { updateSession(session.id, () => ({ isConnected: false })); addLog(session.id, 'INFO', 'Closed'); });
             window.serialAPI!.onError(session.id, (err) => addLog(session.id, 'ERROR', err));
+            // ⚡ 主进程定时发送 tick —— 记录高精度 TX 时间戳日志
+            (window.serialAPI!.onTimedSendTick as any)?.(session.id, (data: any, timestamp: number) => {
+                addLog(session.id, 'TX', new Uint8Array(data), 'none', undefined, undefined, timestamp);
+            });
             registeredSessions.current.add(session.id);
         });
     }, [sessions, updateSession, addLog]);

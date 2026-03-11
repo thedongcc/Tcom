@@ -16,6 +16,7 @@ import { Tooltip } from '../common/Tooltip';
 
 interface SerialInputProps {
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
+    sessionId?: string;
     initialContent?: string;
     initialHTML?: string;
     initialTokens?: Record<string, Token>;
@@ -25,14 +26,15 @@ interface SerialInputProps {
     isConnected?: boolean;
     fontSize?: number;
     fontFamily?: string;
-    onConnectRequest?: () => void;
-    onStateChange?: (state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => void;
+    onConnectRequest?: () => Promise<void> | void;
+    onStateChange?: (state: { content: string, html: string, tokens: Record<string, any>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => void;
     /** Hide toolbar, timer, and send button (e.g. for Command Editor) */
     hideExtras?: boolean;
 }
 
 export const SerialInput = ({
     onSend,
+    sessionId,
     initialContent = '',
     initialHTML = '',
     initialTokens = {},
@@ -55,7 +57,6 @@ export const SerialInput = ({
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [timerInterval, setTimerInterval] = useState(initialTimerInterval);
     const [timerIntervalInput, setTimerIntervalInput] = useState(initialTimerInterval.toString()); // String state for input
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
     const isReadyRef = useRef(false);
 
     // Memoize extensions to prevent editor re-creation on every render
@@ -100,9 +101,10 @@ export const SerialInput = ({
             if (onStateChange) {
                 const json = editor.getJSON();
                 const tokensMap: Record<string, Token> = {};
-                const traverse = (node: any) => {
-                    if (node.type === 'serialToken') {
-                        const { id, type, config } = node.attrs;
+                type TraverseNode = { type?: string; attrs?: any; content?: TraverseNode[] };
+                const traverse = (node: TraverseNode) => {
+                    if (node.type === 'serialToken' && node.attrs) {
+                        const { id, type, config } = node.attrs as { id: string, type: any, config: any };
                         tokensMap[id] = { id, type, config };
                     }
                     if (node.content) node.content.forEach(traverse);
@@ -127,9 +129,10 @@ export const SerialInput = ({
 
         const json = editor.getJSON();
         const tokensMap: Record<string, Token> = {};
-        const traverse = (node: any) => {
-            if (node.type === 'serialToken') {
-                const { id, type, config } = node.attrs;
+        type TraverseNode = { type?: string; attrs?: any; content?: TraverseNode[] };
+        const traverse = (node: TraverseNode) => {
+            if (node.type === 'serialToken' && node.attrs) {
+                const { id, type, config } = node.attrs as { id: string, type: any, config: any };
                 tokensMap[id] = { id, type, config };
             }
             if (node.content) node.content.forEach(traverse);
@@ -169,9 +172,9 @@ export const SerialInput = ({
         return () => window.removeEventListener(SERIAL_TOKEN_CLICK_EVENT, handleTokenClick);
     }, []);
 
-    const insertToken = (type: 'crc' | 'flag' | 'timestamp') => {
+    const insertToken = (type: 'crc' | 'flag' | 'timestamp' | 'auto_inc') => {
         if (!editor) return;
-        let config: any = {};
+        let config: Record<string, unknown> = {};
         if (type === 'crc') {
             config = {
                 algorithm: 'modbus-crc16',
@@ -190,14 +193,14 @@ export const SerialInput = ({
         editor.chain().focus().insertSerialToken({ type, config }).run();
     };
 
-    const updateTokenConfig = (id: string, newConfig: any) => {
+    const updateTokenConfig = (id: string, newConfig: Record<string, unknown>) => {
         if (!editor || !popover) return;
 
         // Determine the node type based on the popover's token type
         editor.chain().focus().setNodeSelection(popover.pos).updateAttributes('serialToken', { config: newConfig }).run();
     };
 
-    const deleteToken = (id: string) => {
+    const deleteToken = () => {
         if (!editor || !popover) return;
         editor.chain().focus().setNodeSelection(popover.pos).deleteSelection().run();
         setPopover(null);
@@ -207,9 +210,10 @@ export const SerialInput = ({
         if (!editor) return {};
         const json = editor.getJSON();
         const tokensMap: Record<string, Token> = {};
-        const traverse = (node: any) => {
-            if (node.type === 'serialToken') {
-                const { id, type, config } = node.attrs;
+        type TraverseNode = { type?: string; attrs?: Record<string, unknown>; content?: TraverseNode[] };
+        const traverse = (node: TraverseNode) => {
+            if (node.type === 'serialToken' && node.attrs) {
+                const { id, type, config } = node.attrs as unknown as { id: string, type: string, config: Record<string, unknown> };
                 // Deep clone the config here to ensure external modifications don't leak back 
                 // into the editor's state without a proper transaction
                 tokensMap[id] = { id, type, config: JSON.parse(JSON.stringify(config)) };
@@ -261,7 +265,7 @@ export const SerialInput = ({
         }).run();
 
         onSend(data, mode);
-    }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens]);
+    }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens, showToast, t]);
 
     // Use a ref to store the latest handleSend callback
     const handleSendRef = useRef(handleSend);
@@ -269,22 +273,74 @@ export const SerialInput = ({
         handleSendRef.current = handleSend;
     }, [handleSend]);
 
-    // Timer Effect
+    // ⚡ 定时发送：区分静态/动态 token，选择最优定时策略
+    // 静态数据（无 auto_inc/timestamp token）→ 委托主进程 Node.js libuv 定时器（精度 1~2ms）
+    // 动态数据（有 auto_inc/timestamp）→ 渲染进程漂移补偿定时器（需要每次重新计算）
+    const hasDynamicTokens = useCallback(() => {
+        const tokens = extractTokens();
+        return Object.values(tokens).some(t => t.type === 'auto_inc' || t.type === 'timestamp');
+    }, [extractTokens]);
+
     useEffect(() => {
-        if (isTimerRunning && timerInterval > 0) {
-            timerRef.current = setInterval(() => {
-                if (handleSendRef.current) {
-                    handleSendRef.current();
-                }
-            }, timerInterval);
-        } else {
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
+        if (!isTimerRunning || timerInterval <= 0) {
+            // 确保停止主进程定时器
+            if (sessionId && window.serialAPI?.timedSendStop) {
+                window.serialAPI.timedSendStop(sessionId);
             }
+            return;
         }
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isTimerRunning, timerInterval]);
+
+        if (!isConnected) return;
+
+        // 判断是否有动态 token
+        const isDynamic = hasDynamicTokens();
+
+        if (!isDynamic && sessionId && window.serialAPI?.timedSendStart) {
+            // ── 静态数据：主进程高精度定时器路径 ──
+            // 预编译数据，发送到主进程，由 Node.js libuv 定时器以 1~2ms 精度执行
+            if (!editor || editor.isEmpty) return;
+            const html = editor.getHTML();
+            const text = editor.getText();
+            const tokens = extractTokens();
+            const { data } = MessagePipeline.process(text, html, mode, tokens, lineEnding);
+
+            // 将数据转为 number[] 传给主进程（IPC 序列化需要普通数组）
+            const dataArray = data instanceof Uint8Array
+                ? Array.from(data)
+                : Array.from(new TextEncoder().encode(data as string));
+
+            window.serialAPI.timedSendStart(sessionId, dataArray, timerInterval);
+
+            // 主进程负责所有发送和日志记录（通过 serial:timed-send-tick）
+            // 渲染进程只需确保停止时调用 timedSendStop
+            return () => {
+                window.serialAPI?.timedSendStop?.(sessionId);
+            };
+        } else {
+            // ── 动态数据：渲染进程漂移补偿定时器路径 ──
+            let nextFireTime = performance.now() + timerInterval;
+            let timeoutId: ReturnType<typeof setTimeout> | null = null;
+            let cancelled = false;
+
+            const schedule = () => {
+                if (cancelled) return;
+                const delay = Math.max(0, nextFireTime - performance.now());
+                timeoutId = setTimeout(() => {
+                    if (cancelled) return;
+                    nextFireTime += timerInterval;
+                    handleSendRef.current?.();
+                    schedule();
+                }, delay);
+            };
+
+            schedule();
+
+            return () => {
+                cancelled = true;
+                if (timeoutId !== null) clearTimeout(timeoutId);
+            };
+        }
+    }, [isTimerRunning, timerInterval, isConnected, sessionId, mode, lineEnding, editor, hasDynamicTokens, extractTokens]);
 
     return (
         <div
@@ -354,7 +410,7 @@ export const SerialInput = ({
                         </Tooltip>
                         <Tooltip content={t('serial.insertAuto')} position="bottom" wrapperClassName="flex">
                             <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
-                                onClick={() => insertToken('auto_inc' as any)}>
+                                onClick={() => insertToken('auto_inc')}>
                                 <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
                                 <span>Auto</span>
                             </button>

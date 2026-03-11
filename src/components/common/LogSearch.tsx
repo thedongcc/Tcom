@@ -8,6 +8,7 @@ export interface SearchMatch {
     logId: string;
     startIndex: number;
     endIndex: number;
+    [key: string]: any;
 }
 
 export interface LogSearchProps {

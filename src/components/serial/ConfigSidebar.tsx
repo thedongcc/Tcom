@@ -74,7 +74,7 @@ const SerialConfigPanel = ({ session, sessionManager }: { session: any, sessionM
                             {t('serial.portLabel')}
                         </div>
                         <Tooltip content={t('configSidebar.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
-                            <button onClick={listPorts} className="hover:text-[var(--button-foreground)]">
+                            <button onClick={() => listPorts()} className="hover:text-[var(--button-foreground)] transition-colors">
                                 <RefreshCw size={12} />
                             </button>
                         </Tooltip>

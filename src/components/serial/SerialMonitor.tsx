@@ -1,7 +1,7 @@
 ﻿import { useRef, useState, useEffect, useCallback, useLayoutEffect, memo } from 'react';
-import { SessionState, SessionConfig } from '../../types/session';
+import { SessionState, SessionConfig, LogEntry } from '../../types/session';
 import { SerialInput } from './SerialInput';
-import { Trash2, ArrowDownToLine, Menu, X, ChevronDown, Check, Download, Settings, Copy, FileText, ClipboardList, Filter, Info } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, Download, Settings, Copy, FileText, Search, X } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
 import { useSettings } from '../../context/SettingsContext';
 import { useToast } from '../../context/ToastContext';
@@ -9,23 +9,54 @@ import { useCommandContext } from '../../context/CommandContext';
 import { ContextMenu } from '../common/ContextMenu';
 import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { generateUniqueName } from '../../utils/commandUtils';
-import { AnimatePresence, motion } from 'framer-motion';
-import { formatPortInfo, formatTimestamp } from '../../utils/format';
+import { formatTimestamp } from '../../utils/format';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { LogSearch, useLogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
 import { Tooltip } from '../common/Tooltip';
+import { CommandEntity, CommandItem, CommandGroup } from '../../types/command';
+import { Token } from '../../types/token';
+
+interface SearchMatch {
+    logId: string;
+    startIndex: number;
+    endIndex: number;
+    [key: string]: any;
+}
 
 interface SerialMonitorProps {
     session: SessionState;
     onShowSettings?: (view: string) => void;
     onSend?: (data: string | Uint8Array) => void;
     onUpdateConfig?: (updates: Partial<SessionConfig>) => void;
-    onInputStateChange?: (inputState: any) => void;
+    onInputStateChange?: (inputState: Record<string, unknown>) => void;
     onClearLogs?: () => void;
     onConnectRequest?: () => Promise<boolean | void> | void;
+}
+
+interface LogItemProps {
+    log: LogEntry;
+    isNewLog: boolean;
+    viewMode: 'text' | 'hex' | 'both';
+    encoding: string;
+    showTimestamp: boolean;
+    showPacketType: boolean;
+    showDataLength: boolean;
+    onContextMenu: (e: React.MouseEvent, log: LogEntry) => void;
+    formatData: (data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => string;
+    formatTimestamp: (timestamp: number, format: string) => string;
+    getDataLengthText: (data: string | Uint8Array) => string;
+    timestampFormat?: string;
+    matches?: SearchMatch[];
+    activeMatch?: SearchMatch | null;
+    mergeRepeats?: boolean;
+    flashNewMessage?: boolean;
+    fontSize?: number;
+    showControlChars?: boolean;
+    rxCRC?: CRCConfig;
+    crcEnabled?: boolean;
 }
 
 // Memoized Log Item Component
@@ -47,10 +78,10 @@ const LogItem = memo(({
     mergeRepeats = true,
     flashNewMessage,
     fontSize = 15,
-    rxCRC,
     showControlChars,
+    rxCRC,
     crcEnabled
-}: any) => {
+}: LogItemProps) => {
 
     const renderControlChars = (str: string, show: boolean) => {
         if (!show) return str;
@@ -98,15 +129,15 @@ const LogItem = memo(({
         return parts.length > 0 ? parts : str;
     };
 
-    const renderHighlightedText = (log: any, text: string) => {
-        const logMatches = matches.filter((m: any) => m.logId === log.id);
+    const renderHighlightedText = (log: LogEntry, text: string) => {
+        const logMatches = matches.filter((m: any) => m.logId === log.id) as SearchMatch[];
         if (logMatches.length === 0) return renderControlChars(text, showControlChars);
 
-        const sortedMatches = [...logMatches].sort((a: any, b: any) => a.startIndex - b.startIndex);
+        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
         const result: React.ReactNode[] = [];
         let lastIndex = 0;
 
-        sortedMatches.forEach((match: any, i: number) => {
+        sortedMatches.forEach((match, i) => {
             if (match.startIndex > lastIndex) {
                 result.push(renderControlChars(text.substring(lastIndex, match.startIndex), showControlChars));
             }
@@ -165,7 +196,7 @@ const LogItem = memo(({
                 transform: 'translateZ(0)',
                 lineHeight: `${lineHeightPx}px`,
                 '--flash-color': 'var(--selection-background)'
-            } as any}
+            } as React.CSSProperties}
             onContextMenu={(e) => onContextMenu(e, log)}
             data-component="monitor-bubble"
         >
@@ -244,31 +275,31 @@ const LogItem = memo(({
 });
 
 const scrollPositions = new Map<string, number>();
+const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
 export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig, onInputStateChange, onClearLogs, onConnectRequest }: SerialMonitorProps) => {
     const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const { t } = useI18n();
-    const { parseSystemMessage } = useSystemMessage();
     const { logs, isConnected, config } = session;
-    const currentPort = config.type === 'serial' ? config.connection.path : '';
     const scrollRef = useRef<HTMLDivElement>(null);
     const initialLogCountRef = useRef(logs.length); // Track log count at mount to skip flash on tab switch
     const mountTimeRef = useRef(Date.now()); // Track mount time for animation logic
 
-    const uiState = (config as any).uiState || {};
+    const uiState = ((config as any).uiState as Record<string, any>) || {};
     console.log('SerialMonitor: uiState loaded', { sessionId: session.id, inputHTML: uiState.inputHTML, inputContent: uiState.inputContent });
 
     // Display Settings State - Initialize from uiState
-    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
-    const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
-    const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
-    const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
-    const [showControlChars, setShowControlChars] = useState(uiState.showControlChars !== undefined ? uiState.showControlChars : true);
-    const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
-    const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
-    const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
-    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || 15);
+    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>((uiState.viewMode as any) || 'hex');
+    const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? !!uiState.showTimestamp : true);
+    const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? !!uiState.showPacketType : true);
+    const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? !!uiState.showDataLength : false);
+    const [showControlChars, setShowControlChars] = useState(uiState.showControlChars !== undefined ? !!uiState.showControlChars : true);
+    const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? !!uiState.mergeRepeats : false);
+    const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>((uiState.filterMode as any) || 'all');
+    const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>((uiState.encoding as any) || 'utf-8');
+    const [fontSize, setFontSize] = useState<number>((uiState.fontSize as any) || 15);
+    const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier' | 'AppCoreFont'>((uiState.fontFamily as any) || 'AppCoreFont');
 
     // Sync fontSize with global theme when not overridden locally
     /* useEffect(() => {
@@ -277,29 +308,27 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             setFontSize(15);
         }
     }, [uiState.fontSize]); */
-    const [fontFamily, setFontFamily] = useState<'mono' | 'consolas' | 'courier' | 'AppCoreFont'>(uiState.fontFamily || 'AppCoreFont');
+
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
-    const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
     const [optionsMenuPos, setOptionsMenuPos] = useState({ top: 0, right: 0 });
     const optionsButtonRef = useRef<HTMLButtonElement>(null);
     // Search State
-    const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
+    const [searchOpen, setSearchOpen] = useState(!!uiState.searchOpen);
 
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
-    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
     useEffect(() => {
-        const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
+        const queryFonts = (window as Record<string, unknown>).queryLocalFonts || (window as Record<string, unknown>).updateAPI?.listFonts;
         if (queryFonts) {
-            queryFonts().then((res: any) => {
-                const fonts = Array.isArray(res) ? res : (res?.fonts || []);
-                const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
+            ((queryFonts as any)() as Promise<any>).then((res: any) => {
+                const fonts = Array.isArray(res) ? res : ((res as any)?.fonts || []);
+                const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : (f as any).fullName))).sort();
 
-                const mono: any[] = [];
-                const prop: any[] = [];
+                const mono: Record<string, string>[] = [];
+                const prop: Record<string, string>[] = [];
 
                 uniqueNames.forEach(name => {
                     const lower = (name as string).toLowerCase();
@@ -321,14 +350,14 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: 'header-mono', disabled: true }, ...mono] : []),
                     ...(prop.length > 0 ? [{ label: '-- Proportional --', value: 'header-prop', disabled: true }, ...prop] : [])
                 ];
-                setAvailableFonts(final);
+                setAvailableFonts(final as any[]);
             });
         }
     }, []);
 
     // CRC is in session.config.rxCRC.enabled
-    const crcEnabled = (config as any).rxCRC?.enabled || false;
-    const rxCRC = (config as any).rxCRC || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+    const crcEnabled = ((config as Record<string, unknown>).rxCRC as CRCConfig)?.enabled || false;
+    const rxCRC = ((config as Record<string, unknown>).rxCRC as CRCConfig) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
 
     // Use a ref to store the latest config to break dependency cycle
     // Use a ref to store the latest config to break dependency cycle
@@ -341,17 +370,19 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     // Clean up timer on unmount to prevent zombie updates
     useEffect(() => {
         return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            const timeout = saveTimeoutRef.current;
+            if (timeout) {
+                clearTimeout(timeout);
             }
         };
     }, []);
 
     // Save UI state when it changes (Immediate - no debounce to prevent data loss on close)
-    const saveUIState = useCallback((updates: any) => {
+    const saveUIState = useCallback((updates: Record<string, unknown>) => {
         if (!onUpdateConfig) return;
 
-        const currentUIState = (configRef.current as any).uiState || {};
+        const currentUIState = (configRef.current as Record<string, unknown>).uiState as Record<string, unknown> || {};
 
         // Field-by-field comparison to prevent useless updates
         const hasChanges = Object.keys(updates).some(k =>
@@ -360,7 +391,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
         if (!hasChanges) return;
 
-        onUpdateConfig({ uiState: { ...currentUIState, ...updates } } as any);
+        onUpdateConfig({ uiState: { ...currentUIState, ...updates } } as Partial<SessionConfig>);
     }, [onUpdateConfig]);
 
     // Calculate statistics
@@ -456,7 +487,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 element.scrollIntoView({ behavior: 'auto', block: 'center' });
             }
         }
-    }, [activeMatchRev]);
+    }, [activeMatchRev, activeMatch]);
 
     // Clear logs
     const handleClearLogs = () => {
@@ -493,7 +524,6 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         return `${length}B`;
     };
 
-    const prevLogsRef = useRef(logs);
     useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -503,7 +533,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) {
-            scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+            scrollRef.current.scrollTop = scrollPositions.get(session.id) as number;
         }
     }, [session.id]);
 
@@ -512,7 +542,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         const observer = new ResizeObserver(() => {
             if (scrollRef.current && scrollRef.current.clientHeight > 0) {
                 if (scrollPositions.has(session.id)) {
-                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+                    scrollRef.current.scrollTop = scrollPositions.get(session.id) as number;
                 }
             }
         });
@@ -552,13 +582,13 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     const toggleCRC = () => {
         if (!onUpdateConfig) return;
-        const currentRxCRC = (config as any).rxCRC || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
-        onUpdateConfig({ rxCRC: { ...currentRxCRC, enabled: !crcEnabled } } as any);
+        const currentRxCRC = (config as Record<string, unknown>).rxCRC as CRCConfig || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+        onUpdateConfig({ rxCRC: { ...currentRxCRC, enabled: !crcEnabled } } as Partial<SessionConfig>);
     };
 
     const updateRxCRC = (updates: Partial<CRCConfig>) => {
         if (!onUpdateConfig) return;
-        onUpdateConfig({ rxCRC: { ...rxCRC, ...updates } } as any);
+        onUpdateConfig({ rxCRC: { ...rxCRC, ...updates } } as Partial<SessionConfig>);
     };
 
     // Filter logs
@@ -575,21 +605,19 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         saveUIState({ filterMode: newMode });
     };
 
-    const fontFamilyClass = fontFamily === 'consolas' ? 'font-[Consolas]' : fontFamily === 'courier' ? 'font-[Courier]' : fontFamily === 'AppCoreFont' ? 'font-[AppCoreFont]' : 'font-mono';
-
-    const handleInputStateChange = useCallback((state: { content: string, html: string, tokens: any, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => {
+    const handleInputStateChange = useCallback((state: { content: string, html: string, tokens: Record<string, Token>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => {
         // Prevent update if content hasn't changed (simple check)
         // Note: tokens might be complex object, deep comparison might be heavy. 'inputHTML' usually changes if visual changes.
         // We will trust the callback for now but stabilization helps.
         saveUIState({
             inputContent: state.content,
             inputHTML: state.html,
-            inputTokens: state.tokens,
+            inputTokens: state.tokens as any,
             inputMode: state.mode,
             lineEnding: state.lineEnding,
             inputTimerInterval: state.timerInterval
         });
-    }, []); // Empty deps because saveUIState is stable (if defined properly) or we use function update form in saveUIState if needed.
+    }, [saveUIState]); // Dependencies adjusted
     // However, saveUIState depends on 'onUpdateConfig'.
     // 'onUpdateConfig' is from props.
     // If 'onUpdateConfig' changes, we re-create this.
@@ -600,10 +628,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const { addCommand, commands } = useCommandContext();
 
     // Context Menu State
-    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, log: any } | null>(null);
-    const [showCommandEditor, setShowCommandEditor] = useState<any | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, log: LogEntry } | null>(null);
+    const [showCommandEditor, setShowCommandEditor] = useState<Record<string, unknown> | null>(null);
 
-    const handleLogContextMenu = (e: React.MouseEvent, log: any) => {
+    const handleLogContextMenu = (e: React.MouseEvent, log: LogEntry) => {
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({
@@ -613,7 +641,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         });
     };
 
-    const handleCopyLog = (log: any) => {
+    const handleCopyLog = (log: LogEntry | null) => {
         if (!log) return;
         const text = formatData(log.data, viewMode, encoding);
         navigator.clipboard.writeText(text);
@@ -621,7 +649,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         setContextMenu(null);
     };
 
-    const handleAddToCommand = (log: any) => {
+    const handleAddToCommand = (log: LogEntry | null) => {
         if (!log) return;
         const payload = formatData(log.data, viewMode, encoding);
         // Open Editor Dialog
@@ -635,7 +663,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         setContextMenu(null);
     };
 
-    const handleSaveCommand = (updates: any) => {
+    const handleSaveCommand = (updates: Record<string, unknown>) => {
         addCommand({
             ...updates,
             parentId: undefined // Add to root by default, or maybe prompt? User said "doesn't belong to any group"
@@ -778,7 +806,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                             { label: 'ASCII', value: 'ascii' }
                                                         ]}
                                                         value={encoding}
-                                                        onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }}
+                                                        onChange={(val) => { setEncoding(val as 'utf-8' | 'gbk' | 'ascii'); saveUIState({ encoding: val }); }}
                                                     />
                                                 </div>
                                             </div>
@@ -871,7 +899,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                                         { label: 'None', value: 'none' }
                                                                     ]}
                                                                     value={rxCRC.algorithm}
-                                                                    onChange={(val) => updateRxCRC({ algorithm: val as any })}
+                                                                    onChange={(val) => updateRxCRC({ algorithm: val as 'modbus-crc16' | 'ccitt-crc16' | 'crc32' | 'none' })}
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
@@ -931,7 +959,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                         <CustomSelect
                                                             items={availableFonts}
                                                             value={fontFamily}
-                                                            onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val as any }); }}
+                                                            onChange={(val) => { setFontFamily(val as 'mono' | 'consolas' | 'courier' | 'AppCoreFont'); saveUIState({ fontFamily: val }); }}
                                                         />
                                                     </div>
                                                 </div>
@@ -943,15 +971,15 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                                                         <div className="flex-1 max-w-[150px]">
                                                             <CustomSelect
                                                                 items={[
-                                                                    { label: t('monitor.rxPacketMode_none' as any), value: 'none', description: t('monitor.rxPacketMode_none_tip' as any) },
-                                                                    { label: t('monitor.rxPacketMode_timeout' as any), value: 'timeout', description: t('monitor.rxPacketMode_timeout_tip' as any) },
-                                                                    { label: t('monitor.rxPacketMode_delimiter' as any), value: 'delimiter', description: t('monitor.rxPacketMode_delimiter_tip' as any) },
-                                                                    { label: t('monitor.rxPacketMode_fixedLength' as any), value: 'fixedLength', description: t('monitor.rxPacketMode_fixedLength_tip' as any) },
-                                                                    { label: t('monitor.rxPacketMode_delimiterWithTimeout' as any), value: 'delimiterWithTimeout', description: t('monitor.rxPacketMode_delimiterWithTimeout_tip' as any) },
-                                                                    { label: t('monitor.rxPacketMode_fixedLengthWithTimeout' as any), value: 'fixedLengthWithTimeout', description: t('monitor.rxPacketMode_fixedLengthWithTimeout_tip' as any) },
+                                                                    { label: t('monitor.rxPacketMode_none'), value: 'none', description: t('monitor.rxPacketMode_none_tip') },
+                                                                    { label: t('monitor.rxPacketMode_timeout'), value: 'timeout', description: t('monitor.rxPacketMode_timeout_tip') },
+                                                                    { label: t('monitor.rxPacketMode_delimiter'), value: 'delimiter', description: t('monitor.rxPacketMode_delimiter_tip') },
+                                                                    { label: t('monitor.rxPacketMode_fixedLength'), value: 'fixedLength', description: t('monitor.rxPacketMode_fixedLength_tip') },
+                                                                    { label: t('monitor.rxPacketMode_delimiterWithTimeout'), value: 'delimiterWithTimeout', description: t('monitor.rxPacketMode_delimiterWithTimeout_tip') },
+                                                                    { label: t('monitor.rxPacketMode_fixedLengthWithTimeout'), value: 'fixedLengthWithTimeout', description: t('monitor.rxPacketMode_fixedLengthWithTimeout_tip') },
                                                                 ]}
-                                                                value={uiState.rxPacketMode || 'none'}
-                                                                onChange={(val) => saveUIState({ rxPacketMode: val as any })}
+                                                                value={uiState.rxPacketMode as string || 'none'}
+                                                                onChange={(val) => saveUIState({ rxPacketMode: val })}
                                                             />
                                                         </div>
                                                     </div>
@@ -1151,13 +1179,14 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             {/* Serial Input Area */}
             <SerialInput
                 key={session.id}
+                sessionId={session.id}
                 onSend={handleSend}
                 initialContent={uiState.inputContent || ''}
                 initialHTML={uiState.inputHTML || ''}
-                initialTokens={uiState.inputTokens as any || {}}
+                initialTokens={uiState.inputTokens as Record<string, Token> || {}}
                 initialMode={uiState.inputMode || 'hex'}
                 initialLineEnding={uiState.lineEnding ?? ''}
-                initialTimerInterval={uiState.inputTimerInterval}
+                initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
                 onStateChange={handleInputStateChange}
                 isConnected={isConnected}
                 fontSize={fontSize}
@@ -1205,10 +1234,15 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 showCommandEditor && (
                     <CommandEditorDialog
                         item={{
+                            ...(showCommandEditor as any),
                             id: 'new',
                             type: 'command',
-                            ...showCommandEditor
-                        }}
+                            name: '',
+                            payload: typeof (showCommandEditor as any).data === 'string' ? (showCommandEditor as any).data : '',
+                            mode: (showCommandEditor as any).type === 'TX' ? (uiState.inputMode as any || 'text') : (uiState.viewMode as any || 'text'),
+                            tokens: {},
+                            parentId: null
+                        } as CommandEntity}
                         onClose={() => setShowCommandEditor(null)}
                         onSave={handleSaveCommand}
                         existingNames={commands.filter(c => !c.parentId).map(c => c.name)}
