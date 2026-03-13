@@ -1,85 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
+import {
+    Direction,
+    SplitNode,
+    LeafNode,
+    LayoutNode,
+    EditorLayoutState,
+    findNode,
+    findParent,
+    getAllLeaves,
+    normalizeTree,
+} from './editorLayoutTypes';
 
-// --- Types ---
+// 重新导出类型，确保外部引用不断
+export type { Direction, SplitNode, LeafNode, LayoutNode, EditorLayoutState };
+export { findNode };
 
-export type Direction = 'horizontal' | 'vertical';
-
-export interface SplitNode {
-    type: 'split';
-    id: string;
-    direction: Direction;
-    children: LayoutNode[];
-    size?: number; // Percentage for resizable panels, optional for now
-}
-
-export interface LeafNode {
-    type: 'leaf';
-    id: string;
-    views: string[]; // List of Session IDs
-    activeViewId: string | null;
-    size?: number;
-}
-
-export type LayoutNode = SplitNode | LeafNode;
-
-export interface EditorLayoutState {
-    root: LayoutNode | null;
-    activeGroupId: string | null;
-}
-
-// --- Helpers ---
-
-// Find a node by ID in the tree
-export const findNode = (node: LayoutNode, id: string): LayoutNode | null => {
-    if (node.id === id) return node;
-    if (node.type === 'split') {
-        for (const child of node.children) {
-            const result = findNode(child, id);
-            if (result) return result;
-        }
-    }
-    return null;
-};
-
-// Find parent of a node
-const findParent = (root: LayoutNode, nodeId: string): { parent: SplitNode, index: number } | null => {
-    if (root.type !== 'split') return null;
-    for (let i = 0; i < root.children.length; i++) {
-        const child = root.children[i];
-        if (child.id === nodeId) return { parent: root, index: i };
-        if (child.type === 'split') {
-            const result = findParent(child, nodeId);
-            if (result) return result;
-        }
-    }
-    return null;
-};
-
-// Get all leaf nodes
-const getAllLeaves = (node: LayoutNode): LeafNode[] => {
-    if (node.type === 'leaf') return [node];
-    return node.children.flatMap(getAllLeaves);
-};
-
-// Normalize tree (remove empty splits, merge single-child splits)
-// Returns null if tree is empty
-const normalizeTree = (node: LayoutNode): LayoutNode | null => {
-    if (node.type === 'leaf') {
-        // If leaf has no views? No, we might keep empty groups until explicitly closed?
-        // VS Code keeps empty groups. We'll decide cleanup logic elsewhere (closeView).
-        return node;
-    }
-
-    // Split node
-    const newChildren = node.children
-        .map(normalizeTree)
-        .filter((c): c is LayoutNode => c !== null);
-
-    if (newChildren.length === 0) return null;
-    if (newChildren.length === 1) return newChildren[0]; // Collapse single child split
-
-    return { ...node, children: newChildren };
-};
 
 export const useEditorLayout = () => {
     const [layout, setLayout] = useState<LayoutNode | null>({

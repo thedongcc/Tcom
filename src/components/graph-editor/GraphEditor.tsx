@@ -1,31 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
-import { DndContext, useSensor, useSensors, PointerSensor, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { graphService, GraphNode as IGraphNode, GraphEdge as IGraphEdge } from '../../services/GraphService';
 import { GraphNode } from './GraphNode';
-import { useConfirm } from '../../context/ConfirmContext';
 import { GraphCanvas } from './GraphCanvas';
-import { GraphLayout } from './GraphStyles';
 import { Plus, Trash2, Layout, ZoomIn, ZoomOut, Link, Network } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
+import { useGraphActions } from './useGraphActions';
 
 interface GraphEditorProps {
     sessionId?: string;
 }
 
 export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
-    const { confirm } = useConfirm();
     const { t } = useI18n();
-    // Local state for UI responsiveness, synced with Service
+    // 本地 UI 状态，与 Service 同步
     const [nodes, setNodes] = useState<IGraphNode[]>([]);
     const [edges, setEdges] = useState<IGraphEdge[]>([]);
     const [scale, setScale] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const tempEdgeRef = useRef<{ sourceNode: string, type: 'source' | 'target' } | null>(null);
 
-    // Temp edge for visual rendering
+    // 临时连线渲染
     const [tempEdge, setTempEdge] = useState<{ sourceX: number, sourceY: number, targetX: number, targetY: number } | null>(null);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -35,7 +32,18 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     );
 
-    // Initial Load & Sync using graphService
+    // ── 交互逻辑（委托给 Hook） ──
+    const {
+        handleDragStart, handleDragMove, handleDragEnd,
+        addNode, clearGraph,
+        handleHandleMouseDown, handleDeleteKey,
+    } = useGraphActions({
+        nodes, edges, scale, pan, containerRef,
+        setNodes, setEdges, setActiveDrag, setTempEdge,
+        setSelectedNodeId, setSelectedEdgeId,
+    });
+
+    // 初始化和同步
     useEffect(() => {
         const update = () => {
             const g = graphService.getGraph();
@@ -47,7 +55,7 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
         return () => unsub();
     }, [sessionId]);
 
-    // Zoom Wheel Logic (Non-passive)
+    // 滚轮缩放（Non-passive）
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -64,181 +72,17 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
         return () => container.removeEventListener('wheel', handleWheel);
     }, []);
 
-    // Handle Delete Key
+    // Delete 键删除
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedNodeId) {
-                    const newNodes = nodes.filter(n => n.id !== selectedNodeId);
-                    const newEdges = edges.filter(e => e.sourceStr !== selectedNodeId && e.targetStr !== selectedNodeId);
-                    setNodes(newNodes);
-                    setEdges(newEdges);
-                    graphService.updateGraph(newNodes, newEdges);
-                    setSelectedNodeId(null);
-                }
-                if (selectedEdgeId) {
-                    const newEdges = edges.filter(e => e.id !== selectedEdgeId);
-                    setEdges(newEdges);
-                    graphService.updateGraph(nodes, newEdges);
-                    setSelectedEdgeId(null);
-                }
+                handleDeleteKey(selectedNodeId, selectedEdgeId);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedNodeId, selectedEdgeId, nodes, edges]);
+    }, [selectedNodeId, selectedEdgeId, handleDeleteKey]);
 
-    // Drag State for smooth lines
-
-    const handleDragStart = (event: any) => {
-        setActiveDrag({ id: event.active.id, delta: { x: 0, y: 0 } });
-    };
-
-    const handleDragMove = (event: any) => {
-        const { active, delta } = event;
-        setActiveDrag({ id: active.id, delta: { x: delta.x / scale, y: delta.y / scale } });
-    };
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { id } = event.active;
-        const { delta } = event;
-
-        const newNodes = nodes.map(n => {
-            if (n.id === id) {
-                return {
-                    ...n,
-                    position: {
-                        x: n.position.x + delta.x / scale, // Adjust for zoom
-                        y: n.position.y + delta.y / scale
-                    }
-                };
-            }
-            return n;
-        });
-
-        setNodes(newNodes);
-        graphService.updateGraph(newNodes, edges);
-        setActiveDrag(null);
-    };
-
-    const addNode = (type: 'physical' | 'virtual' | 'pair' | 'bus') => {
-        const id = `node-${Date.now()}`;
-        const newNode: IGraphNode = {
-            id,
-            type,
-            title: type === 'pair' ? 'Pairing Node' : type === 'bus' ? 'Shared Bus' : `New ${type}`,
-            portPath: type === 'pair' ? 'Bridge' : type === 'bus' ? 'Bus' : type === 'physical' ? 'COM1' : `COM${nodes.length + 10}`,
-            position: { x: 100 + Math.abs(pan.x / scale), y: 100 + Math.abs(pan.y / scale) } // Center(ish)
-        };
-        const newNodes = [...nodes, newNode];
-        setNodes(newNodes);
-        graphService.updateGraph(newNodes, edges);
-    };
-
-    // Helper to get handle position
-    const getHandlePos = (nodeId: string, type: 'source' | 'target') => {
-        const node = nodes.find(n => n.id === nodeId);
-        if (!node) return { x: 0, y: 0 };
-        return GraphLayout.getPortCoordinates(node, type);
-    };
-
-    const handleHandleMouseDown = (nodeId: string, type: 'source' | 'target') => {
-        tempEdgeRef.current = { sourceNode: nodeId, type };
-
-        const startPos = getHandlePos(nodeId, type);
-        // Initialize temp edge
-        setTempEdge({
-            sourceX: startPos.x,
-            sourceY: startPos.y,
-            targetX: startPos.x,
-            targetY: startPos.y
-        });
-
-        // Add specific mouse move/up listeners for the wire drag
-        window.addEventListener('mousemove', handleWireMouseMove);
-        window.addEventListener('mouseup', handleWireMouseUp);
-    };
-
-    const handleWireMouseMove = (e: MouseEvent) => {
-        if (!tempEdgeRef.current || !containerRef.current) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / scale;
-        const y = (e.clientY - rect.top - pan.y) / scale;
-
-        setTempEdge(prev => {
-            if (!prev) return null;
-            return { ...prev, targetX: x, targetY: y };
-        });
-    };
-
-    const handleWireMouseUp = (e: MouseEvent) => {
-        // Check if we dropped on a handle
-        const targetEl = document.elementFromPoint(e.clientX, e.clientY);
-        // Traverse up to find handle
-        let handleEl = targetEl;
-        while (handleEl && !handleEl.hasAttribute('data-handle-id')) {
-            handleEl = handleEl.parentElement;
-            if (handleEl === document.body) { handleEl = null; break; }
-        }
-
-        if (handleEl && tempEdgeRef.current) {
-            const targetId = handleEl.getAttribute('data-handle-id');
-            const targetType = handleEl.getAttribute('data-handle-type');
-
-            if (targetId && targetType && targetId !== tempEdgeRef.current.sourceNode) {
-                // Determine Source vs Target based on Types
-                let sourceNodeId = tempEdgeRef.current.sourceNode;
-                let targetNodeId = targetId;
-
-                let isValid = false;
-                if (tempEdgeRef.current.type === 'source' && targetType === 'target') {
-                    isValid = true;
-                } else if (tempEdgeRef.current.type === 'target' && targetType === 'source') {
-                    // Swapped
-                    sourceNodeId = targetId;
-                    targetNodeId = tempEdgeRef.current.sourceNode;
-                    isValid = true;
-                }
-
-                if (isValid) {
-                    // Check duplicates
-                    if (!edges.some(edge => edge.sourceStr === sourceNodeId && edge.targetStr === targetNodeId)) {
-                        const newEdge: IGraphEdge = {
-                            id: `edge-${Date.now()}`,
-                            sourceStr: sourceNodeId,
-                            targetStr: targetNodeId,
-                            active: true
-                        };
-                        const newEdges = [...edges, newEdge];
-                        setEdges(newEdges);
-                        graphService.updateGraph(nodes, newEdges);
-                    }
-                }
-            }
-        }
-
-        // Cleanup
-        window.removeEventListener('mousemove', handleWireMouseMove);
-        window.removeEventListener('mouseup', handleWireMouseUp);
-        setTempEdge(null);
-        tempEdgeRef.current = null;
-    };
-
-    const clearGraph = async () => {
-        const ok = await confirm({
-            title: '清空图形',
-            message: '确定要清空整个图形吗？所有节点和连接都将丢失。',
-            type: 'danger',
-            confirmText: '继续清空'
-        });
-        if (ok) {
-            graphService.updateGraph([], []);
-        }
-    };
-
-
-    // --- Pan / Zoom / Drag Logic ---
     const [isPanning, setIsPanning] = useState(false);
     const lastPanObj = useRef({ x: 0, y: 0 });
 

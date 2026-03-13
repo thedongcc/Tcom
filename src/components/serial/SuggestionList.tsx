@@ -77,7 +77,7 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
                                 }`}
                             onClick={() => selectItem(index)}
                         >
-                            <Icon size={14} className={index === selectedIndex ? 'text-[var(--button-foreground)]' : item.iconColor || 'text-[var(--activitybar-inactive-foreground)]'} />
+                            <Icon size={14} style={{ color: index === selectedIndex ? 'var(--button-foreground, #fff)' : (item.iconColor || 'var(--activitybar-inactive-foreground, #858585)') }} />
                             <span className="flex-1 font-mono">{item.title}</span>
                             {item.shortcut && <span className="opacity-50 text-[10px]">{item.shortcut}</span>}
                         </button>

@@ -1,10 +1,11 @@
-﻿import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef } from 'react';
 import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, Check, FolderOpen, FileJson, AlertTriangle, X } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
-import { useConfirm } from '../../context/ConfirmContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
+import { useSettingsActions } from './useSettingsActions';
+import { FactoryResetDialog } from './SettingsComponents';
 
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -56,117 +57,23 @@ const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => voi
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {
-    const { config, availableThemes, loadThemes, updateConfig, updateUI, setTheme, resetConfig, importConfig, exportConfig } =
+    const { config, availableThemes, loadThemes, updateConfig, updateUI, setTheme } =
         useSettings();
-    const { confirm } = useConfirm();
     const { t } = useI18n();
     const [searchTerm, setSearchTerm] = useState('');
-    const [systemFonts, setSystemFonts] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const themeFileInputRef = useRef<HTMLInputElement>(null);
 
     // Factory Reset State
     const [showFactoryReset, setShowFactoryReset] = useState(false);
     const [resetInput, setResetInput] = useState('');
-    const resetKeyword = t('settings.factoryResetKeyword'); // "RESET"
-    const canFactoryReset = resetInput === resetKeyword;
 
-    const performFactoryReset = async () => {
-        if (!canFactoryReset) return;
-        try {
-            if (!(window as any).appAPI) {
-                alert('appAPI 未定义，请完全重启应用以加载最新的主进程和预加载脚本！\nappAPI is undefined, please restart the app fully.');
-                return;
-            }
-            const res = await (window as any).appAPI.factoryReset();
-            if (res && res.success === false) {
-                alert('重置失败 (Reset Failed):\n' + res.error);
-            }
-        } catch (e: any) {
-            console.error(e);
-            alert('重置期间发生异常:\n' + e.message);
-        }
-    };
-
-    // 加载系统字体列表
-    useEffect(() => {
-        (window as any).updateAPI?.listFonts?.().then((res: any) => {
-            if (res?.success && Array.isArray(res.fonts)) {
-                setSystemFonts(res.fonts);
-            }
-        }).catch(() => { /* 忽略错误，使用预设列表 */ });
-    }, []);
-
-    // ── 文件导入 ──
-    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = ev => {
-                if (ev.target?.result) importConfig(ev.target.result as string);
-            };
-            reader.readAsText(file);
-        }
-    };
-
-    // ── 文件导出 ──
-    const handleDownload = () => {
-        const json = exportConfig();
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tcom-settings.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-    // ── 重置确认 ──
-    const handleReset = async () => {
-        const ok = await confirm({
-            title: t('settings.resetTitle'),
-            message: t('settings.resetMessage'),
-            confirmText: t('settings.resetConfirm'),
-            cancelText: t('common.cancel'),
-            type: 'warning',
-        });
-        if (ok) resetConfig();
-    };
-
-
+    // ── 操作函数和字体列表（委托给 Hook） ──
+    const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
 
     // 通用样式
     const inputCls =
         'bg-[var(--input-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] text-[13px] px-2 h-7 outline-none focus:border-[var(--focus-border-color)] rounded-[4px]';
-
-    // 预设字体列表（内置字体 + 分类后的系统字体）
-    const fontFamilyPresets = [
-        { label: '-- Built-in --', value: '', disabled: true },
-        { label: '内嵌字体 (Default)', value: 'AppCoreFont' },
-    ];
-
-    // 分类系统字体
-    const monoFonts: { label: string; value: string }[] = [];
-    const propFonts: { label: string; value: string }[] = [];
-
-    // 定义一些常见的等宽字体关键词，用于初步分类
-    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
-
-    systemFonts.forEach(f => {
-        const lowerF = f.toLowerCase();
-        const item = { label: f, value: `"${f}"` };
-        if (monoKeywords.some(kw => lowerF.includes(kw))) {
-            monoFonts.push(item);
-        } else {
-            propFonts.push(item);
-        }
-    });
-
-    const finalFontList = [
-        ...fontFamilyPresets,
-        ...(monoFonts.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...monoFonts] : []),
-        ...(propFonts.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...propFonts] : [])
-    ];
 
     // ── 普通设置区块数据 ──
     type SettingItem = { label: string; description?: string; render: () => React.ReactNode };
@@ -434,53 +341,13 @@ export const SettingsEditor = () => {
                 </div>
             </div>
 
-            {/* Factory Reset Confirmation Dialog */}
             {showFactoryReset && (
-                <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div
-                        className="bg-[var(--st-popover-bg)] border border-[var(--st-settings-danger-bg)] shadow-2xl w-[450px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between p-3 border-b border-[var(--st-popover-border)] bg-[var(--st-settings-danger-bg-subtle)]">
-                            <span className="text-[12px] font-bold text-[var(--st-settings-danger-title)] uppercase tracking-wider flex items-center gap-2">
-                                <AlertTriangle size={14} />
-                                {t('settings.factoryResetDialogTitle')}
-                            </span>
-                            <button onClick={() => setShowFactoryReset(false)} className="text-[var(--st-settings-text)] hover:text-[var(--st-settings-text-hover)] transition-colors">
-                                <X size={14} />
-                            </button>
-                        </div>
-                        <div className="p-5">
-                            <p className="text-[13px] text-[var(--st-settings-text)] leading-relaxed whitespace-pre-wrap mb-4">
-                                {t('settings.factoryResetDialogMessage', { keyword: resetKeyword })}
-                            </p>
-                            <input
-                                autoFocus
-                                type="text"
-                                className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] p-2 text-sm text-[var(--input-foreground)] outline-none focus:border-[var(--st-settings-danger-bg)] rounded"
-                                placeholder={resetKeyword}
-                                value={resetInput}
-                                onChange={e => setResetInput(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2 p-3 bg-[var(--st-settings-footer-bg)] border-t border-[var(--st-settings-footer-border)]">
-                            <button
-                                onClick={() => setShowFactoryReset(false)}
-                                className="px-4 py-1.5 text-[var(--st-settings-text)] hover:bg-[var(--st-settings-btn-cancel-hover)] rounded-sm text-xs transition-colors"
-                            >
-                                {t('common.cancel')}
-                            </button>
-                            <button
-                                disabled={!canFactoryReset}
-                                onClick={performFactoryReset}
-                                className={`px-4 py-1.5 text-[var(--st-settings-danger-text)] rounded-sm text-xs transition-all flex items-center gap-2 ${canFactoryReset ? 'bg-[var(--st-settings-danger-bg)] hover:bg-[var(--st-settings-danger-hover)] cursor-pointer' : 'bg-[var(--st-settings-btn-disabled-bg)] text-[var(--st-settings-btn-disabled-text)] cursor-not-allowed opacity-50'}`}
-                            >
-                                {canFactoryReset && <AlertTriangle size={12} />}
-                                {t('settings.factoryResetBtn')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <FactoryResetDialog
+                    resetInput={resetInput}
+                    setResetInput={setResetInput}
+                    onReset={performFactoryReset}
+                    onClose={() => setShowFactoryReset(false)}
+                />
             )}
         </div>
     );

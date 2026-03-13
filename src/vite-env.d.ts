@@ -32,6 +32,8 @@ export interface SerialAPI {
     timedSendStart?: (connectionId: string, data: number[], intervalMs: number) => Promise<{ success: boolean; error?: string }>;
     timedSendStop?: (connectionId: string) => Promise<{ success: boolean }>;
     onTimedSendTick?: (connectionId: string, callback: (data: number[], timestamp: number) => void) => () => void;
+    // ⚡ 高精度动态定时发送（Worker 用模运算循环帧，无需 feed/replace/refill）
+    timedSendStartDynamic?: (connectionId: string, frames: number[][], intervalMs: number, timestampSlots: any[]) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface MqttAPI {

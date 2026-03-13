@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { CommandEntity, CommandGroup, CommandItem } from '../types/command';
 import { useHistory } from '../hooks/useHistory';
 import { useConfirm } from './ConfirmContext';
+import { cloneRecursive, readCommandsFromFile, downloadCommandsAsJson } from '../hooks/useCommandActions';
 
 const STORAGE_KEY = 'tcom-commands';
 
@@ -107,68 +108,30 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
         });
     }, [setCommands]);
 
-    // Deep duplicate
+    // 深复制
     const duplicateEntity = useCallback((id: string, newParentId?: string) => {
         setCommands(prev => {
             const itemToClone = prev.find(c => c.id === id);
             if (!itemToClone) return prev;
 
-            // Recursive Cloner
-            const cloneRecursive = (item: CommandEntity, parentId: string | null, allCommands: CommandEntity[]): CommandEntity[] => {
-                const newId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            const clones = cloneRecursive(
+                itemToClone,
+                newParentId !== undefined ? newParentId : itemToClone.parentId,
+                prev,
+                prev,
+            );
 
-                // 在目标 parent 下生成唯一名称
-                const siblings = allCommands.filter(c => c.parentId === parentId);
-                let baseName = item.name;
-                let uniqueName = baseName;
-                let counter = 1;
-                while (siblings.some(s => s.name === uniqueName)) {
-                    uniqueName = `${baseName}_${counter}`;
-                    counter++;
-                }
-
-                let clone = { ...item, id: newId, parentId, name: uniqueName };
-
-                if (clone.type === 'command') {
-                    const cmd = clone as CommandItem;
-                    if (cmd.tokens) {
-                        clone = { ...clone, tokens: JSON.parse(JSON.stringify(cmd.tokens)) } as CommandItem;
-                    }
-                }
-
-                let result = [clone];
-
-                // If group, find children and clone them
-                if (item.type === 'group') {
-                    const children = prev.filter(c => c.parentId === item.id);
-                    children.forEach(child => {
-                        result = [...result, ...cloneRecursive(child, newId, [...allCommands, ...result])];
-                    });
-                }
-                return result;
-            };
-
-            const clones = cloneRecursive(itemToClone, newParentId !== undefined ? newParentId : itemToClone.parentId, prev);
-
-            // Determine insertion strategy
-            // 1. Groups: Always append to end (User preference for ordering)
-            // 2. Cross-parent paste: Append to end (Avoid confusion with source index)
-            // 3. Same-parent Command: Insert adjacent (Standard duplicate behavior)
-
+            // 插入策略：分组或跨 parent 追加到末尾，同 parent 命令插入到原项后面
             const isCrossParent = newParentId !== undefined && newParentId !== itemToClone.parentId;
-
             if (itemToClone.type === 'group' || isCrossParent) {
                 return [...prev, ...clones];
             }
-
-            // Insert after the original item (for better UX)
             const index = prev.findIndex(c => c.id === id);
             if (index !== -1) {
                 const newCommands = [...prev];
                 newCommands.splice(index + 1, 0, ...clones);
                 return newCommands;
             }
-
             return [...prev, ...clones];
         });
     }, [setCommands]);
@@ -176,39 +139,12 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
     // 批量深复制（一次性在单个历史记录中完成，支持一次撤回）
     const duplicateEntities = useCallback((ids: string[], newParentId?: string) => {
         setCommands(prev => {
-            const cloneRecursiveBatch = (item: CommandEntity, parentId: string | null, allCommands: CommandEntity[]): CommandEntity[] => {
-                const newId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-                const siblings = allCommands.filter(c => c.parentId === parentId);
-                let baseName = item.name;
-                let uniqueName = baseName;
-                let counter = 1;
-                while (siblings.some(s => s.name === uniqueName)) {
-                    uniqueName = `${baseName}_${counter}`;
-                    counter++;
-                }
-                let clone = { ...item, id: newId, parentId, name: uniqueName };
-                if (clone.type === 'command') {
-                    const cmd = clone as CommandItem;
-                    if (cmd.tokens) {
-                        clone = { ...clone, tokens: JSON.parse(JSON.stringify(cmd.tokens)) } as CommandItem;
-                    }
-                }
-                let result = [clone];
-                if (item.type === 'group') {
-                    const children = prev.filter(c => c.parentId === item.id);
-                    children.forEach(child => {
-                        result = [...result, ...cloneRecursiveBatch(child, newId, [...allCommands, ...result])];
-                    });
-                }
-                return result;
-            };
-
             let accumulated = [...prev];
             for (const id of ids) {
                 const itemToClone = accumulated.find(c => c.id === id);
                 if (!itemToClone) continue;
                 const targetParent = newParentId !== undefined ? newParentId : itemToClone.parentId;
-                const clones = cloneRecursiveBatch(itemToClone, targetParent, accumulated);
+                const clones = cloneRecursive(itemToClone, targetParent, accumulated, prev);
                 accumulated = [...accumulated, ...clones];
             }
             return accumulated;
@@ -232,50 +168,26 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
     }, [setCommands]);
 
     const importCommands = useCallback(() => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const imported = JSON.parse(event.target?.result as string);
-                    if (Array.isArray(imported)) {
-                        confirm({
-                            title: '导入指令',
-                            message: '是否将导入的指令合并到现有列表中？点击取消将替换现有指令。',
-                            type: 'info',
-                            confirmText: '合并',
-                            cancelText: '替换'
-                        }).then(ok => {
-                            if (ok) {
-                                setCommands(prev => [...prev, ...imported]);
-                            } else {
-                                setCommands(imported);
-                            }
-                        });
-                    } else {
-                        alert('Invalid format');
-                    }
-                } catch (e) {
-                    alert('Failed to parse file');
+        readCommandsFromFile().then(imported => {
+            if (!imported) return;
+            confirm({
+                title: '导入指令',
+                message: '是否将导入的指令合并到现有列表中？点击取消将替换现有指令。',
+                type: 'info',
+                confirmText: '合并',
+                cancelText: '替换'
+            }).then(ok => {
+                if (ok) {
+                    setCommands(prev => [...prev, ...imported]);
+                } else {
+                    setCommands(imported);
                 }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    }, [setCommands]);
+            });
+        });
+    }, [setCommands, confirm]);
 
     const exportCommands = useCallback(() => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(commands, null, 2));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "serial_tool_commands.json");
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+        downloadCommandsAsJson(commands);
     }, [commands]);
 
     const value = {

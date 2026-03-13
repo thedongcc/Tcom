@@ -6,3 +6,4 @@ dist-electron
 node_modules
 release
 dev-data
+optimize

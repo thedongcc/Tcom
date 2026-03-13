@@ -1,9 +1,122 @@
-﻿import { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import { usePluginManager } from '../../context/PluginContextShared';
 import { Box, Play, Pause, Trash2, Search, FolderOpen, ExternalLink, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { PLUGIN_REGISTRY } from '../../plugins/registry';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+
+// ─── 提取到模块顶层，避免每次父组件 render 重新创建组件函数导致 hover 闪动 ───
+
+const SectionHeader = React.memo(({
+    title, count, expanded, onToggle,
+}: {
+    title: string;
+    count: number;
+    expanded: boolean;
+    onToggle: () => void;
+}) => (
+    <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-wide hover:text-[var(--st-sidebar-text)] transition-colors"
+    >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {title}
+        <span className="ml-auto font-normal normal-case text-[10px] opacity-60">{count}</span>
+    </button>
+));
+
+const PluginCard = React.memo(({
+    id, name, version, description, author, homepage,
+    icon: Icon, isActive, isExternal, actions,
+    isExpanded, onToggleExpand,
+    enabledText, disabledText, userInstalledText,
+}: {
+    id: string;
+    name: string;
+    version: string;
+    description?: string;
+    author?: string;
+    homepage?: string;
+    icon?: React.ComponentType<{ size?: number; className?: string }>;
+    isActive?: boolean;
+    isExternal?: boolean;
+    actions: React.ReactNode;
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+    enabledText: string;
+    disabledText: string;
+    userInstalledText: string;
+}) => (
+    <div
+        className="px-4 py-3 hover:bg-[var(--list-hover-background)] group border-l-2 border-transparent hover:border-[var(--focus-border-color)] transition-colors cursor-pointer"
+        onClick={onToggleExpand}
+    >
+        <div className="flex gap-3">
+            {/* 图标 */}
+            <div className="pt-0.5 flex-shrink-0">
+                {Icon
+                    ? <Icon size={36} className="text-[var(--st-sidebar-text)] opacity-70" />
+                    : <Box size={36} className="text-[var(--st-sidebar-text)] opacity-40" />
+                }
+            </div>
+
+            {/* 信息 */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[13px] font-bold text-[var(--st-sidebar-text)] truncate pr-2">{name}</span>
+                    <div
+                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {actions}
+                    </div>
+                </div>
+                <div className="text-[12px] text-[var(--input-placeholder-color)] truncate mb-1">{description}</div>
+                <div className="flex items-center gap-2 text-[11px] text-[var(--input-placeholder-color)]">
+                    <span>{version}</span>
+                    {author && <><span>•</span><span>{author}</span></>}
+                    {isActive !== undefined && (
+                        <>
+                            <span>•</span>
+                            <span className={isActive ? 'text-[var(--st-extension-active-text)]' : 'text-[var(--input-placeholder-color)]'}>
+                                {isActive ? enabledText : disabledText}
+                            </span>
+                        </>
+                    )}
+                    {isExternal && (
+                        <>
+                            <span>•</span>
+                            <span className="text-[var(--st-extension-user-text)]">{userInstalledText}</span>
+                        </>
+                    )}
+                </div>
+
+                {/* 展开详情 */}
+                {isExpanded && (
+                    <div className="mt-2 pt-2 border-t border-[var(--border-color)] space-y-1">
+                        <div className="text-[11px] text-[var(--st-sidebar-text)] opacity-70">ID: <code className="font-mono">{id}</code></div>
+                        {homepage && (
+                            <a
+                                href={homepage}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    (window as any).shellAPI?.openExternal(homepage);
+                                }}
+                                className="flex items-center gap-1 text-[11px] text-[var(--accent-color)] hover:underline"
+                            >
+                                <ExternalLink size={11} />
+                                {homepage}
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+));
+
+// ─── 主组件 ──────────────────────────────────────────────────────────────────
 
 export const ExtensionsSidebar = () => {
     const { plugins, activatePlugin, deactivatePlugin, uninstallPlugin, registerPlugin, installFromJson } =
@@ -52,121 +165,6 @@ export const ExtensionsSidebar = () => {
         e.target.value = '';
     };
 
-    const SectionHeader = ({
-        title,
-        count,
-        expanded,
-        onToggle,
-    }: {
-        title: string;
-        count: number;
-        expanded: boolean;
-        onToggle: () => void;
-    }) => (
-        <button
-            onClick={onToggle}
-            className="w-full flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-wide hover:text-[var(--st-sidebar-text)] transition-colors"
-        >
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {title}
-            <span className="ml-auto font-normal normal-case text-[10px] opacity-60">{count}</span>
-        </button>
-    );
-
-    const PluginCard = ({
-        id,
-        name,
-        version,
-        description,
-        author,
-        homepage,
-        icon: Icon,
-        isActive,
-        isExternal,
-        actions,
-    }: {
-        id: string;
-        name: string;
-        version: string;
-        description?: string;
-        author?: string;
-        homepage?: string;
-        icon?: React.ComponentType<{ size?: number; className?: string }>;
-        isActive?: boolean;
-        isExternal?: boolean;
-        actions: React.ReactNode;
-    }) => {
-        const isExpanded = expandedId === id;
-        return (
-            <div
-                className="px-4 py-3 hover:bg-[var(--list-hover-background)] group border-l-2 border-transparent hover:border-[var(--focus-border-color)] transition-colors cursor-pointer"
-                onClick={() => setExpandedId(isExpanded ? null : id)}
-            >
-                <div className="flex gap-3">
-                    {/* 图标 */}
-                    <div className="pt-0.5 flex-shrink-0">
-                        {Icon
-                            ? <Icon size={36} className="text-[var(--st-sidebar-text)] opacity-70" />
-                            : <Box size={36} className="text-[var(--st-sidebar-text)] opacity-40" />
-                        }
-                    </div>
-
-                    {/* 信息 */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[13px] font-bold text-[var(--st-sidebar-text)] truncate pr-2">{name}</span>
-                            <div
-                                className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0"
-                                onClick={e => e.stopPropagation()}
-                            >
-                                {actions}
-                            </div>
-                        </div>
-                        <div className="text-[12px] text-[var(--input-placeholder-color)] truncate mb-1">{description}</div>
-                        <div className="flex items-center gap-2 text-[11px] text-[var(--input-placeholder-color)]">
-                            <span>{version}</span>
-                            {author && <><span>•</span><span>{author}</span></>}
-                            {isActive !== undefined && (
-                                <>
-                                    <span>•</span>
-                                    <span className={isActive ? 'text-[var(--st-extension-active-text)]' : 'text-[var(--input-placeholder-color)]'}>
-                                        {isActive ? t('extensions.enabled') : t('extensions.disabled')}
-                                    </span>
-                                </>
-                            )}
-                            {isExternal && (
-                                <>
-                                    <span>•</span>
-                                    <span className="text-[var(--st-extension-user-text)]">{t('extensions.userInstalled')}</span>
-                                </>
-                            )}
-                        </div>
-
-                        {/* 展开详情 */}
-                        {isExpanded && (
-                            <div className="mt-2 pt-2 border-t border-[var(--border-color)] space-y-1">
-                                <div className="text-[11px] text-[var(--st-sidebar-text)] opacity-70">ID: <code className="font-mono">{id}</code></div>
-                                {homepage && (
-                                    <a
-                                        href={homepage}
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            window.shellAPI?.openExternal(homepage);
-                                        }}
-                                        className="flex items-center gap-1 text-[11px] text-[var(--accent-color)] hover:underline"
-                                    >
-                                        <ExternalLink size={11} />
-                                        {homepage}
-                                    </a>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     return (
         <div className="flex flex-col h-full bg-[var(--extensions-sidebar-bg)]" data-component="extensions-sidebar">
@@ -233,6 +231,11 @@ export const ExtensionsSidebar = () => {
                                 icon={plugin.icon}
                                 isActive={isActive}
                                 isExternal={isExternal}
+                                isExpanded={expandedId === plugin.id}
+                                onToggleExpand={() => setExpandedId(expandedId === plugin.id ? null : plugin.id)}
+                                enabledText={t('extensions.enabled')}
+                                disabledText={t('extensions.disabled')}
+                                userInstalledText={t('extensions.userInstalled')}
                                 actions={
                                     <>
                                         {isActive ? (
@@ -295,6 +298,11 @@ export const ExtensionsSidebar = () => {
                                         version={plugin.version}
                                         description={plugin.description}
                                         icon={plugin.icon}
+                                        isExpanded={expandedId === plugin.id}
+                                        onToggleExpand={() => setExpandedId(expandedId === plugin.id ? null : plugin.id)}
+                                        enabledText={t('extensions.enabled')}
+                                        disabledText={t('extensions.disabled')}
+                                        userInstalledText={t('extensions.userInstalled')}
                                         actions={
                                             <button
                                                 onClick={() => registerPlugin(plugin)}

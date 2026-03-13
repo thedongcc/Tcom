@@ -6,6 +6,9 @@ import { componentTokenMap } from '../../themes/componentTokenMap';
 import { ColorPickerTrigger } from './ColorPickerShared';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+import { REGION_GROUPS, findGroupForComp, findFirstTokenOfComp } from './themeColorGroups';
+import { TokenRow, throttledIpcSync } from './ThemeTokenRow';
+
 
 // GlobalWindow definition merged into vite-env.d.ts
 interface Props {
@@ -13,143 +16,6 @@ interface Props {
     onClose: () => void;
 }
 
-// 定义分组及其包含的组件 ID
-const REGION_GROUPS = [
-    {
-        id: 'global-variables',
-        label: '基础全局与基座',
-        components: ['global-common', 'global-components', 'global-scrollbar', 'st-status-indicators']
-    },
-    {
-        id: 'layout',
-        label: '全局与布局',
-        components: ['titlebar', 'activitybar', 'sidebar', 'editor-area', 'editor-tabs', 'statusbar']
-    },
-    {
-        id: 'sidebar-menus',
-        label: '侧边栏及菜单',
-        components: ['session-list-sidebar', 'session-list-item', 'command-sidebar', 'extensions-sidebar']
-    },
-    {
-        id: 'serial-tabs',
-        label: '串口与终端模块',
-        components: ['serial-monitor', 'serial-input', 'serial-config', 'monitor-terminal', 'virtual-port-plugin', 'st-connection-control']
-    },
-    {
-        id: 'mqtt-tabs',
-        label: 'MQTT 与配置模块',
-        components: ['mqtt-monitor', 'mqtt-config']
-    },
-    {
-        id: 'messaging',
-        label: '消息气泡与通讯',
-        components: ['monitor-bubble', 'system-message']
-    },
-    {
-        id: 'popups',
-        label: '弹出与对话框',
-        components: ['context-menu', 'dialog', 'tooltip', 'toast']
-    },
-    {
-        id: 'settings-tools',
-        label: '⚙设置与高级工具',
-        components: ['settings-editor', 'graph-editor']
-    }
-];
-
-// 根据 compKey 找到它所在的 groupId
-function findGroupForComp(compKey: string): string | null {
-    for (const group of REGION_GROUPS) {
-        if (group.components.includes(compKey)) return group.id;
-    }
-    return null;
-}
-
-// 根据 compKey 找到该组件下的第一个 token varName
-function findFirstTokenOfComp(compKey: string): string | null {
-    const meta = componentTokenMap[compKey];
-    if (!meta || meta.tokens.length === 0) return null;
-    return meta.tokens[0].var;
-}
-
-// ── 子组件 TokenRow (Memoized) ─────────────────────────────────────────────────────────────
-
-interface TokenRowProps {
-    varName: string;
-    label: string;
-    value: string;
-    isCopied: boolean;
-    idPrefix?: string;
-    onColorChange: (varName: string, color: string) => void;
-    onCopy: (text: string) => void;
-    setRef?: (el: HTMLDivElement | null) => void;
-}
-
-const TokenRow = React.memo(({ varName, label, value, isCopied, idPrefix = "", onColorChange, onCopy, setRef }: TokenRowProps) => {
-    const { t } = useI18n();
-    return (
-        <div
-            ref={setRef}
-            className="flex items-center gap-2.5 group/token relative mx-1 p-1.5 rounded-lg transition-all shadow-sm active:scale-[0.985]"
-            style={{
-                minHeight: '32px',
-                backgroundColor: 'var(--theme-editor-card-bg)',
-                borderColor: 'var(--theme-editor-card-border)',
-                borderWidth: '1px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-editor-card-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-editor-card-bg)'}
-        >
-            <div className="relative shrink-0 flex items-center">
-                <ColorPickerTrigger
-                    value={value}
-                    onChange={(val) => onColorChange(varName, val)}
-                />
-                <div
-                    className="absolute inset-0 rounded pointer-events-none ring-1 ring-inset"
-                    style={{
-                        boxShadow: 'inset 0 1px 1px var(--theme-editor-card-border)',
-                        borderColor: 'var(--theme-editor-card-border)'
-                    }}
-                />
-            </div>
-            <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-[10px] truncate transition-colors text-[var(--app-foreground)] font-semibold leading-tight opacity-90">
-                    {label}
-                </span>
-                <Tooltip content={isCopied ? t('themeEditor.copied') : t('themeEditor.copyVar')} position="right" delay={150}>
-                    <span
-                        className="text-[9px] text-[var(--app-foreground)] opacity-50 font-mono truncate cursor-pointer hover:underline hover:opacity-100 block mt-[1px]"
-                        onClick={e => { e.stopPropagation(); onCopy(varName); }}
-                    >
-                        {varName}
-                    </span>
-                </Tooltip>
-            </div>
-        </div>
-    );
-});
-TokenRow.displayName = 'TokenRow';
-
-// IPC 娑堟伅鎴祦鍣紝淇濇姢閫氫俊绠＄嚎闃叉鑹茬幆楂橀鎷栨嫿鎵撳穿 Renderer
-let lastIpcTime = 0;
-let ipcTimer: NodeJS.Timeout | null = null;
-const throttledIpcSync = (themeId: string, edits: Record<string, string>) => {
-    const now = Date.now();
-    if (now - lastIpcTime > 32) { // 澶х害 30 FPS
-        window.themeAPI?.applyPreview?.(edits);
-        window.themeAPI?.setPendingEdits?.(themeId, edits);
-        lastIpcTime = now;
-        if (ipcTimer) clearTimeout(ipcTimer);
-    } else {
-        if (ipcTimer) clearTimeout(ipcTimer);
-        ipcTimer = setTimeout(() => {
-            window.themeAPI?.applyPreview?.(edits);
-            window.themeAPI?.setPendingEdits?.(themeId, edits);
-            lastIpcTime = Date.now();
-        }, 32);
-    }
-};
 
 export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
     const { t } = useI18n();

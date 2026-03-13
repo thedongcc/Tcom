@@ -4,7 +4,7 @@ import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { SuggestionList, SuggestionListRef } from './SuggestionList';
-import { Hash, Flag, Clock, Settings } from 'lucide-react';
+import { tokenRegistry } from '../../tokens';
 
 export const SuggestionExtension = Extension.create({
     name: 'suggestion',
@@ -30,119 +30,40 @@ export const SuggestionExtension = Extension.create({
     },
 });
 
+/**
+ * 通过 tokenRegistry 自动生成 / 快捷菜单条目。
+ * 新增 Token 类型只需实现 suggestions() 方法，无需修改本文件。
+ */
 export const getSuggestionOptions = () => ({
     char: '/',
     allowSpaces: false,
     items: ({ query }: { query: string }) => {
-        const items = [
-            {
-                title: 'CRC16-Modbus',
-                type: 'crc',
-                config: { algorithm: 'modbus-crc16' },
-                icon: Hash,
-                iconColor: 'text-[var(--st-token-crc)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'crc', config: { algorithm: 'modbus-crc16' } })
-                        .run();
-                },
-            },
-            {
-                title: 'CRC16-CCITT',
-                type: 'crc',
-                config: { algorithm: 'ccitt-crc16' },
-                icon: Hash,
-                iconColor: 'text-[var(--st-token-crc)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'crc', config: { algorithm: 'ccitt-crc16' } })
-                        .run();
-                },
-            },
-            {
-                title: 'CRC32',
-                type: 'crc',
-                config: { algorithm: 'crc32' },
-                icon: Hash,
-                iconColor: 'text-[var(--st-token-crc)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'crc', config: { algorithm: 'crc32' } })
-                        .run();
-                },
-            },
-            {
-                title: 'Custom',
-                type: 'flag',
-                config: { hex: 'AA55' }, // Default placeholder
-                icon: Flag,
-                iconColor: 'text-[var(--st-token-flag)]',
-                command: ({ editor, range }: any) => {
-                    // Start with empty flag or specialized dialog? 
-                    // For now, insert default flag token which user can click to configure
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'flag', config: { hex: 'AA55' } })
-                        .run();
-                },
-            },
-            {
-                title: 'Timestamp (s)',
-                type: 'timestamp',
-                config: { format: 'seconds' },
-                icon: Clock,
-                iconColor: 'text-[var(--st-token-timestamp)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'timestamp', config: { format: 'seconds' } })
-                        .run();
-                },
-            },
-            {
-                title: 'Timestamp (ms)',
-                type: 'timestamp',
-                config: { format: 'milliseconds' }, // Correct type literal
-                icon: Clock,
-                iconColor: 'text-[var(--st-token-timestamp)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'timestamp', config: { format: 'milliseconds' } })
-                        .run();
-                },
-            },
-            {
-                title: 'Auto',
-                type: 'auto_inc',
-                config: { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 },
-                icon: Settings,
-                iconColor: 'text-[var(--st-token-auto-inc)]',
-                command: ({ editor, range }: any) => {
-                    editor
-                        .chain()
-                        .focus()
-                        .deleteRange(range)
-                        .insertSerialToken({ type: 'auto_inc', config: { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 } })
-                        .run();
-                },
-            },
-        ];
+        const items: any[] = [];
+
+        for (const plugin of tokenRegistry.getAll()) {
+            const colorValue = `var(${plugin.colorVar}, ${plugin.fallbackColor})`;
+            const suggestions = plugin.suggestions?.() ?? [
+                { title: plugin.label, config: plugin.defaultConfig() },
+            ];
+
+            for (const suggestion of suggestions) {
+                items.push({
+                    title: suggestion.title,
+                    type: plugin.type,
+                    config: suggestion.config,
+                    icon: suggestion.icon,
+                    iconColor: colorValue,
+                    command: ({ editor, range }: any) => {
+                        editor
+                            .chain()
+                            .focus()
+                            .deleteRange(range)
+                            .insertSerialToken({ type: plugin.type, config: suggestion.config })
+                            .run();
+                    },
+                });
+            }
+        }
 
         return items.filter(item =>
             item.title.toLowerCase().includes(query.toLowerCase())

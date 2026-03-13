@@ -1,4 +1,5 @@
 ﻿import { Node, mergeAttributes } from '@tiptap/core';
+import { tokenRegistry } from '../../tokens';
 
 export const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
 
@@ -71,11 +72,9 @@ export const SerialToken = Node.create<SerialTokenOptions>({
         return ({ node, getPos, editor }) => {
             let currentNode = node;
 
-            // Create container
             const dom = document.createElement('span');
             dom.className = 'inline select-none mx-[0.1em] align-baseline';
 
-            // Create content wrapper
             const span = document.createElement('span');
             span.className = `
                 inline-block
@@ -83,44 +82,29 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 cursor-pointer transition-colors
             `;
 
-            // Apply type-specific colors
+            // ─── 通过 registry 获取颜色，直接用 style.color 避免 Tailwind JIT 漏扫动态类 ───
             const updateColors = (type: string) => {
-                span.classList.remove('text-[var(--st-token-crc)]', 'text-[var(--st-token-timestamp)]', 'text-[var(--st-token-auto-inc)]', 'text-[var(--st-token-flag)]');
-                if (type === 'crc') span.classList.add('text-[var(--st-token-crc)]');
-                else if (type === 'timestamp') span.classList.add('text-[var(--st-token-timestamp)]');
-                else if (type === 'auto_inc') span.classList.add('text-[var(--st-token-auto-inc)]');
-                else span.classList.add('text-[var(--st-token-flag)]');
+                const plugin = tokenRegistry.get(type);
+                const colorVar = plugin?.colorVar ?? '--st-token-flag';
+                const fallback = plugin?.fallbackColor ?? '#c586c0';
+                // 使用 var(--xxx, 兜底色) 确保 CSS 变量未注入时仍能正确显示
+                span.style.color = `var(${colorVar}, ${fallback})`;
+            };
+
+            // ─── 通过 registry 获取显示标签 ─────────────────────────────
+            const updateLabel = (attrs: any) => {
+                const { type, config } = attrs;
+                const plugin = tokenRegistry.get(type);
+                const label = plugin ? plugin.getLabel(config) : 'Unknown';
+                const isBold = plugin?.isBold ?? false;
+                span.innerHTML = `<span class="opacity-50 mr-[0.1em]">/</span><span class="${isBold ? 'font-medium' : ''}">${label}</span>`;
             };
 
             updateColors(node.attrs.type);
             span.title = 'Click to configure';
-
-            // Helper to update label
-            const updateLabel = (attrs: any) => {
-                const { type, config } = attrs;
-                let label = 'Unknown';
-
-                if (type === 'crc') {
-                    if (config.algorithm === 'modbus-crc16') label = 'CRC16-Modbus';
-                    else if (config.algorithm === 'ccitt-crc16') label = 'CRC16-CCITT';
-                    else label = `CRC:${config.algorithm}`;
-                } else if (type === 'flag') {
-                    const hex = config.hex || '';
-                    const display = hex.length > 20 ? hex.substring(0, 20) + '...' : hex;
-                    label = config.name ? `${config.name}: ${display}` : (hex ? `Custom:${display}` : 'Custom');
-                } else if (type === 'timestamp') {
-                    label = config.format === 'milliseconds' ? 'Time:Unix_ms' : 'Time:Unix_s';
-                } else if (type === 'auto_inc') {
-                    label = `Val:${config.currentValue || config.defaultValue || '00'}`;
-                }
-
-                span.innerHTML = `<span class="opacity-50 mr-[0.1em]">/</span><span class="${type === 'crc' ? 'font-medium' : ''}">${label}</span>`;
-            };
-
             updateLabel(node.attrs);
 
-            // Click Handler
-            const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
+            // ─── 点击打开配置弹窗 ───────────────────────────────────────
             span.onclick = (e) => {
                 e.stopPropagation();
                 const { id, type, config } = currentNode.attrs;
@@ -131,23 +115,19 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 window.dispatchEvent(event);
             };
 
-            // Right Click / Context Menu Handler (Reset)
+            // ─── 右键通过 registry 处理 ─────────────────────────────────
             span.oncontextmenu = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Use editor.commands to ensure we follow the framework's way
-                if (currentNode.attrs.type === 'auto_inc') {
-                    const currentConfig = currentNode.attrs.config;
-                    const newConfig = JSON.parse(JSON.stringify({
-                        ...currentConfig,
-                        currentValue: currentConfig.defaultValue
-                    }));
-
-                    editor.chain().focus().command(({ tr }) => {
-                        tr.setNodeAttribute(getPos(), 'config', newConfig);
-                        return true;
-                    }).run();
-                }
+                const plugin = tokenRegistry.get(currentNode.attrs.type);
+                if (!plugin?.onContextMenu) return;
+                const newConfig = plugin.onContextMenu(currentNode.attrs.config);
+                if (newConfig === null) return;
+                const newConfigCopy = JSON.parse(JSON.stringify(newConfig));
+                editor.chain().focus().command(({ tr }) => {
+                    tr.setNodeAttribute(getPos(), 'config', newConfigCopy);
+                    return true;
+                }).run();
             };
 
             dom.appendChild(span);

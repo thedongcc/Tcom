@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Send, Plus, Upload, Timer, Flag } from 'lucide-react';
-import { Token, CRCConfig, FlagConfig } from '../../types/token';
+import { Send, Upload, Timer } from 'lucide-react';
+import { Token } from '../../types/token';
+import { tokenRegistry } from '../../tokens';
 import { TokenConfigPopover } from './TokenConfigPopover';
-import { MessagePipeline } from '../../services/MessagePipeline';
 
 // TipTap Imports
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -13,6 +13,7 @@ import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
+import { useSerialInputLogic } from './useSerialInputLogic';
 
 interface SerialInputProps {
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
@@ -57,6 +58,10 @@ export const SerialInput = ({
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [timerInterval, setTimerInterval] = useState(initialTimerInterval);
     const [timerIntervalInput, setTimerIntervalInput] = useState(initialTimerInterval.toString()); // String state for input
+    // 编辑器内容版本号：每次 docChanged 时 +1，用于触发定时发送 effect 重新运行
+    const [contentVersion, setContentVersion] = useState(0);
+    // isSyncingRef：标记当前是内部同步（如 syncEditorDynamicTokens），不应触发 contentVersion 递增
+    const isSyncingRef = useRef(false);
     const isReadyRef = useRef(false);
 
     // Memoize extensions to prevent editor re-creation on every render
@@ -96,6 +101,11 @@ export const SerialInput = ({
 
             if ((!transaction.docChanged && !transaction.scrolledIntoView) || !isReadyRef.current) {
                 return;
+            }
+
+            // 内容变化时递增版本号，但跳过内部同步（如 auto_inc 显示刷新）引起的变化
+            if (transaction.docChanged && !isSyncingRef.current) {
+                setContentVersion(v => v + 1);
             }
 
             if (onStateChange) {
@@ -172,24 +182,12 @@ export const SerialInput = ({
         return () => window.removeEventListener(SERIAL_TOKEN_CLICK_EVENT, handleTokenClick);
     }, []);
 
-    const insertToken = (type: 'crc' | 'flag' | 'timestamp' | 'auto_inc') => {
+    // 通过 registry 获取默认配置，无需在此处硬编码 Token 类型
+    const insertToken = (type: string) => {
         if (!editor) return;
-        let config: Record<string, unknown> = {};
-        if (type === 'crc') {
-            config = {
-                algorithm: 'modbus-crc16',
-                startIndex: 0,
-                endIndex: 0
-            } as CRCConfig;
-        } else if (type === 'flag') {
-            config = { hex: 'AA', name: '' } as FlagConfig;
-        } else if (type === 'timestamp') {
-            // 时间戳 Token
-            config = { format: 'seconds', byteOrder: 'big' };
-        } else if (type === 'auto_inc') {
-            // 自变化 Token
-            config = { bytes: 1, defaultValue: '00', currentValue: '00', step: 1 };
-        }
+        const plugin = tokenRegistry.get(type);
+        if (!plugin) return;
+        const config = plugin.defaultConfig();
         editor.chain().focus().insertSerialToken({ type, config }).run();
     };
 
@@ -206,141 +204,14 @@ export const SerialInput = ({
         setPopover(null);
     };
 
-    const extractTokens = useCallback((): Record<string, Token> => {
-        if (!editor) return {};
-        const json = editor.getJSON();
-        const tokensMap: Record<string, Token> = {};
-        type TraverseNode = { type?: string; attrs?: Record<string, unknown>; content?: TraverseNode[] };
-        const traverse = (node: TraverseNode) => {
-            if (node.type === 'serialToken' && node.attrs) {
-                const { id, type, config } = node.attrs as unknown as { id: string, type: string, config: Record<string, unknown> };
-                // Deep clone the config here to ensure external modifications don't leak back 
-                // into the editor's state without a proper transaction
-                tokensMap[id] = { id, type, config: JSON.parse(JSON.stringify(config)) };
-            }
-            if (node.content) node.content.forEach(traverse);
-        };
-        traverse(json);
-        return tokensMap;
-    }, [editor]);
 
-    const handleSend = useCallback(() => {
-        if (!isConnected) {
-            onConnectRequest?.();
-            return;
-        }
-        if (!editor || editor.isEmpty) {
-            showToast(t('toast.sendEmpty'), 'warning');
-            return;
-        }
+    // ── 发送和定时逻辑（委托给 Hook） ──
+    const { extractTokens, handleSend } = useSerialInputLogic({
+        editor, mode, lineEnding, isConnected, isEmpty,
+        sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
+        onSend, onConnectRequest,
+    });
 
-        const html = editor.getHTML();
-        const text = editor.getText();
-        const json = editor.getJSON();
-        const tokensMap = extractTokens();
-        console.log('SerialInput handleSend:', { html, text, json: JSON.stringify(json, null, 2), tokensMap });
-        const { data } = MessagePipeline.process(text, html, mode, tokensMap, lineEnding);
-
-        // After sending, some tokens (like auto_inc) might have updated their currentValue.
-        // We need to sync these updates back to the editor in ONE transition.
-        editor.chain().command(({ tr }) => {
-            let changed = false;
-            tr.doc.descendants((node, pos) => {
-                if (node.type.name === 'serialToken' && node.attrs.type === 'auto_inc') {
-                    const updatedToken = tokensMap[node.attrs.id];
-                    if (updatedToken) {
-                        // We must send a NEW object reference to ProseMirror/TipTap 
-                        // to trigger the update and re-render of the NodeView.
-                        const nextConfig = JSON.parse(JSON.stringify(updatedToken.config));
-
-                        // Compare content to avoid infinite loops or unnecessary updates
-                        if (JSON.stringify(node.attrs.config) !== JSON.stringify(nextConfig)) {
-                            tr.setNodeAttribute(pos, 'config', nextConfig);
-                            changed = true;
-                        }
-                    }
-                }
-            });
-            return changed;
-        }).run();
-
-        onSend(data, mode);
-    }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens, showToast, t]);
-
-    // Use a ref to store the latest handleSend callback
-    const handleSendRef = useRef(handleSend);
-    useEffect(() => {
-        handleSendRef.current = handleSend;
-    }, [handleSend]);
-
-    // ⚡ 定时发送：区分静态/动态 token，选择最优定时策略
-    // 静态数据（无 auto_inc/timestamp token）→ 委托主进程 Node.js libuv 定时器（精度 1~2ms）
-    // 动态数据（有 auto_inc/timestamp）→ 渲染进程漂移补偿定时器（需要每次重新计算）
-    const hasDynamicTokens = useCallback(() => {
-        const tokens = extractTokens();
-        return Object.values(tokens).some(t => t.type === 'auto_inc' || t.type === 'timestamp');
-    }, [extractTokens]);
-
-    useEffect(() => {
-        if (!isTimerRunning || timerInterval <= 0) {
-            // 确保停止主进程定时器
-            if (sessionId && window.serialAPI?.timedSendStop) {
-                window.serialAPI.timedSendStop(sessionId);
-            }
-            return;
-        }
-
-        if (!isConnected) return;
-
-        // 判断是否有动态 token
-        const isDynamic = hasDynamicTokens();
-
-        if (!isDynamic && sessionId && window.serialAPI?.timedSendStart) {
-            // ── 静态数据：主进程高精度定时器路径 ──
-            // 预编译数据，发送到主进程，由 Node.js libuv 定时器以 1~2ms 精度执行
-            if (!editor || editor.isEmpty) return;
-            const html = editor.getHTML();
-            const text = editor.getText();
-            const tokens = extractTokens();
-            const { data } = MessagePipeline.process(text, html, mode, tokens, lineEnding);
-
-            // 将数据转为 number[] 传给主进程（IPC 序列化需要普通数组）
-            const dataArray = data instanceof Uint8Array
-                ? Array.from(data)
-                : Array.from(new TextEncoder().encode(data as string));
-
-            window.serialAPI.timedSendStart(sessionId, dataArray, timerInterval);
-
-            // 主进程负责所有发送和日志记录（通过 serial:timed-send-tick）
-            // 渲染进程只需确保停止时调用 timedSendStop
-            return () => {
-                window.serialAPI?.timedSendStop?.(sessionId);
-            };
-        } else {
-            // ── 动态数据：渲染进程漂移补偿定时器路径 ──
-            let nextFireTime = performance.now() + timerInterval;
-            let timeoutId: ReturnType<typeof setTimeout> | null = null;
-            let cancelled = false;
-
-            const schedule = () => {
-                if (cancelled) return;
-                const delay = Math.max(0, nextFireTime - performance.now());
-                timeoutId = setTimeout(() => {
-                    if (cancelled) return;
-                    nextFireTime += timerInterval;
-                    handleSendRef.current?.();
-                    schedule();
-                }, delay);
-            };
-
-            schedule();
-
-            return () => {
-                cancelled = true;
-                if (timeoutId !== null) clearTimeout(timeoutId);
-            };
-        }
-    }, [isTimerRunning, timerInterval, isConnected, sessionId, mode, lineEnding, editor, hasDynamicTokens, extractTokens]);
 
     return (
         <div
@@ -351,16 +222,16 @@ export const SerialInput = ({
             <div className="flex items-center gap-2 h-6 overflow-x-auto scrollbar-none">
                 <div className="shrink-0 flex items-center gap-[1px] bg-[var(--st-btn-secondary-bg)] border border-[var(--st-widget-border)] rounded-sm overflow-hidden p-[2px]">
                     <button
-                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[var(--st-input-btn-mode-txt-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
-                        onClick={() => setMode('text')}
-                    >
-                        TXT
-                    </button>
-                    <button
                         className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[var(--st-input-btn-mode-hex-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                         onClick={() => setMode('hex')}
                     >
                         HEX
+                    </button>
+                    <button
+                        className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'text' ? 'bg-[var(--st-input-btn-mode-txt-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
+                        onClick={() => setMode('text')}
+                    >
+                        TXT
                     </button>
                 </div>
                 {/* Line Ending Selector 始终显示（文本模式下） */}
@@ -387,34 +258,23 @@ export const SerialInput = ({
                     <>
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
 
-                        <Tooltip content={t('serial.insertFlag')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
-                                onClick={() => insertToken('flag')}>
-                                <Flag size={14} className="text-blue-400" />
-                                <span>Custom</span>
-                            </button>
-                        </Tooltip>
-                        <Tooltip content={t('serial.insertCRC')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
-                                onClick={() => insertToken('crc')}>
-                                <Plus size={14} className="text-emerald-500" />
-                                <span>CRC</span>
-                            </button>
-                        </Tooltip>
-                        <Tooltip content={t('serial.insertTime')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
-                                onClick={() => insertToken('timestamp')}>
-                                <div className="flex items-center justify-center w-[14px] h-[14px] border border-blue-400 text-blue-400 text-[9px] font-mono rounded-[2px] leading-none">T</div>
-                                <span>Time</span>
-                            </button>
-                        </Tooltip>
-                        <Tooltip content={t('serial.insertAuto')} position="bottom" wrapperClassName="flex">
-                            <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
-                                onClick={() => insertToken('auto_inc')}>
-                                <div className="flex items-center justify-center w-[14px] h-[14px] border border-purple-400 text-purple-400 text-[9px] font-mono rounded-[2px] leading-none">A</div>
-                                <span>Auto</span>
-                            </button>
-                        </Tooltip>
+                        {/* Token 工具栏按钮 — registry 驱动，自动渲染所有已注册插件 */}
+                        {tokenRegistry.getAll().filter(p => p.toolbar).map(plugin => {
+                            const tb = plugin.toolbar!;
+                            return (
+                                <Tooltip key={plugin.type} content={t(tb.tooltip) || tb.tooltip} position="bottom" wrapperClassName="flex">
+                                    <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors whitespace-nowrap"
+                                        onClick={() => insertToken(plugin.type)}>
+                                        {tb.icon.kind === 'lucide' ? (
+                                            <tb.icon.component size={14} className={tb.icon.colorClass} />
+                                        ) : (
+                                            <div className={`flex items-center justify-center w-[14px] h-[14px] border ${tb.icon.borderColorClass} ${tb.icon.textColorClass} text-[9px] font-mono rounded-[2px] leading-none`}>{tb.icon.letter}</div>
+                                        )}
+                                        <span>{tb.shortLabel}</span>
+                                    </button>
+                                </Tooltip>
+                            );
+                        })}
                         <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
                         <Tooltip content={t('serial.loadFile')} position="bottom" wrapperClassName="flex">
                             <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
