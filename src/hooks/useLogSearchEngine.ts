@@ -143,19 +143,13 @@ export const useLogSearchEngine = (
 
     const nextMatch = useCallback(() => {
         if (matches.length === 0) return;
-        setCurrentIndex(prev => {
-            const next = prev === -1 ? 0 : (prev + 1) % matches.length;
-            return next;
-        });
+        setCurrentIndex(prev => prev === -1 ? 0 : (prev + 1) % matches.length);
         setActiveMatchRev(r => r + 1);
     }, [matches.length]);
 
     const prevMatch = useCallback(() => {
         if (matches.length === 0) return;
-        setCurrentIndex(prev => {
-            const next = prev === -1 ? matches.length - 1 : (prev - 1 + matches.length) % matches.length;
-            return next;
-        });
+        setCurrentIndex(prev => prev === -1 ? matches.length - 1 : (prev - 1 + matches.length) % matches.length);
         setActiveMatchRev(r => r + 1);
     }, [matches.length]);
 

@@ -124,8 +124,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
         <div
             style={{
                 ...dropdownStyle,
-                backgroundColor: 'var(--dropdown-background)',
-                border: '1px solid var(--dropdown-border-color)',
+                backgroundColor: 'var(--st-select-bg)',
+                border: '1px solid var(--st-select-border)',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
@@ -155,8 +155,8 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 setIsOpen(false);
                             }}
                             style={{
-                                borderBottom: '1px solid var(--dropdown-border-color)',
-                                backgroundColor: hoveredValue === '__custom__' ? 'var(--dropdown-item-hover-background)' : ''
+                                borderBottom: '1px solid var(--st-select-border)',
+                                backgroundColor: hoveredValue === '__custom__' ? 'var(--st-select-hover)' : ''
                             }}
                             className="w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none mb-0.5 text-[var(--input-placeholder-color)] italic"
                             onMouseEnter={() => setHoveredValue('__custom__')}
@@ -182,17 +182,18 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                                 }}
                                 style={{
                                     color: isSelected
-                                        ? 'var(--dropdown-item-selected-foreground)'
-                                        : 'var(--st-select-item-text)',
-                                    backgroundColor: showHighlight && !item.disabled ? 'var(--dropdown-item-hover-background)' : '',
+                                        ? 'var(--st-select-selected)'
+                                        : 'var(--st-select-text)',
+                                    backgroundColor: showHighlight && !item.disabled ? 'var(--st-select-hover)' : '',
+                                    fontWeight: isSelected ? 600 : 'normal',
                                 }}
-                                className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] font-normal ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                className={`w-full h-7 text-left px-3 flex items-center gap-2 transition-colors border-none outline-none text-[12px] ${item.disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                                 onMouseEnter={() => {
                                     if (!item.disabled) setHoveredValue(item.value);
                                 }}
                             >
                                 {showStatus && (
-                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-red-500' : 'bg-green-500'}`} />
+                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.busy ? 'bg-[var(--st-status-error)]' : 'bg-[var(--st-status-success)]'}`} />
                                 )}
                                 <span className="overflow-hidden text-ellipsis whitespace-pre flex-1 py-0.5">{item.label}</span>
                             </button>
@@ -300,7 +301,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                     <div className="flex items-center gap-1.5 truncate">
                         {showStatus && selectedItem && (
                             <div
-                                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedItem.busy ? 'bg-red-500' : 'bg-green-500'}`}
+                                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedItem.busy ? 'bg-[var(--st-status-error)]' : 'bg-[var(--st-status-success)]'}`}
                             />
                         )}
                         <span className="overflow-hidden text-ellipsis whitespace-pre">

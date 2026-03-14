@@ -78,7 +78,7 @@ export const MonitorLogItem = React.memo(({
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[var(--focus-border-color)] text-[var(--st-monitor-tab-active-text)] shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-tab-inactive-text)]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-[var(--st-monitor-tab-active-text)] shadow-sm' : 'bg-[var(--st-logsearch-match-highlight)] text-[var(--st-monitor-tab-inactive-text)]'}
                 >
                     {text.substring(match.startIndex, match.endIndex)}
                 </span>

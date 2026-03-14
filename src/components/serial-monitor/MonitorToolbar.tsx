@@ -46,7 +46,6 @@ interface MonitorToolbarProps {
     onEncoding: (v: string) => void;
     onFontFamily: (v: string) => void;
     onFontSize: (v: number) => void;
-    scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const MonitorToolbar = React.memo(({
@@ -57,8 +56,7 @@ export const MonitorToolbar = React.memo(({
     onFilterChange, onViewModeChange, onAutoScrollToggle, onToggleOptionsMenu,
     onClearLogs, onSaveLogs,
     onShowTimestamp, onShowPacketType, onShowDataLength, onMergeRepeats, onFlashNewMessage,
-    onEncoding, onFontFamily, onFontSize,
-    scrollRef,
+    onEncoding, onFontFamily, onFontSize
 }: MonitorToolbarProps) => {
     const { t } = useI18n();
 

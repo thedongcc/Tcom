@@ -62,9 +62,7 @@ export const LogItem = memo(({
     mergeRepeats = true,
     flashNewMessage,
     fontSize = 15,
-    showControlChars,
-    rxCRC,
-    crcEnabled
+    showControlChars
 }: LogItemProps) => {
 
     const { parseSystemMessage } = useSystemMessage();
@@ -156,7 +154,7 @@ export const LogItem = memo(({
             </span>
             {log.crcStatus === 'error' && (
                 <span
-                    className="ml-2 text-[10px] text-red-600 bg-red-900 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-900/50 px-1.5 rounded border flex items-center shrink-0 font-bold"
+                    className="ml-2 text-[10px] text-[var(--st-status-error)] bg-[var(--st-status-error-bg)] border-[var(--st-status-error)] px-1.5 rounded border flex items-center shrink-0 font-bold"
                     style={{ height: `${itemHeightPx}px` }}
                 >
                     CRC Error

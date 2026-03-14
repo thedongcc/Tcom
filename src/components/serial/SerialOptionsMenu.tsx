@@ -198,7 +198,7 @@ export const SerialOptionsMenu = ({
                         </div>
 
                         {/* 导出按钮 */}
-                        <div className="pt-2 border-t border-[#3c3c3c]">
+                        <div className="pt-2 border-t border-[var(--st-monitor-divider)]">
                             <button
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--st-btn-primary-bg)] hover:bg-[var(--st-btn-primary-hover)] text-white text-[11px] rounded transition-colors"
                                 onClick={() => {

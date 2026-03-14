@@ -77,8 +77,8 @@ export const StatusBar = ({ hasUpdate = false, updateVersion, onShowUpdate }: St
         if (hasUpdate) {
             return (
                 <>
-                    <ArrowDownCircle size={11} className="text-[var(--st-status-success-text)]" />
-                    <span className="text-[var(--st-status-success-text)] font-medium">
+                    <ArrowDownCircle size={11} className="text-[var(--st-statusbar-success-text)]" />
+                    <span className="text-[var(--st-statusbar-success-text)] font-medium">
                         {updateVersion ? `v${updateVersion} ${t('statusBar.available')}` : t('statusBar.available')}
                     </span>
                 </>
@@ -139,7 +139,7 @@ export const StatusBar = ({ hasUpdate = false, updateVersion, onShowUpdate }: St
                 {/* 检查更新 */}
                 <Tooltip content={hasUpdate ? t('statusBar.clickToUpdate') : t('statusBar.checkUpdate')} position="top" wrapperClassName="h-full flex items-center">
                     <div
-                        className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
+                        className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
                         onClick={handleClick}
                     >
                         {renderUpdateSection()}
@@ -151,7 +151,7 @@ export const StatusBar = ({ hasUpdate = false, updateVersion, onShowUpdate }: St
                 {/* GitHub */}
                 <Tooltip content={t('statusBar.openGithub')} position="top" wrapperClassName="h-full flex items-center">
                     <div
-                        className="flex items-center gap-1 px-1 rounded-sm hover:bg-[var(--hover-background)] cursor-pointer transition-colors"
+                        className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
                         onClick={() => window.shellAPI?.openExternal('https://github.com/thedongcc/Tcom')}
                     >
                         <Github size={11} className="opacity-60" />

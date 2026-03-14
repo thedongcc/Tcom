@@ -7,7 +7,7 @@
  * - useCommandListActions.ts — 拖放和发送操作
  * - CommandScrollArea — 可滚动列表区域
  */
-import { Plus, FolderPlus, Upload, Trash2, MoreHorizontal, FileText, Folder, Play, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
+import { FolderPlus, Upload, Trash2, MoreHorizontal, FileText, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCommandManager } from '../../hooks/useCommandManager';
 import { CommandList } from './CommandList';
@@ -74,7 +74,6 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
         setAllCommands, deleteEntity, deleteEntities, updateEntity, duplicateEntity, duplicateEntities,
         undo, redo, canUndo, canRedo
     } = useCommandManager();
-    const { showToast } = useToast();
     const { t } = useI18n();
     const { activeSessionId } = useSession();
 

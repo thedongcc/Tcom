@@ -1,10 +1,9 @@
-﻿import { useState, useEffect, useRef, type ReactNode } from 'react';
+﻿import { useEffect, useRef, type ReactNode } from 'react';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { SideBar } from './SideBar';
 import { StatusBar } from './StatusBar';
 import { EditorArea } from './EditorArea';
-import { Panel } from './Panel';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';

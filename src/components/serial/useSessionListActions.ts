@@ -72,7 +72,7 @@ export function useSessionListActions({ sessionManager, editorLayout }: UseSessi
                 if (trimmedName !== session.name) {
                     const isOpen = sessionManager.sessions.some(s => s.id === editingId);
                     if (isOpen) {
-                        sessionManager.updateSessionConfig(editingId, { name: trimmedName });
+                        void sessionManager.updateSessionConfig(editingId, { name: trimmedName });
                     } else {
                         const updatedConfig = { ...session, name: trimmedName };
                         sessionManager.saveSession(updatedConfig);

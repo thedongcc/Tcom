@@ -20,7 +20,7 @@ export const MessagePipeline = {
         lineEnding: string = ''
     ): ProcessedMessage => {
 
-        let data: Uint8Array | string = content;
+        let data: Uint8Array | string;
 
         if (html && tokens && Object.keys(tokens).length > 0) {
             // Rich Text Mode (CRC, Flags, Hex)

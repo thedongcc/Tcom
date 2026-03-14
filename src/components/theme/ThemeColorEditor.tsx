@@ -26,7 +26,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
         expandedGroups, setExpandedGroups,
         isInspecting, copiedVar,
         cdpDebugData, setCdpDebugData,
-        edits, editCount,
+        editCount,
         getColorValue, handleColorChange, handleSave, handleCancel,
         handleCopy, startInspect, extractVars,
     } = useThemeEditorState({ isOpen, onClose });

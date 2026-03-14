@@ -41,7 +41,7 @@ export function useDropdownPosition(
 
         let top: number | undefined;
         let bottom: number | undefined;
-        let maxHeight = defaultMaxH;
+        let maxHeight: number;
 
         // 优先向下展开
         if (spaceBelow >= defaultMaxH || spaceBelow > spaceAbove) {

@@ -139,7 +139,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                                 session={session as any}
                                 onShowSettings={onShowSettings}
                                 onPublish={(topic, payload, qos, retain) => sessionManager.publishMqtt(session.id, topic, payload, { qos, retain })}
-                                onUpdateConfig={(updates) => sessionManager.updateSessionConfig(session.id, updates)}
+                                onUpdateConfig={(updates) => { void sessionManager.updateSessionConfig(session.id, updates); }}
                                 onClearLogs={() => sessionManager.clearLogs(session.id)}
                                 onConnectRequest={() => {
                                     sessionManager.setActiveSessionId(session.id);
@@ -163,7 +163,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                             session={session}
                             onShowSettings={onShowSettings}
                             onSend={(data) => sessionManager.writeToSession(session.id, data)}
-                            onUpdateConfig={(updates) => sessionManager.updateSessionConfig(session.id, updates)}
+                            onUpdateConfig={(updates) => { void sessionManager.updateSessionConfig(session.id, updates); }}
                             onInputStateChange={(inputState) => sessionManager.updateUIState(session.id, inputState)}
                             onClearLogs={() => sessionManager.clearLogs(session.id)}
                             onConnectRequest={() => {

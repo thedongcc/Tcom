@@ -243,7 +243,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
                     </div>
                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1 mx-1" />
                     <div
-                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-red-500/10 hover:text-red-400 cursor-pointer text-red-500/80 transition-colors group"
+                        className="flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-[var(--st-status-error-bg)] hover:text-[var(--st-status-error)] cursor-pointer text-[var(--st-status-error)] transition-colors group"
                         onClick={async () => {
                             await deleteSession(contextMenu.sessionId);
                         }}

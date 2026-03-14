@@ -67,7 +67,7 @@ async function spawnCommand(command: string): Promise<any> {
 export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
     ipcMain.handle('com0com:launch-installer', async () => {
         const isDev = !!VITE_DEV_SERVER_URL;
-        let installerPath = '';
+        let installerPath: string;
         if (isDev) {
             installerPath = path.join(__dirname, '../resources/drivers/com0com_setup.exe');
         } else {
@@ -152,7 +152,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
         }
     });
 
-    ipcMain.handle('com0com:exec', async (_event, command: string, silent: boolean = false) => {
+    ipcMain.handle('com0com:exec', async (_event, command: string) => {
         if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
             const { exec } = require('node:child_process');
             const isAdmin = await new Promise((resolve) => {

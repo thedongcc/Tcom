@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化定时器方案,现在定时发送间隔时间非常准确
 - 优化项目架构,增加项目规范文档
 - 优化更新逻辑,现在启动时不再自动检查更新了，改为每30分钟自动静默检查
+- 优化组件颜色变量独立解耦
 
 ### Removed
 - 

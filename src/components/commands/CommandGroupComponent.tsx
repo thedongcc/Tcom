@@ -1,9 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { Folder, ChevronRight, ChevronDown, GripVertical } from 'lucide-react';
 import { CommandGroup, CommandEntity } from '../../types/command';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { CommandList } from './CommandList';
 import { useCommandManager } from '../../hooks/useCommandManager';
 
@@ -25,7 +24,6 @@ export const CommandGroupComponent = ({ group, onEdit, onSend, onContextMenu, ca
         attributes,
         listeners,
         setNodeRef: setSortableRef,
-        transform,
         transition,
         isDragging
     } = useSortable({ id: group.id });

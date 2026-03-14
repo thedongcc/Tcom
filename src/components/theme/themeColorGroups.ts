@@ -10,7 +10,7 @@ export const REGION_GROUPS = [
     {
         id: 'global-variables',
         label: '基础全局与基座',
-        components: ['global-common', 'global-components', 'global-scrollbar', 'st-status-indicators']
+        components: ['global-common', 'global-components', 'global-scrollbar', 'st-status-indicators', 'custom-select']
     },
     {
         id: 'layout',
@@ -35,7 +35,7 @@ export const REGION_GROUPS = [
     {
         id: 'messaging',
         label: '消息气泡与通讯',
-        components: ['monitor-bubble', 'system-message']
+        components: ['monitor-bubble', 'system-message', 'log-search']
     },
     {
         id: 'popups',

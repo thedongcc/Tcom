@@ -60,24 +60,24 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
     const getStyles = () => {
         switch (type) {
             case 'success': return {
-                borderColor: '#22c55e', // green-500
-                shadow: '0 0 15px rgba(34, 197, 94, 0.2)',
-                icon: <Check size={18} className="text-green-500" />
+                borderColor: 'var(--st-status-success)',
+                shadow: '0 0 15px var(--st-status-success-bg)',
+                icon: <Check size={18} className="text-[var(--st-status-success)]" />
             };
             case 'error': return {
-                borderColor: '#ef4444', // red-500
-                shadow: '0 0 15px rgba(239, 68, 68, 0.2)',
-                icon: <X size={18} className="text-red-500" />
+                borderColor: 'var(--st-status-error)',
+                shadow: '0 0 15px var(--st-status-error-bg)',
+                icon: <X size={18} className="text-[var(--st-status-error)]" />
             };
             case 'warning': return {
-                borderColor: '#eab308', // yellow-500
-                shadow: '0 0 15px rgba(234, 179, 8, 0.2)',
-                icon: <AlertTriangle size={18} className="text-yellow-500" />
+                borderColor: 'var(--st-status-warning)',
+                shadow: '0 0 15px var(--st-status-warning-bg)',
+                icon: <AlertTriangle size={18} className="text-[var(--st-status-warning)]" />
             };
             case 'info': return {
-                borderColor: '#3b82f6', // blue-500
-                shadow: '0 0 15px rgba(59, 130, 246, 0.2)',
-                icon: <Info size={18} className="text-blue-500" />
+                borderColor: 'var(--st-status-info)',
+                shadow: '0 0 15px var(--st-status-info-bg)',
+                icon: <Info size={18} className="text-[var(--st-status-info)]" />
             };
         }
     };
@@ -88,7 +88,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
         <div
             className={`
                 relative flex items-center gap-3 px-4 py-3 
-                bg-[var(--widget-background)] border-2
+                bg-[var(--st-toast-bg)] border-2
                 rounded-md min-w-[300px] max-w-[400px]
                 cursor-pointer shadow-lg
                 transition-all duration-300 ease-in-out

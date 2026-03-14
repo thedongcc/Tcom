@@ -91,7 +91,7 @@ export const useSessionManager = () => {
     useEffect(() => {
         if (activeSessionId && workspace.workspacePath) {
             localStorage.setItem(`active-session-${workspace.workspacePath}`, activeSessionId);
-            portScanner.listPorts();
+            void portScanner.listPorts();
         }
     }, [activeSessionId, workspace.workspacePath, portScanner.listPorts]);
 
@@ -133,7 +133,7 @@ export const useSessionManager = () => {
     }, [workspace]);
 
     const closeSession = useCallback((sessionId: string) => {
-        disconnectSession(sessionId);
+        void disconnectSession(sessionId);
         setSessions(prev => prev.filter(s => s.id !== sessionId));
         setActiveSessionId(prev => prev === sessionId ? null : prev);
     }, [disconnectSession]);
@@ -189,12 +189,12 @@ export const useSessionManager = () => {
             const lastWs = await window.workspaceAPI.getLastWorkspace();
             if (lastWs.success && lastWs.path) await workspace.openWorkspace(lastWs.path);
         };
-        initWs();
+        void initWs();
     }, [workspace.openWorkspace]);
 
     // 包装 closeWorkspace
     const closeWorkspace = useCallback(() => {
-        sessionsRef.current.forEach(s => { if (s.isConnected) disconnectSession(s.id); });
+        sessionsRef.current.forEach(s => { if (s.isConnected) void disconnectSession(s.id); });
         setSessions([]);
         setActiveSessionId(null);
         workspace.closeWorkspace(() => { });

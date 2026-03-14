@@ -151,7 +151,7 @@ export class MonitorService {
             const physicalPortPath = config.physicalSerialPort || config.physicalPort;
             const baudRate = config.connection?.baudRate || config.baudRate || 9600;
 
-            if (!internalPortPath || !physicalPortPath) throw new Error('Missing port configuration');
+            if (!internalPortPath || !physicalPortPath) return { success: false, error: 'Missing port configuration' };
             console.log(`[Monitor] Starting session ${sessionId}`);
 
             // 并行开启两个端口
@@ -171,7 +171,7 @@ export class MonitorService {
             return { success: true };
         } catch (error: any) {
             console.error(`[Monitor] Start failed for session ${sessionId}:`, error.message);
-            if (pollTimer) clearInterval(pollTimer);
+            clearInterval(pollTimer);
             internal?.removeAllListeners();
             physical?.removeAllListeners();
             await Promise.all([MonitorService.forceClosePort(internal), MonitorService.forceClosePort(physical)]);

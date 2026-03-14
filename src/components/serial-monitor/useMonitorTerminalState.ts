@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } fr
 import { useSettings } from '../../context/SettingsContext';
 import { useSession } from '../../context/SessionContext';
 import { useLogSearch } from '../common/LogSearch';
-import { SessionState, MonitorSessionConfig } from '../../types/session';
+import { SessionState } from '../../types/session';
 
 // ── 字体分类关键字 ──
 const MONO_KEYWORDS = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
@@ -89,7 +89,7 @@ export function useMonitorTerminalState(session: SessionState) {
     // ── 持久化 UI 状态到会话配置 ──
     const saveUIState = useCallback((updates: any) => {
         const currentUIState = (config as any).uiState || {};
-        sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
+        void sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
     }, [session.id, sessionManager, config]);
 
     // ── 数据格式化 ──

@@ -12,7 +12,6 @@ interface UseSerialMonitorSearchParams {
     sessionId: string;
     logs: LogEntry[];
     autoScroll: boolean;
-    flashNewMessage: boolean;
     viewMode: 'text' | 'hex' | 'both';
     encoding: string;
     filterMode: 'all' | 'rx' | 'tx';
@@ -26,7 +25,7 @@ interface UseSerialMonitorSearchParams {
 const scrollPositions = new Map<string, number>();
 
 export function useSerialMonitorSearch({
-    sessionId, logs, autoScroll, flashNewMessage,
+    sessionId, logs, autoScroll,
     viewMode, encoding, filterMode,
     searchOpen, setSearchOpen, uiState, saveUIState,
 }: UseSerialMonitorSearchParams) {

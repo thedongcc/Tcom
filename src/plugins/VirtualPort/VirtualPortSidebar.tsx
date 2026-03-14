@@ -12,6 +12,7 @@ import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { Com0Com } from '../../utils/com0com';
 import { useConfirm } from '../../context/ConfirmContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { Tooltip } from '../../components/common/Tooltip';
 import { Switch } from '../../components/common/Switch';
 import { useI18n } from '../../context/I18nContext';
 import { Com0comInstallDialog } from './Com0comInstallDialog';
@@ -23,18 +24,18 @@ interface VirtualPortSidebarProps {
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSidebarProps) => {
+export const VirtualPortSidebar = ({ sessionManager }: VirtualPortSidebarProps) => {
     const { confirm } = useConfirm();
     const { t } = useI18n();
 
     // ── 核心状态（全部委托给 Hook） ──
     const {
-        pathStatus, com0comVersion, showInstallDialog, setShowInstallDialog,
+        pathStatus, showInstallDialog, setShowInstallDialog,
         setupcPath, setSetupcPath,
         isAdmin, monitorEnabled,
-        existingPairs, listPairsError, isCreatingPair,
+        existingPairs, isCreatingPair,
         newPairExt, setNewPairExt, newPairInt, setNewPairInt,
-        usedPorts, physicalPorts, processPairCreation,
+        usedPorts, physicalPorts,
         refreshPairs, suggestNextPair, createNewPair, handleToggleMonitor,
     } = useVirtualPortState(sessionManager);
 
@@ -50,8 +51,8 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                         disabled={!isAdmin}
                     />
                     {!isAdmin && (
-                        <div className="mt-2 p-2 bg-red-900/30 border border-red-500/50 rounded-sm">
-                            <p className="text-[11px] text-red-400">
+                        <div className="mt-2 p-2 bg-[var(--st-status-error-bg)] border border-[var(--st-status-error)]/50 rounded-sm">
+                            <p className="text-[11px] text-[var(--st-status-error)]">
                                 {t('monitor.adminRequired')}
                             </p>
                         </div>
@@ -99,8 +100,8 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                         </div>
                         <div className="h-[16px] text-[11px] mt-0.5 flex items-center">
                             {pathStatus === 'checking' && <span className="text-[var(--activitybar-inactive-foreground)]">{t('monitor.pathChecking')}</span>}
-                            {pathStatus === 'valid' && <span className="text-green-500">✓ {t('monitor.pathValid').replace(' {version}', '')}</span>}
-                            {pathStatus === 'invalid' && <span className="text-red-400">✗ {t('monitor.pathInvalid')}</span>}
+                            {pathStatus === 'valid' && <span className="text-[var(--st-status-success)]">✓ {t('monitor.pathValid').replace(' {version}', '')}</span>}
+                            {pathStatus === 'invalid' && <span className="text-[var(--st-status-error)]">✗ {t('monitor.pathInvalid')}</span>}
                         </div>
                     </div>
 
@@ -109,21 +110,23 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                         <div className="text-[11px] text-[var(--activitybar-inactive-foreground)] flex justify-between items-center mb-1 font-medium">
                             <span>{t('monitor.virtualPairs')}</span>
                             <div className="flex gap-1 items-center">
-                                <button
-                                    onClick={(e) => { e.preventDefault(); suggestNextPair(); }}
-                                    className="p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]"
-                                    title={t('monitor.suggestNextPair')}
-                                >
-                                    <Wand2 size={13} />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.preventDefault(); if (pathStatus === 'valid') refreshPairs(); }}
-                                    className={`p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors ${pathStatus !== 'valid' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]'}`}
-                                    title={t('monitor.refresh')}
-                                    disabled={pathStatus !== 'valid'}
-                                >
-                                    <RefreshCw size={13} />
-                                </button>
+                                <Tooltip content={t('monitor.suggestNextPair')} position="top" wrapperClassName="flex">
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); suggestNextPair(); }}
+                                        className="p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]"
+                                    >
+                                        <Wand2 size={13} />
+                                    </button>
+                                </Tooltip>
+                                <Tooltip content={t('monitor.refresh')} position="top" wrapperClassName="flex">
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); if (pathStatus === 'valid') void refreshPairs(); }}
+                                        className={`p-1 rounded text-[var(--activitybar-inactive-foreground)] transition-colors ${pathStatus !== 'valid' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--hover-background)] hover:text-[var(--app-foreground)]'}`}
+                                        disabled={pathStatus !== 'valid'}
+                                    >
+                                        <RefreshCw size={13} />
+                                    </button>
+                                </Tooltip>
                             </div>
                         </div>
 
@@ -150,7 +153,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                 />
                             </div>
                             <button
-                                onClick={() => { if (pathStatus !== 'valid') return; createNewPair(); }}
+                                onClick={() => { if (pathStatus !== 'valid') return; void createNewPair(); }}
                                 disabled={isCreatingPair || !isAdmin || !monitorEnabled || pathStatus !== 'valid'}
                                 className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${!isAdmin || !monitorEnabled || pathStatus !== 'valid'
                                     ? 'bg-[var(--button-secondary-background)] text-[var(--input-placeholder-color)] cursor-not-allowed'
@@ -170,7 +173,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                         <span className="text-[var(--app-foreground)]">{pair.portB}</span>
                                     </div>
                                     <button
-                                        className="p-1 rounded transition-colors text-[var(--input-placeholder-color)] hover:text-red-400 hover:bg-[var(--hover-background)]"
+                                        className="p-1 rounded transition-colors text-[var(--input-placeholder-color)] hover:text-[var(--st-status-error)] hover:bg-[var(--hover-background)]"
                                         onClick={async () => {
                                             const ok = await confirm({
                                                 title: t('monitor.deletePairTitle'),
@@ -180,7 +183,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                             });
                                             if (ok) {
                                                 await Com0Com.removePair(setupcPath, pair.id);
-                                                refreshPairs();
+                                                void refreshPairs();
                                             }
                                         }}
                                     >

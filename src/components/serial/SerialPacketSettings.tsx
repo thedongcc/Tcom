@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { CustomSelect } from '../common/CustomSelect';
+import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 
 interface SerialPacketSettingsProps {
@@ -41,7 +42,9 @@ export const SerialPacketSettings = React.memo(({ uiState, saveUIState }: Serial
                 <div className="flex flex-col gap-2 mt-1">
                     {(rxPacketMode === 'delimiter' || rxPacketMode === 'delimiterWithTimeout') && (
                         <div className="flex items-center justify-between gap-4">
-                            <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxDelimiterLabel')}>{t('monitor.rxDelimiterLabel')}</span>
+                            <Tooltip content={t('monitor.rxDelimiterLabel')} position="top" wrapperClassName="flex shrink-0 max-w-[80px]">
+                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium truncate">{t('monitor.rxDelimiterLabel')}</span>
+                            </Tooltip>
                             <div className="flex-1 max-w-[150px]">
                                 <CustomSelect
                                     items={[
@@ -59,7 +62,9 @@ export const SerialPacketSettings = React.memo(({ uiState, saveUIState }: Serial
                     )}
                     {(rxPacketMode === 'fixedLength' || rxPacketMode === 'fixedLengthWithTimeout') && (
                         <div className="flex items-center justify-between gap-4">
-                            <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxFixedLengthLabel')}>{t('monitor.rxFixedLengthLabel')}</span>
+                            <Tooltip content={t('monitor.rxFixedLengthLabel')} position="top" wrapperClassName="flex shrink-0 max-w-[80px]">
+                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium truncate">{t('monitor.rxFixedLengthLabel')}</span>
+                            </Tooltip>
                             <div className="flex-1 max-w-[150px]">
                                 <CustomSelect
                                     items={[
@@ -81,7 +86,9 @@ export const SerialPacketSettings = React.memo(({ uiState, saveUIState }: Serial
                     )}
                     {(rxPacketMode === 'timeout' || rxPacketMode === 'delimiterWithTimeout' || rxPacketMode === 'fixedLengthWithTimeout') && (
                         <div className="flex items-center justify-between gap-4">
-                            <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxTimeoutMsLabel')}>{t('monitor.rxTimeoutMsLabel')}</span>
+                            <Tooltip content={t('monitor.rxTimeoutMsLabel')} position="top" wrapperClassName="flex shrink-0 max-w-[80px]">
+                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium truncate">{t('monitor.rxTimeoutMsLabel')}</span>
+                            </Tooltip>
                             <div className="flex-1 max-w-[150px]">
                                 <CustomSelect
                                     items={[

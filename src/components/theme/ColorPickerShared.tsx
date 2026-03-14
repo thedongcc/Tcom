@@ -62,14 +62,14 @@ export const ChannelInput: React.FC<{ label: string; value: number; max: number;
     label, value, max, onChange,
 }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: '#969696', textAlign: 'center' }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--st-dialog-muted-text)', textAlign: 'center' }}>{label}</span>
         <input
             type="number"
             value={value}
             min={0}
             max={max}
             onChange={e => onChange(parseFloat(e.target.value) || 0)}
-            className="bg-[#2d2d2d] text-[#cccccc] border border-[#454545] focus:border-[#007acc] w-full py-[3px] text-center rounded-sm text-[11px] outline-none transition-colors"
+            className="bg-[var(--input-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] focus:border-[var(--focus-border-color)] w-full py-[3px] text-center rounded-sm text-[11px] outline-none transition-colors"
         />
     </div>
 );

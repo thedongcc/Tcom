@@ -45,7 +45,7 @@ function isShortcutBlocked(): boolean {
 }
 
 export function useCommandKeyboardActions({
-    commands, undo, redo, canUndo, canRedo, deleteEntities, duplicateEntities
+    commands, undo, redo, deleteEntities, duplicateEntities
 }: UseCommandKeyboardActionsParams) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);

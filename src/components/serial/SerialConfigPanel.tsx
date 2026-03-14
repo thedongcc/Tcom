@@ -44,7 +44,7 @@ export const SerialConfigPanel = ({ session, sessionManager }: SerialConfigPanel
     };
 
     const updateConnection = (updates: Partial<typeof connection>) => {
-        updateSessionConfig(session.id, { connection: { ...connection, ...updates } });
+        void updateSessionConfig(session.id, { connection: { ...connection, ...updates } });
     };
 
     const portItems = ports.map(port => ({
@@ -171,7 +171,7 @@ export const SerialConfigPanel = ({ session, sessionManager }: SerialConfigPanel
                         </div>
                     ) : (
                         <div className="flex items-center gap-2 justify-center text-[11px] text-[var(--st-config-muted-text)]">
-                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <div className="w-2 h-2 rounded-full bg-[var(--st-status-error)]"></div>
                             <span>{t('serial.disconnected')}</span>
                         </div>
                     )}

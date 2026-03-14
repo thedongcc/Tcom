@@ -41,7 +41,7 @@ export const SerialInputToolbar = React.memo(({
     return (
         <div className="flex items-center gap-2 h-6 overflow-x-auto scrollbar-none">
             {/* 模式切换 HEX/TXT */}
-            <div className="shrink-0 flex items-center gap-[1px] bg-[var(--st-btn-secondary-bg)] border border-[var(--st-widget-border)] rounded-sm overflow-hidden p-[2px]">
+            <div className="shrink-0 flex items-center gap-[1px] bg-[var(--st-btn-secondary-bg)] border border-[var(--st-sendarea-toolbar-border)] rounded-sm overflow-hidden p-[2px]">
                 <button
                     className={`text-[10px] px-1.5 py-0.5 font-mono transition-colors rounded-[1px] ${mode === 'hex' ? 'bg-[var(--st-input-btn-mode-hex-active-bg)] text-[var(--button-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]'}`}
                     onClick={() => setMode('hex')}
@@ -59,7 +59,7 @@ export const SerialInputToolbar = React.memo(({
             {/* 行尾符选择器（仅文本模式） */}
             {mode === 'text' && (
                 <div className="flex items-center gap-1">
-                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mr-1" />
+                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-sendarea-toolbar-border)] mr-1" />
                     <CustomSelect
                         value={lineEnding}
                         onChange={(val) => setLineEnding(val)}
@@ -78,7 +78,7 @@ export const SerialInputToolbar = React.memo(({
 
             {!hideExtras && (
                 <>
-                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
+                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-sendarea-toolbar-border)] mx-1" />
 
                     {/* Token 工具栏按钮 — registry 驱动 */}
                     {tokenRegistry.getAll().filter(p => p.toolbar).map(plugin => {
@@ -98,7 +98,7 @@ export const SerialInputToolbar = React.memo(({
                         );
                     })}
 
-                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)] mx-1" />
+                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-sendarea-toolbar-border)] mx-1" />
                     <Tooltip content={t('serial.loadFile')} position="bottom" wrapperClassName="flex">
                         <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
                             <Upload size={14} />
@@ -108,7 +108,7 @@ export const SerialInputToolbar = React.memo(({
                     <div className="flex-1 shrink min-w-0" />
 
                     {/* 定时发送控件 */}
-                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-widget-border)]" />
+                    <div className="shrink-0 w-[1px] h-4 bg-[var(--st-sendarea-toolbar-border)]" />
                     <div className="shrink-0 flex items-center gap-1.5">
                         <Tooltip content={isTimerRunning ? t('serial.stopTimer') : (isEmpty ? t('serial.timerEmpty') : t('serial.startTimer'))} position="bottom" wrapperClassName="flex">
                             <button

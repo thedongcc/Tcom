@@ -52,7 +52,6 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         showOptionsMenu, setShowOptionsMenu,
         searchOpen, setSearchOpen,
         topic, payload, publishFormat, qos, retain,
-        showTopicDropdown,
         saveUIState, subscribedTopics, uiState,
     } = state;
 

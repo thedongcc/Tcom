@@ -97,7 +97,7 @@ export const SessionListItem = ({
                             <span className="flex items-center justify-center flex-shrink-0 mb-[1.5px]">
                                 <Tooltip content={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')} position="top" wrapperClassName="flex items-center justify-center">
                                     <span
-                                        className={`size-1.5 rounded-full ${isPortBusy ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]'}`}
+                                        className={`size-1.5 rounded-full ${isPortBusy ? 'bg-[var(--st-status-error)] shadow-[0_0_4px_var(--st-status-error)]' : 'bg-[var(--st-status-success)] shadow-[0_0_4px_var(--st-status-success)]'}`}
                                     />
                                 </Tooltip>
                             </span>

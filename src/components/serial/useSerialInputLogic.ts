@@ -55,7 +55,7 @@ const extractTokensFromEditor = (editor: Editor): Record<string, Token> => {
 };
 
 export const useSerialInputLogic = ({
-    editor, mode, lineEnding, isConnected, isEmpty,
+    editor, mode, lineEnding, isConnected,
     sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
     onSend, onConnectRequest,
 }: UseSerialInputLogicParams) => {

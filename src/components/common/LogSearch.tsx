@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef } from 'react';
-import { Search, X, ChevronUp, ChevronDown, Regex } from 'lucide-react';
+import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 import { useI18n } from '../../context/I18nContext';
@@ -92,8 +92,8 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                         className={`flex items-center border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-colors focus-within:ring-1 focus-within:ring-[var(--focus-border-color)] ${regexError ? 'border-[var(--st-error-text)] shadow-sm' : ''
                             }`}
                         style={{
-                            backgroundColor: 'var(--widget-background)',
-                            borderColor: regexError ? undefined : 'var(--widget-border-color)',
+                            backgroundColor: 'var(--st-logsearch-bg)',
+                            borderColor: regexError ? undefined : 'var(--st-logsearch-border)',
                         }}
                     >
                         <input
@@ -104,7 +104,7 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                             onKeyDown={handleKeyDown}
                             placeholder="Find..."
                             className="bg-transparent border-none outline-none text-xs px-2 w-48 h-full font-mono"
-                            style={{ color: 'var(--st-search-text)' }}
+                            style={{ color: 'var(--st-logsearch-text)' }}
                         />
 
                         <div

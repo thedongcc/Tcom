@@ -115,13 +115,13 @@ export const MyComponent = ({ prop1, prop2 }: Props) => {
     const [value, setValue] = useState('');
     
     // 3. 计算值 / useMemo
-    const filtered = useMemo(() => items.filter(...), [items]);
+    const filtered = useMemo(() => items.filter(Boolean), [items]);
     
     // 4. 事件处理 / useCallback
-    const handleClick = useCallback(() => { ... }, []);
+    const handleClick = useCallback(() => { /* handle */ }, []);
     
     // 5. 副作用 / useEffect
-    useEffect(() => { ... }, []);
+    useEffect(() => { /* effect */ }, []);
     
     // 6. 条件渲染辅助
     const showPanel = value.length > 0;

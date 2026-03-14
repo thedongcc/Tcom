@@ -85,7 +85,7 @@ interface EditorAreaProps {
     onShowSettings?: (view: string) => void;
 }
 
-export const EditorArea = ({ children, sessionManager, editorLayout, onShowSettings }: EditorAreaProps) => {
+export const EditorArea = ({ sessionManager, editorLayout, onShowSettings }: EditorAreaProps) => {
     const { layout, activeGroupId, moveView, splitDrop } = editorLayout;
     const { t } = useI18n();
     const { sessions } = sessionManager;

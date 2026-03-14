@@ -49,7 +49,7 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
                 config={activeSession.config as MqttSessionConfig}
                 isConnected={activeSession.isConnected}
                 isConnecting={activeSession.isConnecting}
-                onUpdate={(updates) => sessionManager.updateSessionConfig(activeSession.id, updates)}
+                onUpdate={(updates) => { void sessionManager.updateSessionConfig(activeSession.id, updates); }}
                 onConnectToken={() => sessionManager.connectSession(activeSession.id)}
                 onDisconnectToken={() => sessionManager.disconnectSession(activeSession.id)}
             />

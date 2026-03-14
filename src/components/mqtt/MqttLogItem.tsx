@@ -4,7 +4,7 @@
  * 从 MqttMonitor.tsx 中拆分出来。
  */
 import React from 'react';
-import { LogEntry, MqttSessionConfig } from '../../types/session';
+import { LogEntry } from '../../types/session';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
 
 interface SearchMatch {
@@ -58,7 +58,7 @@ export const MqttLogItem = React.memo(({
             result.push(
                 <span
                     key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-toolbar-foreground)]'}
+                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--st-logsearch-match-highlight)] text-[var(--st-monitor-toolbar-foreground)]'}
                 >
                     {text.substring(match.startIndex, match.endIndex)}
                 </span>
@@ -84,7 +84,7 @@ export const MqttLogItem = React.memo(({
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')
-                    .replace(/(\"(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*\"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[\[\]{}:,])/g, (match) => {
+                    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"_])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|[\[\]{}:,])/g, (match) => {
                         let cls = 'color: var(--st-json-punctuation);';
                         if (/^"/.test(match)) {
                             cls = /:$/.test(match) ? 'color: var(--st-json-key); font-weight: bold;' : 'color: var(--st-json-string);';

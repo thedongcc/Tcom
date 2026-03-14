@@ -30,7 +30,7 @@ interface MonitorTerminalProps {
     onConnectRequest?: () => Promise<void> | void;
 }
 
-export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: MonitorTerminalProps) => {
+export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalProps) => {
     const { showToast } = useToast();
     const { t } = useI18n();
 
@@ -52,7 +52,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         handleFilterChange, handleViewModeChange, handleAutoScrollToggle,
         onShowTimestamp, onShowPacketType, onShowDataLength,
         onMergeRepeats, onFlashNewMessage, onEncoding, onFontFamily, onFontSize,
-        onSendTarget, handleInputStateChange, saveUIState,
+        onSendTarget, handleInputStateChange,
         txBytes, rxBytes,
     } = state;
 
@@ -70,7 +70,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                 finalData = byteArray;
             }
         }
-        sessionManager.writeToMonitor(session.id, sendTarget, finalData);
+        void sessionManager.writeToMonitor(session.id, sendTarget, finalData);
     };
 
     // ── 右键菜单和命令添加 ──
@@ -79,7 +79,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const [showCommandEditor, setShowCommandEditor] = useState<any | null>(null);
 
     const handleLogContextMenu = useCallback((e: React.MouseEvent, log: any) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, log }); }, []);
-    const handleCopyLog = (log: any) => { navigator.clipboard.writeText(formatData(log.data, viewMode, encoding)); showToast(t('toast.copied'), 'success', 1500); setContextMenu(null); };
+    const handleCopyLog = (log: any) => { void navigator.clipboard.writeText(formatData(log.data, viewMode, encoding)); showToast(t('toast.copied'), 'success', 1500); setContextMenu(null); };
     const handleAddToCommand = (log: any) => { setShowCommandEditor({ name: generateUniqueName(commands, 'command', undefined), payload: formatData(log.data, viewMode, encoding), mode: viewMode === 'hex' ? 'hex' : 'text', tokens: {}, lineEnding: '' }); setContextMenu(null); };
 
     const handleSaveCommand = (updates: any) => {
@@ -124,7 +124,6 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                 onEncoding={onEncoding}
                 onFontFamily={onFontFamily}
                 onFontSize={onFontSize}
-                scrollRef={scrollRef}
             />
 
             <AnimatePresence>

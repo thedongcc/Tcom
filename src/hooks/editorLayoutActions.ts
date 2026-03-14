@@ -129,13 +129,12 @@ export function applySplitGroup(
         if (parent.direction === direction) {
             parent.children.splice(index + 1, 0, newGroup);
         } else {
-            const newSplit: SplitNode = {
+            parent.children[index] = {
                 type: 'split',
                 id: `split-${Date.now()}`,
                 direction,
                 children: [sourceNode, newGroup]
             };
-            parent.children[index] = newSplit;
         }
     }
 
@@ -228,13 +227,12 @@ export function applySplitDrop(
             const insertIndex = (edge === 'top' || edge === 'left') ? index : index + 1;
             parent.children.splice(insertIndex, 0, newGroup);
         } else {
-            const newSplit: SplitNode = {
+            parent.children[index] = {
                 type: 'split',
                 id: `split-${Date.now()}`,
                 direction,
                 children
             };
-            parent.children[index] = newSplit;
         }
     } else {
         // 根节点即目标

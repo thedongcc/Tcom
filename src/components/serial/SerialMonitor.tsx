@@ -52,7 +52,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     // ── 搜索/滚动/过滤/格式化（委托给 Hook） ──
     const search = useSerialMonitorSearch({
-        sessionId: session.id, logs, autoScroll, flashNewMessage,
+        sessionId: session.id, logs, autoScroll,
         viewMode, encoding, filterMode,
         searchOpen, setSearchOpen, uiState, saveUIState,
     });

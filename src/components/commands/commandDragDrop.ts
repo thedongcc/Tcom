@@ -4,7 +4,7 @@
  * 将 handleDragEnd 的复杂逻辑拆为 processRootDrop 和 processItemDrop 两个函数，
  * 它们只操作数据结构，不依赖 React 状态。
  */
-import { DragEndEvent } from '@dnd-kit/core';
+
 import { arrayMove } from '@dnd-kit/sortable';
 import { CommandEntity } from '../../types/command';
 
@@ -112,8 +112,7 @@ export function processItemDrop(
 
     let newCommands = [...commands];
     const [movedItem] = newCommands.splice(activeIndex, 1);
-    const newOverIndex = newCommands.findIndex(c => c.id === overIdClean);
-    let insertIndex = newOverIndex;
+    let insertIndex = newCommands.findIndex(c => c.id === overIdClean);
     if (isInsertBottom) insertIndex++;
     newCommands.splice(insertIndex, 0, movedItem);
     return { type: 'reorder', newCommands };

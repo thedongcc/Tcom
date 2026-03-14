@@ -52,6 +52,10 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--statusbar-debugging-background", label: "调试模式背景色" },
       { var: "--st-statusbar-text", label: "文本颜色" },
       { var: "--st-statusbar-divider", label: "分隔线颜色" },
+      { var: "--st-statusbar-btn-bg", label: "按钮及版本区背景" },
+      { var: "--st-statusbar-btn-hover", label: "按钮悬停背景" },
+      { var: "--st-statusbar-success-text", label: "更新就绪强调字" },
+      { var: "--st-statusbar-icon", label: "常态图标色" },
     ],
   },
   "editor-area": {
@@ -205,6 +209,9 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--input-focus-border-color", label: "输入框聚焦边框" },
       { var: "--st-btn-switch-active-bg", label: "模式切换按钮激活态" },
       { var: "--st-btn-send-bg", label: "发送按钮强调色" },
+      { var: "--st-sendarea-toolbar-bg", label: "防抖工具栏外壳底色" },
+      { var: "--st-sendarea-toolbar-border", label: "防抖工具栏边线" },
+      { var: "--st-sendarea-toolbar-active", label: "快捷按键激活态" },
     ],
   },
   "monitor-bubble": {
@@ -358,6 +365,25 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--switch-active-bg", label: "开关打开段强调色" },
     ],
   },
+  "custom-select": {
+    label: "选项板 (CustomSelect)",
+    tokens: [
+      { var: "--st-select-bg", label: "列表框背景" },
+      { var: "--st-select-border", label: "列表边框" },
+      { var: "--st-select-text", label: "常规文字" },
+      { var: "--st-select-hover", label: "滑过时热点" },
+      { var: "--st-select-selected", label: "已选中强调" },
+    ]
+  },
+  "log-search": {
+    label: "内置查询 (LogSearch)",
+    tokens: [
+      { var: "--st-logsearch-bg", label: "主搜索条背景" },
+      { var: "--st-logsearch-border", label: "外围包围边框" },
+      { var: "--st-logsearch-text", label: "查询字迹色" },
+      { var: "--st-logsearch-match-highlight", label: "关键字搜索高亮" },
+    ]
+  },
   "global-scrollbar": {
     label: "全局滚动条样式",
     tokens: [
@@ -398,6 +424,8 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
     tokens: [
       { var: "--st-toast-text", label: "提示讯息文字" },
       { var: "--st-toast-icon-hover", label: "互动图标" },
+      { var: "--st-toast-bg", label: "气泡实体背景区" },
+      { var: "--st-toast-border", label: "轮廓边框" },
     ],
   },
   "st-status-indicators": {

@@ -5,7 +5,6 @@
  */
 import { useCallback, useRef } from 'react';
 import { SessionState, LogEntry } from '../types/session';
-import { validateRXCRC } from '../utils/crc';
 
 const MAX_LOGS = 1000;
 

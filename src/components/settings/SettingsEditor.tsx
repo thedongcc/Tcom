@@ -292,7 +292,7 @@ export const SettingsEditor = () => {
                     <Tooltip content={t('settings.resetTooltip')} position="bottom">
                         <button
                             onClick={handleReset}
-                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-[var(--list-hover-background)] rounded transition-colors"
+                            className="p-1.5 text-[var(--st-status-error)] hover:text-[var(--st-settings-danger-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
                         >
                             <RotateCcw size={14} />
                         </button>

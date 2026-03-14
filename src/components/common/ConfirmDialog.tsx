@@ -29,29 +29,29 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
     const getIcon = () => {
         switch (type) {
-            case 'danger': return <AlertCircle className="text-[#f48771]" size={24} />;
-            case 'warning': return <AlertTriangle className="text-[#eab308]" size={24} />;
-            default: return <InfoIcon className="text-[#007acc]" size={24} />;
+            case 'danger': return <AlertCircle className="text-[var(--st-status-error)]" size={24} />;
+            case 'warning': return <AlertTriangle className="text-[var(--st-status-warning)]" size={24} />;
+            default: return <InfoIcon className="text-[var(--st-status-info)]" size={24} />;
         }
     };
 
     const getConfirmColor = () => {
         switch (type) {
-            case 'danger': return 'bg-[#a1260d] hover:bg-[#c93f24]';
-            default: return 'bg-[#0e639c] hover:bg-[#1177bb]';
+            case 'danger': return 'bg-[var(--st-settings-danger-bg)] hover:bg-[#c93f24]';
+            default: return 'bg-[var(--st-status-info)] hover:bg-[#1177bb]';
         }
     };
 
     return (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div
-                className="bg-[#252526] border border-[#3c3c3c] shadow-2xl w-[420px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+                className="bg-[var(--st-dialog-content-bg)] border border-[var(--st-dialog-border)] shadow-2xl w-[420px] flex flex-col rounded-md overflow-hidden animate-in zoom-in-95 fade-in duration-300"
                 onClick={e => e.stopPropagation()}
                 data-component="dialog"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-2.5 border-b border-[#3c3c3c] bg-[#2d2d2d]">
-                    <span className="text-[11px] font-bold text-[#cccccc] uppercase tracking-wider">{title}</span>
+                <div className="flex items-center justify-between p-2.5 border-b border-[var(--st-dialog-border)] bg-[var(--st-dialog-header-bg)]">
+                    <span className="text-[11px] font-bold text-[var(--st-dialog-text)] uppercase tracking-wider">{title}</span>
                     <button onClick={() => onResolve(false)} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-icon-hover)] transition-colors">
                         <X size={14} />
                     </button>
@@ -63,16 +63,16 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         {getIcon()}
                     </div>
                     <div className="flex-1">
-                        <p className="text-[13px] text-[#cccccc] leading-relaxed whitespace-pre-wrap">{message}</p>
+                        <p className="text-[13px] text-[var(--st-dialog-text)] leading-relaxed whitespace-pre-wrap">{message}</p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-end gap-2 p-3 bg-[#1e1e1e] border-t border-[#3c3c3c]">
+                <div className="flex justify-end gap-2 p-3 bg-[var(--st-dialog-footer-bg)] border-t border-[var(--st-dialog-border)]">
                     <button
                         ref={cancelRef}
                         onClick={() => onResolve(false)}
-                        className="px-4 py-1.5 text-[#cccccc] hover:bg-[#3c3c3c] rounded-sm text-xs transition-colors min-w-[70px]"
+                        className="px-4 py-1.5 text-[var(--st-dialog-text)] hover:bg-[var(--st-dialog-header-bg)] rounded-sm text-xs transition-colors min-w-[70px]"
                     >
                         {cancelText}
                     </button>

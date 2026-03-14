@@ -41,6 +41,54 @@ div[data-direction="vertical"]:hover {
   cursor: inherit !important;
 }
 
+/* 
+  Fallback / IDE Placeholder for dynamically injected CSS variables 
+  These are normally injected by ThemeManager.ts, we define defaults here 
+  to quiet IDE warnings and provide a safe baseline before JS loads.
+*/
+:root {
+  --sys-bg-base: #1e1e1e;
+  --sys-bg-surface: #252526;
+  --sys-bg-elevated: #2d2d30;
+  --sys-bg-hover: rgba(255, 255, 255, 0.1);
+  --sys-bg-active: rgba(255, 255, 255, 0.15);
+
+  --sys-text-primary: #cccccc;
+  --sys-text-secondary: #999999;
+  --sys-text-muted: #666666;
+  --sys-text-inverse: #ffffff;
+
+  --sys-border-base: #3c3c3c;
+  --sys-border-divider: #444444;
+
+  --sys-color-primary: #007acc;
+  --sys-color-primary-dark: #005c99;
+
+  /* IDE warnings missing */
+  --context-menu-hover-bg: #094771;
+  --final-bg: transparent;
+  --final-border: transparent;
+  --flash-border: transparent;
+  --flash-color: transparent;
+
+  --st-command-drop-indicator: #007acc;
+  --st-command-empty-text: var(--sys-text-muted);
+  --st-config-item-bg: rgba(0, 0, 0, 0.2);
+  --st-config-success-bg: rgba(0, 128, 0, 0.2);
+  --st-editor-tabs-bg: var(--sys-bg-elevated);
+  --st-extension-active-text: var(--sys-color-primary);
+  --st-extension-user-text: #4ade80;
+  --st-extension-warning-text: #facc15;
+  --st-monitor-config-label: var(--sys-text-secondary);
+  --st-monitor-config-text: var(--sys-text-primary);
+  --st-panel-header-text: var(--sys-text-primary);
+  --st-settings-danger-bg: #ef4444;
+  --st-settings-text: var(--sys-text-primary);
+  --st-settings-title-text: var(--sys-text-primary);
+  --st-toolbar-bg: var(--sys-bg-surface);
+  --st-widget-border: var(--sys-border-divider);
+}
+
 
 :root {
   /* Dark+ (Default) */
@@ -150,6 +198,42 @@ div[data-direction="vertical"]:hover {
   /* StatusBar */
   --st-statusbar-text: var(--sys-text-inverse);
   --st-statusbar-divider: rgba(255, 255, 255, 0.2);
+  --st-statusbar-btn-bg: transparent;
+  --st-statusbar-btn-hover: var(--hover-background);
+  --st-statusbar-success-text: var(--st-status-success);
+  --st-statusbar-icon: var(--sys-text-secondary);
+
+  /* Status Colors (Semantic System additions) */
+  --st-status-success: #22c55e;
+  --st-status-error: #ef4444;
+  --st-status-warning: #eab308;
+  --st-status-info: #3b82f6;
+  --st-status-success-bg: rgba(34, 197, 94, 0.1);
+  --st-status-error-bg: rgba(239, 68, 68, 0.1);
+  --st-status-warning-bg: rgba(234, 179, 8, 0.1);
+  --st-status-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* CustomSelect */
+  --st-select-bg: var(--input-background);
+  --st-select-border: var(--input-border-color);
+  --st-select-text: var(--input-foreground);
+  --st-select-hover: var(--hover-background);
+  --st-select-selected: var(--focus-border-color);
+
+  /* LogSearch */
+  --st-logsearch-bg: var(--widget-background);
+  --st-logsearch-border: var(--widget-border-color);
+  --st-logsearch-text: var(--sys-text-primary);
+  --st-logsearch-match-highlight: rgba(167, 139, 250, 0.2);
+
+  /* SerialInput Toolbar */
+  --st-sendarea-toolbar-bg: var(--editor-background);
+  --st-sendarea-toolbar-border: var(--widget-border-color);
+  --st-sendarea-toolbar-active: var(--accent-color);
+
+  /* Toast & Tooltip additions */
+  --st-toast-bg: var(--widget-background);
+  --st-toast-border: var(--widget-border-color);
 
   /* Session List Item */
   --st-list-item-bg: transparent;
@@ -205,6 +289,9 @@ div[data-direction="vertical"]:hover {
   --st-dialog-content-bg: var(--app-background);
   --st-dialog-footer-bg: var(--widget-background);
   --st-dialog-text: var(--app-foreground);
+  --st-dialog-border: var(--widget-border-color);
+  --st-dialog-muted-text: var(--sys-text-secondary);
+  --st-dialog-icon-hover: var(--app-foreground);
 
   /* === 独立专属 Component Tokens（防止修改一个变量误伤多个组件）=== */
 
@@ -337,7 +424,7 @@ div[data-direction="vertical"]:hover {
 body {
   background-color: var(--app-background);
   color: var(--app-foreground);
-  font-family: var(--st-font-family, 'AppCoreFont', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+  font-family: var(--st-font-family, 'AppCoreFont', 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif), sans-serif;
   line-height: var(--st-line-height, 1.5);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -488,7 +575,7 @@ body {
 }
 
 .vscode-color-picker .react-colorful__alpha {
-  margin-top: 0px !important;
+  margin-top: 0 !important;
 }
 
 .vscode-color-picker .react-colorful__pointer {

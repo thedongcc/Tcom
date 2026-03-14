@@ -419,7 +419,25 @@ export const DEFAULT_DARK_COLORS: Record<string, string> = {
     "--theme-editor-match-border": "rgba(167, 139, 250, 0.2)",
     "--theme-editor-match-text": "#c084fc",
     "--theme-editor-scrollbar-thumb": "rgba(255, 255, 255, 0.1)",
-    "--theme-editor-scrollbar-hover": "rgba(255, 255, 255, 0.15)"
+    "--theme-editor-scrollbar-hover": "rgba(255, 255, 255, 0.15)",
+    "--st-statusbar-btn-bg": "transparent",
+    "--st-statusbar-btn-hover": "#2a2d2e",
+    "--st-statusbar-success-text": "#22c55e",
+    "--st-statusbar-icon": "#999999",
+    "--st-select-bg": "#3c3c3c",
+    "--st-select-border": "#3c3c3c",
+    "--st-select-text": "#cccccc",
+    "--st-select-hover": "#2a2d2e",
+    "--st-select-selected": "#3D90C7",
+    "--st-logsearch-bg": "#252526",
+    "--st-logsearch-border": "#454545",
+    "--st-logsearch-text": "#cccccc",
+    "--st-logsearch-match-highlight": "rgba(167, 139, 250, 0.2)",
+    "--st-sendarea-toolbar-bg": "#1e1e1e",
+    "--st-sendarea-toolbar-border": "#454545",
+    "--st-sendarea-toolbar-active": "#007acc",
+    "--st-toast-bg": "#252526",
+    "--st-toast-border": "#454545"
 };
 
 // ─── 亮色主题默认颜色 ──────────────────────────────────────────────────────────
@@ -836,7 +854,25 @@ export const DEFAULT_LIGHT_COLORS: Record<string, string> = {
     "--theme-editor-match-border": "rgba(167, 139, 250, 0.3)",
     "--theme-editor-match-text": "#7e22ce",
     "--theme-editor-scrollbar-thumb": "rgba(0, 0, 0, 0.15)",
-    "--theme-editor-scrollbar-hover": "rgba(0, 0, 0, 0.25)"
+    "--theme-editor-scrollbar-hover": "rgba(0, 0, 0, 0.25)",
+    "--st-statusbar-btn-bg": "transparent",
+    "--st-statusbar-btn-hover": "#e8e8e8",
+    "--st-statusbar-success-text": "#16a34a",
+    "--st-statusbar-icon": "#666666",
+    "--st-select-bg": "#ffffff",
+    "--st-select-border": "#cecece",
+    "--st-select-text": "#333333",
+    "--st-select-hover": "#e8e8e8",
+    "--st-select-selected": "#3D90C7",
+    "--st-logsearch-bg": "#f3f3f3",
+    "--st-logsearch-border": "#e4e4e4",
+    "--st-logsearch-text": "#333333",
+    "--st-logsearch-match-highlight": "rgba(167, 139, 250, 0.3)",
+    "--st-sendarea-toolbar-bg": "#ffffff",
+    "--st-sendarea-toolbar-border": "#e4e4e4",
+    "--st-sendarea-toolbar-active": "#007acc",
+    "--st-toast-bg": "#f3f3f3",
+    "--st-toast-border": "#e4e4e4"
 };
 
 // ─── 主题模板生成 ────────────────────────────────────────────────────────────────

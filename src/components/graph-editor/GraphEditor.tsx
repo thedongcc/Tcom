@@ -166,7 +166,7 @@ export const GraphEditor = ({ sessionId }: GraphEditorProps) => {
                     </Tooltip>
                     <div className="w-[1px] bg-[var(--st-graph-divider)]"></div>
                     <Tooltip content={t('graph.clearGraph')} position="bottom">
-                        <button onClick={clearGraph} className="p-2 hover:bg-red-900/50 text-red-400">
+                        <button onClick={clearGraph} className="p-2 hover:bg-[var(--st-status-error-bg)] text-[var(--st-status-error)] transition-colors">
                             <Trash2 size={16} />
                         </button>
                     </Tooltip>

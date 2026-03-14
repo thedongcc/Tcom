@@ -82,7 +82,7 @@ export const usePortScanner = (): UsePortScannerReturn => {
         setMonitorEnabled(enabled);
         localStorage.setItem('tcom-monitor-enabled', String(enabled));
         if (enabled) {
-            listPorts();
+            void listPorts();
         } else {
             // 禁用时移除 com0com 端口
             setPorts(prev => prev.filter(p => p.manufacturer !== 'com0com' && !p.friendlyName?.includes('Virtual')));
@@ -109,8 +109,8 @@ export const usePortScanner = (): UsePortScannerReturn => {
 
     // 端口扫描定时器
     useEffect(() => {
-        const firstScanTimer = setTimeout(() => listPorts(false), 300);
-        const interval = setInterval(() => listPorts(true), 2000);
+        const firstScanTimer = setTimeout(() => void listPorts(false), 300);
+        const interval = setInterval(() => void listPorts(true), 2000);
         return () => {
             clearTimeout(firstScanTimer);
             clearInterval(interval);

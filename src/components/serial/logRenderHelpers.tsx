@@ -82,7 +82,7 @@ export function renderHighlightedText(
         result.push(
             <span
                 key={`${log.id}-match-${i}`}
-                className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-toolbar-foreground)]'}
+                className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--st-logsearch-match-highlight)] text-[var(--st-monitor-toolbar-foreground)]'}
             >
                 {renderControlChars(text.substring(match.startIndex, match.endIndex), showControlChars)}
             </span>

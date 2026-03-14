@@ -44,7 +44,7 @@ interface SerialInputProps {
 
 export const SerialInput = ({
     onSend, sessionId,
-    initialContent = '', initialHTML = '', initialTokens = {},
+    initialContent = '', initialHTML = '',
     initialMode = 'hex', initialLineEnding = '', initialTimerInterval = 1000,
     isConnected = false, fontSize = 15, fontFamily = 'AppCoreFont',
     onConnectRequest, onStateChange, hideExtras = false
@@ -161,7 +161,7 @@ export const SerialInput = ({
     };
 
     // ── 发送和定时逻辑（委托给 Hook） ──
-    const { extractTokens, handleSend } = useSerialInputLogic({
+    const { handleSend } = useSerialInputLogic({
         editor, mode, lineEnding, isConnected, isEmpty,
         sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
         onSend, onConnectRequest,

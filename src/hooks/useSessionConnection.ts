@@ -76,7 +76,7 @@ export function useSessionConnection({
                 const found = await Com0Com.findPairedPort(portScanner.setupcPath, monitorConfig.virtualSerialPort);
                 if (found) {
                     actualPort = found;
-                    updateSessionConfig(sessionId, { pairedPort: found });
+                    void updateSessionConfig(sessionId, { pairedPort: found });
                 }
             } catch (e) { console.error(e); }
         }
@@ -166,7 +166,7 @@ export function useSessionConnection({
             if (monitorConfig.autoDestroyPair && monitorConfig.pairedPort && portScanner.setupcPath) {
                 try {
                     await Com0Com.removePair(portScanner.setupcPath, monitorConfig.pairedPort);
-                    updateSessionConfig(sessionId, { pairedPort: undefined });
+                    void updateSessionConfig(sessionId, { pairedPort: undefined });
                 } catch (e) { sessionLog.addLog(sessionId, 'ERROR', `Failed to remove pair: ${e}`); }
             }
         }
