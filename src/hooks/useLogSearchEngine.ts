@@ -6,12 +6,50 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SearchMatch } from '../components/common/LogSearch';
 
+/**
+ * 在匹配列表中找到最接近屏幕中心的 match 索引
+ */
+function findClosestMatchIndex(matches: SearchMatch[]): number {
+    let closestIndex = -1;
+    let minDist = Infinity;
+    const center = window.innerHeight / 2;
+    for (let i = 0; i < matches.length; i++) {
+        const el = document.getElementById(`log-${matches[i].logId}`);
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            const dist = Math.abs(rect.top + rect.height / 2 - center);
+            if (dist < minDist) { minDist = dist; closestIndex = i; }
+        }
+    }
+    return closestIndex === -1 ? matches.length - 1 : closestIndex;
+}
+
+/**
+ * 在新匹配列表中恢复之前活跃的 match 索引
+ */
+function restorePreviousIndex(matches: SearchMatch[], prevMatch: SearchMatch | null, fallback: number): number {
+    if (prevMatch) {
+        const found = matches.findIndex(m => m.logId === prevMatch.logId && m.startIndex === prevMatch.startIndex);
+        return found !== -1 ? found : -1;
+    }
+    return fallback;
+}
+
+/**
+ * 构建搜索正则表达式
+ */
+function buildSearchRegex(query: string, isRegex: boolean, matchCase: boolean): RegExp {
+    const flags = matchCase ? 'g' : 'gi';
+    const pattern = isRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(pattern, flags);
+}
+
 export const useLogSearchEngine = (
     logs: any[],
     initialQuery: string = '',
     initialIsRegex: boolean = false,
     initialIsMatchCase: boolean = false,
-    viewMode: 'text' | 'hex' | 'json' | 'both',
+    viewMode: 'text' | 'hex' | 'json' | 'both' | 'base64',
     formatData: (data: any, mode: any, encoding: string) => string,
     encoding: string
 ) => {
@@ -46,23 +84,14 @@ export const useLogSearchEngine = (
 
     useEffect(() => {
         if (!query) {
-            setMatches([]);
-            setCurrentIndex(-1);
-            setRegexError(false);
+            setMatches([]); setCurrentIndex(-1); setRegexError(false);
             lastSearchRef.current.query = '';
             lastSearchRef.current.activeMatch = null;
             return;
         }
 
         try {
-            let regex: RegExp;
-            const flags = matchCase ? 'g' : 'gi';
-            if (isRegex) {
-                regex = new RegExp(query, flags);
-            } else {
-                const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                regex = new RegExp(escapedQuery, flags);
-            }
+            const regex = buildSearchRegex(query, isRegex, matchCase);
             setRegexError(false);
 
             const newMatches: SearchMatch[] = [];
@@ -71,18 +100,13 @@ export const useLogSearchEngine = (
                 let match;
                 regex.lastIndex = 0;
                 while ((match = regex.exec(text)) !== null) {
-                    newMatches.push({
-                        logId: log.id,
-                        startIndex: match.index,
-                        endIndex: regex.lastIndex
-                    });
+                    newMatches.push({ logId: log.id, startIndex: match.index, endIndex: regex.lastIndex });
                     if (regex.lastIndex === match.index) regex.lastIndex++;
                 }
             });
 
             setMatches(newMatches);
 
-            // 判断搜索词或模式是否改变
             const conditionChanged =
                 lastSearchRef.current.query !== query ||
                 lastSearchRef.current.isRegex !== isRegex ||
@@ -90,60 +114,21 @@ export const useLogSearchEngine = (
 
             if (newMatches.length > 0) {
                 if (conditionChanged) {
-                    // 查询条件变了，找到屏幕中心的 match
-                    let closestIndex = -1;
-                    let minDist = Infinity;
-                    const center = window.innerHeight / 2;
-                    for (let i = 0; i < newMatches.length; i++) {
-                        const el = document.getElementById(`log-${newMatches[i].logId}`);
-                        if (el) {
-                            const rect = el.getBoundingClientRect();
-                            const dist = Math.abs(rect.top + rect.height / 2 - center);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                closestIndex = i;
-                            }
-                        }
-                    }
-                    if (closestIndex === -1) {
-                        closestIndex = newMatches.length - 1; // 如果都没渲染，选最新的
-                    }
-                    setCurrentIndex(closestIndex);
-                    setActiveMatchRev(r => r + 1); // 触发滚动
+                    setCurrentIndex(findClosestMatchIndex(newMatches));
+                    setActiveMatchRev(r => r + 1);
                 } else {
-                    // 条件没变但是 logs 有更新：尝试找回之前的焦点
-                    const prevMatch = lastSearchRef.current.activeMatch;
-                    let nextIndex = 0;
-                    if (prevMatch) {
-                        const foundIndex = newMatches.findIndex(m =>
-                            m.logId === prevMatch.logId &&
-                            m.startIndex === prevMatch.startIndex
-                        );
-                        if (foundIndex !== -1) {
-                            nextIndex = foundIndex;
-                        } else {
-                            nextIndex = -1;
-                        }
-                    } else if (currentIndex === -1) {
-                        nextIndex = -1;
-                    }
-                    setCurrentIndex(nextIndex);
-                    // 注意：这里不增加 activeMatchRev，不让他滚动
+                    setCurrentIndex(restorePreviousIndex(newMatches, lastSearchRef.current.activeMatch, currentIndex === -1 ? -1 : 0));
                 }
             } else {
                 setCurrentIndex(-1);
             }
 
-            // 记录新的搜索条件
             lastSearchRef.current.query = query;
             lastSearchRef.current.isRegex = isRegex;
             lastSearchRef.current.matchCase = matchCase;
-
         } catch (e) {
             console.error('Search regex error:', e);
-            setMatches([]);
-            setCurrentIndex(-1);
-            setRegexError(true);
+            setMatches([]); setCurrentIndex(-1); setRegexError(true);
         }
     }, [query, isRegex, matchCase, logs, viewMode, formatData, encoding]);
 

@@ -158,7 +158,7 @@ export const MqttLogItem = React.memo(({
                         </span>
                     )}
                 </div>
-                <div className={`whitespace-pre-wrap break-all font-mono ${isTX ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
+                <div className={`whitespace-pre-wrap break-all font-[inherit] ${isTX ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
                     {renderPayload(log)}
                 </div>
             </div>

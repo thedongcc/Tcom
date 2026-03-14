@@ -1,5 +1,14 @@
+/**
+ * CommandListSidebar.tsx
+ * 命令列表侧边栏 — 命令管理、拖放排序、右键菜单。
+ *
+ * 子模块：
+ * - useCommandKeyboardActions.ts — 键盘快捷键和选择逻辑
+ * - useCommandListActions.ts — 拖放和发送操作
+ * - CommandScrollArea — 可滚动列表区域
+ */
 import { Plus, FolderPlus, Upload, Trash2, MoreHorizontal, FileText, Folder, Play, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useCommandManager } from '../../hooks/useCommandManager';
 import { CommandList } from './CommandList';
 import { CommandEntity, CommandItem } from '../../types/command';
@@ -12,17 +21,11 @@ import { generateUniqueName } from '../../utils/commandUtils';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import { useCommandListActions } from './useCommandListActions';
+import { useCommandKeyboardActions } from './useCommandKeyboardActions';
 
-// Helper component for the scrollable list area
+// ── 滚动列表区域 ──
 const CommandScrollArea = ({
-    items,
-    onEdit,
-    onSend,
-    onContextMenu,
-    canSend,
-    selectedIds,
-    onSelect,
-    onClearSelection
+    items, onEdit, onSend, onContextMenu, canSend, selectedIds, onSelect, onClearSelection
 }: {
     items: CommandEntity[];
     onEdit: (item: CommandEntity) => void;
@@ -38,7 +41,6 @@ const CommandScrollArea = ({
         id: 'root-drop',
         data: { type: 'root' }
     });
-
     const showLine = isOver && active;
 
     return (
@@ -49,20 +51,13 @@ const CommandScrollArea = ({
             onClick={onClearSelection}
         >
             <CommandList
-                items={items}
-                onEdit={onEdit}
-                onSend={onSend}
-                onContextMenu={onContextMenu}
-                dropIndicator={null}
-                canSend={canSend}
-                selectedIds={selectedIds}
-                onSelect={onSelect}
+                items={items} onEdit={onEdit} onSend={onSend}
+                onContextMenu={onContextMenu} dropIndicator={null}
+                canSend={canSend} selectedIds={selectedIds} onSelect={onSelect}
             />
-
             {showLine && (
                 <div className="mx-1 mt-0.5 h-[2px] bg-[var(--st-command-drop-indicator)] shadow-[0_0_4px_var(--st-command-drop-indicator)] rounded-full" />
             )}
-
             {items.length === 0 && !showLine && (
                 <div className="p-4 text-center text-[13px] text-[var(--st-command-empty-text)] opacity-60">
                     {t('command.noCommands')}<br />{t('command.noCommandsHint')}
@@ -72,6 +67,7 @@ const CommandScrollArea = ({
     );
 };
 
+// ── 主组件 ──
 const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string) => void }) => {
     const {
         commands, addGroup, addCommand, clearAll, importCommands, exportCommands,
@@ -80,180 +76,34 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     } = useCommandManager();
     const { showToast } = useToast();
     const { t } = useI18n();
-
     const { activeSessionId } = useSession();
+
     const [showMenu, setShowMenu] = useState(false);
     const [editingItem, setEditingItem] = useState<CommandEntity | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: CommandEntity | null } | null>(null);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-    const [clipboard, setClipboard] = useState<CommandEntity[]>([]);
-    // 追踪命令菜单是否处于用户交互焦点
-    const containerRef = useRef<HTMLDivElement>(null);
-    const isFocused = useRef(false);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // 只在命令菜单处于焦点状态时才拦截快捷键
-            if (!isFocused.current) return;
-
-            const activeEl = document.activeElement;
-            const isInput = ['INPUT', 'TEXTAREA'].includes(activeEl?.tagName || '');
-            const isContentEditable = activeEl?.getAttribute('contenteditable') === 'true';
-            const hasModalOpen = document.querySelector('.fixed.z-50') || document.querySelector('dialog[open]');
-
-            if (isInput || isContentEditable || !!hasModalOpen) return;
-
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    redo();
-                } else {
-                    undo();
-                }
-                return;
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-                e.preventDefault();
-                redo();
-                return;
-            }
-
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-                e.preventDefault();
-                if (selectedIds.size > 0) {
-                    // 只复制顶层选中项（过滤掉父级已被选中的子项，避免粘贴时重复）
-                    const selected = commands.filter(c => selectedIds.has(c.id));
-                    const topLevel = selected.filter(c => !selectedIds.has(c.parentId || ''));
-                    if (topLevel.length > 0) setClipboard(topLevel);
-                } else if (lastSelectedId) {
-                    const item = commands.find(c => c.id === lastSelectedId);
-                    if (item) setClipboard([item]);
-                }
-                return;
-            }
-
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-                e.preventDefault();
-                if (clipboard.length > 0) {
-                    let targetId: string | undefined = undefined;
-                    if (lastSelectedId) {
-                        const sel = commands.find(c => c.id === lastSelectedId);
-                        if (sel?.type === 'group') {
-                            targetId = sel.id;
-                        } else if (sel) {
-                            targetId = sel.parentId || undefined;
-                        }
-                    }
-                    // 一次性批量粘贴，可一次性撤回
-                    duplicateEntities(clipboard.map(i => i.id), targetId);
-                }
-                return;
-            }
-
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedIds.size > 0) {
-                    deleteEntities(Array.from(selectedIds));
-                    setSelectedIds(new Set());
-                }
-            }
-        };
-
-        // 点击命令菜单外部时，清除选择状态
-        const handleMouseDown = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-                isFocused.current = false;
-                setSelectedIds(new Set());
-                setLastSelectedId(null);
-            } else {
-                isFocused.current = true;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('mousedown', handleMouseDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('mousedown', handleMouseDown);
-        };
-    }, [selectedIds, lastSelectedId, clipboard, commands, undo, redo, canUndo, canRedo, deleteEntities, duplicateEntity]);
-
-    const handleItemClick = (e: React.MouseEvent, item: CommandEntity) => {
-        e.stopPropagation();
-        let newSelection = new Set(selectedIds);
-
-        if (e.ctrlKey || e.metaKey) {
-            if (newSelection.has(item.id)) {
-                newSelection.delete(item.id);
-            } else {
-                newSelection.add(item.id);
-                setLastSelectedId(item.id);
-            }
-        } else if (e.shiftKey && lastSelectedId) {
-            const getVisibleItems = (parentId?: string | null): CommandEntity[] => {
-                const effectiveParentId = parentId === undefined ? null : parentId;
-                const children = commands.filter(c => c.parentId === effectiveParentId || (effectiveParentId === null && !c.parentId));
-                let flat: CommandEntity[] = [];
-                for (const child of children) {
-                    flat.push(child);
-                    if (child.type === 'group' && (child.isOpen ?? true)) {
-                        flat = [...flat, ...getVisibleItems(child.id)];
-                    }
-                }
-                return flat;
-            };
-
-            const visibleItems = getVisibleItems(undefined);
-            const startIndex = visibleItems.findIndex(i => i.id === lastSelectedId);
-            const endIndex = visibleItems.findIndex(i => i.id === item.id);
-
-            if (startIndex !== -1 && endIndex !== -1) {
-                const start = Math.min(startIndex, endIndex);
-                const end = Math.max(startIndex, endIndex);
-                const range = visibleItems.slice(start, end + 1);
-                range.forEach(i => newSelection.add(i.id));
-            }
-        } else {
-            newSelection = new Set([item.id]);
-            setLastSelectedId(item.id);
-        }
-
-        setSelectedIds(newSelection);
-    };
+    // ── 键盘快捷键和选择逻辑（委托给 Hook） ──
+    const {
+        selectedIds, clipboard, containerRef, handleItemClick, clearSelection, setClipboard, handlePaste
+    } = useCommandKeyboardActions({
+        commands, undo, redo, canUndo, canRedo, deleteEntities, duplicateEntities
+    });
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     );
-
     const rootItems = useMemo(() => commands.filter(c => !c.parentId), [commands]);
 
-    // ── 拖放和发送操作（委托给 Hook） ──
+    // ── 拖放和发送（委托给 Hook） ──
     const { customCollisionStrategy, handleDragEnd, handleSend } = useCommandListActions({
         commands, setAllCommands, updateEntity, onNavigate,
     });
 
+    // ── 右键菜单 ──
     const handleContextMenu = (e: React.MouseEvent, item?: CommandEntity) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            item: item || null
-        });
-    };
-
-    const handleDuplicate = (item: CommandEntity) => {
-        duplicateEntity(item.id, item.parentId || undefined);
-    };
-
-    const handleCopy = (item: CommandEntity) => {
-        setClipboard([item]);
-    };
-
-    const handlePaste = (targetParentId?: string) => {
-        if (clipboard.length === 0) return;
-        // 一次性批量粘贴，可一步撤回
-        duplicateEntities(clipboard.map(i => i.id), targetParentId);
+        setContextMenu({ x: e.clientX, y: e.clientY, item: item || null });
     };
 
     const getMenuItems = () => {
@@ -262,70 +112,26 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
 
         if (!item) {
             return [
-                {
-                    label: t('command.newCommand'),
-                    icon: <FileText size={13} />,
-                    onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined })
-                },
-                {
-                    label: t('command.newGroup'),
-                    icon: <FolderPlus size={13} />,
-                    onClick: () => addGroup(generateUniqueName(commands, t('command.newGroup'), undefined))
-                },
+                { label: t('command.newCommand'), icon: <FileText size={13} />, onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }) },
+                { label: t('command.newGroup'), icon: <FolderPlus size={13} />, onClick: () => addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)) },
                 { separator: true },
-                {
-                    label: t('common.paste'),
-                    icon: <CornerDownLeft size={13} className="rotate-180" />,
-                    onClick: () => handlePaste(undefined),
-                    disabled: clipboard.length === 0
-                }
+                { label: t('common.paste'), icon: <CornerDownLeft size={13} className="rotate-180" />, onClick: () => handlePaste(undefined), disabled: clipboard.length === 0 }
             ];
         }
 
         const items: any[] = [
-            {
-                label: t('common.edit'),
-                icon: <Pencil size={13} />,
-                onClick: () => setEditingItem(item)
-            },
-            {
-                label: t('common.duplicate'),
-                icon: <CopyPlus size={13} />,
-                onClick: () => handleDuplicate(item)
-            },
-            {
-                label: t('common.copy'),
-                icon: <Copy size={13} />,
-                onClick: () => handleCopy(item)
-            },
+            { label: t('common.edit'), icon: <Pencil size={13} />, onClick: () => setEditingItem(item) },
+            { label: t('common.duplicate'), icon: <CopyPlus size={13} />, onClick: () => duplicateEntity(item.id, item.parentId || undefined) },
+            { label: t('common.copy'), icon: <Copy size={13} />, onClick: () => setClipboard([item]) },
             { separator: true },
-            {
-                label: t('common.delete'),
-                icon: <Trash2 size={13} />,
-                color: 'red',
-                onClick: () => deleteEntity(item.id)
-            }
+            { label: t('common.delete'), icon: <Trash2 size={13} />, color: 'red', onClick: () => deleteEntity(item.id) }
         ];
 
         if (item.type === 'group') {
-            items.splice(3, 0, {
-                label: t('common.paste'),
-                icon: <ClipboardPaste size={13} />,
-                onClick: () => handlePaste(item.id),
-                disabled: clipboard.length === 0
-            });
-
+            items.splice(3, 0, { label: t('common.paste'), icon: <ClipboardPaste size={13} />, onClick: () => handlePaste(item.id), disabled: clipboard.length === 0 });
             items.unshift({ separator: true });
-            items.unshift({
-                label: t('command.newGroup'),
-                icon: <FolderPlus size={13} />,
-                onClick: () => addGroup(generateUniqueName(commands, t('command.newGroup'), item.id))
-            });
-            items.unshift({
-                label: t('command.newCommand'),
-                icon: <FileText size={13} />,
-                onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), item.id), payload: '', mode: 'text', tokens: {}, parentId: item.id })
-            });
+            items.unshift({ label: t('command.newGroup'), icon: <FolderPlus size={13} />, onClick: () => addGroup(generateUniqueName(commands, t('command.newGroup'), item.id)) });
+            items.unshift({ label: t('command.newCommand'), icon: <FileText size={13} />, onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), item.id), payload: '', mode: 'text', tokens: {}, parentId: item.id }) });
         }
 
         return items;
@@ -337,10 +143,7 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                 <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
                 <div className="flex items-center gap-1 relative">
                     <Tooltip content={t('command.menu')} position="bottom">
-                        <button
-                            className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)]"
-                            onClick={() => setShowMenu(!showMenu)}
-                        >
+                        <button className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)]" onClick={() => setShowMenu(!showMenu)}>
                             <MoreHorizontal size={14} />
                         </button>
                     </Tooltip>
@@ -350,28 +153,13 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
                             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
                             <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-lg rounded-sm z-50 text-[13px]">
                                 <div className="py-1">
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
-                                        onClick={() => { addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)); setShowMenu(false); }}>
-                                        <FolderPlus size={14} /> {t('command.newGroup')}
-                                    </div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
-                                        onClick={() => { addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }); setShowMenu(false); }}>
-                                        <FileText size={14} /> {t('command.newCommand')}
-                                    </div>
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)); setShowMenu(false); }}><FolderPlus size={14} /> {t('command.newGroup')}</div>
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }); setShowMenu(false); }}><FileText size={14} /> {t('command.newCommand')}</div>
                                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
-                                        onClick={() => { importCommands(); setShowMenu(false); }}>
-                                        <Upload size={14} /> {t('command.import')}
-                                    </div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
-                                        onClick={() => { exportCommands(); setShowMenu(false); }}>
-                                        <Upload size={14} className="rotate-180" /> {t('command.export')}
-                                    </div>
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { importCommands(); setShowMenu(false); }}><Upload size={14} /> {t('command.import')}</div>
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { exportCommands(); setShowMenu(false); }}><Upload size={14} className="rotate-180" /> {t('command.export')}</div>
                                     <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]"
-                                        onClick={() => { clearAll(); setShowMenu(false); }}>
-                                        <Trash2 size={14} /> {t('command.clearAll')}
-                                    </div>
+                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]" onClick={() => { clearAll(); setShowMenu(false); }}><Trash2 size={14} /> {t('command.clearAll')}</div>
                                 </div>
                             </div>
                         </>
@@ -380,48 +168,27 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
             </div>
 
             <div className="flex-1 flex flex-col min-h-0">
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={customCollisionStrategy}
-                    onDragEnd={handleDragEnd}
-                >
+                <DndContext sensors={sensors} collisionDetection={customCollisionStrategy} onDragEnd={handleDragEnd}>
                     <CommandScrollArea
-                        items={rootItems}
-                        onEdit={setEditingItem}
+                        items={rootItems} onEdit={setEditingItem}
                         onSend={(cmd) => handleSend(cmd as CommandItem)}
-                        onContextMenu={handleContextMenu}
-                        canSend={!!activeSessionId}
-                        selectedIds={selectedIds}
-                        onSelect={handleItemClick}
-                        onClearSelection={() => {
-                            setSelectedIds(new Set());
-                            setLastSelectedId(null);
-                        }}
+                        onContextMenu={handleContextMenu} canSend={!!activeSessionId}
+                        selectedIds={selectedIds} onSelect={handleItemClick}
+                        onClearSelection={clearSelection}
                     />
                 </DndContext>
             </div>
 
             {editingItem && (
                 <CommandEditorDialog
-                    item={editingItem}
-                    onClose={() => setEditingItem(null)}
-                    onSave={(updates) => {
-                        updateEntity(editingItem.id, updates);
-                        setEditingItem(null);
-                    }}
-                    existingNames={commands
-                        .filter(c => c.parentId === editingItem.parentId && c.id !== editingItem.id)
-                        .map(c => c.name)}
+                    item={editingItem} onClose={() => setEditingItem(null)}
+                    onSave={(updates) => { updateEntity(editingItem.id, updates); setEditingItem(null); }}
+                    existingNames={commands.filter(c => c.parentId === editingItem.parentId && c.id !== editingItem.id).map(c => c.name)}
                 />
             )}
 
             {contextMenu && (
-                <ContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    items={getMenuItems()}
-                    onClose={() => setContextMenu(null)}
-                />
+                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={getMenuItems()} onClose={() => setContextMenu(null)} />
             )}
         </div>
     );

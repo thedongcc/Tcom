@@ -24,14 +24,10 @@ export const MessagePipeline = {
 
         if (html && tokens && Object.keys(tokens).length > 0) {
             // Rich Text Mode (CRC, Flags, Hex)
-            console.log('MessagePipeline: Processing with tokens', { html, tokensCount: Object.keys(tokens).length, tokens });
             const div = document.createElement('div');
             div.innerHTML = html;
-            console.log('MessagePipeline: Created div innerHTML', div.innerHTML);
             const segments = parseDOM(div);
-            console.log('MessagePipeline: Parsed segments', segments);
             data = compileSegments(segments, mode, tokens);
-            console.log('MessagePipeline: Compiled data', { length: data.length, data });
         } else if (mode === 'hex') {
             // Plain Hex
             data = parseHex(content);

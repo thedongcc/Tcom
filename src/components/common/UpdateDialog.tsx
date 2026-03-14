@@ -29,7 +29,7 @@ export const UpdateDialog = ({ onClose }: { onClose: () => void }) => {
         });
 
         const removeStatusListener = window.updateAPI.onStatus((data: any) => {
-            console.log('Update Status:', data);
+
             if (data.type === 'available' || data.type === 'downloaded' || data.type === 'error' || data.type === 'checking' || data.type === 'not-available') {
                 setStatus(prev => ({ ...prev, ...data }));
             }

@@ -6,12 +6,70 @@ import { app, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
+// ── 命令解析 ──
+
+function parseCommand(command: string): { exePath: string; args: string[] } {
+    let exePath = '';
+    let argsString = '';
+
+    if (command.startsWith('"')) {
+        const closeQuote = command.indexOf('"', 1);
+        if (closeQuote > 1) {
+            exePath = command.substring(1, closeQuote);
+            argsString = command.substring(closeQuote + 1).trim();
+        }
+    } else {
+        const space = command.indexOf(' ');
+        if (space > 0) {
+            exePath = command.substring(0, space);
+            argsString = command.substring(space + 1).trim();
+        } else {
+            exePath = command;
+        }
+    }
+    return { exePath, args: argsString ? argsString.split(/\s+/) : [] };
+}
+
+// ── 子进程执行（含输出收集）  ──
+
+function spawnAndCollect(exePath: string, args: string[], cwd?: string): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string; code?: number }> {
+    return new Promise(resolve => {
+        const { spawn } = require('node:child_process');
+        const child = spawn(exePath, args, { cwd, shell: true, windowsHide: true, env: process.env });
+        let stdout = '', stderr = '';
+        child.stdout.on('data', (d: any) => stdout += d.toString());
+        child.stderr.on('data', (d: any) => stderr += d.toString());
+        child.on('error', (err: any) => resolve({ success: false, error: err.message }));
+        child.on('close', (code: number) => {
+            if (code === 0) resolve({ success: true, stdout });
+            else resolve({ success: false, error: `Process exited with code ${code}`, stderr, stdout, code });
+        });
+    });
+}
+
+// ── 执行 com0com 命令（含本地回退） ──
+
+async function spawnCommand(command: string): Promise<any> {
+    const { exePath, args } = parseCommand(command);
+    const cwd = exePath.includes('\\') || exePath.includes('/') ? path.dirname(exePath) : undefined;
+
+    const result = await spawnAndCollect(exePath, args, cwd);
+    if (result.success) return result;
+
+    // 本地安装路径回退
+    if (exePath === 'setupc' || exePath === 'setupc.exe') {
+        const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
+        return spawnAndCollect(localSetupc, args, path.dirname(localSetupc));
+    }
+    return result;
+}
+
 export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
     ipcMain.handle('com0com:launch-installer', async () => {
         const isDev = !!VITE_DEV_SERVER_URL;
         let installerPath = '';
         if (isDev) {
-            installerPath = path.join(__dirname, '../../resources/drivers/com0com_setup.exe');
+            installerPath = path.join(__dirname, '../resources/drivers/com0com_setup.exe');
         } else {
             installerPath = path.join(process.resourcesPath, 'resources/drivers/com0com_setup.exe');
         }
@@ -46,7 +104,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
         const isDev = !!VITE_DEV_SERVER_URL;
         let installerPath = '';
         if (isDev) {
-            installerPath = path.join(__dirname, '../../resources/drivers/com0com_setup.exe');
+            installerPath = path.join(__dirname, '../resources/drivers/com0com_setup.exe');
         } else {
             installerPath = path.join(process.resourcesPath, 'resources/drivers/com0com_setup.exe');
         }
@@ -109,65 +167,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
             return { success: false, error: 'Unauthorized command' };
         }
 
-        return new Promise((resolve) => {
-            const { spawn } = require('node:child_process');
-            let exePath = '';
-            let argsString = '';
-
-            if (command.startsWith('"')) {
-                const closeQuoteIndex = command.indexOf('"', 1);
-                if (closeQuoteIndex > 1) {
-                    exePath = command.substring(1, closeQuoteIndex);
-                    argsString = command.substring(closeQuoteIndex + 1).trim();
-                }
-            } else {
-                const spaceIndex = command.indexOf(' ');
-                if (spaceIndex > 0) {
-                    exePath = command.substring(0, spaceIndex);
-                    argsString = command.substring(spaceIndex + 1).trim();
-                } else {
-                    exePath = command;
-                }
-            }
-
-            const args = argsString ? argsString.split(/\s+/) : [];
-            const cwd = exePath.includes('\\') || exePath.includes('/') ? path.dirname(exePath) : undefined;
-
-            const child = spawn(exePath, args, {
-                cwd,
-                shell: true,
-                windowsHide: true,
-                env: process.env
-            });
-
-            let stdout = '';
-            let stderr = '';
-            child.stdout.on('data', (d: any) => stdout += d.toString());
-            child.stderr.on('data', (d: any) => stderr += d.toString());
-
-            child.on('error', (err: any) => resolve({ success: false, error: err.message }));
-
-            child.on('close', (code: number) => {
-                if (code === 0) {
-                    resolve({ success: true, stdout });
-                } else {
-                    if (exePath === 'setupc' || exePath === 'setupc.exe') {
-                        const localSetupc = path.join(app.getPath('userData'), 'drivers', 'com0com', 'setupc.exe');
-                        const localChild = spawn(localSetupc, args, { cwd: path.dirname(localSetupc), shell: true, windowsHide: true });
-                        let lStdout = ''; let lStderr = '';
-                        localChild.stdout.on('data', (d: any) => lStdout += d.toString());
-                        localChild.stderr.on('data', (d: any) => lStderr += d.toString());
-                        localChild.on('close', (lCode: number) => {
-                            if (lCode === 0) resolve({ success: true, stdout: lStdout });
-                            else resolve({ success: false, error: `Process exited with code ${lCode}`, stderr: lStderr, stdout: lStdout });
-                        });
-                        localChild.on('error', (lErr: any) => resolve({ success: false, error: lErr.message }));
-                    } else {
-                        resolve({ success: false, error: `Process exited with code ${code}`, stderr, stdout });
-                    }
-                }
-            });
-        });
+        return spawnCommand(command);
     });
 
     ipcMain.handle('com0com:name', async (_event, { port, name }) => {

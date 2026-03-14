@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化全局悬停显示样式
 - 修改flag token为custom占位符
 - 优化定时器方案,现在定时发送间隔时间非常准确
+- 优化项目架构,增加项目规范文档
 
 ### Removed
 - 

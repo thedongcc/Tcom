@@ -9,6 +9,40 @@ import { validateRXCRC } from '../utils/crc';
 
 const MAX_LOGS = 1000;
 
+/**
+ * 比较两条日志的数据是否相同（支持 string 和 Uint8Array）
+ */
+function isSameData(a: string | Uint8Array, b: string | Uint8Array): boolean {
+    if (typeof a === 'string' && typeof b === 'string') return a === b;
+    if (a instanceof Uint8Array && b instanceof Uint8Array) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+/**
+ * 将 incoming 日志合并到 logs 数组（支持重复合并）
+ */
+function mergeIncomingLog(logs: LogEntry[], incoming: LogEntry, mergeRepeats: boolean): void {
+    const last = logs[logs.length - 1];
+    if (mergeRepeats && last && last.type === incoming.type && last.topic === incoming.topic && isSameData(last.data, incoming.data)) {
+        logs[logs.length - 1] = { ...last, timestamp: incoming.timestamp, repeatCount: (last.repeatCount || 1) + (incoming.repeatCount || 1) };
+    } else {
+        logs.push(incoming);
+    }
+}
+
+/**
+ * 计算日志条目的字节数
+ */
+function getLogByteLength(data: string | Uint8Array): number {
+    return typeof data === 'string' ? new TextEncoder().encode(data).length : data.length;
+}
+
 export interface UseSessionLogReturn {
     addLog: (sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus?: LogEntry['crcStatus'], topic?: string, commandName?: string, tsOverride?: number) => void;
     clearLogs: (sessionId: string, updateSession: (id: string, updater: (prev: SessionState) => Partial<SessionState>) => void) => void;
@@ -34,63 +68,21 @@ export const useSessionLog = (
 
         setSessions(prev => prev.map(s => {
             const bufferLogs = buffer.get(s.id);
-            if (!bufferLogs || bufferLogs.length === 0) return s;
+            if (!bufferLogs?.length) return s;
 
+            const mergeRepeats = !!s.config.uiState?.mergeRepeats;
             let newLogs = [...s.logs];
-            const mergeRepeats = s.config.uiState?.mergeRepeats;
+            bufferLogs.forEach(incoming => mergeIncomingLog(newLogs, incoming, mergeRepeats));
+            if (newLogs.length > MAX_LOGS) newLogs = newLogs.slice(-MAX_LOGS);
 
-            bufferLogs.forEach(incoming => {
-                const lastLog = newLogs[newLogs.length - 1];
-                if (mergeRepeats && lastLog && lastLog.type === incoming.type && lastLog.topic === incoming.topic) {
-                    let isSameData = false;
-                    if (typeof lastLog.data === 'string' && typeof incoming.data === 'string') {
-                        isSameData = lastLog.data === incoming.data;
-                    } else if (lastLog.data instanceof Uint8Array && incoming.data instanceof Uint8Array) {
-                        if (lastLog.data.length === incoming.data.length) {
-                            isSameData = true;
-                            for (let i = 0; i < incoming.data.length; i++) {
-                                if (lastLog.data[i] !== incoming.data[i]) {
-                                    isSameData = false;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (isSameData) {
-                        newLogs[newLogs.length - 1] = {
-                            ...lastLog,
-                            timestamp: incoming.timestamp,
-                            repeatCount: (lastLog.repeatCount || 1) + (incoming.repeatCount || 1)
-                        };
-                        return;
-                    }
-                }
-                newLogs.push(incoming);
-            });
-
-            if (newLogs.length > MAX_LOGS) {
-                newLogs = newLogs.slice(-MAX_LOGS);
-            }
-
+            // 统计字节数
             let newTxBytes = s.txBytes || 0;
             let newRxBytes = s.rxBytes || 0;
-
-            bufferLogs.forEach(incoming => {
-                const len = typeof incoming.data === 'string'
-                    ? new TextEncoder().encode(incoming.data).length
-                    : incoming.data.length;
-
-                if (incoming.type === 'TX') {
-                    if (!incoming.topic || incoming.topic === 'virtual') {
-                        newTxBytes += len * (incoming.repeatCount || 1);
-                    }
-                } else if (incoming.type === 'RX') {
-                    if (!incoming.topic || incoming.topic === 'physical') {
-                        newRxBytes += len * (incoming.repeatCount || 1);
-                    }
-                }
-            });
+            for (const incoming of bufferLogs) {
+                const len = getLogByteLength(incoming.data) * (incoming.repeatCount || 1);
+                if (incoming.type === 'TX' && (!incoming.topic || incoming.topic === 'virtual')) newTxBytes += len;
+                else if (incoming.type === 'RX' && (!incoming.topic || incoming.topic === 'physical')) newRxBytes += len;
+            }
 
             return { ...s, logs: newLogs, txBytes: newTxBytes, rxBytes: newRxBytes };
         }));

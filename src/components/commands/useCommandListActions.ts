@@ -2,15 +2,18 @@
  * useCommandListActions.ts
  * 命令列表的拖放逻辑和发送操作。
  * 从 CommandListSidebar.tsx 中拆分出来。
+ *
+ * 子模块：
+ * - commandDragDrop.ts — 拖放处理纯函数（processRootDrop / processItemDrop）
  */
 import { useCallback } from 'react';
 import { DragEndEvent, CollisionDetection, closestCenter, pointerWithin } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 import { CommandEntity, CommandItem } from '../../types/command';
 import { MessagePipeline } from '../../services/MessagePipeline';
 import { useToast } from '../../context/ToastContext';
 import { useSession } from '../../context/SessionContext';
 import { useI18n } from '../../context/I18nContext';
+import { processRootDrop, processItemDrop, DragResult } from './commandDragDrop';
 
 interface UseCommandListActionsParams {
     commands: CommandEntity[];
@@ -30,133 +33,47 @@ export const useCommandListActions = ({
     const customCollisionStrategy: CollisionDetection = (args) => {
         const pointerCollisions = pointerWithin(args);
         const insertionLine = pointerCollisions.find(c =>
-            c.id.toString().endsWith('-top') ||
-            c.id.toString().endsWith('-bottom')
+            c.id.toString().endsWith('-top') || c.id.toString().endsWith('-bottom')
         );
+        if (insertionLine) return [insertionLine];
 
-        if (insertionLine) {
-            return [insertionLine];
-        }
-
-        const dropZone = pointerCollisions.find(c =>
-            c.id.toString().endsWith('-drop')
-        );
-
-        if (dropZone) {
-            return [dropZone];
-        }
+        const dropZone = pointerCollisions.find(c => c.id.toString().endsWith('-drop'));
+        if (dropZone) return [dropZone];
 
         const rootDrop = pointerCollisions.find(c => c.id === 'root-drop');
-        if (rootDrop) {
-            return [rootDrop];
-        }
+        if (rootDrop) return [rootDrop];
 
         return closestCenter(args);
     };
 
-    // 拖放结束处理
+    // 执行拖放结果
+    const applyDragResult = useCallback((result: DragResult) => {
+        switch (result.type) {
+            case 'update':
+                updateEntity(result.id, result.updates);
+                break;
+            case 'reorder':
+                setAllCommands(result.newCommands);
+                break;
+            case 'conflict':
+                showToast(t('toast.moveConflict', { name: result.name }), 'warning');
+                break;
+            case 'noop':
+                break;
+        }
+    }, [updateEntity, setAllCommands, showToast, t]);
+
+    // 拖放结束处理（委托给纯函数）
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         if (!over) return;
 
-        if (over.id === 'root-drop') {
-            const activeId = active.id.toString();
-            const activeItem = commands.find(c => c.id === activeId);
-
-            if (activeItem) {
-                if (activeItem.parentId !== undefined) {
-                    const hasCollision = commands.some(c =>
-                        c.parentId === undefined &&
-                        c.name === activeItem.name &&
-                        c.id !== activeItem.id
-                    );
-                    if (hasCollision) {
-                        showToast(t('toast.moveConflict', { name: activeItem.name }), 'warning');
-                        return;
-                    }
-                }
-
-                if (activeItem.parentId) {
-                    updateEntity(activeItem.id, { parentId: undefined });
-                } else {
-                    const oldIndex = commands.findIndex(c => c.id === activeId);
-                    const newIndex = commands.length - 1;
-                    if (oldIndex !== newIndex) {
-                        setAllCommands(arrayMove(commands, oldIndex, newIndex));
-                    }
-                }
-            }
-            return;
-        }
-
         const activeId = active.id.toString();
-        const overIdFull = over.id.toString();
-        const isDropInto = overIdFull.endsWith('-drop');
-        const isInsertTop = overIdFull.endsWith('-top');
-        const isInsertBottom = overIdFull.endsWith('-bottom');
-        const overIdClean = overIdFull.replace(/-drop|-top|-bottom/, '');
-
-        if (activeId === overIdClean) return;
-
-        const activeItem = commands.find(c => c.id === activeId);
-        const overItem = commands.find(c => c.id === overIdClean);
-
-        if (!activeItem || !overItem) return;
-
-        let targetParentId: string | undefined = undefined;
-
-        if (isDropInto && overItem.type === 'group' && activeItem.parentId !== overItem.id && activeItem.id !== overItem.id) {
-            targetParentId = overItem.id;
-        } else if (activeItem.parentId !== overItem.parentId) {
-            targetParentId = overItem.parentId || undefined;
-        }
-
-        if (targetParentId !== activeItem.parentId) {
-            const hasCollision = commands.some(c =>
-                c.parentId === targetParentId &&
-                c.name === activeItem.name &&
-                c.id !== activeItem.id
-            );
-            if (hasCollision) {
-                showToast(t('toast.moveConflict', { name: activeItem.name }), 'warning');
-                return;
-            }
-        }
-
-        if (isDropInto && overItem.type === 'group' && activeItem.parentId !== overItem.id && activeItem.id !== overItem.id) {
-            updateEntity(activeItem.id, { parentId: overItem.id });
-            return;
-        }
-
-        if (activeItem.parentId !== overItem.parentId) {
-            let newCommands = [...commands];
-            const activeIndex = newCommands.findIndex(c => c.id === activeId);
-            const [movedItem] = newCommands.splice(activeIndex, 1);
-            movedItem.parentId = overItem.parentId;
-            const overIndex = newCommands.findIndex(c => c.id === overIdClean);
-            let insertIndex = overIndex;
-            if (isInsertBottom) insertIndex = overIndex + 1;
-            newCommands.splice(insertIndex, 0, movedItem);
-            setAllCommands(newCommands);
-            return;
-        }
-
-        const activeIndex = commands.findIndex(c => c.id === activeId);
-        const overIndex = commands.findIndex(c => c.id === overIdClean);
-        let newCommands = [...commands];
-        const [movedItem] = newCommands.splice(activeIndex, 1);
-        const newOverIndex = newCommands.findIndex(c => c.id === overIdClean);
-        let insertIndex = newOverIndex;
-        if (isInsertBottom) insertIndex++;
-
-        if (!isInsertTop && !isInsertBottom) {
-            setAllCommands(arrayMove(commands, activeIndex, overIndex));
-            return;
-        }
-
-        newCommands.splice(insertIndex, 0, movedItem);
-        setAllCommands(newCommands);
-    }, [commands, setAllCommands, updateEntity, showToast, t]);
+        const result = over.id === 'root-drop'
+            ? processRootDrop(commands, activeId)
+            : processItemDrop(commands, activeId, over.id.toString());
+        applyDragResult(result);
+    }, [commands, applyDragResult]);
 
     // 发送命令
     const handleSend = useCallback(async (cmd: CommandItem) => {

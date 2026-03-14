@@ -30,7 +30,7 @@ export interface LogSearchProps {
     logs: any[];
     currentIndex: number;
     totalMatches: number;
-    viewMode: 'text' | 'hex' | 'json' | 'both';
+    viewMode: 'text' | 'hex' | 'json' | 'both' | 'base64';
     formatData: (data: any, mode: any, encoding: string) => string;
     encoding: string;
     regexError?: boolean;

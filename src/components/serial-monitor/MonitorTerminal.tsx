@@ -1,237 +1,63 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
-import {
-    Trash2,
-    ArrowDownToLine,
-    Download,
-    Menu,
-    X,
-    ChevronDown,
-    Copy,
-    PlusSquare,
-    Check,
-    FileText,
-    Settings,
-    RefreshCw,
-    Send
-} from 'lucide-react';
-import { useSettings } from '../../context/SettingsContext';
+/**
+ * MonitorTerminal.tsx
+ * 串口监控器终端 — 显示日志数据流、搜索和数据注入。
+ *
+ * 子模块：
+ * - MonitorToolbar.tsx — 工具栏（过滤器、视图模式、选项菜单）
+ * - useMonitorTerminalState.ts — 状态管理（UI 状态、搜索、字体、滚动）
+ */
+import React, { useState, useCallback } from 'react';
+import { Copy, FileText } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useCommandContext } from '../../context/CommandContext';
-import { useSession } from '../../context/SessionContext';
-import { CustomSelect } from '../common/CustomSelect';
-import { Switch } from '../common/Switch';
 import { formatTimestamp } from '../../utils/format';
 import { SerialInput } from '../serial/SerialInput';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { ContextMenu } from '../common/ContextMenu';
-import { SessionState, MonitorSessionConfig, LogEntry } from '../../types/session';
-import { LogSearch, useLogSearch } from '../common/LogSearch';
+import { MonitorSessionConfig } from '../../types/session';
+import { LogSearch } from '../common/LogSearch';
 import { useI18n } from '../../context/I18nContext';
-import { useSystemMessage } from '../../hooks/useSystemMessage';
-import { Tooltip } from '../common/Tooltip';
 import { MonitorLogItem } from './MonitorLogItem';
+import { MonitorToolbar } from './MonitorToolbar';
+import { useMonitorTerminalState } from './useMonitorTerminalState';
+import { SessionState } from '../../types/session';
 
 interface MonitorTerminalProps {
     session: SessionState;
     onShowSettings?: (view: string) => void;
-    onConnectRequest?: () => Promise<boolean>;
+    onConnectRequest?: () => Promise<void> | void;
 }
 
-const scrollPositions = new Map<string, number>();
-
 export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: MonitorTerminalProps) => {
-    const { config: themeConfig } = useSettings();
     const { showToast } = useToast();
     const { t } = useI18n();
-    const sessionManager = useSession();
-    const { logs, isConnected, config } = session;
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const initialLogCountRef = useRef(logs.length);
-    const mountTimeRef = useRef(Date.now());
-    const { parseSystemMessage } = useSystemMessage();
 
-    const uiState = (config as any).uiState || {};
+    // ── 核心状态（全部委托给 Hook） ──
+    const state = useMonitorTerminalState(session);
+    const {
+        scrollRef, initialLogCountRef, mountTimeRef, scrollPositions,
+        sessionManager, isConnected, config, themeConfig, uiState,
+        viewMode, showTimestamp, showPacketType, showDataLength,
+        mergeRepeats, filterMode, encoding, fontSize, fontFamily,
+        autoScroll, flashNewMessage, showOptionsMenu, sendTarget,
+        partnerConnected, searchOpen, availableFonts,
+        setShowOptionsMenu,
+        formatData, getDataLengthText,
+        query, isRegex, matchCase, matches, currentIndex, activeMatch, regexError,
+        handleQueryChange, handleRegexChange, handleMatchCaseChange, handleToggleSearch,
+        nextMatch, prevMatch,
+        filteredLogs,
+        handleFilterChange, handleViewModeChange, handleAutoScrollToggle,
+        onShowTimestamp, onShowPacketType, onShowDataLength,
+        onMergeRepeats, onFlashNewMessage, onEncoding, onFontFamily, onFontSize,
+        onSendTarget, handleInputStateChange, saveUIState,
+        txBytes, rxBytes,
+    } = state;
 
-    const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
-    const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
-    const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
-    const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
-    const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
-    const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
-    const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
-    const [fontSize, setFontSize] = useState<number>(uiState.fontSize || themeConfig.typography.fontSize || 15);
-
-    // Sync fontSize with global theme when not overridden locally
-    useEffect(() => {
-        if (uiState.fontSize === undefined) {
-            setFontSize(themeConfig.typography.fontSize || 15);
-        }
-    }, [themeConfig.typography.fontSize, uiState.fontSize]);
-    const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
-    const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
-    const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
-    const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-    const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>(uiState.sendTarget || 'physical');
-    const [availableFonts, setAvailableFonts] = useState<any[]>([]);
-    const [partnerConnected, setPartnerConnected] = useState(true);
-    // Search State
-    const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
-
-    const monoKeywords = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
-
-    useEffect(() => {
-        const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
-        if (queryFonts) {
-            queryFonts().then((res: any) => {
-                const fonts = Array.isArray(res) ? res : ((res as any)?.fonts || []);
-                const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
-
-                const mono: any[] = [];
-                const prop: any[] = [];
-
-                uniqueNames.forEach(name => {
-                    const lower = (name as string).toLowerCase();
-                    const item = { label: name as string, value: `"${name as string}"` };
-                    if (monoKeywords.some(kw => lower.includes(kw))) {
-                        mono.push(item);
-                    } else {
-                        prop.push(item);
-                    }
-                });
-
-                const builtIn = [
-                    { label: '内嵌字体 (Default)', value: 'AppCoreFont' },
-                ];
-
-                const final = [
-                    { label: '-- Built-in --', value: '', disabled: true },
-                    ...builtIn,
-                    ...(mono.length > 0 ? [{ label: '-- Monospaced --', value: '', disabled: true }, ...mono] : []),
-                    ...(prop.length > 0 ? [{ label: '-- Proportional --', value: '', disabled: true }, ...prop] : [])
-                ];
-                setAvailableFonts(final);
-            });
-        }
-    }, []);
-
-    const saveUIState = useCallback((updates: any) => {
-        const currentUIState = (config as any).uiState || {};
-        sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
-    }, [session.id, sessionManager, config]);
-
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => {
-        let hexStr = '';
-        let textStr = '';
-
-        if (mode === 'hex' || mode === 'both') {
-            const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-            hexStr = Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-        }
-
-        if (mode === 'text' || mode === 'both') {
-            if (typeof data === 'string') {
-                textStr = data;
-            } else {
-                try {
-                    textStr = new TextDecoder(enc).decode(data);
-                } catch {
-                    textStr = new TextDecoder().decode(data);
-                }
-            }
-        }
-
-        if (mode === 'both') {
-            return `${hexStr} [${textStr}]`;
-        } else if (mode === 'hex') {
-            return hexStr;
-        } else {
-            return textStr;
-        }
-    }, []);
-
-    const getDataLengthText = useCallback((data: string | Uint8Array) => `${(typeof data === 'string' ? new TextEncoder().encode(data).length : data.length)}B`, []);
-
-    // Search logic
-    const { query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev } = useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData as any, encoding);
-    const activeMatch = matches[currentIndex];
-
-    const handleQueryChange = (newQuery: string) => {
-        setQuery(newQuery);
-        saveUIState({ searchQuery: newQuery });
-    };
-
-    const handleRegexChange = (newRegex: boolean) => {
-        setIsRegex(newRegex);
-        saveUIState({ searchRegex: newRegex });
-    };
-
-    const handleMatchCaseChange = (newMatchCase: boolean) => {
-        setMatchCase(newMatchCase);
-        saveUIState({ searchMatchCase: newMatchCase });
-    };
-
-    const handleToggleSearch = useCallback(() => {
-        setSearchOpen(prev => {
-            const next = !prev;
-            saveUIState({ searchOpen: next });
-            return next;
-        });
-    }, [saveUIState]);
-
-    // Ctrl+F shortcut
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                handleToggleSearch();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleToggleSearch]);
-
-    // Scroll to active match when activeMatchRev changes
-    useEffect(() => {
-        if (activeMatch && scrollRef.current) {
-            const element = document.getElementById(`log-${activeMatch.logId}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'auto', block: 'center' });
-            }
-        }
-    }, [activeMatchRev]);
-
-    useLayoutEffect(() => {
-        if (autoScroll && scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            scrollPositions.set(session.id, scrollRef.current.scrollHeight);
-        }
-    }, [logs, autoScroll, session.id]);
-
-    useLayoutEffect(() => {
-        if (scrollRef.current && scrollPositions.has(session.id)) {
-            scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
-        }
-    }, [session.id]);
-
-    useEffect(() => {
-        if (!scrollRef.current || !autoScroll) return;
-        const observer = new ResizeObserver(() => {
-            if (scrollRef.current && scrollRef.current.clientHeight > 0) {
-                if (scrollPositions.has(session.id)) {
-                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
-                }
-            }
-        });
-        observer.observe(scrollRef.current);
-        return () => observer.disconnect();
-    }, [session.id, autoScroll]);
-
+    // ── 日志操作 ──
     const handleClearLogs = () => sessionManager.clearLogs(session.id);
-
-    const txBytes = session.txBytes || 0;
-    const rxBytes = session.rxBytes || 0;
 
     const handleSend = (data: string | Uint8Array, mode: 'text' | 'hex') => {
         if (!isConnected) { showToast(t('toast.connectFirst'), 'error'); return; }
@@ -247,11 +73,7 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         sessionManager.writeToMonitor(session.id, sendTarget, finalData);
     };
 
-    const filteredLogs = useMemo(() => logs.filter(log => {
-        if (log.type === 'INFO' || log.type === 'ERROR') return true;
-        return filterMode === 'rx' ? log.topic === 'physical' : filterMode === 'tx' ? log.topic === 'virtual' : true;
-    }), [logs, filterMode]);
-
+    // ── 右键菜单和命令添加 ──
     const { addCommand, commands } = useCommandContext();
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, log: any } | null>(null);
     const [showCommandEditor, setShowCommandEditor] = useState<any | null>(null);
@@ -260,30 +82,13 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
     const handleCopyLog = (log: any) => { navigator.clipboard.writeText(formatData(log.data, viewMode, encoding)); showToast(t('toast.copied'), 'success', 1500); setContextMenu(null); };
     const handleAddToCommand = (log: any) => { setShowCommandEditor({ name: generateUniqueName(commands, 'command', undefined), payload: formatData(log.data, viewMode, encoding), mode: viewMode === 'hex' ? 'hex' : 'text', tokens: {}, lineEnding: '' }); setContextMenu(null); };
 
-    const handleInputStateChange = useCallback((state: any) => {
-        saveUIState({
-            inputContent: state.content,
-            inputHTML: state.html,
-            inputTokens: state.tokens,
-            inputMode: state.mode,
-            lineEnding: state.lineEnding,
-            inputTimerInterval: state.timerInterval
-        });
-    }, [saveUIState]);
-
     const handleSaveCommand = (updates: any) => {
-        addCommand({
-            ...updates,
-            payload: updates.payload || '',
-            mode: updates.mode || 'text',
-            tokens: updates.tokens || {},
-            parentId: undefined
-        });
+        addCommand({ ...updates, payload: updates.payload || '', mode: updates.mode || 'text', tokens: updates.tokens || {}, parentId: undefined });
         setShowCommandEditor(null);
     };
 
     const handleSaveLogs = () => {
-        const content = logs.map(log => {
+        const content = state.logs.map(log => {
             const timestampStr = new Date(log.timestamp).toLocaleTimeString();
             const dataStr = formatData(log.data, viewMode, encoding);
             return `[${timestampStr}][${log.topic === 'virtual' ? 'APP' : 'DEV'}] ${dataStr} `;
@@ -301,150 +106,33 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
         <div className="absolute inset-0 flex flex-col bg-[var(--monitor-terminal-bg)] bg-cover bg-center select-none" style={{ backgroundImage: 'var(--st-rx-bg-img)' }} onClick={() => setContextMenu(null)} data-component="monitor-terminal">
             <style>{`@keyframes flash-new { 0% { background-color: var(--flash-color); } 100% { background-color: transparent; } } .animate-flash-new { animation: flash-new 1s ease-out forwards; }`}</style>
 
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--st-widget-border)] bg-[var(--st-toolbar-bg)] shrink-0">
-                <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
-                    {isConnected ? <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} /> : <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />}
-                    <span className="opacity-80">Monitor: </span>
-                    <span className="text-blue-400 font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
-                    <span className="text-gray-600 px-1">⟷</span>
-                    <span className="text-emerald-400 font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-[var(--st-ter-filter-group-border)] rounded-[3px] divide-x divide-[var(--st-ter-filter-group-divider)] overflow-hidden h-[26px] bg-[var(--st-ter-filter-group-bg)]">
-                        <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterVirtualPort')} position="bottom">
-                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-monitor-btn-filter-tx-active-bg)] text-[var(--st-ter-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-ter-btn-filter-tx-hover-bg)] text-[var(--st-ter-btn-filter-tx-text)] bg-[var(--st-ter-btn-filter-tx-bg)]'}`} onClick={() => { const m = filterMode === 'tx' ? 'all' : 'tx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                                <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).virtualSerialPort}:</span>
-                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
-                            </div>
-                        </Tooltip>
-                        <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterPhysicalPort')} position="bottom">
-                            <div className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[var(--st-monitor-btn-filter-rx-active-bg)] text-[var(--st-ter-btn-filter-rx-active-text)] shadow-sm' : 'hover:bg-[var(--st-ter-btn-filter-rx-hover-bg)] text-[var(--st-ter-btn-filter-rx-text)] bg-[var(--st-ter-btn-filter-rx-bg)]'}`} onClick={() => { const m = filterMode === 'rx' ? 'all' : 'rx'; setFilterMode(m); saveUIState({ filterMode: m }); }}>
-                                <span className="text-[11px] font-bold font-mono opacity-70">{(config as MonitorSessionConfig).connection?.path || 'DEV'}:</span>
-                                <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
-                            </div>
-                        </Tooltip>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-0.5 p-0.5 rounded-[3px] border border-[var(--st-ter-view-group-border)] bg-[var(--st-ter-view-group-bg)] h-[26px]">
-                            <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'hex' || viewMode === 'both' ? 'bg-[var(--st-monitor-btn-view-hex-active-bg)] text-[var(--st-ter-btn-view-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-view-text)] hover:bg-[var(--st-ter-btn-view-hover-bg)] bg-[var(--st-ter-btn-view-bg)]'}`}
-                                onClick={() => {
-                                    if (viewMode === 'hex') return;
-                                    const newMode = viewMode === 'both' ? 'text' : 'both';
-                                    setViewMode(newMode);
-                                    saveUIState({ viewMode: newMode });
-                                }}
-                            >
-                                HEX
-                            </button>
-                            <button
-                                className={`flex items-center justify-center px-2 h-full text-[10px] font-medium leading-none rounded-[2px] uppercase transition-colors ${viewMode === 'text' || viewMode === 'both' ? 'bg-[var(--st-monitor-btn-view-txt-active-bg)] text-[var(--st-ter-btn-view-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-view-text)] hover:bg-[var(--st-ter-btn-view-hover-bg)] bg-[var(--st-ter-btn-view-bg)]'}`}
-                                onClick={() => {
-                                    if (viewMode === 'text') return;
-                                    const newMode = viewMode === 'both' ? 'hex' : 'both';
-                                    setViewMode(newMode);
-                                    saveUIState({ viewMode: newMode });
-                                }}
-                            >
-                                TXT
-                            </button>
-                        </div>
-
-                        <div className="relative">
-                            <button className={`h-[26px] px-2 hover:bg-[var(--monitor-options-hover-bg)] rounded-[3px] text-[var(--st-ter-btn-options-text)] bg-[var(--st-ter-btn-options-bg)] border-[var(--st-ter-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--monitor-options-hover-bg)] text-[var(--st-ter-btn-options-text)]' : ''}`} onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
-                                <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
-                            </button>
-                            {showOptionsMenu && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                    <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                        <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
-                                            <div className="text-[12px] text-[var(--menu-foreground)] font-bold">{t('monitor.logSettings')}</div>
-                                            <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--menu-foreground)]" onClick={() => setShowOptionsMenu(false)} />
-                                        </div>
-                                        <div className="space-y-4 px-1">
-                                            <div className="space-y-2.5">
-                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
-                                                <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => { setEncoding(val as any); saveUIState({ encoding: val }); }} />
-                                                <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
-                                                <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={val => { setShowPacketType(val); saveUIState({ showPacketType: val }); }} />
-                                                <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
-                                                <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
-                                                <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
-
-                                                <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
-                                                    <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
-                                                        <CustomSelect
-                                                            items={availableFonts}
-                                                            value={fontFamily}
-                                                            onChange={(val) => { setFontFamily(val as any); saveUIState({ fontFamily: val }); }}
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col gap-2 mt-2">
-                                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
-                                                        <CustomSelect
-                                                            items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                                label: `${size}px`,
-                                                                value: size.toString()
-                                                            }))}
-                                                            value={fontSize.toString()}
-                                                            onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                                <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--st-monitor-btn-export-bg)] text-white text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
-                                                    <Download size={14} /> {t('monitor.exportLog')}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 border-l border-[var(--st-ter-toolbar-divider)] pl-2">
-                        <Tooltip content={autoScroll ? t('monitor.autoScrollOn') : t('monitor.autoScrollOff')} position="bottom">
-                            <button
-                                className={`w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors ${autoScroll ? 'bg-[var(--st-monitor-btn-autoscroll-active-bg)] text-[var(--st-ter-btn-autoscroll-active-text)] shadow-sm' : 'text-[var(--st-ter-btn-autoscroll-icon)] hover:bg-[var(--st-ter-btn-autoscroll-hover-bg)] bg-[var(--st-ter-btn-autoscroll-bg)] border border-[var(--st-ter-btn-autoscroll-border)]'}`}
-                                onClick={() => {
-                                    const newState = !autoScroll;
-                                    setAutoScroll(newState);
-                                    saveUIState({ autoScroll: newState });
-                                    // If enabling, scroll to bottom immediately
-                                    if (newState && scrollRef.current) {
-                                        requestAnimationFrame(() => {
-                                            if (scrollRef.current) {
-                                                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                                            }
-                                        });
-                                    }
-                                }}
-                            >
-                                <ArrowDownToLine size={14} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip content={t('monitor.clearLogs')} position="bottom">
-                            <button className="w-7 h-[26px] flex items-center justify-center rounded-[3px] transition-colors text-[var(--st-ter-btn-clear-icon)] hover:bg-[var(--st-ter-btn-clear-hover-bg)] bg-[var(--st-ter-btn-clear-bg)] border border-[var(--st-ter-btn-clear-border)]" onClick={handleClearLogs}><Trash2 size={14} /></button>
-                        </Tooltip>
-                    </div>
-                </div>
-            </div>
+            <MonitorToolbar
+                isConnected={isConnected} config={config} txBytes={txBytes} rxBytes={rxBytes}
+                filterMode={filterMode} viewMode={viewMode} autoScroll={autoScroll} showOptionsMenu={showOptionsMenu}
+                showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength}
+                mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
+                encoding={encoding} fontFamily={fontFamily} fontSize={fontSize} availableFonts={availableFonts}
+                onFilterChange={handleFilterChange} onViewModeChange={handleViewModeChange}
+                onAutoScrollToggle={handleAutoScrollToggle}
+                onToggleOptionsMenu={() => setShowOptionsMenu(!showOptionsMenu)}
+                onClearLogs={handleClearLogs} onSaveLogs={handleSaveLogs}
+                onShowTimestamp={onShowTimestamp}
+                onShowPacketType={onShowPacketType}
+                onShowDataLength={onShowDataLength}
+                onMergeRepeats={onMergeRepeats}
+                onFlashNewMessage={onFlashNewMessage}
+                onEncoding={onEncoding}
+                onFontFamily={onFontFamily}
+                onFontSize={onFontSize}
+                scrollRef={scrollRef}
+            />
 
             <AnimatePresence>
                 {isConnected && !partnerConnected && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-amber-600/20 border-b border-amber-600/30">
                         <div className="px-4 py-2 flex items-center justify-between gap-3 text-amber-400 text-xs">
                             <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort })}</span></div>
-                            <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }}>{t('monitor.switchPhysical')}</button>
+                            <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => onSendTarget('physical')}>{t('monitor.switchPhysical')}</button>
                         </div>
                     </motion.div>
                 )}
@@ -453,23 +141,12 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
             <div className="flex-1 relative overflow-hidden">
                 <div className="absolute top-4 right-4 z-10">
                     <LogSearch
-                        isOpen={searchOpen}
-                        onToggle={handleToggleSearch}
-                        query={query}
-                        isRegex={isRegex}
-                        isMatchCase={matchCase}
-                        onQueryChange={handleQueryChange}
-                        onRegexChange={handleRegexChange}
-                        onMatchCaseChange={handleMatchCaseChange}
-                        onNext={nextMatch}
-                        onPrev={prevMatch}
-                        logs={logs}
-                        currentIndex={currentIndex}
-                        totalMatches={matches.length}
-                        viewMode={viewMode}
-                        formatData={formatData as any}
-                        encoding={encoding}
-                        regexError={regexError}
+                        isOpen={searchOpen} onToggle={handleToggleSearch}
+                        query={query} isRegex={isRegex} isMatchCase={matchCase}
+                        onQueryChange={handleQueryChange} onRegexChange={handleRegexChange} onMatchCaseChange={handleMatchCaseChange}
+                        onNext={nextMatch} onPrev={prevMatch}
+                        logs={state.logs} currentIndex={currentIndex} totalMatches={matches.length}
+                        viewMode={viewMode} formatData={formatData as any} encoding={encoding} regexError={regexError}
                     />
                 </div>
                 <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}>
@@ -478,63 +155,41 @@ export const MonitorTerminal = ({ session, onShowSettings, onConnectRequest }: M
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
                         const rxCRC = ((config as any).rxCRC as any) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
-                        const crcEnabled = rxCRC.enabled || false;
-
                         return (
                             <MonitorLogItem
                                 key={`${log.id}-${log.repeatCount || 1}`}
-                                log={log}
-                                isNewLog={isNewLog}
-                                viewMode={viewMode}
-                                encoding={encoding}
-                                showTimestamp={showTimestamp}
-                                showPacketType={showPacketType}
-                                showDataLength={showDataLength}
-                                virtualSerialPort={virtualSerPort}
-                                physicalPortPath={physPort}
+                                log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
+                                showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength}
+                                virtualSerialPort={virtualSerPort} physicalPortPath={physPort}
                                 onContextMenu={handleLogContextMenu}
-                                formatData={formatData}
-                                formatTimestamp={formatTimestamp}
-                                getDataLengthText={getDataLengthText}
+                                formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText}
                                 timestampFormat={themeConfig.timestampFormat}
-                                matches={matches}
-                                activeMatch={activeMatch}
-                                mergeRepeats={mergeRepeats}
-                                flashNewMessage={flashNewMessage}
-                                fontSize={fontSize}
-                                rxCRC={rxCRC as any}
-                                crcEnabled={crcEnabled as any}
+                                matches={matches} activeMatch={activeMatch} mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
+                                fontSize={fontSize} rxCRC={rxCRC as any} crcEnabled={rxCRC.enabled as any}
                             />
                         );
                     })}
                 </div>
-
             </div>
 
             <div className="bg-[var(--app-background)] border-t border-[var(--border-color)]">
                 <div className="flex items-center bg-[var(--widget-background)]/30 px-3 py-1 border-y border-white/5 gap-2">
-                    <button onClick={() => { setSendTarget('virtual'); saveUIState({ sendTarget: 'virtual' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--st-monitor-btn-target-virtual-active-bg)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
-                    <button onClick={() => { setSendTarget('physical'); saveUIState({ sendTarget: 'physical' }); }} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[var(--st-monitor-btn-target-physical-active-bg)] text-white shadow-md' : 'bg-[var(--button-secondary-background)] text-[var(--st-monitor-btn-text)] hover:text-white hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
+                    <button onClick={() => onSendTarget('virtual')} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--st-monitor-btn-target-virtual-active-bg)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
+                    <button onClick={() => onSendTarget('physical')} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[var(--st-monitor-btn-target-physical-active-bg)] text-white shadow-md' : 'bg-[var(--button-secondary-background)] text-[var(--st-monitor-btn-text)] hover:text-white hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>
                 <SerialInput
                     key={session.id}
                     onSend={handleSend as any}
-                    initialContent={uiState.inputContent as string}
-                    initialHTML={uiState.inputHTML as string}
-                    initialTokens={uiState.inputTokens as any}
-                    initialMode={(uiState.inputMode as any) || 'hex'}
-                    initialLineEnding={(uiState.lineEnding as any) ?? ''}
-                    initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
+                    initialContent={uiState.inputContent as string} initialHTML={uiState.inputHTML as string}
+                    initialTokens={uiState.inputTokens as any} initialMode={(uiState.inputMode as any) || 'hex'}
+                    initialLineEnding={(uiState.lineEnding as any) ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
                     onStateChange={handleInputStateChange}
-                    isConnected={isConnected}
-                    fontSize={fontSize}
-                    fontFamily={fontFamily}
-                    onConnectRequest={onConnectRequest}
+                    isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest}
                 />
             </div>
 
             {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: t('common.copy'), icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: t('common.addCommand'), icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}
             {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', name: '', payload: '', mode: 'hex', tokens: {}, parentId: null, ...showCommandEditor } as any} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
-        </div >
+        </div>
     );
 };

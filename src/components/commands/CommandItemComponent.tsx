@@ -6,6 +6,7 @@ import { CommandItem } from '../../types/command';
 import { useToast } from '../../context/ToastContext';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
+import { buildCommandPreview } from '../../utils/commandPreview';
 
 interface Props {
     item: CommandItem;
@@ -20,63 +21,6 @@ interface Props {
 export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disabled, selected, onSelect }: Props) => {
     const { showToast } = useToast();
     const { t } = useI18n();
-
-    // 将 item.html 解析成包含占位符可读标签的预览字符串
-    const buildPreview = (item: any): string => {
-        if (!item.html) return item.payload || '';
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(item.html, 'text/html');
-            let result = '';
-            doc.body.childNodes.forEach((node: any) => {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    result += node.textContent;
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    // 递归处理 p / div 包裹
-                    const process = (el: Element) => {
-                        el.childNodes.forEach((child: any) => {
-                            if (child.nodeType === Node.TEXT_NODE) {
-                                result += child.textContent;
-                            } else if (child.nodeType === Node.ELEMENT_NODE) {
-                                const tokenType = child.getAttribute?.('data-token-type');
-                                if (tokenType) {
-                                    // 解析 token config
-                                    let label = '';
-                                    try {
-                                        const configRaw = child.getAttribute('data-token-config');
-                                        const cfg = configRaw ? JSON.parse(decodeURIComponent(configRaw)) : {};
-                                        if (tokenType === 'crc') {
-                                            label = cfg.algorithm === 'modbus-crc16' ? '[CRC16-Modbus]'
-                                                : cfg.algorithm === 'ccitt-crc16' ? '[CRC16-CCITT]'
-                                                    : `[CRC:${cfg.algorithm || ''}]`;
-                                        } else if (tokenType === 'flag') {
-                                            const hex = cfg.hex || '';
-                                            label = cfg.name ? `[${cfg.name}:${hex}]` : `[Custom:${hex}]`;
-                                        } else if (tokenType === 'timestamp') {
-                                            label = cfg.format === 'milliseconds' ? '[Time:ms]' : '[Time:s]';
-                                        } else if (tokenType === 'auto_inc') {
-                                            label = `[Auto:${cfg.defaultValue || '00'}]`;
-                                        } else {
-                                            label = `[${tokenType}]`;
-                                        }
-                                    } catch {
-                                        label = `[${tokenType}]`;
-                                    }
-                                    result += label;
-                                } else {
-                                    process(child);
-                                }
-                            }
-                        });
-                    };
-                    process(node);
-                }
-            });
-            return result.trim() || item.payload || '';
-        } catch {
-            return item.payload || '';
-        }
-    };
 
     // Standard Sortable (for dragging THIS item)
     const {
@@ -155,7 +99,7 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
             </div>
 
             {/* Name */}
-            <Tooltip content={buildPreview(item)} position="top" wrapperClassName={`flex-1 min-w-0 ${selected ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`}>
+            <Tooltip content={buildCommandPreview(item)} position="top" wrapperClassName={`flex-1 min-w-0 ${selected ? 'text-[var(--app-foreground)]' : 'text-[var(--app-foreground)]'}`}>
                 <div className={`text-[13px] truncate font-medium`}>
                     {item.name}
                 </div>
@@ -178,7 +122,7 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
                                 return;
                             }
 
-                            console.log('Send button clicked via UI', item.name);
+
                             onSend(item);
                         }}
                         onDoubleClick={(e) => e.stopPropagation()}

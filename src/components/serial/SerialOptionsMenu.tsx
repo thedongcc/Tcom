@@ -1,15 +1,19 @@
 /**
  * SerialOptionsMenu.tsx
- * 串口监视器选项菜单面板（编码/功能开关/排版/分包策略/导出）。
- * 从 SerialMonitor.tsx 中拆分出来。
+ * 串口监视器选项菜单面板 — 组合编码/功能开关/排版/CRC/分包/导出子模块。
+ *
+ * 子模块：
+ * - SerialCRCPanel.tsx       — CRC 校验配置
+ * - SerialPacketSettings.tsx — 接收分包策略
  */
-import { Download, Settings, Menu } from 'lucide-react';
+import { Download, Menu } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
-import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { useRef } from 'react';
+import { SerialCRCPanel } from './SerialCRCPanel';
+import { SerialPacketSettings } from './SerialPacketSettings';
 
 interface SerialOptionsMenuProps {
     // 展示状态
@@ -144,75 +148,13 @@ export const SerialOptionsMenu = ({
                                 <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={(checked) => { setMergeRepeats(checked); saveUIState({ mergeRepeats: checked }); }} />
                                 <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={(checked) => { setFlashNewMessage(checked); saveUIState({ flashNewMessage: checked }); }} />
 
-                                {/* CRC */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between gap-4 group/crc">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.crcCheck')}</span>
-                                            <Tooltip content={t('monitor.crcConfig')} position="bottom">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setShowCRCPanel(!showCRCPanel); }}
-                                                    className={`p-1 rounded hover:bg-[var(--st-serial-options-hover-bg)] text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-monitor-btn-text)] transition-colors flex-shrink-0 ${showCRCPanel ? 'bg-[var(--st-serial-btn-crc-active-bg)] text-white' : ''}`}
-                                                >
-                                                    <Settings size={12} />
-                                                </button>
-                                            </Tooltip>
-                                        </div>
-                                        <Switch checked={crcEnabled} onChange={toggleCRC} />
-                                    </div>
-
-                                    {showCRCPanel && (
-                                        <div className="bg-[rgba(128,128,128,0.05)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">校验对象</span>
-                                                <CustomSelect
-                                                    items={[
-                                                        { label: '仅接收 (RX)', value: 'rx' },
-                                                        { label: '仅发送 (TX)', value: 'tx' },
-                                                        { label: '发送与接收 (TX+RX)', value: 'both' }
-                                                    ]}
-                                                    value={uiState.crcTarget || 'rx'}
-                                                    onChange={(val) => saveUIState({ crcTarget: val })}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.algorithm')}</span>
-                                                <CustomSelect
-                                                    items={[
-                                                        { label: 'Modbus CRC16', value: 'modbus-crc16' },
-                                                        { label: 'CCITT CRC16', value: 'ccitt-crc16' },
-                                                        { label: 'CRC32', value: 'crc32' },
-                                                        { label: 'None', value: 'none' }
-                                                    ]}
-                                                    value={rxCRC.algorithm}
-                                                    onChange={(val) => updateRxCRC({ algorithm: val as 'modbus-crc16' | 'ccitt-crc16' | 'crc32' | 'none' })}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.startOffset')}</span>
-                                                <input
-                                                    type="number"
-                                                    className="w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[11px] text-[var(--input-foreground)] rounded-sm outline-none px-2 py-1 focus:border-[var(--focus-border-color)]"
-                                                    value={rxCRC.startIndex}
-                                                    onChange={(e) => updateRxCRC({ startIndex: parseInt(e.target.value) || 0 })}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.endPosition')}</span>
-                                                <CustomSelect
-                                                    items={[
-                                                        { label: t('monitor.crcEndPacket'), value: '0' },
-                                                        { label: t('monitor.crcExclude1'), value: '-1' },
-                                                        { label: t('monitor.crcExclude2'), value: '-2' },
-                                                        { label: t('monitor.crcExclude3'), value: '-3' }
-                                                    ]}
-                                                    value={(rxCRC.endIndex ?? 0).toString()}
-                                                    onChange={(val) => updateRxCRC({ endIndex: parseInt(val) })}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                {/* CRC 配置 */}
+                                <SerialCRCPanel
+                                    crcEnabled={crcEnabled} toggleCRC={toggleCRC}
+                                    rxCRC={rxCRC} updateRxCRC={updateRxCRC}
+                                    showCRCPanel={showCRCPanel} setShowCRCPanel={setShowCRCPanel}
+                                    uiState={uiState} saveUIState={saveUIState}
+                                />
                             </div>
                         </div>
 
@@ -251,93 +193,7 @@ export const SerialOptionsMenu = ({
                                 </div>
 
                                 {/* 接收分包策略 */}
-                                <div className="flex flex-col gap-1.5 mt-2">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.rxPacketSection')}</span>
-                                        <div className="flex-1 max-w-[150px]">
-                                            <CustomSelect
-                                                items={[
-                                                    { label: t('monitor.rxPacketMode_none'), value: 'none', description: t('monitor.rxPacketMode_none_tip') },
-                                                    { label: t('monitor.rxPacketMode_timeout'), value: 'timeout', description: t('monitor.rxPacketMode_timeout_tip') },
-                                                    { label: t('monitor.rxPacketMode_delimiter'), value: 'delimiter', description: t('monitor.rxPacketMode_delimiter_tip') },
-                                                    { label: t('monitor.rxPacketMode_fixedLength'), value: 'fixedLength', description: t('monitor.rxPacketMode_fixedLength_tip') },
-                                                    { label: t('monitor.rxPacketMode_delimiterWithTimeout'), value: 'delimiterWithTimeout', description: t('monitor.rxPacketMode_delimiterWithTimeout_tip') },
-                                                    { label: t('monitor.rxPacketMode_fixedLengthWithTimeout'), value: 'fixedLengthWithTimeout', description: t('monitor.rxPacketMode_fixedLengthWithTimeout_tip') },
-                                                ]}
-                                                value={uiState.rxPacketMode as string || 'none'}
-                                                onChange={(val) => saveUIState({ rxPacketMode: val })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* 展开的参数配置行 */}
-                                    {uiState.rxPacketMode && uiState.rxPacketMode !== 'none' && (
-                                        <div className="flex flex-col gap-2 mt-1">
-                                            {(uiState.rxPacketMode === 'delimiter' || uiState.rxPacketMode === 'delimiterWithTimeout') && (
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxDelimiterLabel')}>{t('monitor.rxDelimiterLabel')}</span>
-                                                    <div className="flex-1 max-w-[150px]">
-                                                        <CustomSelect
-                                                            items={[
-                                                                { label: '\\r\\n (CRLF)', value: '\\r\\n' },
-                                                                { label: '\\n (LF)', value: '\\n' },
-                                                                { label: '\\r (CR)', value: '\\r' },
-                                                                { label: '\\t (TAB)', value: '\\t' },
-                                                            ]}
-                                                            value={uiState.rxDelimiter ?? '\\r\\n'}
-                                                            onChange={(val) => saveUIState({ rxDelimiter: val })}
-                                                            allowCustom={true}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {(uiState.rxPacketMode === 'fixedLength' || uiState.rxPacketMode === 'fixedLengthWithTimeout') && (
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxFixedLengthLabel')}>{t('monitor.rxFixedLengthLabel')}</span>
-                                                    <div className="flex-1 max-w-[150px]">
-                                                        <CustomSelect
-                                                            items={[
-                                                                { label: '8', value: '8' },
-                                                                { label: '16', value: '16' },
-                                                                { label: '32', value: '32' },
-                                                                { label: '64', value: '64' },
-                                                                { label: '128', value: '128' },
-                                                            ]}
-                                                            value={(uiState.rxFixedLength ?? 8).toString()}
-                                                            onChange={(val) => {
-                                                                const num = parseInt(val);
-                                                                if (!isNaN(num) && num > 0) saveUIState({ rxFixedLength: num });
-                                                            }}
-                                                            allowCustom={true}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {(uiState.rxPacketMode === 'timeout' || uiState.rxPacketMode === 'delimiterWithTimeout' || uiState.rxPacketMode === 'fixedLengthWithTimeout') && (
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0 truncate max-w-[80px]" title={t('monitor.rxTimeoutMsLabel')}>{t('monitor.rxTimeoutMsLabel')}</span>
-                                                    <div className="flex-1 max-w-[150px]">
-                                                        <CustomSelect
-                                                            items={[
-                                                                { label: '20', value: '20' },
-                                                                { label: '50', value: '50' },
-                                                                { label: '100', value: '100' },
-                                                                { label: '200', value: '200' },
-                                                                { label: '500', value: '500' },
-                                                            ]}
-                                                            value={(uiState.rxTimeoutMs ?? 50).toString()}
-                                                            onChange={(val) => {
-                                                                const num = parseInt(val);
-                                                                if (!isNaN(num) && num > 0) saveUIState({ rxTimeoutMs: num });
-                                                            }}
-                                                            allowCustom={true}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                <SerialPacketSettings uiState={uiState} saveUIState={saveUIState} />
                             </div>
                         </div>
 

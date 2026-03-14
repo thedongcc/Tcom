@@ -1,13 +1,21 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Wand2, ArrowRightLeft, FolderOpen, Trash2, X, AlertCircle } from 'lucide-react';
+﻿/**
+ * VirtualPortSidebar.tsx
+ * 虚拟串口侧边栏 — com0com 驱动管理和虚拟端口对创建。
+ *
+ * 子模块：
+ * - Com0comInstallDialog.tsx — 安装方式选择对话框
+ * - useVirtualPortState.ts — 状态管理（路径检测、端口对 CRUD、监控器开关）
+ */
+import { RefreshCw, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
-import { Com0Com, PairInfo } from '../../utils/com0com';
+import { Com0Com } from '../../utils/com0com';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { Switch } from '../../components/common/Switch';
 import { useI18n } from '../../context/I18nContext';
+import { Com0comInstallDialog } from './Com0comInstallDialog';
+import { useVirtualPortState } from './useVirtualPortState';
 
 interface VirtualPortSidebarProps {
     onNavigate: (view: string) => void;
@@ -17,143 +25,23 @@ interface VirtualPortSidebarProps {
 
 export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSidebarProps) => {
     const { confirm } = useConfirm();
-    const { showToast } = useToast();
     const { t } = useI18n();
-    const { ports, isAdmin, monitorEnabled, toggleMonitor, setupcPath, setSetupcPath, sessions } = sessionManager;
 
-    const [isCreatingPair, setIsCreatingPair] = useState(false);
-    const [newPairExt, setNewPairExt] = useState('COM11');
-    const [newPairInt, setNewPairInt] = useState('COM12');
-    const [existingPairs, setExistingPairs] = useState<PairInfo[]>([]);
-    const [listPairsError, setListPairsError] = useState<string | null>(null);
-
-    const [pathStatus, setPathStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
-    const [com0comVersion, setCom0comVersion] = useState<string | null>(null);
-    const [showInstallDialog, setShowInstallDialog] = useState(false);
-
-    const checkCom0comPath = useCallback(async (path: string) => {
-        if (!path) {
-            setPathStatus('invalid');
-            return;
-        }
-        setPathStatus('checking');
-        try {
-            const res = await window.com0comAPI?.checkPath(path);
-            if (res?.success) {
-                setPathStatus('valid');
-                setCom0comVersion(res.version || null);
-            } else {
-                setPathStatus('invalid');
-                setCom0comVersion(null);
-            }
-        } catch (e) {
-            setPathStatus('invalid');
-            setCom0comVersion(null);
-        }
-    }, []);
-
-    useEffect(() => {
-        // 只在功能开启时才做路径检测
-        if (!monitorEnabled || !isAdmin) {
-            setPathStatus('checking'); // 重置为初始态
-            return;
-        }
-        const timer = setTimeout(() => {
-            checkCom0comPath(setupcPath);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [setupcPath, checkCom0comPath, monitorEnabled, isAdmin]);
-
-    const refreshPairs = useCallback(async () => {
-        if (!setupcPath || !monitorEnabled || !isAdmin) {
-            setExistingPairs([]);
-            return;
-        }
-        setListPairsError(null);
-        try {
-            const pairs = await Com0Com.listPairs(setupcPath);
-            setExistingPairs(pairs);
-            sessionManager.listPorts(); // Refresh global ports as well
-        } catch (e: any) {
-            const errStr = e.message || String(e);
-            if (!errStr.includes('Unauthorized command')) {
-                console.error('Failed to list pairs', e);
-                setListPairsError(errStr);
-            }
-            setExistingPairs([]);
-        }
-    }, [setupcPath, monitorEnabled, isAdmin]);
-
-    useEffect(() => {
-        if (setupcPath && monitorEnabled && isAdmin && pathStatus === 'valid') {
-            refreshPairs();
-        } else if (!monitorEnabled || !isAdmin || pathStatus === 'invalid') {
-            setExistingPairs([]);
-        }
-    }, [setupcPath, monitorEnabled, isAdmin, pathStatus, refreshPairs]);
-
-    const processPairCreation = !isCreatingPair && setupcPath;
-
-    const usedPorts = new Set(existingPairs.flatMap(p => [p.portA, p.portB]));
-    const physicalPorts = ports.map(p => p.path);
-
-    const suggestNextPair = (currentUsed?: Set<string>, currentPhysical?: string[]) => {
-        const used = currentUsed ?? usedPorts;
-        const physical = currentPhysical ?? physicalPorts;
-        let i = 1;
-        while (used.has(`COM${i}`) || used.has(`COM${i + 1}`) || physical.includes(`COM${i}`) || physical.includes(`COM${i + 1}`)) i++;
-        setNewPairExt(`COM${i}`);
-        setNewPairInt(`COM${i + 1}`);
-    };
-
-    const createNewPair = async () => {
-        if (!processPairCreation) return;
-
-        // 创建前检测两个端口是否已被占用
-        if (usedPorts.has(newPairExt) || usedPorts.has(newPairInt) || physicalPorts.includes(newPairExt) || physicalPorts.includes(newPairInt)) {
-            showToast(`端口 ${newPairExt} 或 ${newPairInt} 已被占用，已自动切换到可用端口对`, 'warning');
-            suggestNextPair();
-            return;
-        }
-
-        setIsCreatingPair(true);
-        try {
-            const res = await Com0Com.createPair(setupcPath, newPairExt, newPairInt);
-            if (res.success) {
-                await refreshPairs();
-                // 创建成功后自动建议下一对，避免重复创建
-                const newUsed = new Set([...usedPorts, newPairExt, newPairInt]);
-                suggestNextPair(newUsed);
-            } else {
-                showToast(`创建失败: ${res.error}`, 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('创建虚拟串口对时发生错误', 'error');
-        } finally {
-            setIsCreatingPair(false);
-        }
-    };
-
-    // 关闭虚拟串口功能前，检查所有 monitor 会话是否已停止
-    const handleToggleMonitor = (checked: boolean) => {
-        if (!checked) {
-            // 检查是否有 monitor 会话正在运行
-            const runningMonitors = (sessions || []).filter(
-                (s: any) => s.config?.type === 'monitor' && s.isConnected
-            );
-            if (runningMonitors.length > 0) {
-                showToast(t('monitor.stopFirst'), 'warning');
-                return;
-            }
-        }
-        toggleMonitor(checked);
-    };
+    // ── 核心状态（全部委托给 Hook） ──
+    const {
+        pathStatus, com0comVersion, showInstallDialog, setShowInstallDialog,
+        setupcPath, setSetupcPath,
+        isAdmin, monitorEnabled,
+        existingPairs, listPairsError, isCreatingPair,
+        newPairExt, setNewPairExt, newPairInt, setNewPairInt,
+        usedPorts, physicalPorts, processPairCreation,
+        refreshPairs, suggestNextPair, createNewPair, handleToggleMonitor,
+    } = useVirtualPortState(sessionManager);
 
     return (
         <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)] overflow-y-auto w-full">
             <div className="p-4 flex flex-col gap-4">
-                {/* Global Monitor Enable Switch */}
+                {/* 全局监控器开关 */}
                 <div className="border border-[var(--widget-border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
                     <Switch
                         label={t('monitor.enableVirtualMonitor')}
@@ -172,7 +60,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
 
                 <div className={`${(!monitorEnabled || !isAdmin) ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''} flex flex-col gap-4 transition-all duration-300`}>
 
-                    {/* setupc.exe Path */}
+                    {/* setupc.exe 路径 */}
                     <div className="flex flex-col gap-1">
                         <div className="flex justify-between items-center h-[18px]">
                             <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium mb-0">{t('monitor.setupcPath')}</label>
@@ -216,7 +104,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                         </div>
                     </div>
 
-                    {/* Virtual Pair Management */}
+                    {/* 虚拟端口对管理 */}
                     <div className="flex flex-col gap-2 border border-[var(--widget-border-color)] p-3 bg-[var(--widget-background)] rounded-sm">
                         <div className="text-[11px] text-[var(--activitybar-inactive-foreground)] flex justify-between items-center mb-1 font-medium">
                             <span>{t('monitor.virtualPairs')}</span>
@@ -243,8 +131,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                             <div className="flex gap-1 items-center">
                                 <CustomSelect
                                     items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                        label: com,
-                                        value: com,
+                                        label: com, value: com,
                                         disabled: usedPorts.has(com) || physicalPorts.includes(com)
                                     }))}
                                     value={newPairExt}
@@ -254,8 +141,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                 <ArrowRightLeft size={10} className="text-[var(--activitybar-inactive-foreground)] shrink-0" />
                                 <CustomSelect
                                     items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                        label: com,
-                                        value: com,
+                                        label: com, value: com,
                                         disabled: usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt
                                     }))}
                                     value={newPairInt}
@@ -264,10 +150,7 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                                 />
                             </div>
                             <button
-                                onClick={() => {
-                                    if (pathStatus !== 'valid') return;
-                                    createNewPair();
-                                }}
+                                onClick={() => { if (pathStatus !== 'valid') return; createNewPair(); }}
                                 disabled={isCreatingPair || !isAdmin || !monitorEnabled || pathStatus !== 'valid'}
                                 className={`w-full px-3 py-1.5 text-[12px] rounded-sm transition-colors ${!isAdmin || !monitorEnabled || pathStatus !== 'valid'
                                     ? 'bg-[var(--button-secondary-background)] text-[var(--input-placeholder-color)] cursor-not-allowed'
@@ -315,51 +198,8 @@ export const VirtualPortSidebar = ({ onNavigate, sessionManager }: VirtualPortSi
                 </div>
             </div>
 
-            {/* Install Com0com Dialog */}
-            {showInstallDialog && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowInstallDialog(false)}>
-                    <div
-                        className="bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-2xl w-[400px] flex flex-col rounded-md overflow-hidden"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between p-2.5 border-b border-[var(--border-color)] bg-[var(--widget-background)]">
-                            <span className="text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wider">{t('monitor.installMethodTitle')}</span>
-                            <button onClick={() => setShowInstallDialog(false)} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--app-foreground)] transition-colors">
-                                <X size={14} />
-                            </button>
-                        </div>
-                        <div className="p-5 flex gap-4 items-start">
-                            <div className="shrink-0 mt-0.5"><AlertCircle className="text-[var(--accent-color)]" size={24} /></div>
-                            <div className="flex-1">
-                                <p className="text-[13px] text-[var(--app-foreground)] leading-relaxed whitespace-pre-wrap">{t('monitor.installMethodDesc')}</p>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2 p-3 bg-[var(--app-background)] border-t border-[var(--border-color)]">
-                            <button
-                                onClick={async () => {
-                                    setShowInstallDialog(false);
-                                    window.shellAPI?.openExternal('https://com0com.sourceforge.net/');
-                                }}
-                                className="px-4 py-1.5 text-[var(--app-foreground)] hover:bg-[var(--hover-background)] border border-[var(--border-color)] rounded-sm text-xs transition-colors"
-                            >
-                                {t('monitor.websiteDownload')}
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    setShowInstallDialog(false);
-                                    const res = await window.com0comAPI?.launchInstaller();
-                                    if (!res?.success) {
-                                        showToast(res?.error || 'Launch failed', 'error');
-                                    }
-                                }}
-                                className="px-4 py-1.5 text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] rounded-sm text-xs transition-all"
-                            >
-                                {t('monitor.builtinInstall')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* 安装 com0com 对话框 */}
+            {showInstallDialog && <Com0comInstallDialog onClose={() => setShowInstallDialog(false)} />}
         </div>
     );
 };

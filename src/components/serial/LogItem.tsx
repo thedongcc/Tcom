@@ -2,12 +2,16 @@
  * LogItem.tsx
  * Memoized 日志条目渲染组件，从 SerialMonitor.tsx 中拆分出来。
  * 负责单条日志的格式化显示（时间戳、类型标签、数据内容、CRC 状态、搜索高亮等）。
+ *
+ * 子模块：
+ * - logRenderHelpers.tsx — 控制字符渲染和搜索高亮
  */
 import React, { memo } from 'react';
 import { LogEntry } from '../../types/session';
 import { CRCConfig } from '../../utils/crc';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
 import { Tooltip } from '../common/Tooltip';
+import { renderHighlightedText } from './logRenderHelpers';
 
 export interface SearchMatch {
     logId: string;
@@ -62,81 +66,6 @@ export const LogItem = memo(({
     rxCRC,
     crcEnabled
 }: LogItemProps) => {
-
-    const renderControlChars = (str: string, show: boolean | undefined) => {
-        if (!show) return str;
-        const parts: React.ReactNode[] = [];
-        let lastIndex = 0;
-        const regex = /[\r\n\t\0]/g;
-        let match;
-        let k = 0;
-        while ((match = regex.exec(str)) !== null) {
-            if (match.index > lastIndex) {
-                parts.push(str.substring(lastIndex, match.index));
-            }
-            const char = match[0];
-            let label = '';
-            if (char === '\r') label = 'CR';
-            else if (char === '\n') label = 'LF';
-            else if (char === '\t') label = 'TAB';
-            else if (char === '\0') label = 'NUL';
-
-            parts.push(
-                <span key={`ctrl-${k++}`}
-                    className="inline-flex items-center justify-center font-bold text-[0.72em] mx-[2px] px-[4px] py-0 rounded-[3px] select-none border"
-                    style={{
-                        height: '1.5em',
-                        verticalAlign: 'middle',
-                        transform: 'translateY(-1px)',
-                        color: 'var(--st-ctrl-char-fg, currentColor)',
-                        backgroundColor: 'var(--st-ctrl-char-bg, rgba(128,128,128,0.12))',
-                        borderColor: 'var(--st-ctrl-char-border, currentColor)',
-                    }}>
-                    {label}
-                </span>
-            );
-
-            // 保留原始换行/制表符以正确渲染格式
-            if (char === '\n') parts.push('\n');
-            else if (char === '\t') parts.push('\t');
-
-            lastIndex = match.index + 1;
-        }
-        if (lastIndex < str.length) {
-            parts.push(str.substring(lastIndex));
-        }
-        return parts.length > 0 ? parts : str;
-    };
-
-    const renderHighlightedText = (log: LogEntry, text: string) => {
-        const logMatches = matches.filter((m: any) => m.logId === log.id) as SearchMatch[];
-        if (logMatches.length === 0) return renderControlChars(text, showControlChars);
-
-        const sortedMatches = [...logMatches].sort((a, b) => a.startIndex - b.startIndex);
-        const result: React.ReactNode[] = [];
-        let lastIndex = 0;
-
-        sortedMatches.forEach((match, i) => {
-            if (match.startIndex > lastIndex) {
-                result.push(renderControlChars(text.substring(lastIndex, match.startIndex), showControlChars));
-            }
-            const isActive = activeMatch === match;
-            result.push(
-                <span
-                    key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[var(--focus-border-color)] text-white shadow-sm' : 'bg-[var(--selection-background)] text-[var(--st-monitor-toolbar-foreground)]'}
-                >
-                    {renderControlChars(text.substring(match.startIndex, match.endIndex), showControlChars)}
-                </span>
-            );
-            lastIndex = match.endIndex;
-        });
-
-        if (lastIndex < text.length) {
-            result.push(renderControlChars(text.substring(lastIndex), showControlChars));
-        }
-        return result;
-    };
 
     const { parseSystemMessage } = useSystemMessage();
 
@@ -223,7 +152,7 @@ export const LogItem = memo(({
                     log.type === 'ERROR' ? 'text-[var(--st-error-text)]' :
                         'text-[var(--st-info-text)]'
                 }`}>
-                {renderHighlightedText(log, formatData(log.data, viewMode, encoding))}
+                {renderHighlightedText(log, formatData(log.data, viewMode, encoding), matches, activeMatch, showControlChars)}
             </span>
             {log.crcStatus === 'error' && (
                 <span

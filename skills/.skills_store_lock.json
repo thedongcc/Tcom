@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "typescript-pro": {
+      "name": "Typescript Pro",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=typescript-pro",
+      "source": "skillhub",
+      "version": "0.1.0"
+    },
+    "typescript-lsp": {
+      "name": "TypeScript LSP",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=typescript-lsp",
+      "source": "skillhub",
+      "version": "1.0.0"
+    },
+    "afrexai-react-production": {
+      "name": "React Production Engineering",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=afrexai-react-production",
+      "source": "skillhub",
+      "version": "1.0.0"
+    }
+  }
+}

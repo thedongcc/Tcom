@@ -1,30 +1,23 @@
-﻿import React, { type ReactNode, useState } from 'react';
+﻿/**
+ * EditorArea.tsx
+ * 编辑器主区域 — 递归布局渲染 + DnD 拖拽排版。
+ *
+ * 子模块：
+ * - useEditorDragDrop.ts   — DnD 事件处理和碰撞检测逻辑
+ * - EditorGroupPanel.tsx   — 叶节点面板渲染
+ */
+import React, { type ReactNode } from 'react';
 import { useI18n } from '../../context/I18nContext';
-import { LayoutTemplate } from 'lucide-react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { useSessionManager } from '../../hooks/useSessionManager';
-import { useEditorLayout, LayoutNode, LeafNode, findNode } from '../../hooks/useEditorLayout';
-import {
-    DndContext,
-    pointerWithin,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragOverlay,
-    defaultDropAnimationSideEffects,
-    DragStartEvent,
-    DragEndEvent,
-    DragOverEvent,
-} from '@dnd-kit/core';
-import {
-    sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
+import { useEditorLayout } from '../../hooks/useEditorLayout';
+import { DndContext, pointerWithin, DragOverlay } from '@dnd-kit/core';
 import { parseCompositeId } from './EditorTabComponents';
 import { GroupPanel } from './EditorGroupPanel';
+import { useEditorDragDrop } from './useEditorDragDrop';
 
 
-// --- Layout Renderer (Recursive) ---
+// --- 布局递归渲染器 ---
 const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutActions, onShowSettings, activeDragId, dropIndicator }: any) => {
     if (!node) return null;
 
@@ -68,7 +61,7 @@ const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutA
         );
     }
 
-    // Leaf
+    // 叶节点
     return (
         <GroupPanel
             node={node}
@@ -83,7 +76,7 @@ const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutA
     );
 };
 
-// --- Main Editor Area ---
+// --- 主编辑区 ---
 
 interface EditorAreaProps {
     children?: ReactNode;
@@ -95,197 +88,13 @@ interface EditorAreaProps {
 export const EditorArea = ({ children, sessionManager, editorLayout, onShowSettings }: EditorAreaProps) => {
     const { layout, activeGroupId, moveView, splitDrop } = editorLayout;
     const { t } = useI18n();
-
-    // NOTE: We need sessions to find labels
     const { sessions } = sessionManager;
 
-    const [activeDragId, setActiveDragId] = useState<string | null>(null);
-    const [dropIndicator, setDropIndicator] = useState<{ groupId: string, index: number } | null>(null);
-
-    // Keep layout in ref to avoid stale closures in dnd-kit handlers
-    const layoutRef = React.useRef(layout);
-    layoutRef.current = layout;
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-    );
-
-    // Helper to find group by session ID (Legacy, might still be needed for other lookups if any)
-    const findGroupWithSession = (node: LayoutNode, sessionId: string): string | null => {
-        // ... (existing implementation if needed, but we rely on composite IDs now)
-        // Actually, if we use composite IDs strictly for tabs, we might not need this for drag events.
-        // But let's keep it safe.
-        if (node.type === 'leaf') {
-            if (node.views.includes(sessionId)) return node.id;
-            return null;
-        }
-        if (node.type === 'split') {
-            for (const c of node.children) {
-                const res = findGroupWithSession(c, sessionId);
-                if (res) return res;
-            }
-        }
-        return null;
-    };
-
-    const handleDragStart = (event: DragStartEvent) => {
-        setActiveDragId(event.active.id as string);
-        setDropIndicator(null);
-    };
-
-    const handleDragOver = (event: DragOverEvent) => {
-        const { active, over } = event;
-        if (!over) return;
-
-        const overId = over.id as string;
-
-        // 1. Determine Target Group and Insertion Index
-        let targetGroupId: string | null = null;
-
-        // Case A: Dropped on a Tab (Composite ID)
-        const overParsed = parseCompositeId(overId);
-        if (overParsed) {
-            targetGroupId = overParsed.groupId;
-
-            // Find index in target group
-            const targetNode = findNode(layoutRef.current, targetGroupId) as LeafNode;
-            if (targetNode) {
-                const hoverIndex = targetNode.views.indexOf(overParsed.sessionId);
-
-                // Active Rect (dragged)
-                const activeRect = active.rect.current.translated;
-                // Over Rect (target tab)
-                const overRect = over.rect; // { left, top, width, height }
-
-                if (overRect) {
-                    // Check collision with mouse cursor (activatorEvent) is most reliable for "left/right" half
-                    const activator = event.activatorEvent as any;
-                    let insertIndex = hoverIndex;
-
-                    if (activator && activator.clientX !== undefined) {
-                        const clientX = activator.clientX + event.delta.x; // Correctly calculate current position
-                        const midpoint = overRect.left + (overRect.width / 2);
-                        // If cursor is to the right of midpoint, insert AFTER
-                        if (clientX > midpoint) {
-                            insertIndex = hoverIndex + 1;
-                        }
-                    }
-
-                    setDropIndicator({ groupId: targetGroupId, index: insertIndex });
-                }
-            }
-        }
-        // Case B: Dropped on a DropZone (e.g. Center, Header, or Start)
-        else {
-            if (overId.includes('-center') || overId.includes('-header') || overId.includes('-start')) {
-                const gId = overId.replace('-center', '').replace('-header', '').replace('-start', '');
-                const targetNode = findNode(layoutRef.current, gId) as LeafNode;
-                if (targetNode) {
-                    if (overId.includes('-start')) {
-                        // Explicit insertion at start
-                        setDropIndicator({ groupId: gId, index: 0 });
-                    } else if (overId.includes('-header')) {
-                        // Header drop
-                        // Check for left-edge proximity as fallback for "Start Zone" misses
-                        const activator = event.activatorEvent as any;
-                        const overRect = over.rect;
-                        let insertIndex = targetNode.views.length;
-
-                        if (activator && activator.clientX !== undefined && overRect) {
-                            // Use a generous threshold (e.g., 60px) to catch "near start" drops that miss the explicit zone
-                            const currentClientX = activator.clientX + event.delta.x;
-                            if (currentClientX < overRect.left + 60) {
-                                insertIndex = 0;
-                            }
-                        }
-                        setDropIndicator({ groupId: gId, index: insertIndex });
-                    } else {
-                        // Center drop -> Append
-                        setDropIndicator({ groupId: gId, index: targetNode.views.length });
-                    }
-                }
-            } else {
-                setDropIndicator(null);
-            }
-        }
-    };
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        setActiveDragId(null);
-        setDropIndicator(null);
-        if (!over) return;
-
-        const overId = over.id as string;
-
-        const activeParsed = parseCompositeId(active.id as string);
-        if (!activeParsed) return;
-        const { groupId: sourceGroupId, sessionId: activeSessionId } = activeParsed;
-
-        // If overId contains -top/bottom/left/right/center (DropZone)
-        if (overId.includes('-') && !overId.includes('::')) {
-            const parts = overId.split('-');
-            const zone = parts.pop();
-            const targetGroupId = parts.join('-');
-
-            if (zone === 'center' || zone === 'header' || zone === 'start') {
-                const targetNode = findNode(layoutRef.current, targetGroupId) as LeafNode;
-                let idx = targetNode ? targetNode.views.length : 0;
-
-                if (zone === 'start') {
-                    idx = 0;
-                } else if (zone === 'header' && targetNode) {
-                    // Fallback for header background drops
-                    const activator = event.activatorEvent as any;
-                    const overRect = over.rect;
-                    if (activator && activator.clientX !== undefined && overRect) {
-                        const currentClientX = activator.clientX + event.delta.x;
-                        if (currentClientX < overRect.left + 60) {
-                            idx = 0;
-                        }
-                    }
-                }
-
-                moveView(sourceGroupId, targetGroupId, activeSessionId, idx);
-            } else if (['top', 'bottom', 'left', 'right'].includes(zone!)) {
-                splitDrop(sourceGroupId, targetGroupId, activeSessionId, zone as any);
-            }
-            return;
-        }
-
-        // Case: Dropped on a Tab
-        const overParsed = parseCompositeId(overId);
-        if (overParsed) {
-            const targetGroupId = overParsed.groupId;
-            const targetNode = findNode(layoutRef.current, targetGroupId) as LeafNode;
-
-            if (targetNode) {
-                let targetIndex = targetNode.views.indexOf(overParsed.sessionId);
-
-                // Adjust index based on side (re-calculate or use stored indicator? Indicator state is cleared)
-                // We should re-calc using activator event if possible, or reliable rect logic
-                const activator = event.activatorEvent as any;
-                if (activator && activator.clientX !== undefined) {
-                    const clientX = activator.clientX + event.delta.x; // Correctly calculate current position
-                    const overRect = over.rect;
-                    const midpoint = overRect.left + (overRect.width / 2);
-                    if (clientX > midpoint) {
-                        targetIndex += 1;
-                    }
-                }
-
-                moveView(sourceGroupId, targetGroupId, activeSessionId, targetIndex);
-            }
-            return;
-        }
-    };
-
-    const dropAnimation = {
-        sideEffects: defaultDropAnimationSideEffects({
-            styles: { active: { opacity: '0.5' } },
-        }),
-    };
+    // DnD 逻辑
+    const {
+        activeDragId, dropIndicator, sensors,
+        handleDragStart, handleDragOver, handleDragEnd, dropAnimation,
+    } = useEditorDragDrop({ layout, moveView, splitDrop });
 
     return (
         <DndContext
@@ -317,21 +126,9 @@ export const EditorArea = ({ children, sessionManager, editorLayout, onShowSetti
                     ({ activatorEvent, draggingNodeRect, transform }) => {
                         if (draggingNodeRect && activatorEvent) {
                             const activator = activatorEvent as any;
-                            // Ensure we have coordinates (PointerEvent)
                             if (activator.clientX !== undefined && activator.clientY !== undefined) {
-                                // Calculate the offset of the grab point relative to the element's top-left
                                 const offsetX = activator.clientX - draggingNodeRect.left;
                                 const offsetY = activator.clientY - draggingNodeRect.top;
-
-                                // We want the element's top-left to jump to the cursor.
-                                // Currently, dnd-kit preserves the offset.
-                                // dnd-kit calculates: Position = InitialRect + Delta.
-                                // Delta = CurrentCursor - InitialCursor.
-                                // So Position = InitialRect + CurrentCursor - InitialCursor.
-                                // We want Position = CurrentCursor.
-                                // So we need to add (InitialCursor - InitialRect) to the Delta.
-                                // InitialCursor - InitialRect is exactly offsetX/Y.
-
                                 return {
                                     ...transform,
                                     x: transform.x + offsetX,

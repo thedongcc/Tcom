@@ -8,6 +8,38 @@ import type { UseSessionLogReturn } from './useSessionLog';
 import { validateRXCRC } from '../utils/crc';
 
 /**
+ * 合并 Uint8Array 缓冲区为单个连续数组
+ */
+function mergeBuffers(buffers: Uint8Array[]): Uint8Array {
+    const totalLen = buffers.reduce((acc, b) => acc + b.length, 0);
+    const merged = new Uint8Array(totalLen);
+    let offset = 0;
+    buffers.forEach(b => { merged.set(b, offset); offset += b.length; });
+    return merged;
+}
+
+/**
+ * 解析分隔符字符串为字节数组（支持 hex 和转义字符格式）
+ */
+function parseDelimiterBytes(delimStr: string): number[] {
+    if (!delimStr) return [];
+    const trimmed = delimStr.trim();
+    if (/^([0-9a-fA-F]{2}\s*)+$/.test(trimmed)) {
+        return trimmed.split(/\s+/).map(h => parseInt(h, 16));
+    }
+    const parsed = delimStr.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    return Array.from(new TextEncoder().encode(parsed));
+}
+
+/**
+ * 计算 CRC 校验状态
+ */
+function getCrcStatus(data: Uint8Array, shouldValidate: boolean, rxCRC: any): 'ok' | 'error' | 'none' {
+    if (!shouldValidate) return 'none';
+    return validateRXCRC(data, rxCRC) ? 'ok' : 'error';
+}
+
+/**
  * 处理接收到的串口数据，根据会话的 rxPacketMode 配置进行帧组装/分割。
  */
 export function processIncomingData(
@@ -27,10 +59,7 @@ export function processIncomingData(
 
     // 无帧模式且无遗留超时：直接输出
     if (packetMode === 'none' && legacyTimeout === 0) {
-        const crcStatus = shouldValidateRx
-            ? (validateRXCRC(data, session.config.rxCRC!) ? 'ok' : 'error')
-            : 'none';
-        sessionLog.addLog(sessionId, 'RX', data, crcStatus, undefined, undefined, timestamp);
+        sessionLog.addLog(sessionId, 'RX', data, getCrcStatus(data, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
         return;
     }
 
@@ -50,83 +79,54 @@ export function processIncomingData(
     const flushBuffer = () => {
         const finalBuffer = sessionLog.rxBuffersRef.current.get(sessionId);
         if (finalBuffer && finalBuffer.length > 0) {
-            const totalLen = finalBuffer.reduce((acc, curr) => acc + curr.length, 0);
-            const mergedData = new Uint8Array(totalLen);
-            let offset = 0;
-            finalBuffer.forEach(b => { mergedData.set(b, offset); offset += b.length; });
-            const crcStatus = shouldValidateRx
-                ? (validateRXCRC(mergedData, session.config.rxCRC!) ? 'ok' : 'error')
-                : 'none';
-            sessionLog.addLog(sessionId, 'RX', mergedData, crcStatus, undefined, undefined, timestamp);
+            const mergedData = mergeBuffers(finalBuffer);
+            sessionLog.addLog(sessionId, 'RX', mergedData, getCrcStatus(mergedData, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
             sessionLog.rxBuffersRef.current.set(sessionId, []);
         }
         sessionLog.rxTimersRef.current.delete(sessionId);
     };
 
-    const currentBufferLen = buffer.reduce((acc, curr) => acc + curr.length, 0);
+    const mergedBuf = mergeBuffers(buffer);
+    const currentBufferLen = mergedBuf.length;
 
     // 定长模式
     if (packetMode === 'fixedLength') {
         const fixedLen = (uiState.rxFixedLength as number) || 0;
         if (fixedLen > 0 && currentBufferLen >= fixedLen) {
-            const mergedData = new Uint8Array(currentBufferLen);
-            let offset = 0;
-            buffer.forEach(b => { mergedData.set(b, offset); offset += b.length; });
             let processOffset = 0;
             const remainingBuffer: Uint8Array[] = [];
             while (processOffset + fixedLen <= currentBufferLen) {
-                const frame = mergedData.slice(processOffset, processOffset + fixedLen);
-                const crcStatus = shouldValidateRx
-                    ? (validateRXCRC(frame, session.config.rxCRC!) ? 'ok' : 'error')
-                    : 'none';
-                sessionLog.addLog(sessionId, 'RX', frame, crcStatus, undefined, undefined, timestamp);
+                const frame = mergedBuf.slice(processOffset, processOffset + fixedLen);
+                sessionLog.addLog(sessionId, 'RX', frame, getCrcStatus(frame, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
                 processOffset += fixedLen;
             }
             if (processOffset < currentBufferLen) {
-                remainingBuffer.push(mergedData.slice(processOffset));
+                remainingBuffer.push(mergedBuf.slice(processOffset));
             }
             sessionLog.rxBuffersRef.current.set(sessionId, remainingBuffer);
             return;
         }
     } else if (packetMode === 'delimiter' || packetMode === 'delimiterWithTimeout') {
         // 分隔符模式
-        const delimStr = (uiState.rxDelimiter as string) || '';
-        if (delimStr) {
-            let delimBytes: number[] = [];
-            if (/^([0-9a-fA-F]{2}\s*)+$/.test(delimStr.trim())) {
-                delimBytes = delimStr.trim().split(/\s+/).map((h: string) => parseInt(h, 16));
-            } else {
-                const parsedStr = delimStr.replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-                const encoder = new TextEncoder();
-                delimBytes = Array.from(encoder.encode(parsedStr));
-            }
-            if (delimBytes.length > 0) {
-                const mergedData = new Uint8Array(currentBufferLen);
-                let offset = 0;
-                buffer.forEach(b => { mergedData.set(b, offset); offset += b.length; });
-                let startIdx = 0;
-                const remainingBuffer: Uint8Array[] = [];
-                for (let i = 0; i <= currentBufferLen - delimBytes.length; i++) {
-                    let match = true;
-                    for (let j = 0; j < delimBytes.length; j++) {
-                        if (mergedData[i + j] !== delimBytes[j]) { match = false; break; }
-                    }
-                    if (match) {
-                        const frame = mergedData.slice(startIdx, i + delimBytes.length);
-                        const crcStatus = shouldValidateRx
-                            ? (validateRXCRC(frame, session.config.rxCRC!) ? 'ok' : 'error')
-                            : 'none';
-                        sessionLog.addLog(sessionId, 'RX', frame, crcStatus, undefined, undefined, timestamp);
-                        startIdx = i + delimBytes.length;
-                        i = startIdx - 1;
-                    }
+        const delimBytes = parseDelimiterBytes((uiState.rxDelimiter as string) || '');
+        if (delimBytes.length > 0) {
+            let startIdx = 0;
+            const remainingBuffer: Uint8Array[] = [];
+            for (let i = 0; i <= currentBufferLen - delimBytes.length; i++) {
+                let match = true;
+                for (let j = 0; j < delimBytes.length; j++) {
+                    if (mergedBuf[i + j] !== delimBytes[j]) { match = false; break; }
                 }
-                if (startIdx < currentBufferLen) {
-                    remainingBuffer.push(mergedData.slice(startIdx));
+                if (match) {
+                    const frame = mergedBuf.slice(startIdx, i + delimBytes.length);
+                    sessionLog.addLog(sessionId, 'RX', frame, getCrcStatus(frame, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
+                    startIdx = i + delimBytes.length;
+                    i = startIdx - 1;
                 }
-                sessionLog.rxBuffersRef.current.set(sessionId, remainingBuffer);
-                if (packetMode === 'delimiter') return;
             }
+            if (startIdx < currentBufferLen) remainingBuffer.push(mergedBuf.slice(startIdx));
+            sessionLog.rxBuffersRef.current.set(sessionId, remainingBuffer);
+            if (packetMode === 'delimiter') return;
         }
     }
 

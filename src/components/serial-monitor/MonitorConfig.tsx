@@ -1,14 +1,14 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Play, Square, ArrowRightLeft } from 'lucide-react';
+﻿import { useCallback } from 'react';
+import { RefreshCw, Play, Square } from 'lucide-react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
-import { Com0Com, PairInfo } from '../../utils/com0com';
-import { useConfirm } from '../../context/ConfirmContext';
+import { Com0Com } from '../../utils/com0com';
 import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+import { useMonitorPairs } from './useMonitorPairs';
 
 interface MonitorConfigPanelProps {
     session: any;
@@ -16,115 +16,19 @@ interface MonitorConfigPanelProps {
 }
 
 export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPanelProps) => {
-    const { confirm } = useConfirm();
     const { showToast } = useToast();
     const { t } = useI18n();
     const { config, isConnected, isConnecting } = session;
     const monitorConfig = config as MonitorSessionConfig;
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports, isAdmin, monitorEnabled, setupcPath } = sessionManager;
 
-    const [existingPairs, setExistingPairs] = useState<PairInfo[]>([]);
-    const [listPairsError, setListPairsError] = useState<string | null>(null);
-
     const updateConfig = useCallback((updates: Partial<MonitorSessionConfig>) => {
         updateSessionConfig(session.id, updates);
     }, [session.id, updateSessionConfig]);
 
-    const refreshPairs = useCallback(async () => {
-        if (!setupcPath || !monitorEnabled || !isAdmin) {
-            setExistingPairs([]);
-            return;
-        }
-        setListPairsError(null);
-        try {
-            const pairs = await Com0Com.listPairs(setupcPath);
-            setExistingPairs(pairs);
-
-            // Cascade Cleanup & Auto-Selection Logic
-            let currentVirtual = monitorConfig.virtualSerialPort;
-            let currentPaired = monitorConfig.pairedPort;
-
-            // Check if existing selection is still valid
-            if (currentVirtual) {
-                const stillExists = pairs.some(p => p.portA === currentVirtual || p.portB === currentVirtual);
-                if (!stillExists) {
-                    currentVirtual = '';
-                    currentPaired = '';
-                }
-            }
-
-            // Auto-selection if nothing is selected but pairs exist
-            if (!currentVirtual && pairs.length > 0) {
-                // Number-first strategy: sort by COM number and pick smallest as External
-                const firstPair = pairs[0];
-                const getComNum = (p: string) => parseInt(p.replace('COM', '')) || 999;
-                const numA = getComNum(firstPair.portA);
-                const numB = getComNum(firstPair.portB);
-
-                if (numA <= numB) {
-                    currentVirtual = firstPair.portA;
-                    currentPaired = firstPair.portB;
-                } else {
-                    currentVirtual = firstPair.portB;
-                    currentPaired = firstPair.portA;
-                }
-            }
-
-            // Update config if changed (Deduplicated by check)
-            if (currentVirtual !== monitorConfig.virtualSerialPort || currentPaired !== monitorConfig.pairedPort) {
-                updateConfig({
-                    virtualSerialPort: currentVirtual,
-                    pairedPort: currentPaired
-                });
-            } else if (currentVirtual) {
-                // Ensure internal sync even if virtual stays same
-                const pair = pairs.find(p => p.portA === currentVirtual || p.portB === currentVirtual);
-                if (pair) {
-                    const internal = pair.portA === currentVirtual ? pair.portB : pair.portA;
-                    if (monitorConfig.pairedPort !== internal) {
-                        updateConfig({ pairedPort: internal });
-                    }
-                }
-            }
-        } catch (e: any) {
-            const errStr = e.message || String(e);
-            if (!errStr.includes('Unauthorized command')) {
-                console.error('Failed to list pairs', e);
-                setListPairsError(errStr);
-            }
-            setExistingPairs([]);
-        }
-    }, [setupcPath, monitorConfig.virtualSerialPort, monitorConfig.pairedPort, updateConfig, monitorEnabled, isAdmin]);
-
-    // 在 monitorEnabled 或 isAdmin 变化时刷新虚拟端口对列表
-    useEffect(() => {
-        if (setupcPath && monitorEnabled && isAdmin) {
-            refreshPairs();
-        } else {
-            setExistingPairs([]);
-        }
-    }, [setupcPath, monitorEnabled, isAdmin, refreshPairs]);
-
-    useEffect(() => {
-        return () => {
-            // Cleanup check on unmount
-        };
-    }, []);
-
-    // Available virtual ports (COM1-COM255, excluding occupied ones except the one selected)
-    const usedPorts = new Set(existingPairs.flatMap(p => [p.portA, p.portB]));
-    const physicalPorts = ports.map(p => p.path);
-
-    // Available virtual ports for SELECTION (only External ports of existing pairs)
-    const availablePairOptions = existingPairs.flatMap(p => [
-        { value: p.portA, label: `${p.portA} ${t('monitor.pairedWith', { port: p.portB })}` },
-        { value: p.portB, label: `${p.portB} ${t('monitor.pairedWith', { port: p.portA })}` }
-    ]).reduce((acc, current) => {
-        if (!acc.find(item => item.value === current.value)) {
-            acc.push(current);
-        }
-        return acc;
-    }, [] as { value: string, label: string }[]);
+    const { existingPairs, availablePairOptions, refreshPairs } = useMonitorPairs({
+        monitorConfig, setupcPath, monitorEnabled, isAdmin, updateConfig
+    });
 
     const handleToggleConnection = async () => {
         if (isConnected) {
@@ -134,7 +38,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                 const pair = existingPairs.find(p => (p.portA === monitorConfig.virtualSerialPort && p.portB === monitorConfig.pairedPort) || (p.portB === monitorConfig.virtualSerialPort && p.portA === monitorConfig.pairedPort));
                 if (pair && pair.id) {
                     if (isAdmin && monitorEnabled) {
-                        console.log('Auto-destroying pair', pair.id);
+
                         await Com0Com.removePair(setupcPath!, pair.id);
                         refreshPairs();
                         updateConfig({ virtualSerialPort: '', pairedPort: '' });
@@ -177,7 +81,7 @@ export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPan
                             <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.externalPort')}</label>
                             <CustomSelect
                                 items={availablePairOptions.length > 0 ? availablePairOptions.map(opt => ({
-                                    label: opt.label,
+                                    label: `${opt.value} ${t('monitor.pairedWith', { port: opt.paired })}`,
                                     value: opt.value,
                                     busy: ports.find(p => p.path === opt.value)?.busy
                                 })) : (

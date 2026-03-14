@@ -1,9 +1,17 @@
-﻿import { useState, useRef, useEffect } from 'react';
+﻿/**
+ * CustomSelect.tsx
+ * 自定义下拉选择组件 — 支持状态指示、自定义输入、Portal 渲染。
+ *
+ * 子模块：
+ * - useDropdownPosition.ts — 下拉菜单 fixed 定位计算
+ */
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { useDropdownPosition } from './useDropdownPosition';
 
-// 全局 portal 容器，避免被父容器 overflow:hidden 截断
+// 全局 portal 容器
 function getPortalContainer(): HTMLElement {
     let el = document.getElementById('custom-select-portal');
     if (!el) {
@@ -49,49 +57,16 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const [lastCustomValue, setLastCustomValue] = useState<string>(() => {
         return items.some(i => i.value === value) ? '' : value;
     });
-    // 用于 fixed 定位的下拉菜单位置
-    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
     const selectedItem = items.find(item => item.value === value);
 
-    // 计算下拉菜单的 fixed 定位坐标
-    const updateDropdownPosition = () => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const defaultMaxH = 240; // 默认最大高度
-        const spaceBelow = viewportHeight - rect.bottom - 10; // 留 10px 边距
-        const spaceAbove = rect.top - 10;
+    // 下拉菜单定位
+    const { dropdownStyle, updatePosition } = useDropdownPosition(containerRef as any, isOpen, dropdownWidth);
 
-        let top = 0;
-        let bottom: number | string = 'auto';
-        let maxHeight = defaultMaxH;
-
-        // 优先向下展开
-        if (spaceBelow >= defaultMaxH || spaceBelow > spaceAbove) {
-            top = rect.bottom + 2;
-            maxHeight = Math.min(defaultMaxH, spaceBelow);
-        } else {
-            // 向上展开
-            top = rect.top - Math.min(defaultMaxH, spaceAbove) - 2;
-            maxHeight = Math.min(defaultMaxH, spaceAbove);
-        }
-
-        setDropdownStyle({
-            position: 'fixed',
-            top: top,
-            left: rect.left,
-            width: dropdownWidth || rect.width,
-            minWidth: rect.width,
-            maxHeight: maxHeight,
-            zIndex: 999999, // 提高层级防止遮挡
-        });
-    };
-
+    // 点击外部关闭
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                // 也检查下拉菜单 portal 区域
                 const portal = document.getElementById('custom-select-portal');
                 if (portal && portal.contains(event.target as Node)) return;
                 setIsOpen(false);
@@ -116,21 +91,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
         }
     }, [isCustomInput]);
 
-    // 当下拉打开时更新位置，并监听滚动/resize
-    useEffect(() => {
-        if (isOpen) {
-            updateDropdownPosition();
-            const handleScroll = () => updateDropdownPosition();
-            const handleResize = () => updateDropdownPosition();
-            window.addEventListener('scroll', handleScroll, true);
-            window.addEventListener('resize', handleResize);
-            return () => {
-                window.removeEventListener('scroll', handleScroll, true);
-                window.removeEventListener('resize', handleResize);
-            };
-        }
-    }, [isOpen]);
-
+    // 滚动条逻辑
     const handleScroll = () => {
         if (!scrollRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
@@ -155,7 +116,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
         }
     }, [isOpen]);
 
-    // 下拉菜单内容（渲染到 fixed 层）
+    // 下拉菜单内容
     const dropdownContent = isOpen && !disabled ? (
         <div
             style={{
@@ -246,7 +207,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 </div>
             </div>
 
-            {/* 手动绝对定位的真·悬浮滑块 */}
+            {/* 悬浮滚动条 */}
             {(items.length + (allowCustom ? 1 : 0)) > 5 && (
                 <div
                     className={`absolute right-[2px] transition-opacity duration-300 pointer-events-none ${isScrolling ? 'opacity-100' : 'opacity-0 group-hover/menu:opacity-60'}`}
@@ -311,7 +272,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                     type="button"
                     disabled={disabled}
                     onClick={() => {
-                        if (!isOpen) updateDropdownPosition();
+                        if (!isOpen) updatePosition();
                         setIsOpen(!isOpen);
                     }}
                     style={{
@@ -351,7 +312,6 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 </button>
             )}
 
-            {/* 使用 portal 渲染到 body，避免被父容器 overflow:hidden 截断 */}
             {dropdownContent && createPortal(dropdownContent, getPortalContainer())}
         </div>
     );

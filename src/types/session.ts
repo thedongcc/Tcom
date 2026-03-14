@@ -100,7 +100,7 @@ export interface MqttSessionConfig extends BaseSessionConfig {
     uiState?: {
         autoScroll?: boolean;
         showTimestamp?: boolean;
-        viewMode?: 'text' | 'hex' | 'json';
+        viewMode?: 'text' | 'hex' | 'json' | 'base64';
         fontSize?: number;
         fontFamily?: string;
         mergeRepeats?: boolean;
