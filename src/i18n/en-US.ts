@@ -386,6 +386,7 @@ export const enUS = {
         checkFailed: 'Check failed',
         cpuUsage: 'App CPU Usage: {val}%',
         memUsage: 'App Memory (RSS): {val} MB',
+        clickToUpdate: 'Click to view update',
         openGithub: 'Open project on GitHub',
     },
 

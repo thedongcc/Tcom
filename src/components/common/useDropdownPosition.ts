@@ -7,7 +7,8 @@ import { useState, useEffect, useCallback, RefObject } from 'react';
 
 interface DropdownPositionStyle {
     position: 'fixed';
-    top: number;
+    top?: number;
+    bottom?: number;
     left: number;
     width: number | string;
     minWidth: number;
@@ -38,22 +39,24 @@ export function useDropdownPosition(
         const spaceBelow = viewportHeight - rect.bottom - 10;
         const spaceAbove = rect.top - 10;
 
-        let top: number;
+        let top: number | undefined;
+        let bottom: number | undefined;
         let maxHeight = defaultMaxH;
 
         // 优先向下展开
         if (spaceBelow >= defaultMaxH || spaceBelow > spaceAbove) {
             top = rect.bottom + 2;
-            maxHeight = Math.min(defaultMaxH, spaceBelow);
+            maxHeight = Math.min(defaultMaxH, Math.max(0, spaceBelow));
         } else {
-            // 向上展开
-            top = rect.top - Math.min(defaultMaxH, spaceAbove) - 2;
-            maxHeight = Math.min(defaultMaxH, spaceAbove);
+            // 向上展开，使用 bottom 定位，紧贴元素的上边缘
+            bottom = viewportHeight - rect.top + 2;
+            maxHeight = Math.min(defaultMaxH, Math.max(0, spaceAbove));
         }
 
         setDropdownStyle({
             position: 'fixed',
-            top,
+            ...(top !== undefined ? { top } : {}),
+            ...(bottom !== undefined ? { bottom } : {}),
             left: rect.left,
             width: dropdownWidth || rect.width,
             minWidth: rect.width,

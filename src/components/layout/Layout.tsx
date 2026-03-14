@@ -26,7 +26,7 @@ export const Layout = ({ children, sessionManager, editorLayout }: LayoutProps) 
     const setActiveView = (view: string) => updateUI({ activeActivityItem: view });
 
     // sessionManager and editorLayout now come from props
-    const { showUpdateDialog, setShowUpdateDialog } = useAutoUpdate();
+    const { showUpdateDialog, setShowUpdateDialog, hasUpdate, updateVersion, checkForUpdates } = useAutoUpdate();
     const restoredIdsRef = useRef<Set<string>>(new Set());
 
     // 侧边栏位置逻辑
@@ -124,7 +124,7 @@ export const Layout = ({ children, sessionManager, editorLayout }: LayoutProps) 
                     </EditorArea>
                 </div>
             </div>
-            {config.ui.showStatusBar && <StatusBar />}
+            {config.ui.showStatusBar && <StatusBar hasUpdate={hasUpdate} updateVersion={updateVersion} onShowUpdate={checkForUpdates} />}
             {showUpdateDialog && <UpdateDialog onClose={() => setShowUpdateDialog(false)} />}
         </div>
     );

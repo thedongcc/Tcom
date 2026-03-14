@@ -254,30 +254,31 @@ export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: strin
 
     return (
         <div style={{ position: 'relative' }}>
-            <div
-                ref={triggerRef}
-                onClick={() => setIsOpen(!isOpen)}
-                title={value}
-                style={{
-                    width: 28,
-                    height: 20,
-                    borderRadius: 4,
-                    border: '1px solid var(--border-color)',
-                    cursor: 'pointer',
-                    padding: 2,
-                    background: 'rgba(0,0,0,0.2)',
-                    flexShrink: 0,
-                }}
-            >
-                {/* 透明格纹 + 颜色层 */}
-                <div style={{
-                    width: '100%', height: '100%', borderRadius: 2,
-                    backgroundImage: 'conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn)',
-                    backgroundSize: '4px 4px',
-                }}>
-                    <div style={{ width: '100%', height: '100%', backgroundColor: value }} />
+            <Tooltip content={value} position="top" offset={4}>
+                <div
+                    ref={triggerRef}
+                    onClick={() => setIsOpen(!isOpen)}
+                    style={{
+                        width: 28,
+                        height: 20,
+                        borderRadius: 4,
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        padding: 2,
+                        background: 'rgba(0,0,0,0.2)',
+                        flexShrink: 0,
+                    }}
+                >
+                    {/* 透明格纹 + 颜色层 */}
+                    <div style={{
+                        width: '100%', height: '100%', borderRadius: 2,
+                        backgroundImage: 'conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn)',
+                        backgroundSize: '4px 4px',
+                    }}>
+                        <div style={{ width: '100%', height: '100%', backgroundColor: value }} />
+                    </div>
                 </div>
-            </div>
+            </Tooltip>
 
             {typeof document !== 'undefined' && isOpen && createPortal(
                 <ColorPickerContent

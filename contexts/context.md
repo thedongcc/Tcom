@@ -274,7 +274,45 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 | Toast 出现/消失 | 300ms | `ease-in-out` |
 | 拖拽反馈 | 即时 | 无缓动 |
 
-### 4.6 反模式（禁止）
+### 4.7 国际化（i18n）规范
+
+- **双语强制**：所有面向用户的文本（按钮、标签、提示、错误消息、Toast、Tooltip、Dialog）必须同时在 `zh-CN.ts` 和 `en-US.ts` 中定义
+- 禁止在 TSX 中硬编码中文或英文字符串，必须使用 `t('key')` 引用
+- 新增 i18n key 必须在 **两个语言文件中同步添加**
+
+### 4.8 Tooltip 统一规范
+
+- **强制使用项目 `<Tooltip>` 组件**（`src/components/common/Tooltip.tsx`）
+- ❌ 禁止使用原生 HTML `title=` 属性
+- ✅ 正确：`<Tooltip content={t('xxx')}><button>...</button></Tooltip>`
+- ❌ 禁止：`<button title="xxx">...</button>`
+
+### 4.9 组件颜色独立性规范
+
+每个 UI 组件必须拥有**专属 CSS 变量**，禁止直接使用功能级变量（如 `--widget-background`）。
+
+**变量命名规则**：`--{component-name}-{property}`
+
+```css
+/* ✅ 正确：组件专属变量 */
+--serial-config-bg: var(--sidebar-background);
+--serial-config-text: var(--st-monitor-config-text);
+--serial-config-label: var(--st-monitor-config-label);
+
+/* ❌ 禁止：组件直接引用功能级变量 */
+.my-component {
+    background: var(--widget-background); /* 禁止 */
+    background: var(--my-component-bg);   /* 正确 */
+}
+```
+
+**每个组件最少需要的变量**：
+- `--{component}-bg` — 背景色
+- `--{component}-text` — 文字色
+- `--{component}-border` — 边框色
+- 按钮/切换类组件额外需要：`--{component}-hover`、`--{component}-active`
+
+### 4.10 反模式（禁止）
 
 - ❌ 使用 Emoji 作为图标 — 统一使用 Lucide React 图标库
 - ❌ 可点击元素缺少 `cursor: pointer`
@@ -283,6 +321,9 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - ❌ 状态变化无过渡动画（必须 150-300ms）
 - ❌ 焦点状态不可见
 - ❌ 在 JS 层面每帧计算布局做动画
+- ❌ 使用原生 `title=` 属性代替 `<Tooltip>` 组件
+- ❌ 组件直接使用功能级 CSS 变量（必须通过组件专属变量间接引用）
+- ❌ 在 TSX 中硬编码用户可见的中文/英文字符串（必须使用 `t()` 函数）
 
 ---
 

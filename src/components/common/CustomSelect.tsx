@@ -51,6 +51,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const inputRef = useRef<HTMLInputElement>(null);
     const [scrollRatio, setScrollRatio] = useState(0);
     const [thumbHeight, setThumbHeight] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
     const selectedRef = useRef<HTMLButtonElement>(null);
     const [hoveredValue, setHoveredValue] = useState<string | null>(null);
     const [isScrolling, setIsScrolling] = useState(false);
@@ -95,9 +96,11 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const handleScroll = () => {
         if (!scrollRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-        const ratio = scrollTop / (scrollHeight - clientHeight);
+        const maxScroll = scrollHeight - clientHeight;
+        const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0;
         setScrollRatio(ratio);
         setThumbHeight(Math.max((clientHeight / scrollHeight) * clientHeight, 35));
+        setContainerHeight(clientHeight);
         setIsScrolling(true);
         const timer = setTimeout(() => setIsScrolling(false), 1000);
         return () => clearTimeout(timer);
@@ -212,7 +215,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 <div
                     className={`absolute right-[2px] transition-opacity duration-300 pointer-events-none ${isScrolling ? 'opacity-100' : 'opacity-0 group-hover/menu:opacity-60'}`}
                     style={{
-                        top: `${scrollRatio * ((dropdownStyle.maxHeight as number || 240) - thumbHeight)}px`,
+                        top: `${scrollRatio * ((containerHeight || (dropdownStyle.maxHeight as number || 240)) - thumbHeight)}px`,
                         height: `${thumbHeight}px`,
                         width: '4px',
                         backgroundColor: 'var(--scrollbar-slider-hover-color)',

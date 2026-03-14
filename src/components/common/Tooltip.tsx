@@ -119,8 +119,7 @@ export const Tooltip = ({
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.12 }}
-                                className={`px-2 py-1 text-[12px] font-medium rounded shadow-lg bg-[var(--st-tooltip-bg)] text-[var(--st-tooltip-text)] border border-[var(--st-tooltip-border)] max-w-[300px] whitespace-normal break-words text-left leading-relaxed backdrop-blur-md ${className}`}
-                                style={{ textWrap: 'balance' }}
+                                className={`px-2 py-1 text-[12px] font-medium rounded shadow-lg bg-[var(--st-tooltip-bg)] text-[var(--st-tooltip-text)] border border-[var(--st-tooltip-border)] max-w-[300px] w-max whitespace-normal break-words text-left leading-snug backdrop-blur-md ${className}`}
                             >
                                 {content}
                             </motion.div>

@@ -386,6 +386,7 @@ export const zhCN = {
         checkFailed: '检查失败',
         cpuUsage: 'CPU 占用率: {val}%',
         memUsage: '内存占用 (RSS): {val} MB',
+        clickToUpdate: '点击查看更新',
         openGithub: '在 GitHub 上查看项目',
     },
 

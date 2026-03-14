@@ -273,6 +273,61 @@ div[data-direction="vertical"]:hover {
   --new-session-dialog-header-bg: var(--st-dialog-header-bg);
   --new-session-dialog-text: var(--st-dialog-text);
   --new-session-dialog-border: var(--menu-border-color);
+
+  /* StatusBar 按钮/状态 - 独立于 statusbar 基础样式 */
+  --statusbar-btn-hover: var(--hover-background);
+  --statusbar-btn-text: var(--st-statusbar-text);
+  --statusbar-icon: var(--st-statusbar-text);
+  --statusbar-success-text: #4ec9b0;
+
+  /* CustomSelect - 独立于 dropdown */
+  --custom-select-bg: var(--dropdown-background);
+  --custom-select-text: var(--app-foreground);
+  --custom-select-border: var(--dropdown-border-color);
+  --custom-select-hover: var(--dropdown-item-hover-background);
+  --custom-select-selected-text: var(--dropdown-item-selected-foreground);
+  --custom-select-trigger-bg: var(--input-background);
+
+  /* LogSearch 搜索栏 - 独立于 widget */
+  --log-search-bg: var(--widget-background);
+  --log-search-border: var(--widget-border-color);
+  --log-search-text: var(--app-foreground);
+  --log-search-input-bg: var(--input-background);
+  --log-search-match-bg: rgba(234, 179, 8, 0.3);
+
+  /* SerialInput 工具栏 - 独立于 sendarea */
+  --serial-input-toolbar-bg: var(--widget-background);
+  --serial-input-toolbar-border: var(--widget-border-color);
+  --serial-input-toolbar-text: var(--app-foreground);
+  --serial-input-mode-active-bg: var(--accent-color);
+  --serial-input-mode-active-text: var(--button-foreground);
+
+  /* Tooltip - 独立样式 */
+  --tooltip-bg: #383838;
+  --tooltip-text: var(--app-foreground);
+  --tooltip-border: var(--widget-border-color);
+
+  /* Toast - 独立样式 */
+  --toast-bg: var(--widget-background);
+  --toast-text: var(--app-foreground);
+  --toast-border: var(--widget-border-color);
+  --toast-success-bg: rgba(34, 197, 94, 0.15);
+  --toast-error-bg: rgba(239, 68, 68, 0.15);
+
+  /* ConfirmDialog - 独立于通用 Dialog */
+  --confirm-dialog-bg: var(--st-dialog-content-bg);
+  --confirm-dialog-header-bg: var(--st-dialog-header-bg);
+  --confirm-dialog-text: var(--st-dialog-text);
+  --confirm-dialog-border: var(--menu-border-color);
+  --confirm-dialog-danger-bg: #a1260d;
+  --confirm-dialog-danger-hover: #c4250a;
+
+  /* UpdateDialog - 独立于通用 Dialog */
+  --update-dialog-bg: var(--st-dialog-content-bg);
+  --update-dialog-header-bg: var(--st-dialog-header-bg);
+  --update-dialog-text: var(--st-dialog-text);
+  --update-dialog-border: var(--menu-border-color);
+  --update-dialog-progress-bg: var(--accent-color);
 }
 
 /* 主题 CSS 变量由 JS 动态注入到 :root（见 src/themes/index.ts applyTheme）*/
