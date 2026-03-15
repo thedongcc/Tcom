@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { SessionType } from '../../types/session';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -14,11 +14,11 @@ import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
 
 interface UseSessionListActionsParams {
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export function useSessionListActions({ sessionManager, editorLayout }: UseSessionListActionsParams) {
+export function useSessionListActions({ editorLayout }: UseSessionListActionsParams) {
+    const sessionManager = useSession();
     const { confirm } = useConfirm();
     const { showToast } = useToast();
     const { t } = useI18n();

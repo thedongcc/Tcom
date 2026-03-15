@@ -22,26 +22,29 @@ interface ValidationResult {
 
 /**
  * 校验工作区路径是否合法。
- * 仅允许访问 userData 目录和用户文档目录下的路径，防止路径遍历攻击。
+ * 防止路径遍历攻击：拦截空字符串和包含 ".." 的相对路径。
+ * 允许用户通过对话框选择的任意绝对路径（这是正常使用场景）。
  */
 function validatePath(inputPath: unknown): ValidationResult {
     if (typeof inputPath !== 'string' || inputPath.trim() === '') {
         return { valid: false, error: 'Invalid workspace path: must be a non-empty string' };
     }
 
-    const resolved = path.resolve(inputPath);
+    const trimmed = inputPath.trim();
 
-    // 路径白名单：只允许 userData 目录 和 文档目录 及其子目录
-    const allowedRoots = [
-        path.resolve(app.getPath('userData')),
-        path.resolve(app.getPath('documents')),
-    ];
-
-    const isAllowed = allowedRoots.some(root => resolved.startsWith(root + path.sep) || resolved === root);
-    if (!isAllowed) {
-        return { valid: false, error: 'Access denied: workspace path is outside allowed directories' };
+    // 拦截包含路径遍历序列的输入（攻击特征：含 .. 片段）
+    const normalized = trimmed.replace(/\\/g, '/');
+    if (normalized.split('/').some(part => part === '..')) {
+        return { valid: false, error: 'Access denied: path traversal sequences are not allowed' };
     }
 
+    // 必须是绝对路径（由对话框选择保证），拒绝相对路径
+    const isAbsolute = /^([A-Za-z]:[\\/]|\/|\\\\)/.test(trimmed);
+    if (!isAbsolute) {
+        return { valid: false, error: 'Invalid workspace path: must be an absolute path' };
+    }
+
+    const resolved = path.resolve(trimmed);
     return { valid: true, resolved };
 }
 

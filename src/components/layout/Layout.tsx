@@ -1,11 +1,11 @@
-﻿import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { TitleBar } from './TitleBar';
 import { ActivityBar } from './ActivityBar';
 import { SideBar } from './SideBar';
 import { StatusBar } from './StatusBar';
 import { EditorArea } from './EditorArea';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
@@ -14,11 +14,11 @@ import { SessionConfig } from '../../types/session';
 
 interface LayoutProps {
     children?: ReactNode;
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const Layout = ({ children, sessionManager, editorLayout }: LayoutProps) => {
+export const Layout = ({ children, editorLayout }: LayoutProps) => {
+    const sessionManager = useSession();
     const { config, updateUI } = useSettings();
     const { t } = useI18n();
     const activeView = config.ui.activeActivityItem;
@@ -109,13 +109,11 @@ export const Layout = ({ children, sessionManager, editorLayout }: LayoutProps) 
                 <SideBar
                     activeView={activeView}
                     onViewChange={setActiveView}
-                    sessionManager={sessionManager}
                     editorLayout={editorLayout}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0">
                     <EditorArea
-                        sessionManager={sessionManager}
                         editorLayout={editorLayout}
                         onShowSettings={setActiveView}
                     >

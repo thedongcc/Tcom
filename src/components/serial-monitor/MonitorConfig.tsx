@@ -1,6 +1,6 @@
-﻿import { useCallback } from 'react';
+import { useCallback } from 'react';
 import { RefreshCw, Play, Square } from 'lucide-react';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com } from '../../utils/com0com';
 import { useToast } from '../../context/ToastContext';
@@ -12,14 +12,13 @@ import { useMonitorPairs } from './useMonitorPairs';
 
 interface MonitorConfigPanelProps {
     session: any;
-    sessionManager: ReturnType<typeof useSessionManager>;
 }
 
-export const MonitorConfigPanel = ({ session, sessionManager }: MonitorConfigPanelProps) => {
+export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
     const { t } = useI18n();
     const { config, isConnected, isConnecting } = session;
     const monitorConfig = config as MonitorSessionConfig;
-    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports, isAdmin, monitorEnabled, setupcPath } = sessionManager;
+    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports, isAdmin, monitorEnabled, setupcPath } = useSession();
 
     const updateConfig = useCallback((updates: Partial<MonitorSessionConfig>) => {
         void updateSessionConfig(session.id, updates);

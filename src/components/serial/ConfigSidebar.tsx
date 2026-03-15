@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ConfigSidebar.tsx
  * 配置侧边栏 — 根据当前活动会话类型显示对应配置面板。
  *
@@ -7,18 +7,15 @@
  * - MqttConfigPanel.tsx — MQTT 配置面板
  * - MonitorConfig.tsx — 监控器配置面板
  */
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { MqttSessionConfig } from '../../types/session';
 import { MqttConfigPanel } from '../mqtt/MqttConfigPanel';
 import { MonitorConfigPanel } from '../serial-monitor/MonitorConfig';
 import { useI18n } from '../../context/I18nContext';
 import { SerialConfigPanel } from './SerialConfigPanel';
 
-interface ConfigSidebarProps {
-    sessionManager: ReturnType<typeof useSessionManager>;
-}
-
-export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
+export const ConfigSidebar = () => {
+    const sessionManager = useSession();
     const { activeSessionId, sessions } = sessionManager;
     const activeSession = sessions.find(s => s.id === activeSessionId);
     const { t } = useI18n();
@@ -71,11 +68,10 @@ export const ConfigSidebar = ({ sessionManager }: ConfigSidebarProps) => {
         return (
             <MonitorConfigPanel
                 session={activeSession}
-                sessionManager={sessionManager}
             />
         );
     }
 
     // 默认：串口会话
-    return <SerialConfigPanel session={activeSession} sessionManager={sessionManager} />;
+    return <SerialConfigPanel session={activeSession} />;
 };

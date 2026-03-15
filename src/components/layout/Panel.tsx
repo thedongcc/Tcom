@@ -1,15 +1,14 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Maximize2, Trash2 } from 'lucide-react';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { useI18n } from '../../context/I18nContext';
 
 interface PanelProps {
-    sessionManager: ReturnType<typeof useSessionManager>;
     height?: number;
 }
 
-export const Panel = ({ sessionManager, height = 200 }: PanelProps) => {
-    const { sessions, activeSessionId } = sessionManager;
+export const Panel = ({ height = 200 }: PanelProps) => {
+    const { sessions, activeSessionId } = useSession();
     const activeSession = sessions.find(s => s.id === activeSessionId);
     const { t } = useI18n();
 

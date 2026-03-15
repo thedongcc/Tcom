@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { RefreshCw, Play, Square } from 'lucide-react';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { SerialSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { CustomSelect } from '../common/CustomSelect';
 import { useI18n } from '../../context/I18nContext';
@@ -13,15 +13,14 @@ import { Tooltip } from '../common/Tooltip';
 
 interface SerialConfigPanelProps {
     session: any;
-    sessionManager: ReturnType<typeof useSessionManager>;
 }
 
-export const SerialConfigPanel = ({ session, sessionManager }: SerialConfigPanelProps) => {
+export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
     const { config, isConnected } = session;
     const { connection } = config as SerialSessionConfig;
     const { t } = useI18n();
 
-    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = sessionManager;
+    const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = useSession();
     const uiState = (config as any).uiState || {};
     const [highlight, setHighlight] = useState(false);
 

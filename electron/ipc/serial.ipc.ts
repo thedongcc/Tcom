@@ -41,8 +41,18 @@ export function registerSerialIpc(serialService: SerialService) {
     ipcMain.handle('serial:write', async (_event, payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (!isNonEmptyString(p?.connectionId)) return { success: false, error: 'Invalid connectionId' };
-        if (!Array.isArray(p?.data) && typeof p?.data !== 'string') return { success: false, error: 'Invalid data: must be an array or string' };
-        return serialService.write(p.connectionId, p.data as string | number[]);
+        // data 可以是字符串、number[] 或 Uint8Array（经 IPC 序列化后变为类数组 object）
+        const rawData = p?.data;
+        const isValidData = typeof rawData === 'string'
+            || Array.isArray(rawData)
+            || rawData instanceof Uint8Array
+            || (rawData !== null && typeof rawData === 'object' && !Array.isArray(rawData) && 'buffer' in (rawData as object));
+        if (!isValidData) return { success: false, error: 'Invalid data: must be a string, array, or Uint8Array' };
+        // 统一转换为字符串或 number[]
+        const normalizedData: string | number[] = typeof rawData === 'string'
+            ? rawData
+            : Array.from(rawData as Iterable<number>);
+        return serialService.write(p.connectionId as string, normalizedData);
     });
 
     // ⚡ 高精度定时发送：Worker Thread 方案，精度约 1~2ms

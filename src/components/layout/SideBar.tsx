@@ -1,24 +1,24 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { ConfigSidebar } from '../serial/ConfigSidebar';
 import { SessionListSidebar } from '../serial/SessionListSidebar';
-import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { CommandListSidebar } from '../commands/CommandListSidebar';
 import { usePluginManager } from '../../context/PluginContextShared';
 import { ExtensionsSidebar } from '../extensions/ExtensionsSidebar';
 import { useI18n } from '../../context/I18nContext';
+import { useSession } from '../../context/SessionContext';
 
 interface SideBarProps {
     activeView: string;
     onViewChange: (view: string) => void;
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout }: SideBarProps) => {
+export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps) => {
     if (!activeView || activeView === 'settings') return null;
 
+    const sessionManager = useSession();
     const { getPlugin } = usePluginManager();
     const activePlugin = getPlugin(activeView);
     const { t } = useI18n();
@@ -106,16 +106,15 @@ export const SideBar = ({ activeView, onViewChange, sessionManager, editorLayout
             )}
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                {activeView === 'explorer' && <SessionListSidebar sessionManager={sessionManager} editorLayout={editorLayout} />}
+                {activeView === 'explorer' && <SessionListSidebar editorLayout={editorLayout} />}
                 {activeView === 'search' && <div className="p-4 text-xs text-[var(--st-sidebar-muted-text)]">Search not implemented</div>}
-                {activeView === 'serial' && <ConfigSidebar sessionManager={sessionManager} />}
+                {activeView === 'serial' && <ConfigSidebar />}
                 {activeView === 'extensions' && <ExtensionsSidebar />}
 
                 {/* Dynamic Plugin Sidebar */}
                 {activePlugin && activePlugin.sidebarComponent && (
                     <activePlugin.sidebarComponent
                         onNavigate={onViewChange}
-                        sessionManager={sessionManager}
                         editorLayout={editorLayout}
                     />
                 )}

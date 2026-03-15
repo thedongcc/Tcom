@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EditorArea.tsx
  * 编辑器主区域 — 递归布局渲染 + DnD 拖拽排版。
  *
@@ -9,7 +9,7 @@
 import React, { type ReactNode } from 'react';
 import { useI18n } from '../../context/I18nContext';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { DndContext, pointerWithin, DragOverlay } from '@dnd-kit/core';
 import { parseCompositeId } from './EditorTabComponents';
@@ -80,12 +80,12 @@ const LayoutRenderer = ({ node, activeGroupId, sessions, sessionManager, layoutA
 
 interface EditorAreaProps {
     children?: ReactNode;
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
     onShowSettings?: (view: string) => void;
 }
 
-export const EditorArea = ({ sessionManager, editorLayout, onShowSettings }: EditorAreaProps) => {
+export const EditorArea = ({ editorLayout, onShowSettings }: EditorAreaProps) => {
+    const sessionManager = useSession();
     const { layout, activeGroupId, moveView, splitDrop } = editorLayout;
     const { t } = useI18n();
     const { sessions } = sessionManager;

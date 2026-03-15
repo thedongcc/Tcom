@@ -35,4 +35,8 @@ export interface SerialPortInstance {
     removeAllListeners(event?: string): this;
     /** 获取控制信号（用于检测对端 DTR/DSR/CTS） */
     getControlSignals(): Promise<ControlSignals>;
+    /** 设置控制信号（RTS/DTR 等，用于唤醒对端） */
+    set(options: Partial<{ rts: boolean; dtr: boolean; brk: boolean }>): Promise<void>;
+    /** 清除接收/发送缓冲区残留数据 */
+    flush(cb?: (err?: Error | null) => void): void;
 }

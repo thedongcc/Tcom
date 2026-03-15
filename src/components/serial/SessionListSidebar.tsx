@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SessionListSidebar.tsx
  * 会话列表侧边栏 — 工作区头部 + 会话列表 + 右键菜单。
  *
@@ -7,7 +7,6 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { FolderOpen, Plus, Trash2, Edit2, MoreHorizontal, Check, RefreshCw } from 'lucide-react';
-import { useSessionManager } from '../../hooks/useSessionManager';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { NewSessionDialog } from '../session/NewSessionDialog';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -16,13 +15,14 @@ import { SessionListItem } from './SessionListItem';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import { useSessionListActions } from './useSessionListActions';
+import { useSession } from '../../context/SessionContext';
 
 interface SessionListSidebarProps {
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionListSidebarProps) => {
+export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) => {
+    const sessionManager = useSession();
     const { t } = useI18n();
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, sessionId: string } | null>(null);
     const [recentMenu, setRecentMenu] = useState<{ x: number, y: number } | null>(null);
@@ -35,7 +35,7 @@ export const SessionListSidebar = ({ sessionManager, editorLayout }: SessionList
         editingId, setEditingId, editName, setEditName,
         handleDragEnd, handleSelectSessionType: onSelectType,
         startEditing, saveEdit, deleteSession,
-    } = useSessionListActions({ sessionManager, editorLayout });
+    } = useSessionListActions({ editorLayout });
 
     // 关闭右键菜单
     useEffect(() => {

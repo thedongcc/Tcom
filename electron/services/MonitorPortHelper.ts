@@ -24,7 +24,17 @@ export async function openPortWithRetry(
     baudRate: number,
     label: string,
 ): Promise<any> {
-    let port = new SP({ path, baudRate, autoOpen: false });
+    const defaultOptions = {
+        path,
+        baudRate,
+        autoOpen: false,
+        // 关闭所有硬件/软件流控，避免 com0com 对端未连接时驱动挂起
+        rtscts: false,
+        xon: false,
+        xoff: false,
+        hupcl: false,
+    };
+    let port = new SP(defaultOptions);
 
     const attemptOpen = (p: any) => new Promise((resolve, reject) => {
         p.open((err: any) => err ? reject(err) : resolve(p));
@@ -39,7 +49,7 @@ export async function openPortWithRetry(
                 console.log(`[Monitor] Retrying ${label} with ${retryPath}`);
                 port.close(() => { });
 
-                const retryPort = new SP({ path: retryPath, baudRate, autoOpen: false });
+                const retryPort = new SP({ ...defaultOptions, path: retryPath });
                 try {
                     return await attemptOpen(retryPort);
                 } catch (retryErr: any) {

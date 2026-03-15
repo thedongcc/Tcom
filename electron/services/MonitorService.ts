@@ -2,17 +2,36 @@
  * MonitorService.ts
  * 虚拟串口监控服务 — 在内部虚拟端口与外部物理端口之间双向转发数据。
  *
- * 子模块：
- * - MonitorPortHelper.ts — 端口打开和重试逻辑
+ * 架构原则：
+ * - 启动后默认不转发（discard 模式）。
+ * - 用 isPortBusy 持续轮询 COM3。
+ *   · discard 模式下：COM4 无写入，probe 打开 COM3 不产生残包。→ 安全。
+ *   · forwarding 模式下：COM3 被外部软件占用，probe 返回 "access denied" 不实际打开 COM3。→ 安全。
+ *   · 外部软件断开瞬间：probe 成功打开 COM3（"not busy"），但此时立即停止转发恢复 discard。→ 安全。
+ * - 状态机：PROBING（discard 等待连接）↔ FORWARDING（转发中监测断开）
  */
 import { BrowserWindow } from 'electron';
 import { getSerialPort } from '../utils/serialport-loader';
 import { openPortWithRetry, formatPortPath } from './MonitorPortHelper';
 import type { SerialPortInstance } from '../types/serialport.types';
 
+type MonitorState = 'probing' | 'forwarding' | 'transitioning';
+
 export class MonitorService {
     private mainWindow: BrowserWindow;
-    private sessions: Map<string, { internal: SerialPortInstance; physical: SerialPortInstance; pollTimer?: NodeJS.Timeout; isStopping?: boolean }> = new Map();
+    private sessions: Map<string, {
+        internal: SerialPortInstance;
+        physical: SerialPortInstance;
+        pollTimer?: NodeJS.Timeout;
+        isStopping?: boolean;
+        state: MonitorState;
+        portConfig: {
+            internalPath: string;
+            physicalPath: string;
+            externalPath: string;
+            baudRate: number;
+        };
+    }> = new Map();
     private writeQueues: Map<string, Map<'virtual' | 'physical', Promise<void>>> = new Map();
 
     constructor(mainWindow: BrowserWindow) {
@@ -34,9 +53,8 @@ export class MonitorService {
         const next = existing
             .then(async () => {
                 const currentSession = this.sessions.get(sessionId);
-                if (!currentSession || currentSession.isStopping) return;
+                if (!currentSession || currentSession.isStopping || currentSession.state !== 'forwarding') return;
 
-                // 写操作超时保护
                 let isDone = false;
                 await Promise.race([
                     writeFn().finally(() => { isDone = true; }),
@@ -54,7 +72,7 @@ export class MonitorService {
         return next;
     }
 
-    // ── 事件绑定 ──
+    // ── 事件绑定（转发模式）──
 
     private setupEvents(sessionId: string, source: SerialPortInstance, target: SerialPortInstance, label: string, sourceType: 'TX' | 'RX', portPath: string) {
         source.removeAllListeners('data');
@@ -93,47 +111,145 @@ export class MonitorService {
         });
     }
 
-    // ── 对端轮询 ──
+    // ── 检测 COM3 是否被占用 ──
 
-    private startPartnerPoll(sessionId: string, port: SerialPortInstance): NodeJS.Timeout {
-        let lastStatus = false;
-        return setInterval(async () => {
+    private static isPortBusy(SP: any, portPath: string): Promise<boolean> {
+        return new Promise(resolve => {
+            const probe = new SP({ path: portPath, baudRate: 9600, autoOpen: false });
+            probe.open((err: any) => {
+                if (err) {
+                    resolve(/access denied|denied|busy|being used/i.test(err.message));
+                } else {
+                    probe.close(() => resolve(false));
+                }
+            });
+        });
+    }
+
+    // ── 停止转发（切换到 discard 模式）──
+
+    private stopForwarding(sessionId: string) {
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+
+        session.state = 'transitioning';
+
+        const { physical, internal } = session;
+        physical.removeAllListeners('data');
+        physical.removeAllListeners('error');
+        physical.removeAllListeners('close');
+        internal.removeAllListeners('data');
+        internal.removeAllListeners('error');
+        internal.removeAllListeners('close');
+
+        // 丢弃监听器：持续消耗 physical stream
+        physical.on('data', () => { /* 丢弃 */ });
+    }
+
+    // ── 统一轮询（既检测连接又检测断开）──
+
+    private startPoll(sessionId: string) {
+        const session = this.sessions.get(sessionId);
+        if (!session || session.isStopping) return;
+
+        if (session.pollTimer) clearInterval(session.pollTimer);
+
+        session.pollTimer = setInterval(async () => {
             try {
-                if (!port?.isOpen) return;
-                const signals = await port.getControlSignals();
-                const isOpen = !!(signals.carrierDetect || signals.dsr || signals.cts);
-                if (isOpen === lastStatus) return;
-                lastStatus = isOpen;
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                    this.mainWindow.webContents.send('monitor:partner-status', { sessionId, connected: isOpen });
+                const s = this.sessions.get(sessionId);
+                if (!s || s.isStopping || s.state === 'transitioning') return;
+                if (!s.portConfig.externalPath) return;
+
+                const SP = getSerialPort();
+                const isBusy = await MonitorService.isPortBusy(SP, s.portConfig.externalPath);
+
+                if (s.state === 'probing' && isBusy) {
+                    // ======== 外部软件刚连接 ========
+                    // probe 返回 busy = COM3 被占用 → 开始转发
+                    // 此时 COM4 无写入（discard 模式），probe 没有造成 COM3 数据碎片
+                    s.state = 'transitioning';
+                    console.log(`[Monitor] COM3 busy → start forwarding for ${sessionId}`);
+
+                    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        this.mainWindow.webContents.send('monitor:partner-status', { sessionId, connected: true });
+                    }
+
+                    await this.reopenInternalPort(sessionId, true);
+
+                } else if (s.state === 'forwarding' && !isBusy) {
+                    // ======== 外部软件刚断开 ========
+                    // probe 返回 not busy → COM3 已释放
+                    // 立即停止转发并切回 discard 模式，重开 COM4 清理驱动状态
+                    console.log(`[Monitor] COM3 free → stop forwarding for ${sessionId}`);
+
+                    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        this.mainWindow.webContents.send('monitor:partner-status', { sessionId, connected: false });
+                    }
+
+                    this.stopForwarding(sessionId);
+                    await this.reopenInternalPort(sessionId, false);
                 }
             } catch { /* 轮询异常静默处理 */ }
-        }, 1000);
+        }, 500);
+    }
+
+    // ── 重开内部桥接端口（公共方法）──
+    //
+    // startForwarding=true 时：重开后绑定转发事件，进入 forwarding 状态
+    // startForwarding=false 时：仅重置端口，进入 probing 状态
+
+    private async reopenInternalPort(sessionId: string, startForwarding: boolean): Promise<void> {
+        const session = this.sessions.get(sessionId);
+        if (!session || session.isStopping) return;
+
+        const { portConfig, physical } = session;
+        const { internalPath, physicalPath, baudRate } = portConfig;
+
+        // 1. 关闭旧端口（physical 的 discard 监听器在整个过程中保持活跃）
+        const old = session.internal;
+        old.removeAllListeners();
+        await new Promise<void>(resolve => {
+            const t = setTimeout(() => resolve(), 2000);
+            if (!old.isOpen) { clearTimeout(t); return resolve(); }
+            old.close(() => { clearTimeout(t); resolve(); });
+        });
+
+        if (!this.sessions.has(sessionId) || this.sessions.get(sessionId)!.isStopping) return;
+
+        // 2. 等待驱动释放
+        await new Promise(r => setTimeout(r, 150));
+
+        // 3. 重新打开
+        const SP = getSerialPort();
+        try {
+            const newInternal = await openPortWithRetry(SP, internalPath, baudRate, 'Internal');
+            session.internal = newInternal;
+
+            if (startForwarding) {
+                // 绑定转发事件（discard 监听器被 setupEvents 同步替换）
+                this.setupEvents(sessionId, newInternal, physical, 'Internal', 'TX', internalPath);
+                this.setupEvents(sessionId, physical, newInternal, 'Physical', 'RX', physicalPath);
+                session.state = 'forwarding';
+                console.log(`[Monitor] Internal port reopened, forwarding started`);
+            } else {
+                session.state = 'probing';
+                console.log(`[Monitor] Internal port reopened, resumed probing`);
+            }
+        } catch (err: any) {
+            console.error('[Monitor] Reopen internal port failed:', err.message);
+            session.state = 'probing';
+        }
     }
 
     // ── 强制关闭端口 ──
 
     private static forceClosePort(port: SerialPortInstance | null): Promise<void> {
-        return new Promise(resolve => {
-            if (!port) return resolve();
-            port.close(() => resolve());
-        });
-    }
-
-    // ── 安全关闭端口（含事件清理） ──
-
-    private static safeClosePort(port: SerialPortInstance | null): Promise<void> {
-        return new Promise(resolve => {
-            if (!port) return resolve();
-            port.removeAllListeners();
-            if (port.isOpen) {
-                port.close((err?: Error | null) => {
-                    if (err) console.error('[Monitor] Port close error (ignored):', err.message);
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
+        if (!port) return Promise.resolve();
+        port.removeAllListeners();
+        return new Promise<void>(resolve => {
+            if (!port.isOpen) return resolve();
+            const timeout = setTimeout(() => { resolve(); }, 3000);
+            port.close(() => { clearTimeout(timeout); resolve(); });
         });
     }
 
@@ -142,7 +258,6 @@ export class MonitorService {
     async start(sessionId: string, config: any) {
         let internal: SerialPortInstance | null = null;
         let physical: SerialPortInstance | null = null;
-        let pollTimer: NodeJS.Timeout | null = null;
 
         try {
             const SP = getSerialPort();
@@ -150,32 +265,31 @@ export class MonitorService {
 
             const internalPortPath = config.pairedPort || config.internalPort;
             const physicalPortPath = config.physicalSerialPort || config.physicalPort;
+            const externalPortPath = config.virtualSerialPort || '';
             const baudRate = config.connection?.baudRate || config.baudRate || 9600;
 
             if (!internalPortPath || !physicalPortPath) return { success: false, error: 'Missing port configuration' };
             console.log(`[Monitor] Starting session ${sessionId}`);
 
-            // 并行开启两个端口
-            [internal, physical] = await Promise.all([
-                openPortWithRetry(SP, internalPortPath, baudRate, 'Internal'),
-                openPortWithRetry(SP, physicalPortPath, baudRate, 'Physical'),
-            ]);
+            physical = await openPortWithRetry(SP, physicalPortPath, baudRate, 'Physical');
+            internal = await openPortWithRetry(SP, internalPortPath, baudRate, 'Internal');
 
-            // 绑定转发事件
-            this.setupEvents(sessionId, internal, physical, 'Internal', 'TX', internalPortPath);
-            this.setupEvents(sessionId, physical, internal, 'Physical', 'RX', physicalPortPath);
+            // 初始化为 discard + probing 模式
+            physical.on('data', () => { /* 丢弃 */ });
 
-            // 轮询对端状态
-            pollTimer = this.startPartnerPoll(sessionId, internal);
+            this.sessions.set(sessionId, {
+                internal, physical, pollTimer: undefined,
+                state: 'probing',
+                portConfig: { internalPath: internalPortPath, physicalPath: physicalPortPath, externalPath: externalPortPath, baudRate },
+            });
 
-            this.sessions.set(sessionId, { internal, physical, pollTimer });
+            this.startPoll(sessionId);
+
             return { success: true };
         } catch (error: any) {
             console.error(`[Monitor] Start failed for session ${sessionId}:`, error.message);
-            clearInterval(pollTimer);
-            internal?.removeAllListeners();
-            physical?.removeAllListeners();
-            await Promise.all([MonitorService.forceClosePort(internal), MonitorService.forceClosePort(physical)]);
+            await MonitorService.forceClosePort(internal);
+            await MonitorService.forceClosePort(physical);
             return { success: false, error: error.message };
         }
     }
@@ -188,64 +302,44 @@ export class MonitorService {
         if (!session) return { success: true };
 
         session.isStopping = true;
-        await Promise.all([MonitorService.safeClosePort(session.internal), MonitorService.safeClosePort(session.physical)]);
+        await Promise.all([MonitorService.forceClosePort(session.internal), MonitorService.forceClosePort(session.physical)]);
         this.sessions.delete(sessionId);
         this.writeQueues.delete(sessionId);
         return { success: true };
     }
 
-    // ── 注入写入：核心写操作 ──
+    // ── 注入写入 ──
 
     private performInjectionWrite(port: SerialPortInstance, payload: Buffer | string, target: string): Promise<{ success: boolean; error?: string }> {
         return new Promise(resolve => {
             let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
                 timeoutId = null;
-                console.error(`[Monitor] Injection write timeout for ${target}`);
                 resolve({ success: false, error: 'Write timed out' });
             }, 1000);
 
             try {
                 port.write(payload, async (err?: Error | null) => {
-                    if (!timeoutId) return; // 已超时，忽略回调
+                    if (!timeoutId) return;
                     clearTimeout(timeoutId);
                     timeoutId = null;
-
                     if (!err) return resolve({ success: true });
-
-                    // 写入失败：检测对端是否未打开
-                    const errorMsg = await this.diagnoseWriteError(err, port, target);
-                    console.error(`[Monitor] Injection write error:`, errorMsg);
+                    const errorMsg = this.diagnoseWriteError(err);
                     resolve({ success: false, error: errorMsg });
                 });
             } catch (syncErr: any) {
                 if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
-                console.error(`[Monitor] Injection write sync error:`, syncErr.message);
                 resolve({ success: false, error: syncErr.message });
             }
         });
     }
 
-    // ── 写入错误诊断 ──
-
-    private async diagnoseWriteError(err: Error, port: SerialPortInstance, target: string): Promise<string> {
-        if (target !== 'virtual' || !port.isOpen) return err.message;
-        try {
-            const signals = await port.getControlSignals();
-            if (!signals.carrierDetect && !signals.dsr && !signals.cts) {
-                return 'Write failed: Partner software (external port) is not open.';
-            }
-        } catch { /* 信号检查异常，使用原始错误 */ }
+    private diagnoseWriteError(err: Error): string {
         return err.message;
     }
 
-    // ── 注入写入：对外接口 ──
-
     async write(sessionId: string, target: 'virtual' | 'physical', data: string | number[]) {
         const session = this.sessions.get(sessionId);
-        if (!session) {
-            console.error(`[Monitor] Write failed: Session ${sessionId} not found`);
-            return { success: false, error: 'Session not found' };
-        }
+        if (!session) return { success: false, error: 'Session not found' };
 
         const port = target === 'virtual' ? session.internal : session.physical;
         if (!port?.isOpen) return { success: false, error: 'Target port not open' };

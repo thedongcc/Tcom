@@ -1,4 +1,4 @@
-﻿import { Layout } from './components/layout/Layout'
+import { Layout } from './components/layout/Layout'
 import { SettingsProvider } from './context/SettingsContext'
 import { I18nProvider } from './context/I18nContext'
 import { ToastProvider } from './context/ToastContext'
@@ -33,7 +33,7 @@ function App() {
             <CommandProvider>
               <SessionProvider manager={sessionManager}>
                 <PluginProvider>
-                  <Layout sessionManager={sessionManager} editorLayout={editorLayout}>
+                  <Layout editorLayout={editorLayout}>
                     <div className="flex flex-1 items-center justify-center h-full">
                       <div className="flex flex-col items-center max-w-md text-center">
                         <h1 className="text-4xl font-bold mb-4 text-[var(--st-panel-header-text)]">Tcom</h1>
