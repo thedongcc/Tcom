@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化更新逻辑,现在启动时不再自动检查更新了，改为每30分钟自动静默检查
 - 优化组件颜色变量独立解耦
 - 修复监控启动问题
+- 监控数据方向标签更改颜色
 
 ### Removed
 - 

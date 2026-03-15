@@ -143,28 +143,30 @@ export const MonitorLogItem = React.memo(({
             <div className="flex items-center gap-1.5 shrink-0" style={{ height: `${lineHeightPx}px` }}>
                 {showPacketType && (
                     <div
-                        className={`flex items-center justify-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm w-auto px-1 min-w-[5.5em] shrink-0 select-none pt-[1px]
-                        ${log.topic === 'virtual' ? 'bg-[var(--st-monitor-log-tx-label-bg)] text-[var(--st-monitor-virtual-label-text)] border-[var(--st-monitor-log-tx-label-bg)]/40' : 'bg-[var(--st-monitor-log-rx-label-bg)] text-[var(--st-monitor-rx-label-text)] border-[var(--st-monitor-log-rx-label-bg)]/40'}`}
+                        className={`grid grid-cols-[1fr_auto_1fr] items-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm px-1 w-[8.5em] shrink-0 select-none pt-[1px]
+                        ${log.type === 'TX' && log.crcStatus === 'none' 
+                            ? (log.topic === 'virtual' ? 'bg-[var(--st-tcom-v-bg)] text-[var(--st-tcom-v-text)] border-[var(--st-tcom-v-border)]' : 'bg-[var(--st-tcom-p-bg)] text-[var(--st-tcom-p-text)] border-[var(--st-tcom-p-border)]')
+                            : (log.topic === 'virtual' ? 'bg-[var(--st-monitor-log-tx-label-bg)] text-[var(--st-monitor-virtual-label-text)] border-[var(--st-monitor-log-tx-label-bg)]/40' : 'bg-[var(--st-monitor-log-rx-label-bg)] text-[var(--st-monitor-rx-label-text)] border-[var(--st-monitor-log-rx-label-bg)]/40')}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         {log.type === 'TX' && log.crcStatus === 'none' ? (
                             <>
-                                <span className="font-extrabold text-[var(--st-monitor-tx-label-text)] truncate max-w-[3em] text-center shrink-0">Tcom</span>
-                                <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
-                                <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
+                                <span className={`font-extrabold truncate text-center shrink-0`}>Tcom</span>
+                                <span className={`opacity-50 text-[0.8em] shrink-0 mx-0.5 text-center`}>-&gt;</span>
+                                <span className={`opacity-90 truncate text-center shrink-0`}>{log.topic === 'virtual' ? virtualSerialPort : physicalPortPath}</span>
                             </>
                         ) : (
                             log.topic === 'virtual' ? (
                                 <>
-                                    <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
-                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
-                                    <span className="font-extrabold text-[var(--st-monitor-virtual-label-text)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="opacity-90 truncate text-center shrink-0">{virtualSerialPort}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5 text-center">-&gt;</span>
+                                    <span className="font-extrabold text-[var(--st-monitor-virtual-label-text)] truncate text-center shrink-0">{physicalPortPath}</span>
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-extrabold text-[var(--st-monitor-rx-label-text)] truncate max-w-[3em] text-center shrink-0">{physicalPortPath}</span>
-                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5">-&gt;</span>
-                                    <span className="opacity-90 truncate max-w-[3em] text-center shrink-0">{virtualSerialPort}</span>
+                                    <span className="font-extrabold text-[var(--st-monitor-rx-label-text)] truncate text-center shrink-0">{physicalPortPath}</span>
+                                    <span className="opacity-50 text-[0.8em] shrink-0 mx-0.5 text-center">-&gt;</span>
+                                    <span className="opacity-90 truncate text-center shrink-0">{virtualSerialPort}</span>
                                 </>
                             )
                         )}
@@ -188,7 +190,11 @@ export const MonitorLogItem = React.memo(({
                     </span>
                 )}
             </div>
-            <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]'}`}>
+            <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${
+                log.type === 'TX' && log.crcStatus === 'none'
+                    ? (log.topic === 'virtual' ? 'text-[var(--st-tcom-v-msg-text)] font-semibold' : 'text-[var(--st-tcom-p-msg-text)] font-semibold')
+                    : (log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]')
+            }`}>
                 {renderHighlightedText(log, formatData(log.data, viewMode, encoding))}
             </span>
         </div>

@@ -238,6 +238,16 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--st-ctrl-char-fg", label: "控制字符标记文字" },
       { var: "--st-ctrl-char-bg", label: "控制字符标记背景" },
       { var: "--st-ctrl-char-border", label: "控制字符标记边框" },
+
+      { var: "--st-tcom-v-bg", label: "Tcom 向虚拟口送信背景" },
+      { var: "--st-tcom-v-border", label: "Tcom 向虚拟口送信边线" },
+      { var: "--st-tcom-v-text", label: "Tcom 向虚拟口送信徽标文字" },
+      { var: "--st-tcom-v-msg-text", label: "Tcom 向虚拟口送信正文文字" },
+
+      { var: "--st-tcom-p-bg", label: "Tcom 向物理口送信背景" },
+      { var: "--st-tcom-p-border", label: "Tcom 向物理口送信边线" },
+      { var: "--st-tcom-p-text", label: "Tcom 向物理口送信徽标文字" },
+      { var: "--st-tcom-p-msg-text", label: "Tcom 向物理口送信正文文字" },
     ],
   },
 

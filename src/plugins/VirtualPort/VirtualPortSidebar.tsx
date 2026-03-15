@@ -1,4 +1,4 @@
-﻿/**
+/**
  * VirtualPortSidebar.tsx
  * 虚拟串口侧边栏 — com0com 驱动管理和虚拟端口对创建。
  *
@@ -7,7 +7,7 @@
  * - useVirtualPortState.ts — 状态管理（路径检测、端口对 CRUD、监控器开关）
  */
 import { RefreshCw, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
-import { useSessionManager } from '../../hooks/useSessionManager';
+import { useSession } from '../../context/SessionContext';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { Com0Com } from '../../utils/com0com';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -20,11 +20,11 @@ import { useVirtualPortState } from './useVirtualPortState';
 
 interface VirtualPortSidebarProps {
     onNavigate: (view: string) => void;
-    sessionManager: ReturnType<typeof useSessionManager>;
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const VirtualPortSidebar = ({ sessionManager }: VirtualPortSidebarProps) => {
+export const VirtualPortSidebar = ({ onNavigate, editorLayout }: VirtualPortSidebarProps) => {
+    const sessionManager = useSession();
     const { confirm } = useConfirm();
     const { t } = useI18n();
 

@@ -312,6 +312,9 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - `--{component}-border` — 边框色
 - 按钮/切换类组件额外需要：`--{component}-hover`、`--{component}-active`
 
+**全局状态同步要求 (非常重要！)**：
+- 新增任何 CSS 变量后，除了在 `index.css` 定义备用值和在 `componentTokenMap.ts` 注册之外，**必须同步将其默认值添加到 `electron/ipc/theme-defaults.ts` 中的 `DEFAULT_DARK_COLORS` 和 `DEFAULT_LIGHT_COLORS` 里**。如果不加，切换或重置主题时将会丢失这些变量！
+
 ### 4.10 反模式（禁止）
 
 - ❌ 使用 Emoji 作为图标 — 统一使用 Lucide React 图标库

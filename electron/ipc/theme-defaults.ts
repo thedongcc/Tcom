@@ -437,7 +437,15 @@ export const DEFAULT_DARK_COLORS: Record<string, string> = {
     "--st-sendarea-toolbar-border": "#454545",
     "--st-sendarea-toolbar-active": "#007acc",
     "--st-toast-bg": "#252526",
-    "--st-toast-border": "#454545"
+    "--st-toast-border": "#454545",
+    "--st-tcom-v-bg": "rgba(139, 92, 246, 0.15)",
+    "--st-tcom-v-border": "rgba(139, 92, 246, 0.4)",
+    "--st-tcom-v-text": "#a78bfa",
+    "--st-tcom-v-msg-text": "#c4b5fd",
+    "--st-tcom-p-bg": "rgba(14, 165, 233, 0.15)",
+    "--st-tcom-p-border": "rgba(14, 165, 233, 0.4)",
+    "--st-tcom-p-text": "#38bdf8",
+    "--st-tcom-p-msg-text": "#7dd3fc"
 };
 
 // ─── 亮色主题默认颜色 ──────────────────────────────────────────────────────────
@@ -872,7 +880,15 @@ export const DEFAULT_LIGHT_COLORS: Record<string, string> = {
     "--st-sendarea-toolbar-border": "#e4e4e4",
     "--st-sendarea-toolbar-active": "#007acc",
     "--st-toast-bg": "#f3f3f3",
-    "--st-toast-border": "#e4e4e4"
+    "--st-toast-border": "#e4e4e4",
+    "--st-tcom-v-bg": "rgba(139, 92, 246, 0.1)",
+    "--st-tcom-v-border": "rgba(139, 92, 246, 0.3)",
+    "--st-tcom-v-text": "#8b5cf6",
+    "--st-tcom-v-msg-text": "#7c3aed",
+    "--st-tcom-p-bg": "rgba(14, 165, 233, 0.1)",
+    "--st-tcom-p-border": "rgba(14, 165, 233, 0.3)",
+    "--st-tcom-p-text": "#0284c7",
+    "--st-tcom-p-msg-text": "#0369a1"
 };
 
 // ─── 主题模板生成 ────────────────────────────────────────────────────────────────

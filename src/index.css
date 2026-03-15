@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @font-face {
   font-family: 'AppCoreFont';
@@ -259,6 +259,17 @@ div[data-direction="vertical"]:hover {
   --st-tx-bg: rgba(255, 255, 255, 0.05);
   --st-rx-text: var(--app-foreground);
   --st-tx-text: var(--app-foreground);
+
+  /* Tcom Sending distinctive colors */
+  --st-tcom-v-bg: rgba(139, 92, 246, 0.15);         /* Violet - Tcom -> Virtual 背景 */
+  --st-tcom-v-border: rgba(139, 92, 246, 0.4);      /* Violet - Tcom -> Virtual 边框 */
+  --st-tcom-v-text: #a78bfa;                        /* Violet - Tcom -> Virtual 徽标字 */
+  --st-tcom-v-msg-text: #c4b5fd;                    /* Violet - Tcom -> Virtual 正文文字 */
+
+  --st-tcom-p-bg: rgba(14, 165, 233, 0.15);         /* Sky Blue - Tcom -> Physical 背景 */
+  --st-tcom-p-border: rgba(14, 165, 233, 0.4);      /* Sky Blue - Tcom -> Physical 边框 */
+  --st-tcom-p-text: #38bdf8;                        /* Sky Blue - Tcom -> Physical 徽标字 */
+  --st-tcom-p-msg-text: #7dd3fc;                    /* Sky Blue - Tcom -> Physical 正文文字 */
 
   /* MQTT Monitor */
   --st-mqtt-toolbar-bg: var(--widget-background);
