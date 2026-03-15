@@ -1,4 +1,4 @@
-﻿import { Menu, Pin, PinOff, Palette } from 'lucide-react';
+import { Pin, PinOff, Palette } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -48,14 +48,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
       >
         {/* 左侧：菜单图标 + 标题 */}
         <div className="flex items-center h-full px-2 flex-1 min-w-0">
-          <div className="mr-3 ml-1">
-            <Menu
-              size={16}
-              className="text-[var(--st-titlebar-icon)] opacity-80 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 cursor-pointer"
-              style={{ WebkitAppRegion: 'no-drag' } as any}
-            />
-          </div>
-          <div className="text-xs text-[var(--st-titlebar-text)] font-medium truncate">{title}</div>
+          <div className="text-xs text-[var(--st-titlebar-text)] font-medium truncate ml-2">{title}</div>
         </div>
 
         {/* 右侧：颜色编辑器 + 置顶按钮，紧靠原生控件左侧 */}

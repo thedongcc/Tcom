@@ -22,6 +22,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     const [cdpDebugData, setCdpDebugData] = useState<{ compKey: string | null, className: string, outerHTML: string } | null>(null);
     const lastAppliedEditsRef = useRef<Record<string, string>>({});
     const previousThemeId = useRef<string | null>(null);
+    const initDone = useRef(false);
 
     // 派生状态
     const currentThemeId = config.theme || localStorage.getItem('tcom-theme') || 'dark';
@@ -35,16 +36,16 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             if (e.key === 'Escape') {
                 if (isInspecting) {
                     setIsInspecting(false);
-                    window.themeAPI.stopInspector();
+                    window.themeAPI?.stopInspector?.();
                 } else {
                     onClose();
                 }
             }
         };
-        const unInspectorStop = window.themeAPI.onInspectorStopped(() => {
+        const unInspectorStop = window.themeAPI?.onInspectorStopped?.(() => {
             setIsInspecting(false);
         });
-        const unInspectorStart = window.themeAPI.onInspectorStarted(() => {
+        const unInspectorStart = window.themeAPI?.onInspectorStarted?.(() => {
             setIsInspecting(true);
         });
 
@@ -69,6 +70,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             if (savedGroups && Object.keys(savedGroups).length > 0) {
                 setExpandedGroups(savedGroups);
             }
+            initDone.current = true;
             if (pendingEdits && Object.keys(pendingEdits).length > 0) {
                 setAllEdits(pendingEdits);
                 const currentId = localStorage.getItem('tcom-theme') || 'dark';
@@ -84,16 +86,16 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         });
     }, []);
 
-    // 同步 expandedGroups 到主进程
+    // 同步 expandedGroups 到主进程（包括空对象，允许全部折叠持久化）
     useEffect(() => {
-        if (Object.keys(expandedGroups).length > 0) {
+        if (initDone.current) {
             (window as any).themeAPI?.setExpandedGroups(expandedGroups);
         }
     }, [expandedGroups]);
 
-    // 默认展开 + 加载主题
+    // 默认展开 + 加载主题（仅在初始化完成后且确实没有保存状态时使用默认值）
     useEffect(() => {
-        if (isOpen && Object.keys(expandedGroups).length === 0) {
+        if (isOpen && initDone.current && Object.keys(expandedGroups).length === 0) {
             setExpandedGroups({ 'global-variables': true });
         }
         if (isOpen && availableThemes.length === 0) {
@@ -117,7 +119,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
                 Object.entries(themeEdits).forEach(([varName, color]) => {
                     document.documentElement.style.setProperty(varName, color);
                 });
-                window.themeAPI?.applyPreview(themeEdits);
+                window.themeAPI?.applyPreview?.(themeEdits);
             }
             previousThemeId.current = currentThemeDef.id;
         }
@@ -135,7 +137,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     }, []);
 
     useEffect(() => {
-        const unsub = window.themeAPI?.onComponentPicked((data) => {
+        const unsub = window.themeAPI?.onComponentPicked?.((data) => {
             setCdpDebugData(data);
             setLastPickedVars(extractVars(data.outerHTML));
             setTimeout(() => setLastPickedVars([]), 2000);
@@ -146,13 +148,13 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     // ── Inspector 控制 ──
     const startInspect = useCallback(() => {
         setIsInspecting(true);
-        window.themeAPI?.startInspectorMode();
+        window.themeAPI?.startInspectorMode?.();
     }, []);
 
     const stopInspect = useCallback(() => {
         if (isInspecting) {
             setIsInspecting(false);
-            window.themeAPI?.stopInspectorMode();
+                window.themeAPI?.stopInspectorMode?.();
         }
     }, [isInspecting]);
 
@@ -206,7 +208,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             const def = availableThemes.find(t => t.id === themeId);
             if (def) {
                 const updatedThemeDef = { ...def, colors: { ...def.colors, ...themeEdits } };
-                const res = await window.themeAPI.save(themeId, updatedThemeDef);
+                const res = await window.themeAPI!.save!(themeId, updatedThemeDef);
                 if (!res.success) {
                     alert(`保存主题 ${def.name} 失败: ${res.error}`);
                     hasError = true;

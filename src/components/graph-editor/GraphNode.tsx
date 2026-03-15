@@ -1,6 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Network, Monitor, Link } from 'lucide-react';
 import { GraphLayout } from './GraphStyles';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';

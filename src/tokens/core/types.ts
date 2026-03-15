@@ -3,8 +3,8 @@
  * Token 插件系统核心类型定义。
  * 每种 Token 类型都必须实现 TokenPlugin 接口后注册到 TokenRegistry。
  */
-import React from 'react';
-import { Segment, Token } from '../../types/token';
+import type React from 'react';
+import { Segment as _Segment, Token as _Token } from '../../types/token';
 
 /** 编译上下文，compile 函数通过此对象访问当前字节偏移信息 */
 export interface CompileContext {

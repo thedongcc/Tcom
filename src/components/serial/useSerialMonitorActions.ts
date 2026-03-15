@@ -137,7 +137,7 @@ export function useSerialMonitorActions({
         addCommand({
             ...updates,
             parentId: undefined
-        } as Omit<CommandItem, 'id' | 'type'>);
+        } as unknown as Omit<CommandItem, 'id' | 'type'>);
     }, [addCommand]);
 
     return {

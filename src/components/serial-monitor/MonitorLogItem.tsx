@@ -58,8 +58,8 @@ export const MonitorLogItem = React.memo(({
     mergeRepeats = true,
     flashNewMessage,
     fontSize = 15,
-    rxCRC,
-    crcEnabled
+    rxCRC: _rxCRC,
+    crcEnabled: _crcEnabled
 }: MonitorLogItemProps) => {
     // 高亮搜索匹配文本
     const renderHighlightedText = (log: any, text: string) => {

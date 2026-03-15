@@ -130,7 +130,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 {isConnected && !partnerConnected && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-amber-600/20 border-b border-amber-600/30">
                         <div className="px-4 py-2 flex items-center justify-between gap-3 text-amber-400 text-xs">
-                            <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort })}</span></div>
+                            <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort || '' })}</span></div>
                             <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => onSendTarget('physical')}>{t('monitor.switchPhysical')}</button>
                         </div>
                     </motion.div>
@@ -159,9 +159,9 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                                 key={`${log.id}-${log.repeatCount || 1}`}
                                 log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
                                 showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength}
-                                virtualSerialPort={virtualSerPort} physicalPortPath={physPort}
+                                virtualSerialPort={virtualSerPort || ''} physicalPortPath={physPort}
                                 onContextMenu={handleLogContextMenu}
-                                formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText}
+                                formatData={formatData} formatTimestamp={(ts: number, fmt?: string) => formatTimestamp(ts, fmt || 'HH:mm:ss.SSS')} getDataLengthText={getDataLengthText}
                                 timestampFormat={themeConfig.timestampFormat}
                                 matches={matches} activeMatch={activeMatch} mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
                                 fontSize={fontSize} rxCRC={rxCRC as any} crcEnabled={rxCRC.enabled as any}

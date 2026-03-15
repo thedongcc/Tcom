@@ -20,7 +20,7 @@ export const REGION_GROUPS = [
     {
         id: 'sidebar-menus',
         label: '侧边栏及菜单',
-        components: ['session-list-sidebar', 'session-list-item', 'command-sidebar', 'extensions-sidebar']
+        components: ['session-list-sidebar', 'session-list-item', 'command-sidebar', 'module-manager-sidebar']
     },
     {
         id: 'serial-tabs',

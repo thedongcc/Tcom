@@ -14,7 +14,7 @@ const checkIsAdmin = (): Promise<boolean> => {
     if (!_isAdminPromise) {
         _isAdminPromise = new Promise((resolve) => {
             const { exec } = require('node:child_process');
-            exec('net session', { windowsHide: true }, (err: any) => resolve(!err));
+            exec('net session', { windowsHide: true }, (err: Error | null) => resolve(!err));
         });
     }
     return _isAdminPromise;
@@ -40,9 +40,9 @@ export function registerAppIpc(win: BrowserWindow) {
             app.relaunch();
             app.exit(0);
             return { success: true };
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Factory reset failed:', err);
-            return { success: false, error: err.message };
+            return { success: false, error: (err as Error).message };
         }
     });
 
@@ -86,7 +86,7 @@ export function registerAppIpc(win: BrowserWindow) {
             let err = '';
 
             child.stdout.on('data', (d: Buffer) => chunks.push(d));
-            child.stderr.on('data', (d: any) => err += d.toString());
+            child.stderr.on('data', (d: Buffer) => err += d.toString());
 
             child.on('close', (code: number) => {
                 const out = Buffer.concat(chunks).toString('utf8');
@@ -97,7 +97,7 @@ export function registerAppIpc(win: BrowserWindow) {
                     resolve({ success: false, fonts: [], error: err || 'Failed to list fonts' });
                 }
             });
-            child.on('error', (e: any) => {
+            child.on('error', (e: Error) => {
                 resolve({ success: false, fonts: [], error: e.message });
             });
         });
@@ -114,11 +114,11 @@ export function registerAppIpc(win: BrowserWindow) {
     });
 
     // --- Shell ---
-    ipcMain.handle('shell:openExternal', async (_event: any, url: string) => {
+    ipcMain.handle('shell:openExternal', async (_event, url: string) => {
         await shell.openExternal(url);
     });
 
-    ipcMain.handle('shell:showOpenDialog', async (_event: any, options: any) => {
+    ipcMain.handle('shell:showOpenDialog', async (_event, options: Record<string, unknown>) => {
         const { dialog } = require('electron');
         return await dialog.showOpenDialog(win, options);
     });

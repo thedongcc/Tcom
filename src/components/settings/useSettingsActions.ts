@@ -12,7 +12,7 @@ import { useI18n } from '../../context/I18nContext';
 const MONO_KEYWORDS = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
 export const useSettingsActions = () => {
-    const { config, resetConfig, importConfig, exportConfig } = useSettings();
+    const { config: _config, resetConfig, importConfig, exportConfig } = useSettings();
     const { confirm } = useConfirm();
     const { t } = useI18n();
     const [systemFonts, setSystemFonts] = useState<string[]>([]);

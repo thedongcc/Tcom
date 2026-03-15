@@ -62,7 +62,7 @@ export function useMonitorPairs({ monitorConfig, setupcPath, monitorEnabled, isA
             setExistingPairs(pairs);
 
             const { virtual, paired } = validateSelection(
-                monitorConfig.virtualSerialPort, monitorConfig.pairedPort, pairs
+                monitorConfig.virtualSerialPort || '', monitorConfig.pairedPort || '', pairs
             );
 
             if (virtual !== monitorConfig.virtualSerialPort || paired !== monitorConfig.pairedPort) {

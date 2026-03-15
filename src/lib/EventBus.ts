@@ -1,9 +1,9 @@
 /**
  * EventBus.ts
  * 全局事件总线，支持发布-订阅模式。
- * 从 PluginContext.tsx 中拆分出来，可被多个模块复用。
+ * 从 FeatureContext.tsx 中拆分出来，可被多个模块复用。
  */
-import { Disposable } from '../types/plugin';
+import { Disposable } from '../types/module';
 
 export class EventBus {
     private listeners = new Map<string, Set<(...args: any[]) => void>>();

@@ -2,21 +2,24 @@
  * TcpService
  * 负责 TCP 服务器的生命周期管理。
  */
-export class TcpService {
-    private servers: Map<number, any> = new Map();
-    private webContents: any;
+import type net from 'node:net';
+import type { WebContents } from 'electron';
 
-    constructor(webContents: any) {
+export class TcpService {
+    private servers: Map<number, net.Server> = new Map();
+    private webContents: WebContents;
+
+    constructor(webContents: WebContents) {
         this.webContents = webContents;
     }
 
     startServer(port: number) {
-        const net = require('net');
+        const netModule: typeof net = require('net');
         if (this.servers.has(port)) {
             return { success: false, error: 'Server already running' };
         }
 
-        const server = net.createServer((socket: any) => {
+        const server = netModule.createServer((socket: net.Socket) => {
             socket.on('data', (data: Buffer) => {
                 this.webContents.send('tcp:data', { port, data });
             });
@@ -33,7 +36,7 @@ export class TcpService {
             this.webContents.send('tcp:server-started', { port });
         });
 
-        server.on('error', (err: any) => {
+        server.on('error', (err: Error) => {
             this.webContents.send('tcp:error', { port, error: err.message });
         });
 
@@ -51,7 +54,7 @@ export class TcpService {
         return false;
     }
 
-    write(_port: number, _data: any) {
+    write(_port: number, _data: string | number[]) {
         // 预留：写入 TCP 客户端（需按服务端跟踪已连接 socket）
     }
 }

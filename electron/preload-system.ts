@@ -3,7 +3,31 @@
  * 应用/更新/Shell/窗口管理桥接。
  * 从 preload.ts 拆分出来，按系统域分组。
  */
-import { ipcRenderer, contextBridge } from 'electron';
+import { ipcRenderer, contextBridge, type IpcRendererEvent } from 'electron';
+
+/** 更新状态数据 */
+interface UpdateStatusData {
+    status: string;
+    version?: string;
+    error?: string;
+}
+
+/** 更新下载进度 */
+interface UpdateProgressData {
+    percent: number;
+    bytesPerSecond?: number;
+    total?: number;
+    transferred?: number;
+}
+
+/** 文件对话框选项 */
+interface OpenDialogOptions {
+    title?: string;
+    defaultPath?: string;
+    buttonLabel?: string;
+    filters?: Array<{ name: string; extensions: string[] }>;
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'>;
+}
 
 export function registerAppBridge() {
     contextBridge.exposeInMainWorld('appAPI', {
@@ -19,13 +43,13 @@ export function registerUpdateBridge() {
         getVersion: () => ipcRenderer.invoke('app:version'),
         getStats: () => ipcRenderer.invoke('system:stats'),
         listFonts: () => ipcRenderer.invoke('app:list-fonts'),
-        onStatus: (callback: (data: any) => void) => {
-            const listener = (_: any, data: any) => callback(data);
+        onStatus: (callback: (data: UpdateStatusData) => void) => {
+            const listener = (_: IpcRendererEvent, data: UpdateStatusData) => callback(data);
             ipcRenderer.on('update:status', listener);
             return () => ipcRenderer.off('update:status', listener);
         },
-        onProgress: (callback: (progress: any) => void) => {
-            const listener = (_: any, progress: any) => callback(progress);
+        onProgress: (callback: (progress: UpdateProgressData) => void) => {
+            const listener = (_: IpcRendererEvent, progress: UpdateProgressData) => callback(progress);
             ipcRenderer.on('update:progress', listener);
             return () => ipcRenderer.off('update:progress', listener);
         }
@@ -35,7 +59,7 @@ export function registerUpdateBridge() {
 export function registerShellBridge() {
     contextBridge.exposeInMainWorld('shellAPI', {
         openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
-        showOpenDialog: (options: any) => ipcRenderer.invoke('shell:showOpenDialog', options),
+        showOpenDialog: (options: OpenDialogOptions) => ipcRenderer.invoke('shell:showOpenDialog', options),
     });
 }
 

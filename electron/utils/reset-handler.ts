@@ -6,7 +6,7 @@
 import path from 'node:path';
 import fsSync from 'node:fs';
 
-export function handlePendingReset(userDataPath: string, customDataPath: string) {
+export function handlePendingReset(_userDataPath: string, customDataPath: string) {
     const resetFlagPath = path.join(path.dirname(customDataPath), '.reset-pending');
 
     if (fsSync.existsSync(resetFlagPath)) {

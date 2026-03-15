@@ -82,7 +82,7 @@ export const useCommandListActions = ({
 
         if (!activeSessionId) return;
         const session = sessions.find(s => s.id === activeSessionId);
-        if (!session.isConnected) {
+        if (!session || !session.isConnected) {
             if (activeSessionId) {
                 try {
                     const success = await connectSession(activeSessionId);

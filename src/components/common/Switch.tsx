@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 interface SwitchProps {
     checked: boolean;
@@ -12,7 +12,7 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label, disabl
     return (
         <label
             className={`flex items-center justify-between group/switch cursor-pointer gap-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-            onClick={(e) => {
+            onClick={(_e) => {
                 if (!disabled) {
                     onChange(!checked);
                 }

@@ -57,7 +57,7 @@ export class TimedSendManager {
         }
 
         const payload = Buffer.from(data);
-        const { Worker: WorkerThread } = require('worker_threads');
+        require('worker_threads'); // 确保 worker_threads 模块可用
 
         // SharedArrayBuffer 作停止信号：control[0] = 0 运行中，1 = 停止
         const controlBuf = new SharedArrayBuffer(4);
@@ -110,7 +110,7 @@ export class TimedSendManager {
             return { success: false, error: 'Port not open' };
         }
 
-        const { Worker: WorkerThread } = require('worker_threads');
+        require('worker_threads'); // 确保 worker_threads 模块可用
 
         // SharedArrayBuffer：control[0]=0 运行中 / 1=停止
         const controlBuf = new SharedArrayBuffer(8);

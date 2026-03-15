@@ -1,11 +1,14 @@
-﻿import { useState, useRef } from 'react';
-import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Pipette, Check, FolderOpen, FileJson, AlertTriangle, X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Check, FolderOpen, FileJson } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
+import { Switch } from '../common/Switch';
 import { useSettingsActions } from './useSettingsActions';
 import { FactoryResetDialog } from './SettingsComponents';
+import { useFeatureManager } from '../../context/FeatureContextShared';
+import { FEATURE_REGISTRY } from '../../features/registry';
 
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -60,9 +63,10 @@ export const SettingsEditor = () => {
     const { config, availableThemes, loadThemes, updateConfig, updateUI, setTheme } =
         useSettings();
     const { t } = useI18n();
+    const { features, activateFeature, deactivateFeature } = useFeatureManager();
     const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const themeFileInputRef = useRef<HTMLInputElement>(null);
+    // themeFileInputRef 已移除（未使用）
 
     // Factory Reset State
     const [showFactoryReset, setShowFactoryReset] = useState(false);
@@ -224,6 +228,27 @@ export const SettingsEditor = () => {
                     ),
                 },
             ],
+        },
+        {
+            title: t('settings.groups.modules'),
+            items: FEATURE_REGISTRY
+                .filter(descriptor => descriptor.tier === 'optional')
+                .map(descriptor => {
+                    const isActive = features.find(f => f.feature.id === descriptor.id)?.isActive ?? false;
+                    return {
+                        label: t(descriptor.nameKey as any),
+                        description: t(descriptor.descriptionKey as any),
+                        render: () => (
+                            <Switch
+                                checked={isActive}
+                                onChange={(checked) => {
+                                    if (checked) activateFeature(descriptor.id);
+                                    else deactivateFeature(descriptor.id);
+                                }}
+                            />
+                        ),
+                    };
+                }),
         },
         {
             title: 'Danger Zone',

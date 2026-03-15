@@ -49,7 +49,7 @@ export function registerThemeIpc(win: BrowserWindow, RENDERER_DIST: string, VITE
       await ensureThemeFilesExists(themeDir);
 
       const files = await fs.readdir(themeDir);
-      const themes: any[] = [];
+      const themes: Array<{ id: string; name: string; type: string; colors: Record<string, string> }> = [];
 
       for (const file of files) {
         if (file.endsWith('.json')) {
@@ -73,9 +73,9 @@ export function registerThemeIpc(win: BrowserWindow, RENDERER_DIST: string, VITE
         }
       }
       return { success: true, themes };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load themes:', err);
-      return { success: false, error: err.message, themes: [] };
+      return { success: false, error: (err as Error).message, themes: [] };
     }
   });
 
@@ -92,8 +92,8 @@ export function registerThemeIpc(win: BrowserWindow, RENDERER_DIST: string, VITE
       // 不再覆盖写入文件，仅打开已存在的文件
       shell.openPath(filePath);
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+    } catch (err: unknown) {
+      return { success: false, error: (err as Error).message };
     }
   });
 
@@ -180,8 +180,8 @@ export function registerThemeIpc(win: BrowserWindow, RENDERER_DIST: string, VITE
       delete pendingEditsMap[id];
       win?.webContents.send('theme:reload'); // 通知主窗口刷新
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: (error as Error).message };
     }
   });
 

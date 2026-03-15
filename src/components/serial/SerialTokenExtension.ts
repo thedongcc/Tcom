@@ -1,4 +1,4 @@
-﻿import { Node, mergeAttributes } from '@tiptap/core';
+import { Node, mergeAttributes } from '@tiptap/core';
 import { tokenRegistry } from '../../tokens';
 
 export const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
@@ -125,7 +125,7 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 if (newConfig === null) return;
                 const newConfigCopy = JSON.parse(JSON.stringify(newConfig));
                 editor.chain().focus().command(({ tr }) => {
-                    tr.setNodeAttribute(getPos(), 'config', newConfigCopy);
+                    tr.setNodeAttribute(getPos() as number, 'config', newConfigCopy);
                     return true;
                 }).run();
             };

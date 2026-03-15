@@ -21,7 +21,7 @@ export interface TokenRowProps {
 }
 
 // ── 子组件 TokenRow (Memoized) ──
-export const TokenRow = React.memo(({ varName, label, value, isCopied, idPrefix = "", onColorChange, onCopy, setRef }: TokenRowProps) => {
+export const TokenRow = React.memo(({ varName, label, value, isCopied, idPrefix: _idPrefix = "", onColorChange, onCopy, setRef }: TokenRowProps) => {
     const { t } = useI18n();
     return (
         <div

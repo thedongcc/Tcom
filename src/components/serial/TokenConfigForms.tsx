@@ -84,7 +84,7 @@ export const HexConfigForm = ({
 
 // ─── CRC 配置表单 ─────────────────────────────────────────────────────
 export const CRCConfigForm = ({
-    config, setConfig, startIndexInput, setStartIndexInput, endIndexInput, setEndIndexInput, onKeyDown,
+    config, setConfig, startIndexInput, setStartIndexInput, endIndexInput: _endIndexInput, setEndIndexInput, onKeyDown,
 }: {
     config: CRCConfig;
     setConfig: (c: CRCConfig) => void;

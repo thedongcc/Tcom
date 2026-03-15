@@ -1,5 +1,5 @@
-﻿import { useRef, useEffect } from 'react';
-import { X, Network, FileText, Monitor, Cpu, Server, Activity } from 'lucide-react';
+import { useRef, useEffect } from 'react';
+import { X, Network, Cpu, Activity } from 'lucide-react';
 import { SessionType } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 

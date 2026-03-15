@@ -7,7 +7,7 @@
  * - useCommandListActions.ts — 拖放和发送操作
  * - CommandScrollArea — 可滚动列表区域
  */
-import { FolderPlus, Upload, Trash2, MoreHorizontal, FileText, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
+import { FolderPlus, Upload, Trash2, FileText, CornerDownLeft, Copy, CopyPlus, ClipboardPaste, Pencil } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCommandManager } from '../../hooks/useCommandManager';
 import { CommandList } from './CommandList';
@@ -16,10 +16,10 @@ import { CommandEditorDialog } from './CommandEditorDialog';
 import { useSession } from '../../context/SessionContext';
 import { ContextMenu } from '../common/ContextMenu';
 import { DndContext, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
-import { useToast } from '../../context/ToastContext';
+import { useToast as _useToast } from '../../context/ToastContext';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { useI18n } from '../../context/I18nContext';
-import { Tooltip } from '../common/Tooltip';
+
 import { useCommandListActions } from './useCommandListActions';
 import { useCommandKeyboardActions } from './useCommandKeyboardActions';
 
@@ -51,7 +51,7 @@ const CommandScrollArea = ({
             onClick={onClearSelection}
         >
             <CommandList
-                items={items} onEdit={onEdit} onSend={onSend}
+                items={items} onEdit={onEdit} onSend={(item) => onSend(item as CommandItem)}
                 onContextMenu={onContextMenu} dropIndicator={null}
                 canSend={canSend} selectedIds={selectedIds} onSelect={onSelect}
             />
@@ -77,7 +77,7 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
     const { t } = useI18n();
     const { activeSessionId } = useSession();
 
-    const [showMenu, setShowMenu] = useState(false);
+
     const [editingItem, setEditingItem] = useState<CommandEntity | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: CommandEntity | null } | null>(null);
 
@@ -111,10 +111,15 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
 
         if (!item) {
             return [
-                { label: t('command.newCommand'), icon: <FileText size={13} />, onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }) },
+                { label: t('command.newCommand'), icon: <FileText size={13} />, onClick: () => addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined } as unknown as Omit<CommandItem, 'id' | 'type'>) },
                 { label: t('command.newGroup'), icon: <FolderPlus size={13} />, onClick: () => addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)) },
                 { separator: true },
-                { label: t('common.paste'), icon: <CornerDownLeft size={13} className="rotate-180" />, onClick: () => handlePaste(undefined), disabled: clipboard.length === 0 }
+                { label: t('common.paste'), icon: <CornerDownLeft size={13} className="rotate-180" />, onClick: () => handlePaste(undefined), disabled: clipboard.length === 0 },
+                { separator: true },
+                { label: t('command.import'), icon: <Upload size={13} />, onClick: () => importCommands() },
+                { label: t('command.export'), icon: <Upload size={13} className="rotate-180" />, onClick: () => exportCommands() },
+                { separator: true },
+                { label: t('command.clearAll'), icon: <Trash2 size={13} />, color: 'red', onClick: () => clearAll(), disabled: commands.length === 0 },
             ];
         }
 
@@ -138,34 +143,6 @@ const CommandListSidebarContent = ({ onNavigate }: { onNavigate?: (view: string)
 
     return (
         <div ref={containerRef} className="flex flex-col h-full bg-[var(--command-sidebar-bg)] text-[var(--command-sidebar-text)]" onContextMenu={(e) => { e.preventDefault(); }} data-component="command-sidebar">
-            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold bg-[var(--command-sidebar-bg)] border-b border-[var(--command-sidebar-border)]">
-                <span className="uppercase tracking-wide">{t('command.commandMenu')}</span>
-                <div className="flex items-center gap-1 relative">
-                    <Tooltip content={t('command.menu')} position="bottom">
-                        <button className="p-1 hover:bg-[var(--list-hover-background)] rounded text-[var(--st-sidebar-text)]" onClick={() => setShowMenu(!showMenu)}>
-                            <MoreHorizontal size={14} />
-                        </button>
-                    </Tooltip>
-
-                    {showMenu && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-lg rounded-sm z-50 text-[13px]">
-                                <div className="py-1">
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { addGroup(generateUniqueName(commands, t('command.newGroup'), undefined)); setShowMenu(false); }}><FolderPlus size={14} /> {t('command.newGroup')}</div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { addCommand({ name: generateUniqueName(commands, t('command.newCommand'), undefined), payload: '', mode: 'text', tokens: {}, parentId: undefined }); setShowMenu(false); }}><FileText size={14} /> {t('command.newCommand')}</div>
-                                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { importCommands(); setShowMenu(false); }}><Upload size={14} /> {t('command.import')}</div>
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2" onClick={() => { exportCommands(); setShowMenu(false); }}><Upload size={14} className="rotate-180" /> {t('command.export')}</div>
-                                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1" />
-                                    <div className="px-3 py-1.5 hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2 text-[var(--st-error-text)]" onClick={() => { clearAll(); setShowMenu(false); }}><Trash2 size={14} /> {t('command.clearAll')}</div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
             <div className="flex-1 flex flex-col min-h-0">
                 <DndContext sensors={sensors} collisionDetection={customCollisionStrategy} onDragEnd={handleDragEnd}>
                     <CommandScrollArea

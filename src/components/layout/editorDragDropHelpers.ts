@@ -25,7 +25,7 @@ export function computeDropIndicator(
     // Case A: 拖放到 Tab 上（Composite ID）
     const overParsed = parseCompositeId(overId);
     if (overParsed) {
-        const targetNode = findNode(layout, overParsed.groupId) as LeafNode;
+        const targetNode = findNode(layout!, overParsed.groupId) as LeafNode;
         if (targetNode && overRect) {
             const hoverIndex = targetNode.views.indexOf(overParsed.sessionId);
             let insertIndex = hoverIndex;
@@ -42,7 +42,7 @@ export function computeDropIndicator(
     // Case B: 拖放到 DropZone（center/header/start）
     if (overId.includes('-center') || overId.includes('-header') || overId.includes('-start')) {
         const gId = overId.replace('-center', '').replace('-header', '').replace('-start', '');
-        const targetNode = findNode(layout, gId) as LeafNode;
+        const targetNode = findNode(layout!, gId) as LeafNode;
         if (!targetNode) return null;
 
         if (overId.includes('-start')) {
@@ -90,7 +90,7 @@ export function computeDragEndAction(
         const targetGroupId = parts.join('-');
 
         if (zone === 'center' || zone === 'header' || zone === 'start') {
-            const targetNode = findNode(layout, targetGroupId) as LeafNode;
+            const targetNode = findNode(layout!, targetGroupId) as LeafNode;
             let idx = targetNode ? targetNode.views.length : 0;
 
             if (zone === 'start') {
@@ -114,7 +114,7 @@ export function computeDragEndAction(
     // 拖放到 Tab 上
     const overParsed = parseCompositeId(overId);
     if (overParsed) {
-        const targetNode = findNode(layout, overParsed.groupId) as LeafNode;
+        const targetNode = findNode(layout!, overParsed.groupId) as LeafNode;
         if (targetNode) {
             let targetIndex = targetNode.views.indexOf(overParsed.sessionId);
             if (clientX !== undefined && overRect) {

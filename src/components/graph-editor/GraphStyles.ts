@@ -33,7 +33,7 @@ export const GraphLayout = {
         return nodeY + totalHeaderHeight + 10 + (index * 24) + 6; // 10 padding, 24 row height, 6 half-height
     },
 
-    getPortCoordinates: (node: { position: { x: number, y: number } }, type: 'source' | 'target', index: number = 0) => {
+    getPortCoordinates: (node: { position: { x: number, y: number } }, type: 'source' | 'target', _index: number = 0) => {
         const x = type === 'source'
             ? node.position.x + GraphLayout.NODE_WIDTH // Right edge
             : node.position.x;      // Left edge

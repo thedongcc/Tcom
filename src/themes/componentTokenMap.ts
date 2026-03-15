@@ -306,15 +306,13 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--st-command-drop-indicator", label: "拖拽目标指示线色" },
     ],
   },
-  "extensions-sidebar": {
-    label: "插件管理器侧栏",
+  "module-manager-sidebar": {
+    label: "模块管理器侧栏",
     tokens: [
-      { var: "--extensions-sidebar-bg", label: "后台背景色" },
-      { var: "--extensions-sidebar-text", label: "常规文本色" },
-      { var: "--st-extension-active-text", label: "启动状态高亮色" },
-      { var: "--st-extension-user-text", label: "用户安装标记色" },
-      { var: "--st-extension-warning-text", label: "风险警告标语色" },
-      { var: "--st-extension-warning-bg", label: "风险警告底色" },
+      { var: "--module-manager-bg", label: "背景色" },
+      { var: "--module-manager-text", label: "文本颜色" },
+      { var: "--module-manager-border", label: "分隔线颜色" },
+      { var: "--module-manager-item-hover", label: "悬停项背景" },
     ],
   },
   "settings-editor": {

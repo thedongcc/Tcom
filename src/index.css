@@ -320,13 +320,11 @@ div[data-direction="vertical"]:hover {
   --command-sidebar-empty-text: var(--st-command-empty-text);
   --command-sidebar-drop-indicator: var(--st-command-drop-indicator);
 
-  /* 扩展侧边栏 - 独立于普通 sidebar */
-  --extensions-sidebar-bg: var(--sidebar-background);
-  --extensions-sidebar-text: var(--st-sidebar-text);
-  --extensions-sidebar-hover: var(--list-hover-background);
-  --extensions-sidebar-active-text: var(--st-extension-active-text);
-  --extensions-sidebar-user-text: var(--st-extension-user-text);
-  --extensions-sidebar-warning-text: var(--st-extension-warning-text);
+  /* 模块管理侧边栏 - 独立于普通 sidebar */
+  --module-manager-bg: var(--sidebar-background);
+  --module-manager-text: var(--st-sidebar-text);
+  --module-manager-border: var(--border-color);
+  --module-manager-item-hover: var(--list-hover-background);
 
   /* 串口配置侧边栏 - 独立于普通 sidebar */
   --serial-config-bg: var(--sidebar-background);

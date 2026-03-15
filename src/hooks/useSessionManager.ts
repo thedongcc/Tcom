@@ -97,12 +97,12 @@ export const useSessionManager = () => {
 
     // --- 连接管理（委托给 useSessionConnection） ---
     const { connectSession, disconnectSession } = useSessionConnection({
-        sessionsRef, updateSession, updateSessionConfig, sessionLog, portScanner,
+        sessionsRef, updateSession, updateSessionConfig, sessionLog: sessionLog as any, portScanner,
     });
 
     // --- 数据发送（委托给 useSessionDataSender） ---
     const { writeToSession, publishMqtt, writeToMonitor } = useSessionDataSender({
-        sessionsRef, sessionLog,
+        sessionsRef, sessionLog: sessionLog as any,
     });
 
     // --- 会话 CRUD ---

@@ -3,7 +3,6 @@
  * 设置编辑器的 UI 子组件。
  * 从 SettingsEditor.tsx 中拆分出来。
  */
-import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 

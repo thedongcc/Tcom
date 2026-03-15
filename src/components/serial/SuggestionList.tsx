@@ -1,6 +1,6 @@
 
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { Settings, Clock, Flag, Hash } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { Hash } from 'lucide-react';
 
 export interface SuggestionListRef {
     onKeyDown: (props: { event: KeyboardEvent }) => boolean;

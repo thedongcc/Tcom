@@ -44,7 +44,7 @@ export function createPrewarmedThemeEditor(config: ThemeEditorConfig) {
     const { mainWindow, stateFilePath, RENDERER_DIST, VITE_DEV_SERVER_URL } = config;
 
     // 读取上次保存的窗口位置
-    let bounds: any = null;
+    let bounds: Partial<Electron.Rectangle> | null = null;
     try {
         if (fsSync.existsSync(stateFilePath)) {
             bounds = JSON.parse(fsSync.readFileSync(stateFilePath, 'utf8'));

@@ -1,48 +1,11 @@
 /**
- * pluginApiFactory.ts
- * 插件 API 构建工厂：buildPluginFromManifest + buildContextApi。
- * 从 PluginContext.tsx 中拆分出来。
+ * featureApiFactory.ts
+ * 模块 API 构建工厂：createFeatureContextApi。
  */
-import { Plugin, PluginContextApi, Disposable, SessionInfo, TpkgManifest } from '../types/plugin';
+import { FeatureContextApi, Disposable, SessionInfo } from '../types/module';
 import { globalEventBus } from '../lib/EventBus';
 
-// ─── 从 TpkgManifest 构建 Plugin 对象 ─────────────────────────────────────────
-
-export function buildPluginFromManifest(manifest: TpkgManifest): Plugin | null {
-    try {
-        // 使用 Function 構造器执行插件代码（沙箱有限，但满足桌面应用场景）
-        const moduleObj: { exports: any } = { exports: {} };
-        // eslint-disable-next-line no-new-func
-        const fn = new Function('module', 'exports', manifest.code);
-        fn(moduleObj, moduleObj.exports);
-
-        const exported = moduleObj.exports;
-
-        if (typeof exported.activate !== 'function') {
-            return null;
-        }
-
-        return {
-            id: manifest.id,
-            name: manifest.name,
-            version: manifest.version,
-            description: manifest.description,
-            author: manifest.author,
-            homepage: manifest.homepage,
-            activate: exported.activate.bind(exported),
-            deactivate: (exported.deactivate ?? (() => { })).bind(exported),
-            sidebarComponent: exported.sidebarComponent,
-            icon: exported.icon,
-            editorComponent: exported.editorComponent,
-            statusBarItems: exported.statusBarItems,
-        };
-    } catch (e) {
-        console.error('[PluginLoader] Failed to build plugin from manifest:', e);
-        return null;
-    }
-}
-
-// ─── 构建 PluginContextApi（插件沙箱接口）──────────────────────────────────────
+// ─── 构建 FeatureContextApi（模块沙箱接口）──────────────────────────────────────
 
 interface BuildContextApiDeps {
     showToast: (message: string, type?: any, duration?: number) => void;
@@ -54,20 +17,20 @@ interface BuildContextApiDeps {
     dataListenersRef: React.MutableRefObject<Set<(sessionId: string, data: Uint8Array) => void>>;
 }
 
-export function createPluginContextApi(pluginId: string, deps: BuildContextApiDeps): PluginContextApi {
+export function createFeatureContextApi(featureId: string, deps: BuildContextApiDeps): FeatureContextApi {
     const { showToast, confirm, sessions, activeSessionId, disposablesRef, commandsRef, dataListenersRef } = deps;
-    const storagePrefix = `tcom:plugin:${pluginId}:`;
+    const storagePrefix = `tcom:feature:${featureId}:`;
 
     const addDisposable = (d: Disposable) => {
-        if (!disposablesRef.current.has(pluginId)) {
-            disposablesRef.current.set(pluginId, []);
+        if (!disposablesRef.current.has(featureId)) {
+            disposablesRef.current.set(featureId, []);
         }
-        disposablesRef.current.get(pluginId)!.push(d);
+        disposablesRef.current.get(featureId)!.push(d);
         return d;
     };
 
     return {
-        pluginId,
+        featureId: featureId,
 
         ui: {
             showToast: (message, type = 'info', duration = 3000) => {
@@ -87,7 +50,7 @@ export function createPluginContextApi(pluginId: string, deps: BuildContextApiDe
         commands: {
             register: (id, label, callback) => {
                 commandsRef.current.set(id, { label, callback });
-                console.log(`[Plugin:${pluginId}] Command registered: ${id}`);
+                console.log(`[Feature:${featureId}] 命令已注册: ${id}`);
                 const d: Disposable = {
                     dispose: () => {
                         commandsRef.current.delete(id);

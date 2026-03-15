@@ -119,7 +119,7 @@ export function useMonitorTerminalState(session: SessionState) {
     const handleRegexChange = (v: boolean) => { setIsRegex(v); saveUIState({ searchRegex: v }); };
     const handleMatchCaseChange = (v: boolean) => { setMatchCase(v); saveUIState({ searchMatchCase: v }); };
     const handleToggleSearch = useCallback(() => {
-        setSearchOpen(prev => { const next = !prev; saveUIState({ searchOpen: next }); return next; });
+        setSearchOpen((prev: boolean) => { const next = !prev; saveUIState({ searchOpen: next }); return next; });
     }, [saveUIState]);
 
     // Ctrl+F 快捷键
@@ -167,7 +167,7 @@ export function useMonitorTerminalState(session: SessionState) {
     const handleFilterChange = useCallback((mode: 'all' | 'rx' | 'tx') => { setFilterMode(mode); saveUIState({ filterMode: mode }); }, [saveUIState]);
     const handleViewModeChange = useCallback((mode: 'text' | 'hex' | 'both') => { setViewMode(mode); saveUIState({ viewMode: mode }); }, [saveUIState]);
     const handleAutoScrollToggle = useCallback(() => {
-        setAutoScroll(prev => {
+        setAutoScroll((prev: boolean) => {
             const newState = !prev;
             saveUIState({ autoScroll: newState });
             if (newState && scrollRef.current) {

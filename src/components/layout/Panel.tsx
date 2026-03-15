@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { X, Maximize2, Trash2 } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { useI18n } from '../../context/I18nContext';

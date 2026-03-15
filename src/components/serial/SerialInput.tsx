@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SerialInput.tsx
  * 串口输入组件 — TipTap 编辑器 + Token 管理 + 发送按钮。
  *
@@ -149,7 +149,7 @@ export const SerialInput = ({
         editor.chain().focus().insertSerialToken({ type, config }).run();
     }, [editor]);
 
-    const updateTokenConfig = (id: string, newConfig: Record<string, unknown>) => {
+    const updateTokenConfig = (_id: string, newConfig: Record<string, unknown>) => {
         if (!editor || !popover) return;
         editor.chain().focus().setNodeSelection(popover.pos).updateAttributes('serialToken', { config: newConfig }).run();
     };

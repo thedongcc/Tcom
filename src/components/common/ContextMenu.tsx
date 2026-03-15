@@ -24,13 +24,21 @@ export const ContextMenu = ({ x, y, items, onClose }: Props) => {
                 onClose();
             }
         };
-        // Also close on scroll or window resize
-        window.addEventListener('mousedown', handleClickOutside);
-        window.addEventListener('scroll', onClose, true);
+        // 仅监听菜单所在区域的滚动（冒泡），不使用 capture 避免干扰其他区域
+        const handleScroll = (e: Event) => {
+            // 忽略不包含右键菜单的滚动事件
+            const target = e.target as HTMLElement;
+            if (ref.current && target && target.contains?.(ref.current)) {
+                onClose();
+            }
+        };
+        // 使用 capture 模式确保在捕获阶段触发，不受子组件的 stopPropagation 影响
+        window.addEventListener('mousedown', handleClickOutside, true);
+        window.addEventListener('scroll', handleScroll, true);
         window.addEventListener('resize', onClose);
         return () => {
-            window.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', onClose, true);
+            window.removeEventListener('mousedown', handleClickOutside, true);
+            window.removeEventListener('scroll', handleScroll, true);
             window.removeEventListener('resize', onClose);
         };
     }, [onClose]);

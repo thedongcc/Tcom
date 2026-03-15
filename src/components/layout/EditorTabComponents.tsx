@@ -4,7 +4,7 @@
  * 从 EditorArea.tsx 中拆分出来。
  */
 import React, { type ReactNode } from 'react';
-import { X, Columns } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
@@ -61,7 +61,7 @@ export const SortableTab = ({ id, ...props }: TabProps & { id: string }) => {
         attributes,
         listeners,
         setNodeRef,
-        transform,
+        transform: _transform,
         transition,
         isDragging
     } = useSortable({ id });
@@ -112,7 +112,7 @@ export const DropZone = ({ id, className, activeClassName }: { id: string, class
 
 // ── HeaderDropZone 组件 ──
 export const HeaderDropZone = ({ id, children, className }: { id: string, children: ReactNode, className?: string }) => {
-    const { isOver, setNodeRef } = useDroppable({ id });
+    const { isOver: _isOver, setNodeRef } = useDroppable({ id });
     return (
         <div
             ref={setNodeRef}

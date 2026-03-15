@@ -33,7 +33,7 @@ export interface SerialAPI {
     timedSendStop?: (connectionId: string) => Promise<{ success: boolean }>;
     onTimedSendTick?: (connectionId: string, callback: (data: number[], timestamp: number) => void) => () => void;
     // ⚡ 高精度动态定时发送（Worker 用模运算循环帧，无需 feed/replace/refill）
-    timedSendStartDynamic?: (connectionId: string, frames: number[][], intervalMs: number, timestampSlots: any[]) => Promise<{ success: boolean; error?: string }>;
+    timedSendStartDynamic?: (connectionId: string, frames: number[][], intervalMs: number, timestampSlots: Array<{ byteOffset: number; byteSize: number; byteOrder: string; format: string }>) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface MqttAPI {
@@ -49,7 +49,6 @@ export interface MqttAPI {
 
 declare global {
     interface Window {
-        ipcRenderer: import('electron').IpcRenderer
         serialAPI: SerialAPI
         mqttAPI: MqttAPI
         sessionAPI: {
@@ -85,12 +84,13 @@ declare global {
             check: () => Promise<unknown>;
             download: () => Promise<unknown>;
             install: () => void;
-            onStatus: (callback: (data: unknown) => void) => () => void;
-            onProgress: (callback: (progress: unknown) => void) => () => void;
+            onStatus: (callback: (data: { status: string; version?: string; error?: string }) => void) => () => void;
+            onProgress: (callback: (progress: { percent: number; bytesPerSecond?: number; total?: number; transferred?: number }) => void) => () => void;
+            listFonts?: () => Promise<{ success: boolean; fonts?: string[] }>;
         }
         shellAPI: {
             openExternal: (url: string) => Promise<void>;
-            showOpenDialog: (options: Record<string, unknown>) => Promise<unknown>;
+            showOpenDialog: (options: { title?: string; defaultPath?: string; buttonLabel?: string; filters?: Array<{ name: string; extensions: string[] }>; properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'> }) => Promise<unknown>;
         }
         workspaceAPI: {
             getLastWorkspace: () => Promise<{ success: boolean; path: string | null }>;

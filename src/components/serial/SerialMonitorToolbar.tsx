@@ -88,7 +88,7 @@ export function SerialMonitorToolbar({
                 )}
 
                 {config.type === 'serial' ?
-                    `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${config.connection.parity === 'none' ? 'N' : config.connection.parity.toUpperCase()}${config.connection.stopBits}`
+                    `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${(config.connection.parity ?? 'none') === 'none' ? 'N' : (config.connection.parity ?? 'none').toUpperCase()}${config.connection.stopBits}`
                     : config.type === 'mqtt' ?
                         `${config.host}:${config.port} ` : 'Connected'}
             </div>

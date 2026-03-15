@@ -23,7 +23,7 @@ interface VirtualPortSidebarProps {
     editorLayout: ReturnType<typeof useEditorLayout>;
 }
 
-export const VirtualPortSidebar = ({ onNavigate, editorLayout }: VirtualPortSidebarProps) => {
+export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _editorLayout }: VirtualPortSidebarProps) => {
     const sessionManager = useSession();
     const { confirm } = useConfirm();
     const { t } = useI18n();

@@ -37,9 +37,9 @@ function spawnAndCollect(exePath: string, args: string[], cwd?: string): Promise
         const { spawn } = require('node:child_process');
         const child = spawn(exePath, args, { cwd, shell: true, windowsHide: true, env: process.env });
         let stdout = '', stderr = '';
-        child.stdout.on('data', (d: any) => stdout += d.toString());
-        child.stderr.on('data', (d: any) => stderr += d.toString());
-        child.on('error', (err: any) => resolve({ success: false, error: err.message }));
+        child.stdout.on('data', (d: Buffer) => stdout += d.toString());
+        child.stderr.on('data', (d: Buffer) => stderr += d.toString());
+        child.on('error', (err: Error) => resolve({ success: false, error: err.message }));
         child.on('close', (code: number) => {
             if (code === 0) resolve({ success: true, stdout });
             else resolve({ success: false, error: `Process exited with code ${code}`, stderr, stdout, code });
@@ -49,7 +49,7 @@ function spawnAndCollect(exePath: string, args: string[], cwd?: string): Promise
 
 // ── 执行 com0com 命令（含本地回退） ──
 
-async function spawnCommand(command: string): Promise<any> {
+async function spawnCommand(command: string): Promise<{ success: boolean; stdout?: string; stderr?: string; error?: string; code?: number }> {
     const { exePath, args } = parseCommand(command);
     const cwd = exePath.includes('\\') || exePath.includes('/') ? path.dirname(exePath) : undefined;
 
@@ -94,7 +94,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
         if (process.platform === 'win32') {
             const { exec } = require('node:child_process');
             const isAdmin = await new Promise((resolve) => {
-                exec('net session', { windowsHide: true }, (err: any) => resolve(!err));
+                exec('net session', { windowsHide: true }, (err: Error | null) => resolve(!err));
             });
             if (!isAdmin) {
                 return { success: false, error: 'Administrator privileges required for installation' };
@@ -128,7 +128,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
                 cwd: path.dirname(installerPath)
             });
 
-            child.on('error', (err: any) => resolve({ success: false, error: err.message }));
+            child.on('error', (err: Error) => resolve({ success: false, error: err.message }));
             child.on('close', (code: number) => {
                 if (code === 0) resolve({ success: true, path: targetDir });
                 else resolve({ success: false, error: `Installer exited with code ${code}` });
@@ -156,7 +156,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
         if (process.platform === 'win32' && !command.toLowerCase().includes('list')) {
             const { exec } = require('node:child_process');
             const isAdmin = await new Promise((resolve) => {
-                exec('net session', { windowsHide: true }, (err: any) => resolve(!err));
+                exec('net session', { windowsHide: true }, (err: Error | null) => resolve(!err));
             });
             if (!isAdmin) {
                 return { success: false, error: 'Administrator privileges required for this operation' };
@@ -202,7 +202,7 @@ export function registerCom0comIpc(VITE_DEV_SERVER_URL?: string) {
             const { spawn } = require('node:child_process');
             const child = spawn('powershell.exe', ['-Command', psScript], { windowsHide: true });
             let out = '';
-            child.stdout.on('data', (d: any) => out += d.toString());
+            child.stdout.on('data', (d: Buffer) => out += d.toString());
             child.on('close', (code: number) => {
                 const output = out.trim();
                 if (output.includes('Success')) resolve({ success: true });

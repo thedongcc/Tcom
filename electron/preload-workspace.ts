@@ -7,7 +7,7 @@ import { ipcRenderer, contextBridge } from 'electron';
 
 export function registerSessionBridge() {
     contextBridge.exposeInMainWorld('sessionAPI', {
-        save: (sessions: any[]) => ipcRenderer.invoke('session:save', sessions),
+        save: (sessions: Record<string, unknown>[]) => ipcRenderer.invoke('session:save', sessions),
         load: () => ipcRenderer.invoke('session:load')
     });
 }
@@ -18,8 +18,8 @@ export function registerWorkspaceBridge() {
         setLastWorkspace: (wsPath: string | null) => ipcRenderer.invoke('workspace:setLastWorkspace', wsPath),
         openFolder: () => ipcRenderer.invoke('workspace:openFolder'),
         listSessions: (wsPath: string) => ipcRenderer.invoke('workspace:listSessions', wsPath),
-        saveSession: (wsPath: string, config: any) => ipcRenderer.invoke('workspace:saveSession', wsPath, config),
-        deleteSession: (wsPath: string, config: any) => ipcRenderer.invoke('workspace:deleteSession', wsPath, config),
+        saveSession: (wsPath: string, config: Record<string, unknown>) => ipcRenderer.invoke('workspace:saveSession', wsPath, config),
+        deleteSession: (wsPath: string, config: Record<string, unknown>) => ipcRenderer.invoke('workspace:deleteSession', wsPath, config),
         renameSession: (wsPath: string, oldName: string, newName: string) => ipcRenderer.invoke('workspace:renameSession', wsPath, oldName, newName),
         getRecentWorkspaces: () => ipcRenderer.invoke('workspace:getRecentWorkspaces'),
         migrateOldSessions: () => ipcRenderer.invoke('workspace:migrateOldSessions'),

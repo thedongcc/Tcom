@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { CommandEntity, CommandGroup, CommandItem } from '../types/command';
 import { useHistory } from '../hooks/useHistory';
 import { useConfirm } from './ConfirmContext';

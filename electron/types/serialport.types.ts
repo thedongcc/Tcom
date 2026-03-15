@@ -23,6 +23,8 @@ export interface SerialPortInstance {
 
     /** 写入数据到串口 */
     write(data: Buffer | string, cb: (err?: Error | null) => void): boolean;
+    /** 打开串口连接 */
+    open(cb?: (err?: Error | null) => void): void;
     /** 关闭串口连接 */
     close(cb?: (err?: Error | null) => void): void;
     /** 监听数据 */

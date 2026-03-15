@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加主题颜色编辑器开关和窗口
 - 增加接收分包设置
 - 增加接收区特殊字符可视化
+- 命令菜单和虚拟串口开关移动到设置页面内
 
 ### Fixed
 - 修复工作区加载问题
@@ -28,4 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 监控数据方向标签更改颜色
 
 ### Removed
-- 
+- 取消侧边栏右键配置显示隐藏功能
+- 取消扩展功能

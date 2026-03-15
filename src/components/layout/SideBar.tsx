@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+/**
+ * SideBar.tsx
+ * 侧边栏容器 — 根据 activeView 渲染对应面板，统一标题栏。
+ */
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { ConfigSidebar } from '../serial/ConfigSidebar';
 import { SessionListSidebar } from '../serial/SessionListSidebar';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
-import { CommandListSidebar } from '../commands/CommandListSidebar';
-import { usePluginManager } from '../../context/PluginContextShared';
-import { ExtensionsSidebar } from '../extensions/ExtensionsSidebar';
+import { useFeatureManager } from '../../context/FeatureContextShared';
 import { useI18n } from '../../context/I18nContext';
-import { useSession } from '../../context/SessionContext';
 
 interface SideBarProps {
     activeView: string;
@@ -18,9 +18,8 @@ interface SideBarProps {
 export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps) => {
     if (!activeView || activeView === 'settings') return null;
 
-    const sessionManager = useSession();
-    const { getPlugin } = usePluginManager();
-    const activePlugin = getPlugin(activeView);
+    const { getFeature } = useFeatureManager();
+    const activeFeature = getFeature(activeView);
     const { t } = useI18n();
 
     // Resizing State
@@ -77,46 +76,44 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
         updateWidth(250);
     };
 
+    // ── 标题映射 ──
+    const getTitle = (): string => {
+        const viewMap: Record<string, string> = {
+            'explorer': t('sidebar.sessions'),
+            'serial': t('sidebar.configuration'),
+            'commands': t('sidebar.commands'),
+            'virtual-port': t('sidebar.virtualPort'),
+        };
+        const translated = viewMap[activeView];
+        if (translated) return translated;
+        if (activeFeature) return activeFeature.name;
+        return activeView;
+    };
+
     return (
         <div
             className="flex flex-col border-r border-[var(--border-color)] relative shrink-0"
             style={{ width: `${width}px`, backgroundColor: 'var(--sidebar-background)' }}
             data-component="sidebar"
         >
-            {activeView !== 'commands' && (
-                <div className="h-[35px] px-4 flex items-center justify-between text-[11px] font-bold text-[var(--st-sidebar-title-text)] tracking-wide uppercase shrink-0">
-                    <span className="truncate">
-                        {(() => {
-                            const viewMap: Record<string, string> = {
-                                'explorer': t('sidebar.sessions'),
-                                'serial': t('sidebar.configuration'),
-                                'commands': t('sidebar.commands'),
-                                'virtual-port': t('sidebar.virtualPort'),
-                                'extensions': t('sidebar.extensions')
-                            };
-
-                            const translated = viewMap[activeView];
-                            if (translated) return translated;
-                            if (activePlugin) return activePlugin.name;
-                            return activeView;
-                        })()}
-                    </span>
-                    <MoreHorizontal size={14} className="cursor-pointer hover:text-[var(--st-sidebar-action-hover)]" />
-                </div>
-            )}
+            {/* 统一标题栏（所有视图都显示） */}
+            <div className="h-[35px] px-4 flex items-center text-[11px] font-bold text-[var(--st-sidebar-title-text)] tracking-wide uppercase shrink-0">
+                <span className="truncate">{getTitle()}</span>
+            </div>
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {activeView === 'explorer' && <SessionListSidebar editorLayout={editorLayout} />}
                 {activeView === 'search' && <div className="p-4 text-xs text-[var(--st-sidebar-muted-text)]">Search not implemented</div>}
                 {activeView === 'serial' && <ConfigSidebar />}
-                {activeView === 'extensions' && <ExtensionsSidebar />}
 
-                {/* Dynamic Plugin Sidebar */}
-                {activePlugin && activePlugin.sidebarComponent && (
-                    <activePlugin.sidebarComponent
-                        onNavigate={onViewChange}
-                        editorLayout={editorLayout}
-                    />
+                {/* 动态模块侧边栏（含懒加载 Suspense） */}
+                {activeFeature && activeFeature.sidebarComponent && (
+                    <Suspense fallback={<div className="p-4 text-xs text-[var(--input-placeholder-color)] opacity-60">{t('common.loading')}</div>}>
+                        <activeFeature.sidebarComponent
+                            onNavigate={onViewChange}
+                            editorLayout={editorLayout}
+                        />
+                    </Suspense>
                 )}
             </div>
 

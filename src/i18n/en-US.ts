@@ -52,6 +52,7 @@ export const enUS = {
             typography: 'Typography',
             logFormat: 'Log Format',
             customThemes: 'Custom Themes',
+            modules: 'Feature Modules',
         },
 
         // Appearance
@@ -452,7 +453,7 @@ export const enUS = {
         configuration: 'Configuration',
         commands: 'Commands',
         virtualPort: 'Virtual Port',
-        extensions: 'Extensions',
+        modules: 'Modules',
     },
 
     // Panel area
@@ -480,22 +481,19 @@ export const enUS = {
         globalSettingsDesc: 'The editor is currently showing global settings. Configure in the main area on the right; the sidebar provides no additional options.',
     },
 
-    // Extensions sidebar
-    extensions: {
-        searchPlaceholder: 'Search extensions...',
-        installFromFile: 'Install from File (.tpkg)',
-        installed: 'Installed',
-        recommended: 'Recommended',
-        install: 'Install',
+    // Module manager
+    modules: {
+        core: 'Core',
+        optional: 'Optional Modules',
         enabled: 'Enabled',
         disabled: 'Disabled',
-        userInstalled: 'User Installed',
-        noMatches: 'No matches found',
-        noneInstalled: 'No extensions installed',
-        disable: 'Disable',
         enable: 'Enable',
-        uninstall: 'Uninstall',
-        devDocs: 'Plugin Development Docs',
+        disable: 'Disable',
+        coreDesc: 'Core features are always enabled',
+        commandsName: 'Command Menu',
+        commandsDesc: 'Manage and send frequently used serial commands',
+        virtualPortName: 'Virtual Port',
+        virtualPortDesc: 'Virtual serial port management & monitoring (com0com)',
     },
 
     // System Messages
@@ -516,5 +514,13 @@ export const enUS = {
         writeFailed: 'Write failed: {err}',
         publishFailed: 'Publish failed: {err}',
         failedToConnect: 'Failed to connect: {err}',
+    },
+
+    // Welcome page
+    welcome: {
+        subtitle: 'VS Code Style Serial Debug Assistant',
+        newConnection: 'New Connection',
+        openLog: 'Open Log...',
+        recent: 'Recent',
     },
 } as const;

@@ -8,7 +8,7 @@
 ## 一、项目概述
 
 **Tcom** — 一款基于 Electron + React + TypeScript 的专业级串口调试工具。
-支持串口通信、MQTT、TCP 桥接、虚拟串口、命令管理、插件系统等功能。
+支持串口通信、MQTT、TCP 桥接、虚拟串口、命令管理、功能模块系统等功能。
 
 **技术栈**: Electron 28 + React 18 + TypeScript 5 + Vite + TipTap + dnd-kit
 

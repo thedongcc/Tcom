@@ -1,7 +1,11 @@
-﻿import { type ReactNode, useState, useRef, useEffect, useMemo } from 'react';
-import { Files, Search, GitGraph, Box, Settings, Monitor, Check } from 'lucide-react';
-import { useSettings } from '../../context/SettingsContext';
-import { usePluginManager } from '../../context/PluginContextShared';
+/**
+ * ActivityBar.tsx
+ * 活动栏 — 侧边栏导航图标，支持拖拽排序。
+ */
+import { type ReactNode, useState, useEffect, useMemo } from 'react';
+import { Files, Box, Settings, Monitor } from 'lucide-react';
+import { useFeatureManager } from '../../context/FeatureContextShared';
+import { FEATURE_REGISTRY } from '../../features/registry';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import {
@@ -29,16 +33,13 @@ interface ActivityItemProps {
     active?: boolean;
     onClick?: () => void;
     className?: string;
-    // For context menu usage
-    onContextMenu?: (e: React.MouseEvent) => void;
 }
 
-const ActivityItem = ({ icon, label, active, onClick, className, onContextMenu }: ActivityItemProps) => {
+const ActivityItem = ({ icon, label, active, onClick, className }: ActivityItemProps) => {
     const content = (
         <div
             className={`w-[48px] h-[48px] flex items-center justify-center cursor-pointer relative hover:text-[var(--st-activitybar-icon-hover)] transition-colors border-l-4 ${active ? 'text-[var(--st-activitybar-icon-active)] border-[var(--accent-color)]' : 'text-[var(--activitybar-inactive-foreground)] border-transparent'} ${className}`}
             onClick={onClick}
-            onContextMenu={onContextMenu}
         >
             {icon}
         </div>
@@ -89,101 +90,78 @@ interface ActivityBarProps {
 const DEFAULT_ITEMS = [
     { id: 'explorer', icon: <Files size={24} />, label: 'Explorer' },
     { id: 'serial', icon: <Monitor size={24} />, label: 'Serial Monitor' },
-    { id: 'extensions', icon: <Box size={24} />, label: 'Extensions' },
 ];
 
 export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
-    const { plugins } = usePluginManager();
+    const { features } = useFeatureManager();
     const { t } = useI18n();
 
-    // --- State for Drag & Drop and Visibility ---
-    // Merge default items + plugin items
-    // Using a simple state initialization for now. In a real app we might persist this.
+    // 合并默认项 + 激活的功能模块
     const allKnownItems = useMemo(() => {
-        // Translate default items dynamically
+        // 翻译默认项
         const translatedDefaults = DEFAULT_ITEMS.map(item => {
             let translatedLabel = item.label;
             if (item.id === 'explorer') translatedLabel = t('sidebar.sessions');
-            else if (item.id === 'serial') translatedLabel = t('sidebar.virtualPort');
-            else if (item.id === 'extensions') translatedLabel = t('sidebar.extensions');
+            else if (item.id === 'serial') translatedLabel = t('sidebar.configuration');
             return { ...item, label: translatedLabel };
         });
 
-        const pluginItems = plugins
-            .filter(p => p.isActive && p.plugin.sidebarComponent)
-            .map(p => ({
-                id: p.plugin.id,
-                icon: p.plugin.icon ? <p.plugin.icon size={24} /> : <Box size={24} />,
-                label: p.plugin.name || p.plugin.id
-            }));
-        return [...translatedDefaults, ...pluginItems];
-    }, [plugins, t]);
+        // 活跃的功能模块（有侧边栏组件的）
+        const featureItems = features
+            .filter(f => f.isActive && f.feature.sidebarComponent)
+            .map(f => {
+                const descriptor = FEATURE_REGISTRY.find(d => d.id === f.feature.id);
+                return {
+                    id: f.feature.id,
+                    icon: f.feature.icon ? <f.feature.icon size={24} /> : <Box size={24} />,
+                    label: descriptor ? t(descriptor.nameKey as any) : (f.feature.name || f.feature.id)
+                };
+            });
+        return [...translatedDefaults, ...featureItems];
+    }, [features, t]);
 
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
-    const [visibleIds, setVisibleIds] = useState<Record<string, boolean>>({});
 
-    // Initialize state (Load from localStorage or default)
+    // 合并排序：每次 allKnownItems 变化时，确保新增的模块加入排序列表
     useEffect(() => {
-        // Only run once on mount (or if known items change radically, but mainly once)
-        if (orderedIds.length > 0) return; // Already initialized
-
         const savedOrder = localStorage.getItem('activitybar-order');
-        const savedVis = localStorage.getItem('activitybar-visibility');
 
-        if (savedOrder && savedVis) {
+        if (orderedIds.length === 0 && savedOrder) {
             try {
                 const parsedOrder = JSON.parse(savedOrder) as string[];
-                const parsedVis = JSON.parse(savedVis) as Record<string, boolean>;
-
-                // Merge with current known items (handle new/removed plugins)
                 const validIds = new Set(allKnownItems.map(i => i.id));
                 const finalOrder = parsedOrder.filter(id => validIds.has(id));
-                // Append any new items that weren't in saved order
                 allKnownItems.forEach(i => {
                     if (!finalOrder.includes(i.id)) finalOrder.push(i.id);
                 });
-
                 setOrderedIds(finalOrder);
-                setVisibleIds(parsedVis);
                 return;
             } catch (e) {
-                console.error('Failed to parse sidebar state', e);
+                console.error('Failed to parse sidebar order', e);
             }
         }
 
-        // Default Fallback
-        setOrderedIds(allKnownItems.map(i => i.id));
-        const initialVis: Record<string, boolean> = {};
-        allKnownItems.forEach(i => initialVis[i.id] = true);
-        setVisibleIds(initialVis);
-    }, [allKnownItems, orderedIds.length]);
+        // 确保所有已知项都在排序中（处理异步加载的功能模块）
+        const currentIds = new Set(orderedIds);
+        const allIds = allKnownItems.map(i => i.id);
+        const newIds = allIds.filter(id => !currentIds.has(id));
+        // 移除不再存在的项
+        const validIds = new Set(allIds);
+        const cleanedOrder = orderedIds.filter(id => validIds.has(id));
 
-    // Persist State
+        if (newIds.length > 0 || cleanedOrder.length !== orderedIds.length) {
+            setOrderedIds([...cleanedOrder, ...newIds]);
+        } else if (orderedIds.length === 0) {
+            setOrderedIds(allIds);
+        }
+    }, [allKnownItems]);
+
+    // 持久化排序
     useEffect(() => {
         if (orderedIds.length > 0) {
             localStorage.setItem('activitybar-order', JSON.stringify(orderedIds));
         }
     }, [orderedIds]);
-
-    useEffect(() => {
-        if (Object.keys(visibleIds).length > 0) {
-            localStorage.setItem('activitybar-visibility', JSON.stringify(visibleIds));
-        }
-    }, [visibleIds]);
-
-    // Context Menu State
-    const [contextMenuState, setContextMenuState] = useState<{ x: number, y: number, show: boolean }>({ x: 0, y: 0, show: false });
-    const contextMenuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
-                setContextMenuState(prev => ({ ...prev, show: false }));
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     // Drag Sensors
     const sensors = useSensors(
@@ -202,24 +180,9 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
         }
     };
 
-    const handleContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setContextMenuState({
-            x: e.clientX,
-            y: e.clientY,
-            show: true
-        });
-    };
-
-    const toggleVisibility = (id: string) => {
-        setVisibleIds(prev => ({ ...prev, [id]: !prev[id] }));
-        // If hiding active view, switch to first visible? Or just leave empty? VSCode leaves it but hides icon.
-    };
-
     return (
         <div
             className="w-[48px] bg-[var(--activitybar-background)] flex flex-col justify-between py-2 border-r border-[var(--border-color)] z-40"
-            onContextMenu={handleContextMenu}
             data-component="activitybar"
         >
             <DndContext
@@ -230,7 +193,6 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                 <div className="flex flex-col gap-0">
                     <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
                         {orderedIds.map(id => {
-                            if (!visibleIds[id]) return null;
                             const itemDef = allKnownItems.find(i => i.id === id);
                             if (!itemDef) return null;
 
@@ -249,7 +211,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                 </div>
             </DndContext>
 
-            {/* Bottom Actions (Settings) */}
+            {/* 底部：设置 */}
             <div className="flex flex-col gap-0">
                 <ActivityItem
                     icon={<Settings size={24} />}
@@ -260,49 +222,6 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                     }}
                 />
             </div>
-
-            {/* Context Menu for Visibility */}
-            {contextMenuState.show && (
-                <div
-                    ref={contextMenuRef}
-                    className="fixed z-[100] bg-[var(--menu-background)] border border-[var(--menu-border-color)] shadow-xl rounded py-1 min-w-[150px]"
-                    style={{ left: contextMenuState.x, top: contextMenuState.y }}
-                >
-                    {allKnownItems.map(item => (
-                        <div
-                            key={item.id}
-                            className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--st-activitybar-menu-text)]"
-                            onClick={() => toggleVisibility(item.id)}
-                        >
-                            <div className={`w-4 flex items-center justify-center opacity-80`}>
-                                {visibleIds[item.id] && <Check size={14} />}
-                            </div>
-                            <span>{item.label}</span>
-                        </div>
-                    ))}
-                    <div className="h-[1px] bg-[var(--menu-border-color)] my-1 opacity-50"></div>
-                    <div
-                        className="px-3 py-1.5 text-[13px] hover:bg-[var(--list-hover-background)] cursor-pointer flex items-center gap-2 text-[var(--st-activitybar-menu-text)]"
-                        onClick={() => {
-                            // Reset everything
-                            const defaultOrder = allKnownItems.map(i => i.id);
-                            const defaultVis: Record<string, boolean> = {};
-                            allKnownItems.forEach(i => defaultVis[i.id] = true);
-
-                            setOrderedIds(defaultOrder);
-                            setVisibleIds(defaultVis);
-                            setContextMenuState(prev => ({ ...prev, show: false }));
-
-                            // Clear storage
-                            localStorage.removeItem('activitybar-order');
-                            localStorage.removeItem('activitybar-visibility');
-                        }}
-                    >
-                        <div className="w-4"></div>
-                        <span>Reset Location</span>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

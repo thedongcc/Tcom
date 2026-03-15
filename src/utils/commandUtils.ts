@@ -11,7 +11,6 @@ import { CommandEntity } from '../types/command';
  */
 export const generateUniqueName = (commands: CommandEntity[], base: string, parentId?: string): string => {
     const siblings = commands.filter(c => c.parentId === parentId);
-    let name = base;
     let index = 1;
 
     // Logic from CommandListSidebar:

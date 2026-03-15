@@ -141,7 +141,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                             { label: t('configSidebar.mark'), value: 'mark' },
                             { label: t('configSidebar.space'), value: 'space' },
                         ]}
-                        value={connection.parity}
+                        value={connection.parity || 'none'}
                         onChange={(val) => updateConnection({ parity: val as any })}
                         disabled={isConnected}
                     />

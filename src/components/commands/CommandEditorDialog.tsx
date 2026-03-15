@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { CommandEntity, CommandItem } from '../../types/command';
 import { SerialInput } from '../serial/SerialInput';

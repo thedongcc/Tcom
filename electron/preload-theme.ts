@@ -3,7 +3,22 @@
  * 主题 + 吸管桥接。
  * 从 preload.ts 拆分出来，按主题域分组。
  */
-import { ipcRenderer, contextBridge } from 'electron';
+import { ipcRenderer, contextBridge, type IpcRendererEvent } from 'electron';
+
+/** 组件检查器拾取的数据 */
+interface ComponentPickedData {
+    compKey: string | null;
+    className: string;
+    outerHTML: string;
+}
+
+/** 主题定义（保存时使用） */
+interface ThemeDef {
+    id: string;
+    name: string;
+    colors: Record<string, string>;
+    [key: string]: unknown;
+}
 
 export function registerThemeBridge() {
     contextBridge.exposeInMainWorld('themeAPI', {
@@ -12,14 +27,14 @@ export function registerThemeBridge() {
         openFile: (id: string) => ipcRenderer.invoke('theme:openFile', { id }),
         updateTitleBar: (colors: { bgColor: string, symbolColor: string }) => ipcRenderer.invoke('theme:updateTitleBar', colors),
         onStatusChanged: (callback: (isOpen: boolean) => void) => {
-            const listener = (_: any, isOpen: boolean) => callback(isOpen);
+            const listener = (_: IpcRendererEvent, isOpen: boolean) => callback(isOpen);
             ipcRenderer.on('theme-editor:status-changed', listener);
             return () => ipcRenderer.off('theme-editor:status-changed', listener);
         },
         openThemeEditor: () => ipcRenderer.invoke('theme-editor:open'),
         closeThemeEditor: () => ipcRenderer.invoke('theme-editor:close'),
         isWindowOpen: () => ipcRenderer.invoke('theme-editor:is-open'),
-        save: (id: string, themeDef: any) => ipcRenderer.invoke('theme-editor:save', { id, themeDef }),
+        save: (id: string, themeDef: ThemeDef) => ipcRenderer.invoke('theme-editor:save', { id, themeDef }),
         applyPreview: (edits: Record<string, string>) => ipcRenderer.send('theme-editor:preview', edits),
         getPendingEdits: (themeId: string) => ipcRenderer.invoke('theme-editor:get-pending', themeId),
         getAllPendingEdits: () => ipcRenderer.invoke('theme-editor:get-all-pending'),
@@ -28,9 +43,9 @@ export function registerThemeBridge() {
         startInspectorMode: () => ipcRenderer.send('theme-editor:start-inspector'),
         stopInspectorMode: () => ipcRenderer.send('theme-editor:stop-inspector'),
         stopInspector: () => ipcRenderer.send('theme-editor:stop-inspector'),
-        componentPicked: (data: any) => ipcRenderer.send('theme-editor:component-picked', data),
-        onComponentPicked: (callback: (data: { compKey: string | null, className: string, outerHTML: string }) => void) => {
-            const listener = (_: any, data: any) => callback(data);
+        componentPicked: (data: ComponentPickedData) => ipcRenderer.send('theme-editor:component-picked', data),
+        onComponentPicked: (callback: (data: ComponentPickedData) => void) => {
+            const listener = (_: IpcRendererEvent, data: ComponentPickedData) => callback(data);
             ipcRenderer.on('theme-editor:component-picked', listener);
             return () => ipcRenderer.off('theme-editor:component-picked', listener);
         },
@@ -49,13 +64,13 @@ export function registerThemeBridge() {
         // 合并初始化接口：一次往返获取 pendingEdits + expandedGroups
         initData: () => ipcRenderer.invoke('theme-editor:init-data'),
         onApplyPreview: (callback: (edits: Record<string, string>) => void) => {
-            const listener = (_: any, edits: Record<string, string>) => callback(edits);
+            const listener = (_: IpcRendererEvent, edits: Record<string, string>) => callback(edits);
             ipcRenderer.on('theme:apply-preview', listener);
             return () => ipcRenderer.off('theme:apply-preview', listener);
         },
         onEditorClosed: (callback: () => void) => {
             // 绑定 status-changed + isOpen == false
-            const listener = (_: any, isOpen: boolean) => { if (!isOpen) callback(); };
+            const listener = (_: IpcRendererEvent, isOpen: boolean) => { if (!isOpen) callback(); };
             ipcRenderer.on('theme-editor:status-changed', listener);
             return () => ipcRenderer.off('theme-editor:status-changed', listener);
         },
@@ -73,12 +88,12 @@ export function registerEyedropperBridge() {
         watchStart: () => ipcRenderer.invoke('eyedropper:watch-start'),
         watchStop: () => ipcRenderer.invoke('eyedropper:watch-stop'),
         onColor: (cb: (color: string) => void) => {
-            const listener = (_: any, color: string) => cb(color);
+            const listener = (_: IpcRendererEvent, color: string) => cb(color);
             ipcRenderer.on('eyedropper:color', listener);
             return () => ipcRenderer.off('eyedropper:color', listener);
         },
         onPicked: (cb: (color: string) => void) => {
-            const listener = (_: any, color: string) => cb(color);
+            const listener = (_: IpcRendererEvent, color: string) => cb(color);
             ipcRenderer.on('eyedropper:picked', listener);
             return () => ipcRenderer.off('eyedropper:picked', listener);
         },

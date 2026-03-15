@@ -17,7 +17,7 @@ export class TcpService {
                 this.handleConnection(port, socket);
             });
 
-            server.on('error', (err: any) => {
+            server.on('error', (err: Error) => {
                 resolve({ success: false, error: err.message });
             });
 

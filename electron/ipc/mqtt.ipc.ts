@@ -5,15 +5,51 @@
 import { ipcMain, BrowserWindow, app } from 'electron';
 
 // ⚡ 延迟加载：只在首次连接时才 require，避免阻塞主进程启动
-let _mqttModule: any = null;
+let _mqttModule: { connect: (url: string, options: Record<string, unknown>) => MqttClient } | null = null;
 const getMqtt = () => { if (!_mqttModule) _mqttModule = require('mqtt'); return _mqttModule; };
 
-const mqttClients = new Map();
-const pendingMqttConnections = new Set();
+/** MQTT 客户端实例接口（mqtt.js 库抽象） */
+interface MqttClient {
+    connected: boolean;
+    end(force?: boolean): void;
+    subscribe(topic: string): void;
+    unsubscribe(topic: string): void;
+    publish(topic: string, message: Buffer, options: Record<string, unknown>, callback: (err?: Error) => void): void;
+    on(event: 'connect', listener: () => void): void;
+    on(event: 'message', listener: (topic: string, message: Buffer) => void): void;
+    on(event: 'error', listener: (err: Error) => void): void;
+    on(event: 'close', listener: () => void): void;
+    on(event: string, listener: (...args: unknown[]) => void): void;
+}
+
+/** MQTT 订阅主题 */
+interface MqttTopic {
+    path: string;
+    subscribed?: boolean;
+}
+
+/** MQTT 连接配置 */
+interface MqttConfig {
+    host: string;
+    port: number;
+    protocol?: string;
+    path?: string;
+    clientId?: string;
+    username?: string;
+    password?: string;
+    keepAlive?: number;
+    connectTimeout?: number;
+    cleanSession?: boolean;
+    autoReconnect?: boolean;
+    topics?: (string | MqttTopic)[];
+}
+
+const mqttClients = new Map<string, MqttClient>();
+const pendingMqttConnections = new Set<string>();
 
 // ── 构建 MQTT 连接 URL ──
 
-function buildMqttUrl(config: any): string {
+function buildMqttUrl(config: MqttConfig): string {
     const protocol = config.protocol || 'tcp';
     let host = config.host;
     if (host?.includes('://')) {
@@ -30,7 +66,7 @@ function buildMqttUrl(config: any): string {
 
 // ── 自动订阅 Topics ──
 
-function autoSubscribeTopics(client: any, topics: any[]) {
+function autoSubscribeTopics(client: MqttClient, topics: (string | MqttTopic)[] | undefined) {
     if (!Array.isArray(topics)) return;
     for (const t of topics) {
         if (typeof t === 'string') { client.subscribe(t); }
@@ -40,13 +76,13 @@ function autoSubscribeTopics(client: any, topics: any[]) {
 
 // ── 安全发送渲染进程消息 ──
 
-function safeSend(win: BrowserWindow | null, channel: string, data: any) {
+function safeSend(win: BrowserWindow | null, channel: string, data: Record<string, unknown>) {
     if (win && !win.isDestroyed()) win.webContents.send(channel, data);
 }
 
 // ── MQTT 连接核心 ──
 
-function handleMqttConnect(win: BrowserWindow, connectionId: string, config: any): Promise<{ success: boolean; error?: string }> {
+function handleMqttConnect(win: BrowserWindow, connectionId: string, config: MqttConfig): Promise<{ success: boolean; error?: string }> {
     if (pendingMqttConnections.has(connectionId)) {
         return Promise.resolve({ success: false, error: 'Connection attempt already in progress' });
     }
@@ -54,12 +90,12 @@ function handleMqttConnect(win: BrowserWindow, connectionId: string, config: any
     pendingMqttConnections.add(connectionId);
 
     return new Promise(resolve => {
-        const finish = (result: any) => { pendingMqttConnections.delete(connectionId); resolve(result); };
+        const finish = (result: { success: boolean; error?: string }) => { pendingMqttConnections.delete(connectionId); resolve(result); };
 
         // 清理已有连接
         if (mqttClients.has(connectionId)) {
             const existing = mqttClients.get(connectionId);
-            if (existing.connected) existing.end(true);
+            if (existing?.connected) existing.end(true);
             mqttClients.delete(connectionId);
         }
 
@@ -78,9 +114,9 @@ function handleMqttConnect(win: BrowserWindow, connectionId: string, config: any
         console.log(`[MQTT] Connecting to ${url}`, options);
 
         let handled = false;
-        let client: any;
-        try { client = getMqtt().connect(url, options); }
-        catch (err: any) { return finish({ success: false, error: err.message }); }
+        let client: MqttClient;
+        try { client = getMqtt()!.connect(url, options); }
+        catch (err: unknown) { return finish({ success: false, error: (err as Error).message }); }
 
         const onFirstSuccess = () => {
             if (handled) return;

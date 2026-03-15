@@ -3,7 +3,6 @@ import { RefreshCw, Play, Square } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com } from '../../utils/com0com';
-import { useToast } from '../../context/ToastContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Switch } from '../common/Switch';
 import { useI18n } from '../../context/I18nContext';
@@ -159,7 +158,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                     <div className="py-1">
                         <Switch
                             label={t('monitor.autoDestroyPair')}
-                            checked={monitorConfig.autoDestroyPair}
+                            checked={monitorConfig.autoDestroyPair ?? false}
                             onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
                             disabled={isConnected}
                         />

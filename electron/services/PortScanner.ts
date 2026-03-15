@@ -19,7 +19,7 @@ interface PortInfo {
 /**
  * 从系统 SerialPort 库获取端口列表
  */
-async function getSystemPorts(): Promise<any[]> {
+async function getSystemPorts(): Promise<PortInfo[]> {
     const SP = getSerialPort();
     try {
         return SP ? await SP.list() : [];
@@ -37,7 +37,7 @@ async function getActivePortsFromRegistry(): Promise<Map<string, string>> {
     const { exec } = require('node:child_process');
 
     await new Promise<void>((resolve) => {
-        exec('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', { windowsHide: true }, (err: any, stdout: string) => {
+        exec('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', { windowsHide: true }, (err: Error | null, stdout: string) => {
             if (!err && stdout) {
                 const lines = stdout.split('\r\n');
                 lines.forEach(line => {
@@ -65,7 +65,7 @@ async function getCom0ComFriendlyNames(): Promise<Map<string, string>> {
     const { exec } = require('node:child_process');
 
     await new Promise<void>((resolve) => {
-        exec('reg query HKLM\\SYSTEM\\CurrentControlSet\\Enum\\com0com /s', { windowsHide: true }, (err: any, stdout: string) => {
+        exec('reg query HKLM\\SYSTEM\\CurrentControlSet\\Enum\\com0com /s', { windowsHide: true }, (err: Error | null, stdout: string) => {
             if (!err && stdout) {
                 const enumLines = stdout.split('\r\n');
                 enumLines.forEach(line => {
@@ -91,12 +91,12 @@ async function getCom0ComFriendlyNames(): Promise<Map<string, string>> {
  * 将注册表端口合并到系统端口列表
  */
 function mergeRegistryPorts(
-    ports: any[],
+    ports: PortInfo[],
     activePorts: Map<string, string>,
     friendlyNames: Map<string, string>
 ): void {
     activePorts.forEach((device, portName) => {
-        const exists = ports.find((p: any) => p.path === portName);
+        const exists = ports.find((p: PortInfo) => p.path === portName);
         const friendly = friendlyNames.get(portName);
 
         let manufacturer = undefined;
@@ -125,11 +125,11 @@ function mergeRegistryPorts(
  * 检测端口可用性（并发探测每个端口是否被占用）
  */
 async function checkPortsAvailability(
-    ports: any[],
+    ports: PortInfo[],
     openedPaths: Set<string>
 ): Promise<PortInfo[]> {
     const SP = getSerialPort();
-    return Promise.all(ports.map(async (port: any) => {
+    return Promise.all(ports.map(async (port: PortInfo) => {
         // 已由本服务打开的端口，直接标记为可用
         if (openedPaths.has(port.path)) {
             return { ...port, busy: false, status: 'available' };
@@ -142,7 +142,7 @@ async function checkPortsAvailability(
                 autoOpen: false
             });
 
-            p.open((err: any) => {
+            p.open((err: Error | null) => {
                 if (err) {
                     const errorMsg = err.message || '';
                     const isBusy = errorMsg.includes('Access denied') || errorMsg.includes('File not found') || errorMsg.includes('busy');
@@ -188,8 +188,8 @@ export async function scanPorts(
         // 检测端口占用状态
         const portsWithStatus = await checkPortsAvailability(ports, openedPaths);
         return { success: true, ports: portsWithStatus };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error listing ports:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }

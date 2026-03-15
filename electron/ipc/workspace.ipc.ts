@@ -85,9 +85,9 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
     });
 
     // 保存当前工作区路径并更新最近列表
-    ipcMain.handle('workspace:setLastWorkspace', async (_event: any, wsPath: string | null) => {
+    ipcMain.handle('workspace:setLastWorkspace', async (_event, wsPath: string | null) => {
         try {
-            let state: any = { lastWorkspace: null, recentWorkspaces: [] };
+            let state: { lastWorkspace: string | null; recentWorkspaces: string[] } = { lastWorkspace: null, recentWorkspaces: [] };
             try {
                 const data = await fs.readFile(workspaceStateFile, 'utf-8');
                 state = JSON.parse(data);
@@ -104,8 +104,8 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
 
             await fs.writeFile(workspaceStateFile, JSON.stringify(state, null, 2));
             return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            return { success: false, error: (error as Error).message };
         }
     });
 
@@ -129,13 +129,13 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
         const safePath = pathCheck.resolved;
 
         try {
-            await fs.mkdir(safePath, { recursive: true });
-            const files: string[] = await fs.readdir(safePath);
+            await fs.mkdir(safePath!, { recursive: true });
+            const files: string[] = await fs.readdir(safePath!);
             const sessions: unknown[] = [];
             for (const file of files) {
                 if (!file.endsWith('.json')) continue;
                 try {
-                    const content = await fs.readFile(path.join(safePath, file), 'utf-8');
+                    const content = await fs.readFile(path.join(safePath!, file), 'utf-8');
                     const config: unknown = JSON.parse(content);
                     if (config && typeof config === 'object' && 'id' in config && 'type' in config) {
                         sessions.push(config);
@@ -162,9 +162,9 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
         const sessionConfig = config as Record<string, unknown>;
 
         try {
-            await fs.mkdir(safeDirPath, { recursive: true });
+            await fs.mkdir(safeDirPath!, { recursive: true });
             const safeName = (sessionConfig.name as string).replace(/[<>:"/\\|?*]/g, '_');
-            const filePath = path.join(safeDirPath, `${safeName}.json`);
+            const filePath = path.join(safeDirPath!, `${safeName}.json`);
 
             // 使用写入队列序列化同一文件的并发写入
             await FileWriteQueue.enqueue(filePath, async () => {
@@ -192,7 +192,7 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
 
         try {
             const safeName = (sessionConfig.name as string).replace(/[<>:"/\\|?*]/g, '_');
-            const filePath = path.join(safeDirPath, `${safeName}.json`);
+            const filePath = path.join(safeDirPath!, `${safeName}.json`);
             await fs.unlink(filePath);
             return { success: true };
         } catch (error: unknown) {
@@ -214,10 +214,10 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
         if (!newCheck.valid) return { success: false, error: newCheck.error };
 
         try {
-            const safeOld = oldCheck.value.replace(/[<>:"/\\|?*]/g, '_');
-            const safeNew = newCheck.value.replace(/[<>:"/\\|?*]/g, '_');
-            const oldPath = path.join(safeDirPath, `${safeOld}.json`);
-            const newPath = path.join(safeDirPath, `${safeNew}.json`);
+            const safeOld = oldCheck.value!.replace(/[<>:"/\\|?*]/g, '_');
+            const safeNew = newCheck.value!.replace(/[<>:"/\\|?*]/g, '_');
+            const oldPath = path.join(safeDirPath!, `${safeOld}.json`);
+            const newPath = path.join(safeDirPath!, `${safeNew}.json`);
             await fs.rename(oldPath, newPath);
             return { success: true };
         } catch (error: unknown) {

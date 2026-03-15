@@ -52,6 +52,7 @@ export const zhCN = {
             typography: '字体排版',
             logFormat: '日志格式化',
             customThemes: '自定义主题',
+            modules: '功能模块',
         },
 
         // 外观方案
@@ -452,7 +453,7 @@ export const zhCN = {
         configuration: '配置',
         commands: '命令',
         virtualPort: '虚拟串口',
-        extensions: '扩展',
+        modules: '模块管理',
     },
 
     // 面板区域
@@ -481,22 +482,19 @@ export const zhCN = {
     },
 
 
-    // 扩展侧边栏
-    extensions: {
-        searchPlaceholder: '搜索扩展...',
-        installFromFile: '从文件安装 (.tpkg)',
-        installed: '已安装',
-        recommended: '推荐',
-        install: '安装',
+    // 模块管理
+    modules: {
+        core: '核心功能',
+        optional: '可选模块',
         enabled: '已启用',
         disabled: '已禁用',
-        userInstalled: '用户安装',
-        noMatches: '无匹配结果',
-        noneInstalled: '未安装任何扩展',
-        disable: '禁用',
         enable: '启用',
-        uninstall: '卸载',
-        devDocs: '插件开发文档',
+        disable: '禁用',
+        coreDesc: '核心功能始终启用',
+        commandsName: '命令菜单',
+        commandsDesc: '管理和发送常用串口命令',
+        virtualPortName: '虚拟串口',
+        virtualPortDesc: '虚拟串口管理与监控（com0com）',
     },
 
     // 系统消息
@@ -517,6 +515,14 @@ export const zhCN = {
         writeFailed: '写入失败: {err}',
         publishFailed: '发布失败: {err}',
         failedToConnect: '连接失败: {err}',
+    },
+
+    // 欢迎页面
+    welcome: {
+        subtitle: 'VS Code 风格串口调试助手',
+        newConnection: '新建连接',
+        openLog: '打开日志...',
+        recent: '最近',
     },
 } as const;
 
