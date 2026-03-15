@@ -9,9 +9,13 @@
  *   漂移补偿   → 绝对时间轴         ：nextFireTime += interval
  */
 import { BrowserWindow } from 'electron';
+import path from 'node:path';
+import { Worker } from 'worker_threads';
+import type { SerialPortInstance } from '../types/serialport.types';
 
+/** Worker 句柄，用于管理定时发送任务的停止信号 */
 interface TimedSendHandle {
-    worker: any;
+    worker: Worker;
     control: Int32Array;
 }
 
@@ -23,83 +27,20 @@ interface TimestampSlot {
     format: string;
 }
 
-// 静态定时发送 Worker 代码
-const STATIC_WORKER_CODE = `
-const { workerData, parentPort } = require('worker_threads');
-const { performance } = require('perf_hooks');
-const control = new Int32Array(workerData.controlBuf);
-
-const LEAD_MS = 5;
-let nextFireTime = performance.now() + workerData.intervalMs;
-
-while (true) {
-  const remaining = nextFireTime - performance.now();
-
-  if (remaining > LEAD_MS) {
-    const coarse = Math.floor(remaining - LEAD_MS);
-    if (Atomics.wait(control, 0, 0, coarse) !== 'timed-out') break;
-  }
-
-  while (performance.now() < nextFireTime) {
-    if (Atomics.load(control, 0) !== 0) process.exit(0);
-  }
-
-  nextFireTime += workerData.intervalMs;
-  parentPort.postMessage(null);
+/**
+ * 获取 timer-worker.js 的绝对路径。
+ * Vite 构建时 timer-worker.ts 会被单独打包到 dist-electron/timer-worker.js。
+ */
+function getWorkerPath(): string {
+    return path.join(__dirname, 'timer-worker.js');
 }
-`;
-
-// 动态定时发送 Worker 代码（帧循环 + timestamp 填充）
-const DYNAMIC_WORKER_CODE = [
-    "const { workerData, parentPort } = require('worker_threads');",
-    "const { performance } = require('perf_hooks');",
-    "const control = new Int32Array(workerData.controlBuf);",
-    "const LEAD_MS = 5;",
-    "var frames = workerData.frames.map(function(f) { return Buffer.from(f); });",
-    "var frameIndex = 0;",
-    "var timestampSlots = workerData.timestampSlots;",
-    "var nextFireTime = performance.now() + workerData.intervalMs;",
-    "function fillTimestamp(buf) {",
-    "    for (var si = 0; si < timestampSlots.length; si++) {",
-    "        var slot = timestampSlots[si];",
-    "        var byteSize = slot.byteSize;",
-    "        var ts = slot.format === 'milliseconds' ? BigInt(Date.now()) : BigInt(Math.floor(Date.now() / 1000));",
-    "        if (slot.byteOrder === 'big') {",
-    "            for (var i = byteSize - 1; i >= 0; i--) {",
-    "                buf[slot.byteOffset + (byteSize - 1 - i)] = Number((ts >> BigInt(i * 8)) & BigInt(0xFF));",
-    "            }",
-    "        } else {",
-    "            for (var i = 0; i < byteSize; i++) {",
-    "                buf[slot.byteOffset + i] = Number((ts >> BigInt(i * 8)) & BigInt(0xFF));",
-    "            }",
-    "        }",
-    "    }",
-    "}",
-    "while (true) {",
-    "    var remaining = nextFireTime - performance.now();",
-    "    if (remaining > LEAD_MS) {",
-    "        var coarse = Math.floor(remaining - LEAD_MS);",
-    "        if (Atomics.wait(control, 0, 0, coarse) !== 'timed-out') break;",
-    "    }",
-    "    while (performance.now() < nextFireTime) {",
-    "        if (Atomics.load(control, 0) !== 0) process.exit(0);",
-    "    }",
-    "    nextFireTime += workerData.intervalMs;",
-    // 模运算循环使用帧，永不耗尽
-    "    var idx = frameIndex % frames.length;",
-    "    var buf = Buffer.from(frames[idx]);",
-    "    fillTimestamp(buf);",
-    "    parentPort.postMessage({ type: 'send', data: buf, index: frameIndex });",
-    "    frameIndex++;",
-    "}",
-].join('\n');
 
 export class TimedSendManager {
     private handles: Map<string, TimedSendHandle> = new Map();
     private mainWindow: BrowserWindow;
-    private getPort: (connectionId: string) => any;
+    private getPort: (connectionId: string) => SerialPortInstance | undefined;
 
-    constructor(mainWindow: BrowserWindow, getPort: (connectionId: string) => any) {
+    constructor(mainWindow: BrowserWindow, getPort: (connectionId: string) => SerialPortInstance | undefined) {
         this.mainWindow = mainWindow;
         this.getPort = getPort;
     }
@@ -116,15 +57,15 @@ export class TimedSendManager {
         }
 
         const payload = Buffer.from(data);
-        const { Worker } = require('worker_threads');
+        const { Worker: WorkerThread } = require('worker_threads');
 
         // SharedArrayBuffer 作停止信号：control[0] = 0 运行中，1 = 停止
         const controlBuf = new SharedArrayBuffer(4);
         const control = new Int32Array(controlBuf);
 
-        const worker = new Worker(STATIC_WORKER_CODE, {
-            eval: true,
-            workerData: { intervalMs, controlBuf }
+        // 使用独立 Worker 文件，通过 workerData.mode 区分静态/动态模式
+        const worker = new Worker(getWorkerPath(), {
+            workerData: { mode: 'static', intervalMs, controlBuf }
         });
 
         // 主线程收到 tick：写串口 + 通知渲染进程记录日志
@@ -135,7 +76,7 @@ export class TimedSendManager {
                 return;
             }
             const ts = Date.now();
-            p.write(payload, (err: any) => {
+            p.write(payload, (err?: Error | null) => {
                 if (!err && this.mainWindow && !this.mainWindow.isDestroyed()) {
                     this.mainWindow.webContents.send('serial:timed-send-tick', {
                         connectionId, data: Array.from(data), timestamp: ts
@@ -169,18 +110,18 @@ export class TimedSendManager {
             return { success: false, error: 'Port not open' };
         }
 
-        const { Worker } = require('worker_threads');
+        const { Worker: WorkerThread } = require('worker_threads');
 
         // SharedArrayBuffer：control[0]=0 运行中 / 1=停止
         const controlBuf = new SharedArrayBuffer(8);
         const control = new Int32Array(controlBuf);
 
-        const worker = new Worker(DYNAMIC_WORKER_CODE, {
-            eval: true,
-            workerData: { intervalMs, controlBuf, frames, timestampSlots }
+        // 使用独立 Worker 文件，通过 workerData.mode 区分静态/动态模式
+        const worker = new Worker(getWorkerPath(), {
+            workerData: { mode: 'dynamic', intervalMs, controlBuf, frames, timestampSlots }
         });
 
-        worker.on('message', (msg: any) => {
+        worker.on('message', (msg: { type: string; data: Buffer; index: number }) => {
             if (msg.type === 'send') {
                 const p = this.getPort(connectionId);
                 if (!p || !p.isOpen) {
@@ -189,7 +130,7 @@ export class TimedSendManager {
                 }
                 const ts = Date.now();
                 const buf = Buffer.from(msg.data);
-                p.write(buf, (err: any) => {
+                p.write(buf, (err?: Error | null) => {
                     if (!err && this.mainWindow && !this.mainWindow.isDestroyed()) {
                         this.mainWindow.webContents.send('serial:timed-send-tick', {
                             connectionId, data: Array.from(buf), timestamp: ts

@@ -8,10 +8,11 @@
 import { BrowserWindow } from 'electron';
 import { getSerialPort } from '../utils/serialport-loader';
 import { openPortWithRetry, formatPortPath } from './MonitorPortHelper';
+import type { SerialPortInstance } from '../types/serialport.types';
 
 export class MonitorService {
     private mainWindow: BrowserWindow;
-    private sessions: Map<string, { internal: any; physical: any; pollTimer?: NodeJS.Timeout, isStopping?: boolean }> = new Map();
+    private sessions: Map<string, { internal: SerialPortInstance; physical: SerialPortInstance; pollTimer?: NodeJS.Timeout; isStopping?: boolean }> = new Map();
     private writeQueues: Map<string, Map<'virtual' | 'physical', Promise<void>>> = new Map();
 
     constructor(mainWindow: BrowserWindow) {
@@ -55,21 +56,21 @@ export class MonitorService {
 
     // ── 事件绑定 ──
 
-    private setupEvents(sessionId: string, source: any, target: any, label: string, sourceType: 'TX' | 'RX', path: string) {
+    private setupEvents(sessionId: string, source: SerialPortInstance, target: SerialPortInstance, label: string, sourceType: 'TX' | 'RX', portPath: string) {
         source.removeAllListeners('data');
         source.removeAllListeners('error');
         source.removeAllListeners('close');
 
-        source.on('data', (data: any) => {
+        source.on('data', (data: Buffer) => {
             this.enqueueWrite(sessionId, sourceType === 'TX' ? 'physical' : 'virtual', () => {
-                return new Promise((resolve) => {
+                return new Promise<void>((resolve) => {
                     if (target && target.isOpen) {
-                        target.write(data, (err: any) => {
+                        target.write(data, (err?: Error | null) => {
                             if (err) console.error(`[Monitor] Forwarding error from ${label}:`, err.message);
-                            resolve(true);
+                            resolve();
                         });
                     } else {
-                        resolve(true);
+                        resolve();
                     }
                 });
             });
@@ -79,22 +80,22 @@ export class MonitorService {
             }
         });
 
-        source.on('error', (err: any) => {
+        source.on('error', (err: Error) => {
             if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${label} (${formatPortPath(path)}): ${err.message}` });
+                this.mainWindow.webContents.send('monitor:error', { sessionId, error: `${label} (${formatPortPath(portPath)}): ${err.message}` });
             }
         });
 
         source.on('close', () => {
             if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                this.mainWindow.webContents.send('monitor:closed', { sessionId, origin: label, path: formatPortPath(path) });
+                this.mainWindow.webContents.send('monitor:closed', { sessionId, origin: label, path: formatPortPath(portPath) });
             }
         });
     }
 
     // ── 对端轮询 ──
 
-    private startPartnerPoll(sessionId: string, port: any): NodeJS.Timeout {
+    private startPartnerPoll(sessionId: string, port: SerialPortInstance): NodeJS.Timeout {
         let lastStatus = false;
         return setInterval(async () => {
             try {
@@ -112,7 +113,7 @@ export class MonitorService {
 
     // ── 强制关闭端口 ──
 
-    private static forceClosePort(port: any): Promise<void> {
+    private static forceClosePort(port: SerialPortInstance | null): Promise<void> {
         return new Promise(resolve => {
             if (!port) return resolve();
             port.close(() => resolve());
@@ -121,12 +122,12 @@ export class MonitorService {
 
     // ── 安全关闭端口（含事件清理） ──
 
-    private static safeClosePort(port: any): Promise<void> {
+    private static safeClosePort(port: SerialPortInstance | null): Promise<void> {
         return new Promise(resolve => {
             if (!port) return resolve();
             port.removeAllListeners();
             if (port.isOpen) {
-                port.close((err: any) => {
+                port.close((err?: Error | null) => {
                     if (err) console.error('[Monitor] Port close error (ignored):', err.message);
                     resolve();
                 });
@@ -139,8 +140,8 @@ export class MonitorService {
     // ── 启动监控 ──
 
     async start(sessionId: string, config: any) {
-        let internal: any = null;
-        let physical: any = null;
+        let internal: SerialPortInstance | null = null;
+        let physical: SerialPortInstance | null = null;
         let pollTimer: NodeJS.Timeout | null = null;
 
         try {
@@ -195,7 +196,7 @@ export class MonitorService {
 
     // ── 注入写入：核心写操作 ──
 
-    private performInjectionWrite(port: any, payload: Buffer | string, target: string): Promise<{ success: boolean; error?: string }> {
+    private performInjectionWrite(port: SerialPortInstance, payload: Buffer | string, target: string): Promise<{ success: boolean; error?: string }> {
         return new Promise(resolve => {
             let timeoutId: NodeJS.Timeout | null = setTimeout(() => {
                 timeoutId = null;
@@ -204,7 +205,7 @@ export class MonitorService {
             }, 1000);
 
             try {
-                port.write(payload, async (err: any) => {
+                port.write(payload, async (err?: Error | null) => {
                     if (!timeoutId) return; // 已超时，忽略回调
                     clearTimeout(timeoutId);
                     timeoutId = null;
@@ -226,7 +227,7 @@ export class MonitorService {
 
     // ── 写入错误诊断 ──
 
-    private async diagnoseWriteError(err: any, port: any, target: string): Promise<string> {
+    private async diagnoseWriteError(err: Error, port: SerialPortInstance, target: string): Promise<string> {
         if (target !== 'virtual' || !port.isOpen) return err.message;
         try {
             const signals = await port.getControlSignals();

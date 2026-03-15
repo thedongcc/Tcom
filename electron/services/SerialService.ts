@@ -10,9 +10,10 @@ import { BrowserWindow } from 'electron';
 import { getSerialPort } from '../utils/serialport-loader';
 import { scanPorts } from './PortScanner';
 import { TimedSendManager } from './TimedSendManager';
+import type { SerialPortInstance } from '../types/serialport.types';
 
 export class SerialService {
-    private ports: Map<string, any> = new Map();
+    private ports: Map<string, SerialPortInstance> = new Map();
     private mainWindow: BrowserWindow;
     private timedSendManager: TimedSendManager;
 
@@ -53,14 +54,14 @@ export class SerialService {
                 autoOpen: false,
             });
 
-            port.open((err: any) => {
+            port.open((err: Error | null) => {
                 if (err) {
                     resolve({ success: false, error: err.message });
                 } else {
-                    this.ports.set(connectionId, port);
+                    this.ports.set(connectionId, port as unknown as SerialPortInstance);
 
                     // 数据到来：主进程立即打时间戳，精度高于渲染进程接收时再打
-                    port.on('data', (data: any) => {
+                    port.on('data', (data: Buffer) => {
                         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                             this.mainWindow.webContents.send('serial:data', { connectionId, data, timestamp: Date.now() });
                         }
@@ -73,7 +74,7 @@ export class SerialService {
                         this.ports.delete(connectionId);
                     });
 
-                    port.on('error', (err: any) => {
+                    port.on('error', (err: Error) => {
                         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                             this.mainWindow.webContents.send('serial:error', { connectionId, error: err.message });
                         }
@@ -89,7 +90,7 @@ export class SerialService {
         return new Promise((resolve) => {
             const port = this.ports.get(connectionId);
             if (port && port.isOpen) {
-                port.close((err: any) => {
+                port.close((err?: Error | null) => {
                     if (err) {
                         resolve({ success: false, error: err.message });
                     } else {
@@ -109,7 +110,7 @@ export class SerialService {
             const port = this.ports.get(connectionId);
             if (port && port.isOpen) {
                 const payload = typeof data === 'string' ? data : Buffer.from(data);
-                port.write(payload, (err: any) => {
+                port.write(payload, (err?: Error | null) => {
                     if (err) {
                         resolve({ success: false, error: err.message });
                     } else {

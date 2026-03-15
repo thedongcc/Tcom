@@ -7,6 +7,53 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { FileWriteQueue } from '../utils/FileWriteQueue';
 
+// ── 路径安全校验 ──
+
+/** 校验结果统一类型 */
+interface ValidationResult {
+    valid: boolean;
+    /** 校验通过时填充 */
+    resolved?: string;
+    /** 校验通过（requireString）时填充 */
+    value?: string;
+    /** 校验失败时填充 */
+    error?: string;
+}
+
+/**
+ * 校验工作区路径是否合法。
+ * 仅允许访问 userData 目录和用户文档目录下的路径，防止路径遍历攻击。
+ */
+function validatePath(inputPath: unknown): ValidationResult {
+    if (typeof inputPath !== 'string' || inputPath.trim() === '') {
+        return { valid: false, error: 'Invalid workspace path: must be a non-empty string' };
+    }
+
+    const resolved = path.resolve(inputPath);
+
+    // 路径白名单：只允许 userData 目录 和 文档目录 及其子目录
+    const allowedRoots = [
+        path.resolve(app.getPath('userData')),
+        path.resolve(app.getPath('documents')),
+    ];
+
+    const isAllowed = allowedRoots.some(root => resolved.startsWith(root + path.sep) || resolved === root);
+    if (!isAllowed) {
+        return { valid: false, error: 'Access denied: workspace path is outside allowed directories' };
+    }
+
+    return { valid: true, resolved };
+}
+
+/** 校验字符串类型参数是否合法 */
+function requireString(value: unknown, fieldName: string): ValidationResult {
+    if (typeof value !== 'string' || value.trim() === '') {
+        return { valid: false, error: `Invalid parameter: '${fieldName}' must be a non-empty string` };
+    }
+    return { valid: true, value: value.trim() };
+}
+
+
 export function registerWorkspaceIpc(win: BrowserWindow) {
     const workspaceStateFile = path.join(app.getPath('userData'), 'workspace.json');
     const defaultWorkspacePath = path.join(app.getPath('userData'), 'DefaultWorkspace');
@@ -72,68 +119,106 @@ export function registerWorkspaceIpc(win: BrowserWindow) {
     });
 
     // 列举工作区内所有 .json 会话文件
-    ipcMain.handle('workspace:listSessions', async (_event: any, wsPath: string) => {
+    ipcMain.handle('workspace:listSessions', async (_event: unknown, wsPath: unknown) => {
+        // 路径安全校验
+        const pathCheck = validatePath(wsPath);
+        if (!pathCheck.valid) return { success: false, error: pathCheck.error };
+        const safePath = pathCheck.resolved;
+
         try {
-            await fs.mkdir(wsPath, { recursive: true });
-            const files: string[] = await fs.readdir(wsPath);
-            const sessions: any[] = [];
+            await fs.mkdir(safePath, { recursive: true });
+            const files: string[] = await fs.readdir(safePath);
+            const sessions: unknown[] = [];
             for (const file of files) {
                 if (!file.endsWith('.json')) continue;
                 try {
-                    const content = await fs.readFile(path.join(wsPath, file), 'utf-8');
-                    const config = JSON.parse(content);
-                    if (config && config.id && config.type) {
+                    const content = await fs.readFile(path.join(safePath, file), 'utf-8');
+                    const config: unknown = JSON.parse(content);
+                    if (config && typeof config === 'object' && 'id' in config && 'type' in config) {
                         sessions.push(config);
                     }
                 } catch { /* 跳过不合法的文件 */ }
             }
             return { success: true, data: sessions };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     });
 
     // 保存单个会话配置到工作区
-    ipcMain.handle('workspace:saveSession', async (_event: any, wsPath: string, config: any) => {
+    ipcMain.handle('workspace:saveSession', async (_event: unknown, wsPath: unknown, config: unknown) => {
+        // 路径安全校验
+        const pathCheck = validatePath(wsPath);
+        if (!pathCheck.valid) return { success: false, error: pathCheck.error };
+        const safeDirPath = pathCheck.resolved;
+
+        // 配置合法性校验
+        if (!config || typeof config !== 'object' || !('name' in config) || typeof (config as Record<string, unknown>).name !== 'string') {
+            return { success: false, error: 'Invalid session config: missing or invalid name field' };
+        }
+        const sessionConfig = config as Record<string, unknown>;
+
         try {
-            await fs.mkdir(wsPath, { recursive: true });
-            const safeName = config.name.replace(/[<>:"/\\|?*]/g, '_');
-            const filePath = path.join(wsPath, `${safeName}.json`);
+            await fs.mkdir(safeDirPath, { recursive: true });
+            const safeName = (sessionConfig.name as string).replace(/[<>:"/\\|?*]/g, '_');
+            const filePath = path.join(safeDirPath, `${safeName}.json`);
 
             // 使用写入队列序列化同一文件的并发写入
             await FileWriteQueue.enqueue(filePath, async () => {
-                await fs.writeFile(filePath, JSON.stringify(config, null, 2));
+                await fs.writeFile(filePath, JSON.stringify(sessionConfig, null, 2));
             });
 
             return { success: true, filePath };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     });
 
     // 删除工作区中的会话文件
-    ipcMain.handle('workspace:deleteSession', async (_event: any, wsPath: string, config: any) => {
+    ipcMain.handle('workspace:deleteSession', async (_event: unknown, wsPath: unknown, config: unknown) => {
+        // 路径安全校验
+        const pathCheck = validatePath(wsPath);
+        if (!pathCheck.valid) return { success: false, error: pathCheck.error };
+        const safeDirPath = pathCheck.resolved;
+
+        // 配置合法性校验
+        if (!config || typeof config !== 'object' || !('name' in config) || typeof (config as Record<string, unknown>).name !== 'string') {
+            return { success: false, error: 'Invalid session config: missing or invalid name field' };
+        }
+        const sessionConfig = config as Record<string, unknown>;
+
         try {
-            const safeName = config.name.replace(/[<>:"/\\|?*]/g, '_');
-            const filePath = path.join(wsPath, `${safeName}.json`);
+            const safeName = (sessionConfig.name as string).replace(/[<>:"/\\|?*]/g, '_');
+            const filePath = path.join(safeDirPath, `${safeName}.json`);
             await fs.unlink(filePath);
             return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     });
 
     // 重命名工作区中的会话文件
-    ipcMain.handle('workspace:renameSession', async (_event: any, wsPath: string, oldName: string, newName: string) => {
+    ipcMain.handle('workspace:renameSession', async (_event: unknown, wsPath: unknown, oldName: unknown, newName: unknown) => {
+        // 路径安全校验
+        const pathCheck = validatePath(wsPath);
+        if (!pathCheck.valid) return { success: false, error: pathCheck.error };
+        const safeDirPath = pathCheck.resolved;
+
+        // 名称参数校验
+        const oldCheck = requireString(oldName, 'oldName');
+        if (!oldCheck.valid) return { success: false, error: oldCheck.error };
+        const newCheck = requireString(newName, 'newName');
+        if (!newCheck.valid) return { success: false, error: newCheck.error };
+
         try {
-            const safeOld = oldName.replace(/[<>:"/\\|?*]/g, '_');
-            const safeNew = newName.replace(/[<>:"/\\|?*]/g, '_');
-            const oldPath = path.join(wsPath, `${safeOld}.json`);
-            const newPath = path.join(wsPath, `${safeNew}.json`);
+            const safeOld = oldCheck.value.replace(/[<>:"/\\|?*]/g, '_');
+            const safeNew = newCheck.value.replace(/[<>:"/\\|?*]/g, '_');
+            const oldPath = path.join(safeDirPath, `${safeOld}.json`);
+            const newPath = path.join(safeDirPath, `${safeNew}.json`);
             await fs.rename(oldPath, newPath);
             return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     });
 

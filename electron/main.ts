@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 
 import { saveWindowState, loadWindowState } from './utils/window-state';
@@ -97,10 +97,7 @@ function createWindow() {
   win.on('resize', () => saveWindowState(win!));
   win.on('move', () => saveWindowState(win!));
 
-  // 测试推送消息
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
-  })
+
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
