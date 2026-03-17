@@ -139,7 +139,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
                 ref={scrollRef}
                 onScroll={handleScroll}
                 className="overflow-y-auto w-full scrollbar-none"
-                style={{ maxHeight: typeof dropdownStyle.maxHeight === 'number' ? `${dropdownStyle.maxHeight}px` : '240px' }}
+                style={{ maxHeight: `${dropdownStyle.maxHeight}px` }}
             >
                 <style dangerouslySetInnerHTML={{
                     __html: `

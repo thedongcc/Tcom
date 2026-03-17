@@ -51,6 +51,12 @@ jobs:
           cat release_notes.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      - name: Run Tests
+        run: npm test
+
       - name: Build Application
         run: npm run build:app
 

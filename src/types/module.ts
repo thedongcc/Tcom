@@ -160,7 +160,7 @@ export interface Feature {
     /**
      * ActivityBar 图标组件（Lucide Icon 格式）
      */
-    icon?: ComponentType<{ size?: number; className?: string }>;
+    icon?: ComponentType<{ size?: number; className?: string }> | React.ForwardRefExoticComponent<Record<string, unknown>>;
     /**
      * 状态栏贡献项（可选）。
      * 模块可在状态栏添加自定义文本/按钮。

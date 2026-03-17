@@ -59,7 +59,8 @@ export function useMonitorTerminalState(session: SessionState) {
     const initialLogCountRef = useRef(logs.length);
     const mountTimeRef = useRef(Date.now());
 
-    const uiState = config.uiState || {};
+    const monitorConfig = config as import('../../types/session').MonitorSessionConfig;
+    const uiState = monitorConfig.uiState || {};
 
     // ── UI 状态（从会话配置持久化恢复） ──
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
@@ -94,7 +95,7 @@ export function useMonitorTerminalState(session: SessionState) {
     }, [session.id, sessionManager, config]);
 
     // ── 数据格式化 ──
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => {
+    const formatData = useCallback((data: string | Uint8Array, mode: string, enc: string) => {
         let hexStr = '';
         let textStr = '';
         if (mode === 'hex' || mode === 'both') {

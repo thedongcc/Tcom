@@ -185,7 +185,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
 
     const handleColorChange = useCallback((varName: string, color: string) => {
         const themeId = currentThemeDef?.id || config.theme || 'dark';
-        if (typeof varName !== 'string' || !varName.startsWith('--')) return;
+        if (!varName.startsWith('--')) return;
 
         const colorStr = String(color);
         const newEditsForTheme = { ...(allEdits[themeId] || {}), [varName]: colorStr };

@@ -58,7 +58,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
     } = state;
 
     // ── 数据格式化 ──
-    const formatData = useCallback((data: string | Uint8Array, mode: 'text' | 'hex' | 'json' | 'base64') => {
+    const formatData = useCallback((data: string | Uint8Array, mode: string, _encoding: string = 'utf-8') => {
         if (mode === 'hex') {
             const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
             return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');

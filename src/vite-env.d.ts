@@ -118,6 +118,8 @@ declare global {
         }
         appAPI: {
             factoryReset: () => Promise<{ success: true } | { success: false; error: string }>;
+            splashReady: () => void;
+            splashProgress: (percent: number, text: string) => void;
         }
         themeAPI: {
             onStatusChanged: (callback: (isOpen: boolean) => void) => () => void;

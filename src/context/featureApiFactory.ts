@@ -2,15 +2,16 @@
  * featureApiFactory.ts
  * 模块 API 构建工厂：createFeatureContextApi。
  */
-import { FeatureContextApi, Disposable, SessionInfo } from '../types/module';
+import { FeatureContextApi, Disposable, SessionInfo, ToastType, ConfirmOptions } from '../types/module';
+import { SessionConfig } from '../types/session';
 import { globalEventBus } from '../lib/EventBus';
 
 // ─── 构建 FeatureContextApi（模块沙箱接口）──────────────────────────────────────
 
 interface BuildContextApiDeps {
-    showToast: (message: string, type?: any, duration?: number) => void;
-    confirm: (opts: any) => Promise<boolean>;
-    sessions: Array<{ id: string; config: any; isConnected: boolean }>;
+    showToast: (message: string, type?: ToastType, duration?: number) => void;
+    confirm: (opts: ConfirmOptions) => Promise<boolean>;
+    sessions: Array<{ id: string; config: SessionConfig; isConnected: boolean }>;
     activeSessionId: string | null;
     disposablesRef: React.MutableRefObject<Map<string, Disposable[]>>;
     commandsRef: React.MutableRefObject<Map<string, { label: string; callback: () => void }>>;
@@ -34,7 +35,7 @@ export function createFeatureContextApi(featureId: string, deps: BuildContextApi
 
         ui: {
             showToast: (message, type = 'info', duration = 3000) => {
-                showToast(message, type as any, duration);
+                showToast(message, type as ToastType, duration);
             },
             showConfirm: async (opts) => {
                 return confirm({
@@ -42,7 +43,7 @@ export function createFeatureContextApi(featureId: string, deps: BuildContextApi
                     message: opts.message,
                     confirmText: opts.confirmText,
                     cancelText: opts.cancelText,
-                    type: (opts.type === 'danger' ? 'warning' : opts.type) as any,
+                    type: (opts.type === 'danger' ? 'warning' : opts.type) as ConfirmOptions['type'],
                 });
             },
         },

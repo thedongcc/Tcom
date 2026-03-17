@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 命令菜单和虚拟串口开关移动到设置页面内
 - 导出日志时间戳增加毫秒
 - 增加快捷键相关设置
+- 增加启动动画
 
 ### Fixed
 - 修复工作区加载问题

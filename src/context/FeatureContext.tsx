@@ -103,12 +103,14 @@ export const FeatureProvider = ({ children }: { children: ReactNode }) => {
         if (hydratedRef.current) return;
         hydratedRef.current = true;
 
-        // 立即加载 eager 模块，延迟加载 lazy 模块
+        // ⚡ 并行加载所有活跃模块，不再串行 await
         const loadAndActivate = async () => {
-            for (const descriptor of FEATURE_REGISTRY) {
-                const featureState = features.find(f => f.feature.id === descriptor.id);
-                if (!featureState?.isActive) continue;
+            const activeDescriptors = FEATURE_REGISTRY.filter(d => {
+                const featureState = features.find(f => f.feature.id === d.id);
+                return featureState?.isActive;
+            });
 
+            await Promise.all(activeDescriptors.map(async (descriptor) => {
                 try {
                     const module = await descriptor.load();
                     const feature = module.default;
@@ -125,7 +127,7 @@ export const FeatureProvider = ({ children }: { children: ReactNode }) => {
                 } catch (e) {
                     console.error(`[Feature:${descriptor.id}] 加载失败:`, e);
                 }
-            }
+            }));
         };
 
         void loadAndActivate();

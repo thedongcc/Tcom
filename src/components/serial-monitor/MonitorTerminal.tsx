@@ -165,7 +165,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                                 formatData={formatData} formatTimestamp={(ts: number, fmt?: string) => formatTimestamp(ts, fmt || 'HH:mm:ss.SSS')} getDataLengthText={getDataLengthText}
                                 timestampFormat={themeConfig.timestampFormat}
                                 matches={matches} activeMatch={activeMatch} mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
-                                fontSize={fontSize} rxCRC={rxCRC} crcEnabled={!!rxCRC.enabled}
+                                fontSize={fontSize} rxCRC={rxCRC} crcEnabled={rxCRC.enabled}
                             />
                         );
                     })}

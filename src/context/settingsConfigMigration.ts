@@ -38,7 +38,7 @@ export function loadAndMigrateConfig(): ThemeConfig {
  * 深度合并解析后的配置并执行迁移。
  * 同时用于初次加载和导入配置。
  */
-export function mergeAndMigrate(parsed: any): ThemeConfig {
+export function mergeAndMigrate(parsed: Partial<ThemeConfig> & Record<string, unknown>): ThemeConfig {
     const merged: ThemeConfig = {
         ...DEFAULT_THEME,
         ...parsed,

@@ -1,76 +1,43 @@
-import { Layout } from './components/layout/Layout'
-import { SettingsProvider } from './context/SettingsContext'
-import { I18nProvider } from './context/I18nContext'
-import { ToastProvider } from './context/ToastContext'
-import { CommandProvider } from './context/CommandContext'
-import { ConfirmProvider } from './context/ConfirmContext'
-import { SessionProvider } from './context/SessionContext'
-import { FeatureProvider } from './context/FeatureContext'
-import { useSessionManager } from './hooks/useSessionManager'
-import { useEditorLayout } from './hooks/useEditorLayout'
-import { ThemeColorEditor } from './components/theme/ThemeColorEditor'
-import { ErrorBoundary } from './components/common/ErrorBoundary'
+/**
+ * App.tsx
+ * ⚡ 极简入口 — 只导入 React，零业务依赖。
+ *
+ * 架构：App.tsx 首帧只渲染 AppShell（纯 JSX 静态骨架），
+ * 完整应用通过 React.lazy(FullApp) 异步加载后无缝替换。
+ * 这使得 React 在 Vite dev 模式下只需加载 3 个模块就能完成
+ * 首次渲染（react + react-dom + App），而非 50+ 个模块的瀑布流。
+ */
+import React, { Suspense } from 'react'
+
+// ⚡ 整个应用（Provider + Hook + 布局 + 业务）全部懒加载
+const FullApp = React.lazy(() => import('./FullApp'));
+
+/**
+ * ⚡ 极简 App 骨架 — 精确匹配真实布局，视觉过渡无感。
+ * boot-theme.js 已提前注入 CSS 变量，骨架直接使用主题色。
+ */
+const AppShell = () => (
+    <div className="flex flex-col h-screen w-full bg-[var(--app-background,#1e1e1e)] text-[var(--app-foreground,#ccc)] overflow-hidden">
+        {/* 标题栏占位 */}
+        <div
+            className="h-[30px] bg-[var(--titlebar-background,#3c3c3c)] shrink-0 border-b border-[var(--border-color,#444)]"
+            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        />
+        <div className="flex-1 flex overflow-hidden">
+            {/* 活动栏占位 */}
+            <div className="w-[48px] bg-[var(--activitybar-background,#333)] shrink-0 border-r border-[var(--border-color,#444)]" />
+            {/* 主编辑区占位 */}
+            <div className="flex-1 bg-[var(--editor-area-bg,var(--app-background,#1e1e1e))]" />
+        </div>
+    </div>
+);
 
 function App() {
-  const sessionManager = useSessionManager();
-  const editorLayout = useEditorLayout();
-
-  // 拦截独立的主题编辑器窗口渲染
-  if (window.location.hash.includes('/theme-editor')) {
     return (
-      <ErrorBoundary>
-        <SettingsProvider>
-          <I18nProvider>
-            <ThemeColorEditor isOpen={true} onClose={() => { window.themeAPI?.closeThemeEditor(); }} />
-          </I18nProvider>
-        </SettingsProvider>
-      </ErrorBoundary>
+        <Suspense fallback={<AppShell />}>
+            <FullApp />
+        </Suspense>
     );
-  }
-
-  return (
-    <SettingsProvider>
-      <I18nProvider>
-        <ErrorBoundary>
-          <ToastProvider>
-            <ConfirmProvider>
-              <CommandProvider>
-                <SessionProvider manager={sessionManager}>
-                  <FeatureProvider>
-                    <Layout editorLayout={editorLayout}>
-                      <div className="flex flex-1 items-center justify-center h-full">
-                        <div className="flex flex-col items-center max-w-md text-center">
-                          <h1 className="text-4xl font-bold mb-4 text-[var(--st-panel-header-text)]">Tcom</h1>
-                          <p className="text-lg text-[var(--input-placeholder-color)] mb-8">VS Code Style Serial Debug Assistant</p>
-
-                          <div className="flex gap-4">
-                            <button className="px-4 py-2 bg-[var(--button-background)] text-[var(--button-foreground)] text-sm hover:bg-[var(--button-hover-background)] transition-colors flex items-center gap-2">
-                              New Connection
-                            </button>
-                            <button className="px-4 py-2 bg-[var(--button-secondary-background)] text-[var(--button-foreground)] text-sm hover:bg-[var(--button-secondary-hover-background)] transition-colors">
-                              Open Log...
-                            </button>
-                          </div>
-
-                          <div className="mt-12 text-left w-full">
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--input-placeholder-color)] mb-2">Recent</h3>
-                            <div className="space-y-1">
-                              <div className="text-[13px] text-[var(--link-foreground)] hover:underline cursor-pointer">COM3 - 115200</div>
-                              <div className="text-[13px] text-[var(--link-foreground)] hover:underline cursor-pointer">COM7 - 9600</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Layout>
-                  </FeatureProvider>
-                </SessionProvider>
-              </CommandProvider>
-            </ConfirmProvider>
-          </ToastProvider>
-        </ErrorBoundary>
-      </I18nProvider>
-    </SettingsProvider>
-  )
 }
 
 export default App

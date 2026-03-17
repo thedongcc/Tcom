@@ -3,14 +3,9 @@
  * 编辑器组面板，负责渲染选中的会话内容。
  * 从 EditorArea.tsx 中拆分出来。
  */
-import React from 'react';
+import React, { Suspense } from 'react';
 import { LayoutTemplate, Columns } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
-import { SerialMonitor } from '../serial/SerialMonitor';
-import { MqttMonitor } from '../mqtt/MqttMonitor';
-import { MonitorTerminal } from '../serial-monitor/MonitorTerminal';
-import { GraphEditor } from '../graph-editor/GraphEditor';
-import { SettingsEditor } from '../settings/SettingsEditor';
 import { LeafNode } from '../../hooks/useEditorLayout';
 import {
     SortableContext,
@@ -25,6 +20,13 @@ import {
     HeaderDropZone,
     DropIndicator,
 } from './EditorTabComponents';
+
+// ⚡ 重型面板组件懒加载，避免启动时加载数百个模块
+const SerialMonitor = React.lazy(() => import('../serial/SerialMonitor').then(m => ({ default: m.SerialMonitor })));
+const MqttMonitor = React.lazy(() => import('../mqtt/MqttMonitor').then(m => ({ default: m.MqttMonitor })));
+const MonitorTerminal = React.lazy(() => import('../serial-monitor/MonitorTerminal').then(m => ({ default: m.MonitorTerminal })));
+const GraphEditor = React.lazy(() => import('../graph-editor/GraphEditor').then(m => ({ default: m.GraphEditor })));
+const SettingsEditor = React.lazy(() => import('../settings/SettingsEditor').then(m => ({ default: m.SettingsEditor })));
 
 interface GroupPanelProps {
     node: LeafNode;
@@ -122,6 +124,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
 
             {/* 内容区域 */}
             <div className="flex-1 relative bg-[var(--app-background)]">
+                <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center text-[var(--input-placeholder-color)] text-sm opacity-60">Loading...</div>}>
                 {node.activeViewId ? (
                     (() => {
                         const session = sessions.find((s: any) => s.id === node.activeViewId);
@@ -179,6 +182,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                         <p className="text-sm text-[var(--activitybar-inactive-foreground)] mt-2 max-w-[300px]">{t('editor.noEditorDesc')}</p>
                     </div>
                 )}
+                </Suspense>
             </div>
         </div>
     );

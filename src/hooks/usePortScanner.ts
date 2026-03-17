@@ -109,7 +109,8 @@ export const usePortScanner = (): UsePortScannerReturn => {
 
     // 端口扫描定时器
     useEffect(() => {
-        const firstScanTimer = setTimeout(() => void listPorts(false), 300);
+        // ⚡ 首次扫描延迟从 300ms 缩短到 100ms
+    const firstScanTimer = setTimeout(() => void listPorts(false), 100);
         const interval = setInterval(() => void listPorts(true), 2000);
         return () => {
             clearTimeout(firstScanTimer);

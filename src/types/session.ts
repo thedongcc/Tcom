@@ -25,8 +25,8 @@ export interface BaseSessionConfig {
     type: SessionType;
     autoConnect: boolean;
     // Optional properties that might be accessed generically (careful with this)
-    uiState?: any;
-    connection?: any;
+    uiState?: Record<string, unknown>;
+    connection?: Record<string, unknown>;
     txCRC?: CRCConfig;
     rxCRC?: CRCConfig;
 }
@@ -47,7 +47,7 @@ export interface SerialSessionConfig extends BaseSessionConfig {
         // Input area
         inputContent?: string;
         inputHTML?: string; // Persist HTML to keep tokens
-        inputTokens?: Record<string, any>; // Persist token configurations. Type 'any' to avoid circular dependency if possible, or import Token
+        inputTokens?: Record<string, unknown>; // 持久化 Token 配置
         inputMode?: 'text' | 'hex';
         lineEnding?: '' | '\n' | '\r' | '\r\n';
         inputTimerInterval?: number;
@@ -124,8 +124,8 @@ export interface MqttSessionConfig extends BaseSessionConfig {
 export interface GraphSessionConfig extends BaseSessionConfig {
     type: 'graph';
     graphData?: {
-        nodes: any[];
-        edges: any[];
+        nodes: Record<string, unknown>[];
+        edges: Record<string, unknown>[];
         // visual metadata?
     };
 }
@@ -151,7 +151,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         filterMode?: 'all' | 'rx' | 'tx';
         inputContent?: string;
         inputHTML?: string;
-        inputTokens?: any;
+        inputTokens?: Record<string, unknown>;
         inputMode?: 'text' | 'hex';
         encoding?: 'utf-8' | 'gbk' | 'ascii';
         fontSize?: number;

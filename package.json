@@ -1,5 +1,5 @@
 {
-  "name": "Tcom",
+  "name": "tcom",
   "private": true,
   "version": "0.0.2",
   "description": "A powerful serial port debugging tool.",
@@ -9,6 +9,8 @@
     "url": "git+https://github.com/thedongcc/Tcom.git"
   },
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "node scripts/dev.mjs",
     "build:app": "vite build --config config/vite.config.mts",
     "build:dist": "electron-builder --config config/electron-builder.json5",
@@ -61,7 +63,8 @@
     "typescript": "^5.2.2",
     "vite": "^5.4.21",
     "vite-plugin-electron": "^0.28.6",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^4.1.0"
   },
   "main": "dist-electron/main.js"
 }

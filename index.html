@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data: https: http: tcom-file:">
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data: https: http: tcom-file:">
   <!-- 最高优先级预加载本地字体，确保首次渲染时字体已就绪，彻底消除字体切换闪烁（FOUT） -->
   <!-- 注：此路径为 Vite dev server 路径，生产构建 Vite 会优化字体 -->
   <link rel="preload" as="font" type="font/ttf" href="/src/assets/fonts/JetBrainsMono-Medium.ttf"
@@ -16,28 +16,7 @@
 
 <body spellcheck="false">
   <!-- ⚡ 同步从 localStorage 读取主题颜色，避免 loading 界面颜色闪烁 -->
-  <script>
-    (function () {
-      try {
-        var settings = JSON.parse(localStorage.getItem('tcom-settings') || '{}');
-        var themeId = settings.theme || 'dark';
-        // 根据主题模式设置 loading 骨架颜色
-        var isDark = themeId !== 'light';
-        var bg = isDark ? '#1e1e1e' : '#ffffff';
-        var titlebarBg = isDark ? '#3c3c3c' : '#dddddd';
-        var textColor = isDark ? '#cccccc' : '#616161';
-        var spinnerBorder = isDark ? '#3c3c3c' : '#e0e0e0';
-        // 注入关键颜色变量到 :root
-        var root = document.documentElement;
-        root.style.setProperty('--loading-bg', bg);
-        root.style.setProperty('--loading-titlebar', titlebarBg);
-        root.style.setProperty('--loading-text', textColor);
-        root.style.setProperty('--loading-spinner-track', spinnerBorder);
-        // 更新 meta theme-color（部分平台）
-        document.documentElement.style.backgroundColor = bg;
-      } catch (e) { }
-    })();
-  </script>
+  <script src="/src/boot-theme.js"></script>
   <div id="root">
     <style>
       /* 提前设置字体变量默认值，防止 JS 注入前出现字体大小跳变 */

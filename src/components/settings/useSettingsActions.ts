@@ -12,7 +12,7 @@ import { useI18n } from '../../context/I18nContext';
 const MONO_KEYWORDS = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
 export const useSettingsActions = () => {
-    const { config: _config, resetConfig, importConfig, exportConfig } = useSettings();
+    const { resetConfig, importConfig, exportConfig } = useSettings();
     const { confirm } = useConfirm();
     const { t } = useI18n();
     const [systemFonts, setSystemFonts] = useState<string[]>([]);
@@ -70,7 +70,7 @@ export const useSettingsActions = () => {
                 return;
             }
             const res = await window.appAPI.factoryReset();
-            if (res && res.success === false) {
+            if (res && !res.success) {
                 alert('重置失败 (Reset Failed):\n' + res.error);
             }
         } catch (e: any) {

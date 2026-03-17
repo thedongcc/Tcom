@@ -4,19 +4,22 @@
  *
  * 子模块：
  * - useSessionListActions.ts — 拖拽排序、新建/重命名/删除会话逻辑
+ * - WorkspaceHeader.tsx — 工作区头部区域
+ * - RecentWorkspacesMenu.tsx — 最近工作区弹出菜单
  */
 import { useState, useEffect, useRef } from 'react';
-import { FolderOpen, Plus, Trash2, Edit2, MoreHorizontal, Check, RefreshCw } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { NewSessionDialog } from '../session/NewSessionDialog';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SessionListItem } from './SessionListItem';
 import { useI18n } from '../../context/I18nContext';
-import { Tooltip } from '../common/Tooltip';
 import { useSessionListActions } from './useSessionListActions';
 import { useSession } from '../../context/SessionContext';
 import { SessionConfig } from '../../types/session';
+import { WorkspaceHeader } from './WorkspaceHeader';
+import { RecentWorkspacesMenu } from './RecentWorkspacesMenu';
 
 interface SessionListSidebarProps {
     editorLayout: ReturnType<typeof useEditorLayout>;
@@ -65,106 +68,37 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
     return (
         <div className="flex flex-col h-full bg-[var(--session-list-sidebar-bg)] text-[var(--session-list-sidebar-text)] relative" data-component="session-list-sidebar">
             {/* 工作区头部 */}
-            <div className="px-3 py-2 border-b border-[var(--session-list-sidebar-border)] bg-[var(--session-list-sidebar-header-bg)]">
-                {sessionManager.workspacePath ? (
-                    <div className="flex items-center justify-between">
-                        <Tooltip content={sessionManager.workspacePath} position="bottom" wrapperClassName="min-w-0 flex-1 flex">
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-80 min-w-0 flex-1 cursor-default">
-                                <FolderOpen size={13} className="shrink-0 opacity-70" />
-                                <span className="truncate">{workspaceFolderName}</span>
-                            </div>
-                        </Tooltip>
-                        <div className="flex items-center gap-0.5 shrink-0">
-                            <Tooltip content={t('monitor.refresh')} position="bottom">
-                                <div
-                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                    onClick={() => {
-                                        if (sessionManager.workspacePath) {
-                                            sessionManager.openWorkspace(sessionManager.workspacePath);
-                                        }
-                                    }}
-                                >
-                                    <RefreshCw size={13} className="opacity-70 hover:opacity-100" />
-                                </div>
-                            </Tooltip>
-                            <Tooltip content={t('session.recentWorkspaces')} position="bottom">
-                                <div
-                                    ref={recentButtonRef}
-                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const rect = recentButtonRef.current?.getBoundingClientRect();
-                                        if (rect) setRecentMenu({ x: rect.left, y: rect.bottom + 5 });
-                                    }}
-                                >
-                                    <MoreHorizontal size={14} className="opacity-70 hover:opacity-100" />
-                                </div>
-                            </Tooltip>
-                            <Tooltip content={t('session.newSession')} position="bottom">
-                                <div
-                                    ref={addButtonRef}
-                                    className="cursor-pointer p-1 rounded hover:bg-[var(--list-hover-background)]"
-                                    onClick={() => setShowNewSessionDialog(true)}
-                                >
-                                    <Plus size={14} className="opacity-70 hover:opacity-100" />
-                                </div>
-                            </Tooltip>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-2 py-4">
-                        <FolderOpen size={32} className="opacity-30" />
-                        <span className="text-[11px] opacity-50 text-center">{t('session.noWorkspaceOpen')}</span>
-                        <button
-                            className="text-[12px] px-3 py-1.5 rounded bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)] cursor-pointer transition-colors"
-                            onClick={() => sessionManager.browseAndOpenWorkspace()}
-                        >
-                            {t('session.openWorkspace')}
-                        </button>
-                    </div>
-                )}
-            </div>
+            <WorkspaceHeader
+                workspacePath={sessionManager.workspacePath}
+                workspaceFolderName={workspaceFolderName}
+                onRefreshWorkspace={() => {
+                    if (sessionManager.workspacePath) {
+                        sessionManager.openWorkspace(sessionManager.workspacePath);
+                    }
+                }}
+                onShowRecentMenu={(e) => {
+                    e.stopPropagation();
+                    const rect = recentButtonRef.current?.getBoundingClientRect();
+                    if (rect) setRecentMenu({ x: rect.left, y: rect.bottom + 5 });
+                }}
+                onShowNewSession={() => setShowNewSessionDialog(true)}
+                onBrowseWorkspace={() => sessionManager.browseAndOpenWorkspace()}
+                recentButtonRef={recentButtonRef}
+                addButtonRef={addButtonRef}
+                t={t}
+            />
 
             {/* 最近工作区菜单 */}
             {recentMenu && (
-                <div
-                    className="fixed z-50 bg-[var(--st-menu-bg)] border border-[var(--widget-border-color)] shadow-lg rounded py-1 min-w-[200px]"
-                    style={{ top: recentMenu.y, left: recentMenu.x }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="px-3 py-1.5 text-[11px] font-semibold opacity-50 select-none uppercase">
-                        {t('session.recentWorkspaces')}
-                    </div>
-                    {sessionManager.recentWorkspaces.map(ws => (
-                        <div
-                            key={ws}
-                            className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
-                            onClick={() => {
-                                sessionManager.openWorkspace(ws);
-                                setRecentMenu(null);
-                            }}
-                        >
-                            <Tooltip content={ws} position="right" wrapperClassName="truncate flex-1" className="max-w-[300px] whitespace-normal">
-                                <span className="truncate flex-1">
-                                    {ws.split(/[\\/]/).pop()}
-                                </span>
-                            </Tooltip>
-                            {sessionManager.workspacePath === ws && <Check size={12} className="opacity-70" />}
-                        </div>
-                    ))}
-                    {sessionManager.recentWorkspaces.length > 0 && (
-                        <div className="h-[1px] bg-[var(--border-color)] my-1 opacity-50" />
-                    )}
-                    <div
-                        className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer"
-                        onClick={() => {
-                            sessionManager.browseAndOpenWorkspace();
-                            setRecentMenu(null);
-                        }}
-                    >
-                        {t('session.openOther')}
-                    </div>
-                </div>
+                <RecentWorkspacesMenu
+                    position={recentMenu}
+                    currentWorkspacePath={sessionManager.workspacePath}
+                    recentWorkspaces={sessionManager.recentWorkspaces}
+                    onOpenWorkspace={(ws) => sessionManager.openWorkspace(ws)}
+                    onBrowseWorkspace={() => sessionManager.browseAndOpenWorkspace()}
+                    onClose={() => setRecentMenu(null)}
+                    t={t}
+                />
             )}
 
             {/* 会话列表 */}

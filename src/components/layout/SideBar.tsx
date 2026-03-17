@@ -2,12 +2,14 @@
  * SideBar.tsx
  * 侧边栏容器 — 根据 activeView 渲染对应面板，统一标题栏。
  */
-import { useState, useRef, useEffect, Suspense } from 'react';
-import { ConfigSidebar } from '../serial/ConfigSidebar';
-import { SessionListSidebar } from '../serial/SessionListSidebar';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { useFeatureManager } from '../../context/FeatureContextShared';
 import { useI18n } from '../../context/I18nContext';
+
+// ⚡ 重型侧边栏组件懒加载
+const ConfigSidebar = React.lazy(() => import('../serial/ConfigSidebar').then(m => ({ default: m.ConfigSidebar })));
+const SessionListSidebar = React.lazy(() => import('../serial/SessionListSidebar').then(m => ({ default: m.SessionListSidebar })));
 
 interface SideBarProps {
     activeView: string;
@@ -102,6 +104,7 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                <Suspense fallback={<div className="p-4 text-xs text-[var(--input-placeholder-color)] opacity-60">Loading...</div>}>
                 {activeView === 'explorer' && <SessionListSidebar editorLayout={editorLayout} />}
                 {activeView === 'search' && <div className="p-4 text-xs text-[var(--st-sidebar-muted-text)]">Search not implemented</div>}
                 {activeView === 'serial' && <ConfigSidebar />}
@@ -115,6 +118,7 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
                         />
                     </Suspense>
                 )}
+                </Suspense>
             </div>
 
             {/* Resize Sash */}

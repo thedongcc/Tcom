@@ -21,7 +21,7 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
 
         let rawData: Uint8Array;
         if (typeof data === 'string') rawData = new TextEncoder().encode(data);
-        else if (data instanceof Uint8Array) rawData = data;
+        else if (ArrayBuffer.isView(data)) rawData = data as Uint8Array;
         else rawData = new Uint8Array(data);
 
         // 直接发送原始数据（不做任何修改）
@@ -53,7 +53,7 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
     const writeToMonitor = useCallback(async (sessionId: string, target: 'virtual' | 'physical', data: string | number[] | Uint8Array, options?: { commandName?: string }) => {
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || !session.isConnected || session.config.type !== 'monitor' || !window.monitorAPI) return;
-        const pData = data instanceof Uint8Array ? Array.from(data) : typeof data === 'string' ? data : data;
+        const pData = ArrayBuffer.isView(data) ? Array.from(data as Uint8Array) : typeof data === 'string' ? data : data;
         const res = await window.monitorAPI.write(sessionId, target, pData);
         if (res.success) sessionLog.addLog(sessionId, 'TX', data as Uint8Array, 'none', target, options?.commandName);
         else sessionLog.addLog(sessionId, 'ERROR', `Write failed: ${res.error}`);
