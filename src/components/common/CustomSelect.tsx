@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CustomSelect.tsx
  * 自定义下拉选择组件 — 支持状态指示、自定义输入、Portal 渲染。
  *
@@ -62,7 +62,7 @@ export const CustomSelect = ({ items, value, onChange, disabled, placeholder, sh
     const selectedItem = items.find(item => item.value === value);
 
     // 下拉菜单定位
-    const { dropdownStyle, updatePosition } = useDropdownPosition(containerRef as any, isOpen, dropdownWidth);
+    const { dropdownStyle, updatePosition } = useDropdownPosition(containerRef as React.RefObject<HTMLElement>, isOpen, dropdownWidth);
 
     // 点击外部关闭
     useEffect(() => {

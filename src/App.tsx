@@ -21,7 +21,7 @@ function App() {
       <ErrorBoundary>
         <SettingsProvider>
           <I18nProvider>
-            <ThemeColorEditor isOpen={true} onClose={() => { (window as any).themeAPI?.closeThemeEditor(); }} />
+            <ThemeColorEditor isOpen={true} onClose={() => { window.themeAPI?.closeThemeEditor(); }} />
           </I18nProvider>
         </SettingsProvider>
       </ErrorBoundary>

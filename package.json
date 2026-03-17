@@ -9,7 +9,7 @@
     "url": "git+https://github.com/thedongcc/Tcom.git"
   },
   "scripts": {
-    "dev": "vite --config config/vite.config.mts",
+    "dev": "node scripts/dev.mjs",
     "build:app": "vite build --config config/vite.config.mts",
     "build:dist": "electron-builder --config config/electron-builder.json5",
     "build": "npm run build:app && npm run build:dist",

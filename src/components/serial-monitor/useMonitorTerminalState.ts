@@ -8,6 +8,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { useSession } from '../../context/SessionContext';
 import { useLogSearch } from '../common/LogSearch';
 import { SessionState } from '../../types/session';
+import { matchesKeybinding, DEFAULT_KEYBINDINGS } from '../../utils/keybindings';
 
 // ── 字体分类关键字 ──
 const MONO_KEYWORDS = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
@@ -22,11 +23,11 @@ function useAvailableFonts() {
     const [availableFonts, setAvailableFonts] = useState<any[]>([]);
 
     useEffect(() => {
-        const queryFonts = (window as any).queryLocalFonts || (window as any).updateAPI?.listFonts;
+        const queryFonts = window.queryLocalFonts || window.updateAPI?.listFonts;
         if (!queryFonts) return;
 
         queryFonts().then((res: any) => {
-            const fonts = Array.isArray(res) ? res : ((res as any)?.fonts || []);
+            const fonts = Array.isArray(res) ? res : ((res as { fonts?: string[] })?.fonts || []);
             const uniqueNames = Array.from(new Set(fonts.map((f: any) => typeof f === 'string' ? f : f.fullName))).sort();
             const mono: any[] = [];
             const prop: any[] = [];
@@ -58,7 +59,7 @@ export function useMonitorTerminalState(session: SessionState) {
     const initialLogCountRef = useRef(logs.length);
     const mountTimeRef = useRef(Date.now());
 
-    const uiState = (config as any).uiState || {};
+    const uiState = config.uiState || {};
 
     // ── UI 状态（从会话配置持久化恢复） ──
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>(uiState.viewMode || 'hex');
@@ -88,8 +89,8 @@ export function useMonitorTerminalState(session: SessionState) {
 
     // ── 持久化 UI 状态到会话配置 ──
     const saveUIState = useCallback((updates: any) => {
-        const currentUIState = (config as any).uiState || {};
-        void sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as any);
+        const currentUIState = config.uiState || {};
+        void sessionManager.updateSessionConfig(session.id, { uiState: { ...currentUIState, ...updates } } as Partial<import('../../types/session').SessionConfig>);
     }, [session.id, sessionManager, config]);
 
     // ── 数据格式化 ──
@@ -112,7 +113,7 @@ export function useMonitorTerminalState(session: SessionState) {
 
     // ── 搜索 ──
     const { query, setQuery, isRegex, setIsRegex, matchCase, setMatchCase, matches, currentIndex, nextMatch, prevMatch, regexError, activeMatchRev } =
-        useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData as any, encoding);
+        useLogSearch(logs, uiState.searchOpen ? (uiState.searchQuery || '') : '', uiState.searchRegex || false, uiState.searchMatchCase || false, viewMode, formatData, encoding);
     const activeMatch = matches[currentIndex];
 
     const handleQueryChange = (q: string) => { setQuery(q); saveUIState({ searchQuery: q }); };
@@ -122,12 +123,13 @@ export function useMonitorTerminalState(session: SessionState) {
         setSearchOpen((prev: boolean) => { const next = !prev; saveUIState({ searchOpen: next }); return next; });
     }, [saveUIState]);
 
-    // Ctrl+F 快捷键
+    // 搜索切换快捷键（从设置读取）
+    const toggleSearchBinding = themeConfig.keybindings?.toggleSearch || DEFAULT_KEYBINDINGS.toggleSearch;
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); handleToggleSearch(); } };
+        const handleKeyDown = (e: KeyboardEvent) => { if (matchesKeybinding(e, toggleSearchBinding)) { e.preventDefault(); handleToggleSearch(); } };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleToggleSearch]);
+    }, [handleToggleSearch, toggleSearchBinding]);
 
     // 搜索结果自动滚动
     useEffect(() => {
@@ -208,7 +210,7 @@ export function useMonitorTerminalState(session: SessionState) {
         onShowDataLength: (v: boolean) => { setShowDataLength(v); saveUIState({ showDataLength: v }); },
         onMergeRepeats: (v: boolean) => { setMergeRepeats(v); saveUIState({ mergeRepeats: v }); },
         onFlashNewMessage: (v: boolean) => { setFlashNewMessage(v); saveUIState({ flashNewMessage: v }); },
-        onEncoding: (v: string) => { setEncoding(v as any); saveUIState({ encoding: v }); },
+        onEncoding: (v: string) => { setEncoding(v as 'utf-8' | 'gbk' | 'ascii'); saveUIState({ encoding: v }); },
         onFontFamily: (v: string) => { setFontFamily(v); saveUIState({ fontFamily: v }); },
         onFontSize: (v: number) => { setFontSize(v); saveUIState({ fontSize: v }); },
         onSendTarget: (v: 'virtual' | 'physical') => { setSendTarget(v); saveUIState({ sendTarget: v }); },

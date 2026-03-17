@@ -22,7 +22,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
     });
 
     // 监听编辑器开启状态广播
-    const unsub = (window as any).themeAPI?.onStatusChanged((isOpen: boolean) => {
+    const unsub = window.themeAPI?.onStatusChanged((isOpen: boolean) => {
       setIsEditorOpen(isOpen);
     });
     return () => unsub?.();
@@ -43,7 +43,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
     <>
       <div
         className="h-[30px] bg-[var(--titlebar-background)] flex items-center select-none relative z-50"
-        style={{ WebkitAppRegion: 'drag' } as any}
+        style={{ WebkitAppRegion: 'drag' }}
         data-component="titlebar"
       >
         {/* 左侧：菜单图标 + 标题 */}
@@ -57,7 +57,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
           style={{
             WebkitAppRegion: 'no-drag',
             marginRight: `${NATIVE_CONTROLS_WIDTH}px`,
-          } as any}
+          } as React.CSSProperties}
         >
           {/* 调色盘图标（主题颜色编辑器入口） */}
           <Tooltip content="主题颜色编辑器" position="bottom" wrapperClassName="h-full">
@@ -69,9 +69,9 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
                   : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
               ].join(' ')}
               onClick={async () => {
-                await (window as any).themeAPI?.openThemeEditor();
+                await window.themeAPI?.openThemeEditor();
                 // 再次主动校验状态
-                const isOpen = await (window as any).themeAPI?.isWindowOpen();
+                const isOpen = await window.themeAPI?.isWindowOpen();
                 setIsEditorOpen(!!isOpen);
               }}
             >

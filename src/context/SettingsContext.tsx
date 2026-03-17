@@ -31,10 +31,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     // ── 主题文件状态 ──
     const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>([]);
     const appliedThemeRef = useRef<string | null>(null);
+    const prevBgImageRef = useRef(false);
 
     const loadThemes = async () => {
         try {
-            const api = (window as any).themeAPI;
+            const api = window.themeAPI;
             if (api?.loadAll) {
                 const res = await api.loadAll();
                 if (res?.success) {
@@ -100,21 +101,91 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             root.style.setProperty('--st-line-height', `${typography.lineHeight}`);
         }
 
-        // 背景图片
-        if (images.rxBackground) {
-            root.style.setProperty('--st-rx-bg-img', `url(${images.rxBackground})`);
-        } else {
+        // 背景图片：覆盖所有背景色变量
+        const bgOverrideVars = [
+            // 核心布局
+            '--app-background', '--sidebar-background', '--activitybar-background',
+            '--statusbar-background', '--titlebar-background', '--panel-background',
+            '--editor-background', '--widget-background', '--settings-header-background',
+            // 编辑器/标签栏
+            '--editor-area-bg', '--editor-area-tabs-bg', '--st-editor-tabs-bg',
+            '--st-tab-active-bg', '--st-tab-inactive-bg',
+            // 设置
+            '--settings-editor-bg', '--settings-editor-toolbar-bg',
+            // 监视区
+            '--monitor-terminal-bg', '--st-monitor-toolbar-bg', '--st-monitor-log-bg',
+            '--st-monitor-rx-bg',
+            // 发送区
+            '--st-sendarea-bg', '--st-sendarea-toolbar-bg',
+            // 侧边栏面板
+            '--session-list-sidebar-bg', '--session-list-sidebar-header-bg',
+            '--command-sidebar-bg', '--module-manager-bg', '--serial-config-bg',
+            '--st-sidebar-panel-bg', '--st-config-item-bg',
+            // MQTT
+            '--st-mqtt-toolbar-bg', '--mqtt-config-bg', '--st-mqtt-monitor-bg',
+            // 虚拟串口
+            '--monitor-terminal-toolbar-bg',
+            // 搜索/工具栏
+            '--log-search-bg', '--st-logsearch-bg', '--log-search-input-bg',
+            '--st-toolbar-bg', '--serial-input-toolbar-bg',
+            // 输入框/下拉框
+            '--input-background', '--st-input-bg',
+            '--mqtt-config-input-bg',
+        ];
+        const hasBgImage = !!images.rxBackground;
+        const prevHadBgImage = prevBgImageRef.current;
+        prevBgImageRef.current = hasBgImage;
+
+        if (hasBgImage) {
+            // 全局背景图模式：不设置 --st-rx-bg-img（避免监视区重复叠图）
             root.style.removeProperty('--st-rx-bg-img');
+            root.setAttribute('data-bg-image', 'true');
+            // 内联覆盖所有背景色变量为 transparent（优先级高于 applyTheme）
+            for (const v of bgOverrideVars) {
+                root.style.setProperty(v, 'transparent');
+            }
+            // 将背景图片渲染到 body 上
+            document.body.style.backgroundImage = `url(${images.rxBackground})`;
+            document.body.style.backgroundSize = images.bgSize || 'cover';
+            document.body.style.backgroundPosition = images.bgPosition || 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
+            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.opacity = `${(images.bgOpacity ?? 100) / 100}`;
+        } else if (prevHadBgImage) {
+            // 从「有背景图→无背景图」：清理覆盖并立即恢复主题
+            root.style.removeProperty('--st-rx-bg-img');
+            root.removeAttribute('data-bg-image');
+            for (const v of bgOverrideVars) {
+                root.style.removeProperty(v);
+            }
+            // 清除 body 背景图样式
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
+            document.body.style.backgroundRepeat = '';
+            document.body.style.backgroundAttachment = '';
+            document.body.style.opacity = '';
+            // 立即重新应用主题恢复颜色（不等下次渲染）
+            const activeDef = availableThemes.find(t => t.id === theme)
+                || availableThemes.find(t => t.id === 'dark')
+                || availableThemes[0];
+            if (activeDef) {
+                applyTheme(activeDef);
+                appliedThemeRef.current = activeDef.id;
+            }
         }
 
         // 窗口原生按钮色彩
         setTimeout(() => {
             try {
                 const computed = getComputedStyle(root);
-                const bgColor = computed.getPropertyValue('--titlebar-background').trim() || '#3c3c3c';
+                // 背景图启用时用半透明色，否则用主题色
+                const bgColor = images.rxBackground
+                    ? '#00000001'
+                    : (computed.getPropertyValue('--titlebar-background').trim() || '#3c3c3c');
                 const symbolColor = computed.getPropertyValue('--app-foreground').trim() || '#cccccc';
-                if ((window as any).themeAPI?.updateTitleBar) {
-                    (window as any).themeAPI.updateTitleBar({ bgColor, symbolColor });
+                if (window.themeAPI?.updateTitleBar) {
+                    window.themeAPI.updateTitleBar({ bgColor, symbolColor });
                 }
             } catch (e) {
                 console.warn('Failed to update native titleBar color', e);

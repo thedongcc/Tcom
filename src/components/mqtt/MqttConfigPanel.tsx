@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MqttConfigPanel.tsx
  * MQTT 配置面板 — Broker 连接设置 + 订阅主题管理。
  *
@@ -73,7 +73,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     className={inputCls}
                                     value={config.protocol}
                                     onChange={(e) => {
-                                        const newProto = e.target.value as any;
+                                        const newProto = e.target.value as 'tcp' | 'ws' | 'wss' | 'ssl';
                                         let newPort = config.port;
                                         const standards: Record<string, number> = { tcp: 1883, ssl: 8883, ws: 8083, wss: 8084 };
                                         const isStandard = Object.values(standards).includes(config.port);

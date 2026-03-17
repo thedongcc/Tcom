@@ -16,6 +16,7 @@ import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import { useSessionListActions } from './useSessionListActions';
 import { useSession } from '../../context/SessionContext';
+import { SessionConfig } from '../../types/session';
 
 interface SessionListSidebarProps {
     editorLayout: ReturnType<typeof useEditorLayout>;
@@ -186,7 +187,7 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
                             <SessionListItem
                                 key={session.id}
                                 session={session}
-                                portInfo={sessionManager.ports.find(p => p.path === (session as any).connection?.path)}
+                                portInfo={sessionManager.ports.find(p => p.path === session.connection?.path)}
                                 isActive={sessionManager.activeSessionId === session.id}
                                 isConnected={sessionManager.sessions.find(s => s.id === session.id)?.isConnected || false}
                                 isEditing={editingId === session.id}
@@ -212,7 +213,7 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
                 <NewSessionDialog
                     onSelect={(type) => {
                         setShowNewSessionDialog(false);
-                        onSelectType(type);
+                        onSelectType(type as SessionConfig['type']);
                     }}
                     onClose={() => setShowNewSessionDialog(false)}
                     position={{

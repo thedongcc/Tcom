@@ -59,7 +59,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
 
     // ── 初始化：获取 expandedGroups + pendingEdits ──
     useEffect(() => {
-        const api = (window as any).themeAPI;
+        const api = window.themeAPI;
         if (!api?.initData) {
             api?.getExpandedGroups?.().then((groups: Record<string, boolean>) => {
                 if (groups && Object.keys(groups).length > 0) setExpandedGroups(groups);
@@ -89,7 +89,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     // 同步 expandedGroups 到主进程（包括空对象，允许全部折叠持久化）
     useEffect(() => {
         if (initDone.current) {
-            (window as any).themeAPI?.setExpandedGroups(expandedGroups);
+            window.themeAPI?.setExpandedGroups?.(expandedGroups);
         }
     }, [expandedGroups]);
 

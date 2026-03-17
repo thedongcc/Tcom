@@ -8,7 +8,6 @@
  */
 import { RefreshCw, Wand2, ArrowRightLeft, FolderOpen, Trash2 } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
-import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { Com0Com } from '../../utils/com0com';
 import { useConfirm } from '../../context/ConfirmContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -17,13 +16,9 @@ import { Switch } from '../../components/common/Switch';
 import { useI18n } from '../../context/I18nContext';
 import { Com0comInstallDialog } from './Com0comInstallDialog';
 import { useVirtualPortState } from './useVirtualPortState';
+import { FeatureSidebarProps } from '../../types/module';
 
-interface VirtualPortSidebarProps {
-    onNavigate: (view: string) => void;
-    editorLayout: ReturnType<typeof useEditorLayout>;
-}
-
-export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _editorLayout }: VirtualPortSidebarProps) => {
+export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _editorLayout }: FeatureSidebarProps) => {
     const sessionManager = useSession();
     const { confirm } = useConfirm();
     const { t } = useI18n();
@@ -87,8 +82,8 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                                             filters: [{ name: 'com0com installer (setupc.exe)', extensions: ['exe'] }],
                                             properties: ['openFile']
                                         });
-                                        if (result && !(result as any).canceled && (result as any).filePaths.length > 0) {
-                                            setSetupcPath((result as any).filePaths[0]);
+                                        if (result && !result.canceled && result.filePaths.length > 0) {
+                                            setSetupcPath(result.filePaths[0]);
                                         }
                                     } catch (e) {
                                         console.error(e);

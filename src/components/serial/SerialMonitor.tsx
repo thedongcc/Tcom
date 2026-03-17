@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SerialMonitor.tsx
  * 串口监视器主组件。
  * 职责：组装工具栏、日志列表、搜索框、输入区域和上下文菜单。
@@ -180,7 +180,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
             {showCommandEditor && (
                 <CommandEditorDialog
-                    item={{ ...(showCommandEditor as any), id: 'new', type: 'command', name: '', payload: typeof (showCommandEditor as any).data === 'string' ? (showCommandEditor as any).data : '', mode: (showCommandEditor as any).type === 'TX' ? (uiState.inputMode as any || 'text') : (uiState.viewMode as any || 'text'), tokens: {}, parentId: null } as CommandEntity}
+                    item={{ ...(showCommandEditor as Record<string, unknown>), id: 'new', type: 'command', name: '', payload: typeof (showCommandEditor as Record<string, unknown>).data === 'string' ? (showCommandEditor as Record<string, unknown>).data as string : '', mode: (showCommandEditor as Record<string, unknown>).type === 'TX' ? ((uiState.inputMode as string) || 'text') : ((uiState.viewMode as string) || 'text'), tokens: {}, parentId: null } as CommandEntity}
                     onClose={() => setShowCommandEditor(null)}
                     onSave={doHandleSaveCommand}
                     existingNames={commands.filter((c: CommandEntity) => !c.parentId).map((c: CommandEntity) => c.name)}

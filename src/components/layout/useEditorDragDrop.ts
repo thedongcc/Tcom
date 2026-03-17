@@ -49,7 +49,7 @@ export function useEditorDragDrop({ layout, moveView, splitDrop }: UseEditorDrag
         const { over } = event;
         if (!over) return;
 
-        const activator = event.activatorEvent as any;
+        const activator = event.activatorEvent as MouseEvent;
         const clientX = activator?.clientX;
         const result = computeDropIndicator(
             layoutRef.current,
@@ -67,7 +67,7 @@ export function useEditorDragDrop({ layout, moveView, splitDrop }: UseEditorDrag
         setDropIndicator(null);
         if (!over) return;
 
-        const activator = event.activatorEvent as any;
+        const activator = event.activatorEvent as MouseEvent;
         const clientX = activator?.clientX;
         const action = computeDragEndAction(
             layoutRef.current,
@@ -83,7 +83,7 @@ export function useEditorDragDrop({ layout, moveView, splitDrop }: UseEditorDrag
                 moveView(action.sourceGroupId, action.targetGroupId, action.sessionId, action.index);
                 break;
             case 'split':
-                splitDrop(action.sourceGroupId, action.targetGroupId, action.sessionId, action.zone as any);
+                splitDrop(action.sourceGroupId, action.targetGroupId, action.sessionId, action.zone);
                 break;
             case 'noop':
                 break;

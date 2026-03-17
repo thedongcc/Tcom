@@ -114,7 +114,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                 return {
                     id: f.feature.id,
                     icon: f.feature.icon ? <f.feature.icon size={24} /> : <Box size={24} />,
-                    label: descriptor ? t(descriptor.nameKey as any) : (f.feature.name || f.feature.id)
+                    label: descriptor ? t(descriptor.nameKey) : (f.feature.name || f.feature.id)
                 };
             });
         return [...translatedDefaults, ...featureItems];

@@ -16,8 +16,12 @@ export const Panel = ({ height = 200 }: PanelProps) => {
     const isConnected = activeSession ? activeSession.isConnected : false;
     const currentPort = activeSession
         ? (activeSession.config.type === 'serial'
-            ? (activeSession.config as any).connection?.path
-            : `${(activeSession.config as any).protocol}://${(activeSession.config as any).host}:${(activeSession.config as any).port}`)
+            ? activeSession.config.connection?.path || ''
+            : activeSession.config.type === 'monitor'
+                ? activeSession.config.connection?.path || ''
+                : activeSession.config.type === 'mqtt'
+                    ? `${activeSession.config.protocol}://${activeSession.config.host}:${activeSession.config.port}`
+                    : '')
         : '';
 
     const scrollRef = useRef<HTMLDivElement>(null);

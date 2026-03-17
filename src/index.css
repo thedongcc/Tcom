@@ -441,10 +441,10 @@ body {
   /* Prevent body scroll, handle in components */
 }
 
-/* VS Code Scrollbar Styles */
+/* 悬浮滚动条 — 固定窄条 + overlay 叠加在内容上方，不占布局空间 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-corner {
@@ -452,9 +452,9 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-slider-color);
-  transition: background-color 0s;
-  /* VS Code style instant */
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.25s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -467,6 +467,22 @@ body {
 
 ::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+/* 容器 hover 时 thumb 淡入显示 */
+*:hover > ::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-slider-hover-color);
+}
+
+/* 滚动容器始终预留滚动条空间，防止滚动条出现时内容抖动 */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-scroll,
+.overflow-y-scroll,
+.overflow-x-scroll {
+  scrollbar-gutter: stable;
 }
 
 
@@ -688,4 +704,89 @@ div[tabindex]:focus {
   width: 14px !important;
   height: 14px !important;
   border-width: 2px !important;
+}
+
+/* ===== 全局背景图片模式 ===== */
+/* 当 html[data-bg-image] 存在时，覆盖所有背景色 CSS 变量为 transparent */
+/* 注意：主题通过 JS 内联 style 设置变量，因此 SettingsContext.tsx 中也有同样的覆盖 */
+/* 此处作为 fallback 确覆盖——但实际以 JS 覆盖为准 */
+[data-bg-image] {
+  /* 核心布局 */
+  --app-background: transparent;
+  --sidebar-background: transparent;
+  --activitybar-background: transparent;
+  --statusbar-background: transparent;
+  --titlebar-background: transparent;
+  --panel-background: transparent;
+  --editor-background: transparent;
+  --widget-background: transparent;
+  --settings-header-background: transparent;
+
+  /* 编辑器/标签栏 */
+  --editor-area-bg: transparent;
+  --editor-area-tabs-bg: transparent;
+  --st-editor-tabs-bg: transparent;
+  --st-tab-active-bg: transparent;
+  --st-tab-inactive-bg: transparent;
+
+  /* 设置 */
+  --settings-editor-bg: transparent;
+  --settings-editor-toolbar-bg: transparent;
+
+  /* 监视区 */
+  --monitor-terminal-bg: transparent;
+  --st-monitor-toolbar-bg: transparent;
+  --st-monitor-log-bg: transparent;
+  --st-monitor-rx-bg: transparent;
+
+  /* 发送区 */
+  --st-sendarea-bg: transparent;
+  --st-sendarea-toolbar-bg: transparent;
+
+  /* 侧边栏面板 */
+  --session-list-sidebar-bg: transparent;
+  --session-list-sidebar-header-bg: transparent;
+  --command-sidebar-bg: transparent;
+  --module-manager-bg: transparent;
+  --serial-config-bg: transparent;
+  --st-sidebar-panel-bg: transparent;
+  --st-config-item-bg: transparent;
+
+  /* MQTT */
+  --st-mqtt-toolbar-bg: transparent;
+  --mqtt-config-bg: transparent;
+  --st-mqtt-monitor-bg: transparent;
+
+  /* 虚拟串口 */
+  --monitor-terminal-toolbar-bg: transparent;
+
+  /* 搜索/工具栏 */
+  --log-search-bg: transparent;
+  --st-logsearch-bg: transparent;
+  --log-search-input-bg: transparent;
+  --st-toolbar-bg: transparent;
+  --serial-input-toolbar-bg: transparent;
+
+  /* 输入框/下拉框 */
+  --input-background: transparent;
+  --st-input-bg: transparent;
+  --mqtt-config-input-bg: transparent;
+  --custom-select-bg: transparent;
+  --custom-select-trigger-bg: transparent;
+  --st-select-bg: transparent;
+
+  /* 边框半透明 */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --widget-border-color: rgba(255, 255, 255, 0.08);
+  --session-list-sidebar-border: rgba(255, 255, 255, 0.1);
+  --command-sidebar-border: rgba(255, 255, 255, 0.1);
+  --module-manager-border: rgba(255, 255, 255, 0.1);
+  --editor-area-tab-border: rgba(255, 255, 255, 0.08);
+  --st-monitor-divider: rgba(255, 255, 255, 0.08);
+  --st-monitor-toolbar-border: rgba(255, 255, 255, 0.08);
+  --st-sendarea-toolbar-border: rgba(255, 255, 255, 0.08);
+  --serial-input-toolbar-border: rgba(255, 255, 255, 0.08);
+  --st-mqtt-toolbar-border: rgba(255, 255, 255, 0.08);
+  --log-search-border: rgba(255, 255, 255, 0.08);
+  --st-logsearch-border: rgba(255, 255, 255, 0.08);
 }

@@ -6,12 +6,11 @@
 import { useCallback } from 'react';
 import { SessionState } from '../types/session';
 import { validateRXCRC } from '../utils/crc';
+import { UseSessionLogReturn } from './useSessionLog';
 
 interface UseSessionDataSenderParams {
     sessionsRef: React.MutableRefObject<SessionState[]>;
-    sessionLog: {
-        addLog: (sessionId: string, type: string, data: any, crcStatus?: string, topic?: string, commandName?: string, timestamp?: number) => void;
-    };
+    sessionLog: UseSessionLogReturn;
 }
 
 export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionDataSenderParams) {
@@ -29,7 +28,7 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
         const result = await window.serialAPI.write(sessionId, rawData);
         if (result.success) {
             // 根据 crcTarget 决定是否对 TX 日志数据做 CRC 校验显示
-            const uiState = (session.config as any).uiState as Record<string, unknown> || {};
+            const uiState = session.config.uiState as Record<string, unknown> || {};
             const crcTarget = (uiState.crcTarget as string) || 'rx';
             const shouldValidateTx = session.config.rxCRC?.enabled && (crcTarget === 'tx' || crcTarget === 'both');
             const txCrcStatus: 'ok' | 'error' | 'none' = shouldValidateTx

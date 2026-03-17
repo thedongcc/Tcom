@@ -19,7 +19,7 @@ export const useSettingsActions = () => {
 
     // 加载系统字体列表
     useEffect(() => {
-        (window as any).updateAPI?.listFonts?.().then((res: any) => {
+        window.updateAPI?.listFonts?.().then((res: { success: boolean; fonts?: string[] }) => {
             if (res?.success && Array.isArray(res.fonts)) {
                 setSystemFonts(res.fonts);
             }
@@ -65,11 +65,11 @@ export const useSettingsActions = () => {
     // 工厂重置
     const performFactoryReset = useCallback(async () => {
         try {
-            if (!(window as any).appAPI) {
+            if (!window.appAPI) {
                 alert('appAPI 未定义，请完全重启应用以加载最新的主进程和预加载脚本！\nappAPI is undefined, please restart the app fully.');
                 return;
             }
-            const res = await (window as any).appAPI.factoryReset();
+            const res = await window.appAPI.factoryReset();
             if (res && res.success === false) {
                 alert('重置失败 (Reset Failed):\n' + res.error);
             }

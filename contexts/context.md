@@ -74,6 +74,18 @@ src/components/<feature>/
 - 复杂 `useCallback`/`useEffect` 逻辑提取为自定义 Hook
 - 重复代码（≥2处相同逻辑）必须提取为工具函数
 
+### 2.4 Electron 安全规范
+
+**铁律**：
+- 主窗口与所有子窗口 `webPreferences` 必须**显式声明**以下配置（即使是默认值）：
+  - `nodeIntegration: false`
+  - `contextIsolation: true`
+  - `sandbox: true`
+- `index.html` 必须配置 CSP（Content Security Policy）meta 标签
+- 禁止在渲染进程中使用 `require()`
+- Preload 脚本通过 `contextBridge.exposeInMainWorld()` 白名单暴露 API，**禁止透传原始 `ipcRenderer`**
+- 所有 IPC handler 在 Controller 层必须做参数校验（类型守卫 + 非空检查），再调用 Service
+
 ---
 
 ## 三、代码规范
@@ -98,7 +110,11 @@ function isSerialConfig(obj: unknown): obj is SerialConfig {
 ```
 
 **规则**：
-- 禁止使用 `any`（历史代码除外，新增必须消除）
+- **绝对禁止 `any`** — 包括新增代码和历史代码（须逐步消除）
+- 需要宽松类型时使用 `unknown` + 类型守卫，禁止 `any` 作为逃生舱
+- 禁止 `[key: string]: any` 索引签名（使用明确的可选属性或 `Record<string, unknown>`）
+- 禁止 `as any` 类型断言（可用 `as unknown as TargetType` 双重断言替代）
+- 事件回调参数使用 `unknown[]` 而非 `any[]`
 - 所有导出函数必须有明确返回类型
 - 接口优先于 `type`（除联合类型）
 - 枚举使用 `const enum` 或字面量联合类型
@@ -223,6 +239,11 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 
 ### 4.4 组件交互规范
 
+#### SettingsEditor（设置编辑器）
+- 控件区域统一宽度：`w-56`（224px），所有行的输入控件、选择器、按钮组都必须在此宽度内
+- 包含辅助按钮时：外容器 `w-56`，输入框 `flex-1 min-w-0`，按钮 `flex-shrink-0`
+- 禁止输入框 + 按钮的总宽度超过 `w-56`，否则会导致行间对齐错位
+
 #### Toast（消息通知）
 - 位置：页面顶部居中，距顶 26px
 - 颜色：success `#22c55e` / error `#ef4444` / info `#3b82f6` / warning `#eab308`
@@ -327,6 +348,8 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - ❌ 使用原生 `title=` 属性代替 `<Tooltip>` 组件
 - ❌ 组件直接使用功能级 CSS 变量（必须通过组件专属变量间接引用）
 - ❌ 在 TSX 中硬编码用户可见的中文/英文字符串（必须使用 `t()` 函数）
+- ❌ `App.tsx` 中 Provider 嵌套超过 5 层（须使用 `composeProviders` 工具函数扁平化）
+- ❌ 使用 `any` 类型或 `as any` 断言（须使用 `unknown` + 类型守卫）
 
 ---
 
@@ -351,6 +374,20 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - **串口写入**：采用缓冲队列管理，降低 I/O 阻塞
 - **高频发送**：使用 Node.js `libuv` 定时器实现高精度发送
 - **文件写入**：使用 `FileWriteQueue` 解决并发写入竞争
+
+### 5.4 资源释放规范
+
+- **串口关闭顺序**：`port.removeAllListeners()` → `port.close()` → `Map.delete()`
+- **TCP Server 关闭顺序**：销毁所有活跃 socket → `server.close()` → `Map.delete()`
+- **定时器清理**：所有 `setInterval`/`setTimeout` 在模块/组件卸载时必须 `clearInterval`/`clearTimeout`
+- **事件监听器**：组件 `useEffect` 返回的清理函数中必须解绑所有 IPC/DOM 监听器
+- **Worker Thread**：使用完毕必须 `terminate()`，不得泄漏
+
+### 5.5 残留文件清理规则
+
+- 重构后旧文件必须删除，不得保留在原位置
+- 同一模块不得在多个位置存在副本（如 `electron/TcpService.ts` vs `electron/services/TcpService.ts`）
+- 定期检查项目根目录及各子目录是否有不属于当前架构的孤立文件
 
 ---
 

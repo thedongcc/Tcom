@@ -26,7 +26,7 @@ export const parseDOM = (root: HTMLElement): Segment[] => {
             const el = node as HTMLElement;
             if (el.hasAttribute('data-token-id')) {
                 const id = el.getAttribute('data-token-id')!;
-                segments.push({ id, type: 'token', content: { id } as any });
+                segments.push({ id, type: 'token', content: { id } as unknown as string });
             } else {
                 el.childNodes.forEach(traverse);
             }

@@ -49,12 +49,12 @@ export const SerialCRCPanel = React.memo(({
             {showCRCPanel && (
                 <div className="bg-[rgba(128,128,128,0.05)] border border-[var(--border-color)] rounded p-2.5 space-y-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                     <div className="flex flex-col gap-1.5">
-                        <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">校验对象</span>
+                        <span className="text-[10px] text-[var(--input-placeholder-color)] font-medium">{t('monitor.crcTarget')}</span>
                         <CustomSelect
                             items={[
-                                { label: '仅接收 (RX)', value: 'rx' },
-                                { label: '仅发送 (TX)', value: 'tx' },
-                                { label: '发送与接收 (TX+RX)', value: 'both' }
+                                { label: t('monitor.crcTargetRx'), value: 'rx' },
+                                { label: t('monitor.crcTargetTx'), value: 'tx' },
+                                { label: t('monitor.crcTargetBoth'), value: 'both' }
                             ]}
                             value={uiState.crcTarget || 'rx'}
                             onChange={(val) => saveUIState({ crcTarget: val })}

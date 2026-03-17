@@ -18,6 +18,8 @@ import { MqttLogItem } from './MqttLogItem';
 import { useMqttMonitorState } from './useMqttMonitorState';
 import { MqttMonitorToolbar } from './MqttMonitorToolbar';
 import { MqttPublishArea } from './MqttPublishArea';
+import { matchesKeybinding, DEFAULT_KEYBINDINGS } from '../../utils/keybindings';
+import { useSettings } from '../../context/SettingsContext';
 
 interface MqttMonitorProps {
     session: {
@@ -120,17 +122,19 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         });
     }, [saveUIState, setSearchOpen]);
 
-    // Ctrl+F 快捷键
+    // 搜索切换快捷键（从设置读取）
+    const { config: settingsConfig } = useSettings();
+    const toggleSearchBinding = settingsConfig.keybindings?.toggleSearch || DEFAULT_KEYBINDINGS.toggleSearch;
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            if (matchesKeybinding(e, toggleSearchBinding)) {
                 e.preventDefault();
                 handleToggleSearch();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleToggleSearch]);
+    }, [handleToggleSearch, toggleSearchBinding]);
 
     // 搜索结果自动滚动
     useEffect(() => {

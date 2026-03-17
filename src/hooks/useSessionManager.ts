@@ -97,12 +97,12 @@ export const useSessionManager = () => {
 
     // --- 连接管理（委托给 useSessionConnection） ---
     const { connectSession, disconnectSession } = useSessionConnection({
-        sessionsRef, updateSession, updateSessionConfig, sessionLog: sessionLog as any, portScanner,
+        sessionsRef, updateSession, updateSessionConfig, sessionLog, portScanner,
     });
 
     // --- 数据发送（委托给 useSessionDataSender） ---
     const { writeToSession, publishMqtt, writeToMonitor } = useSessionDataSender({
-        sessionsRef, sessionLog: sessionLog as any,
+        sessionsRef, sessionLog,
     });
 
     // --- 会话 CRUD ---
@@ -128,7 +128,7 @@ export const useSessionManager = () => {
         setSessions(prev => [...prev, newState]);
         setActiveSessionId(newId);
         workspace.setSavedSessions(prev => [...prev, baseConfig as unknown as SessionConfig]);
-        if (workspace.workspacePathRef.current) await window.workspaceAPI?.saveSession(workspace.workspacePathRef.current, baseConfig as any);
+        if (workspace.workspacePathRef.current) await window.workspaceAPI?.saveSession(workspace.workspacePathRef.current, baseConfig as unknown as Record<string, unknown>);
         return newId;
     }, [workspace]);
 
@@ -154,7 +154,7 @@ export const useSessionManager = () => {
         const newConfig = { ...source.config, id: newId, name: newName };
         setSessions(prev => [...prev, { id: newId, config: newConfig as unknown as SessionConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] }]);
         workspace.setSavedSessions(prev => [...prev, newConfig as unknown as SessionConfig]);
-        if (workspace.workspacePathRef.current) await window.workspaceAPI?.saveSession(workspace.workspacePathRef.current, newConfig as any);
+        if (workspace.workspacePathRef.current) await window.workspaceAPI?.saveSession(workspace.workspacePathRef.current, newConfig as unknown as Record<string, unknown>);
         return newId;
     }, [workspace]);
 

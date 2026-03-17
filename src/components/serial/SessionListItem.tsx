@@ -1,4 +1,4 @@
-﻿import { useSortable } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SessionConfig, SessionType } from '../../types/session';
 import { FolderOpen, Network, Cpu } from 'lucide-react';
@@ -106,10 +106,10 @@ export const SessionListItem = ({
                             {session.type === 'serial'
                                 ? (portInfo
                                     ? formatPortInfo(portInfo)
-                                    : (session as any).lastDescription || (session as any).connection?.path || 'No Port')
+                                    : (session.type === 'serial' ? (session.lastDescription || session.connection?.path || 'No Port') : 'No Port'))
                                 : session.type === 'mqtt'
-                                    ? ((session as any).host && (session as any).port ? `${(session as any).host}:${(session as any).port}` : 'Not Configured')
-                                    : (session as any).brokerUrl || session.type}
+                                    ? (session.host && session.port ? `${session.host}:${session.port}` : 'Not Configured')
+                                    : session.type}
                         </span>
                     </div>
                 </div>

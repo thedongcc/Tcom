@@ -136,7 +136,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                         if (session.config.type === 'mqtt') {
                             return <MqttMonitor
                                 key={session.id}
-                                session={session as any}
+                                session={{ ...session, config: session.config as import('../../types/session').MqttSessionConfig }}
                                 onShowSettings={onShowSettings}
                                 onPublish={(topic, payload, qos, retain) => sessionManager.publishMqtt(session.id, topic, payload, { qos, retain })}
                                 onUpdateConfig={(updates) => { void sessionManager.updateSessionConfig(session.id, updates); }}

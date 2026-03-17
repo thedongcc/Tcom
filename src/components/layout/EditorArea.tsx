@@ -125,7 +125,7 @@ export const EditorArea = ({ editorLayout, onShowSettings }: EditorAreaProps) =>
                 <DragOverlay className="pointer-events-none" dropAnimation={dropAnimation} modifiers={[
                     ({ activatorEvent, draggingNodeRect, transform }) => {
                         if (draggingNodeRect && activatorEvent) {
-                            const activator = activatorEvent as any;
+                            const activator = activatorEvent as MouseEvent;
                             if (activator.clientX !== undefined && activator.clientY !== undefined) {
                                 const offsetX = activator.clientX - draggingNodeRect.left;
                                 const offsetY = activator.clientY - draggingNodeRect.top;

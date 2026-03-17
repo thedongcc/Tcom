@@ -15,6 +15,7 @@ import { SerialInput } from '../serial/SerialInput';
 import { AnimatePresence, motion } from 'framer-motion';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { CommandEditorDialog } from '../commands/CommandEditorDialog';
+import { CommandEntity } from '../../types/command';
 import { ContextMenu } from '../common/ContextMenu';
 import { MonitorSessionConfig } from '../../types/session';
 import { LogSearch } from '../common/LogSearch';
@@ -145,7 +146,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                         onQueryChange={handleQueryChange} onRegexChange={handleRegexChange} onMatchCaseChange={handleMatchCaseChange}
                         onNext={nextMatch} onPrev={prevMatch}
                         logs={state.logs} currentIndex={currentIndex} totalMatches={matches.length}
-                        viewMode={viewMode} formatData={formatData as any} encoding={encoding} regexError={regexError}
+                        viewMode={viewMode} formatData={formatData} encoding={encoding} regexError={regexError}
                     />
                 </div>
                 <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}>
@@ -153,7 +154,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                         const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
-                        const rxCRC = ((config as any).rxCRC as any) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+                        const rxCRC = (config.rxCRC) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
                         return (
                             <MonitorLogItem
                                 key={`${log.id}-${log.repeatCount || 1}`}
@@ -164,7 +165,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                                 formatData={formatData} formatTimestamp={(ts: number, fmt?: string) => formatTimestamp(ts, fmt || 'HH:mm:ss.SSS')} getDataLengthText={getDataLengthText}
                                 timestampFormat={themeConfig.timestampFormat}
                                 matches={matches} activeMatch={activeMatch} mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
-                                fontSize={fontSize} rxCRC={rxCRC as any} crcEnabled={rxCRC.enabled as any}
+                                fontSize={fontSize} rxCRC={rxCRC} crcEnabled={!!rxCRC.enabled}
                             />
                         );
                     })}
@@ -178,17 +179,17 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 </div>
                 <SerialInput
                     key={session.id}
-                    onSend={handleSend as any}
+                    onSend={handleSend}
                     initialContent={uiState.inputContent as string} initialHTML={uiState.inputHTML as string}
-                    initialTokens={uiState.inputTokens as any} initialMode={(uiState.inputMode as any) || 'hex'}
-                    initialLineEnding={(uiState.lineEnding as any) ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
+                    initialTokens={uiState.inputTokens as Record<string, import('../../types/token').Token>} initialMode={(uiState.inputMode as string as 'text' | 'hex') || 'hex'}
+                    initialLineEnding={(uiState.lineEnding as string) ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
                     onStateChange={handleInputStateChange}
                     isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily} onConnectRequest={onConnectRequest}
                 />
             </div>
 
             {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[{ label: t('common.copy'), icon: <Copy size={13} />, onClick: () => handleCopyLog(contextMenu.log) }, { label: t('common.addCommand'), icon: <FileText size={13} />, onClick: () => handleAddToCommand(contextMenu.log) }]} />}
-            {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', name: '', payload: '', mode: 'hex', tokens: {}, parentId: null, ...showCommandEditor } as any} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
+            {showCommandEditor && <CommandEditorDialog item={{ id: 'new', type: 'command', name: '', payload: '', mode: 'hex', tokens: {}, parentId: null, ...showCommandEditor } as CommandEntity} onClose={() => setShowCommandEditor(null)} onSave={handleSaveCommand} existingNames={commands.filter(c => !c.parentId).map(c => c.name)} />}
         </div>
     );
 };

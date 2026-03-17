@@ -113,7 +113,7 @@ export const CRCConfigForm = ({
                 <CustomSelect
                     items={algoItems}
                     value={config.algorithm}
-                    onChange={(val) => setConfig({ ...config, algorithm: val as any })}
+                    onChange={(val) => setConfig({ ...config, algorithm: val as CRCConfig['algorithm'] })}
                 />
             </div>
 

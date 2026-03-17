@@ -82,7 +82,7 @@ export const MqttPublishArea = React.memo(({
                             { label: 'HEX', value: 'hex' },
                         ]}
                         value={publishFormat}
-                        onChange={(val) => { setPublishFormat(val as any); saveUIState({ publishFormat: val }); }}
+                        onChange={(val) => { setPublishFormat(val as 'text' | 'hex' | 'json' | 'base64'); saveUIState({ publishFormat: val }); }}
                     />
                 </div>
                 {/* Topic 输入框 */}

@@ -64,8 +64,8 @@ export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDial
                             <opt.icon size={16} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-medium leading-none">{t(opt.labelKey as any)}</span>
-                            <span className="text-[10px] opacity-50 mt-1 truncate">{t(opt.descKey as any)}</span>
+                            <span className="text-[13px] font-medium leading-none">{t(opt.labelKey)}</span>
+                            <span className="text-[10px] opacity-50 mt-1 truncate">{t(opt.descKey)}</span>
                         </div>
                     </div>
                 ))}

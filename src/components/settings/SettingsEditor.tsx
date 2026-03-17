@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, RotateCcw, Download, Upload, Image as ImageIcon, Check, FolderOpen, FileJson } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, Check, FolderOpen, FileJson, Settings } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
@@ -9,6 +9,9 @@ import { useSettingsActions } from './useSettingsActions';
 import { FactoryResetDialog } from './SettingsComponents';
 import { useFeatureManager } from '../../context/FeatureContextShared';
 import { FEATURE_REGISTRY } from '../../features/registry';
+import { KeybindingInput } from '../common/KeybindingInput';
+import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../../utils/keybindings';
+import type { ThemeImages } from '../../types/theme';
 
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -66,11 +69,11 @@ export const SettingsEditor = () => {
     const { features, activateFeature, deactivateFeature } = useFeatureManager();
     const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-    // themeFileInputRef 已移除（未使用）
 
     // Factory Reset State
     const [showFactoryReset, setShowFactoryReset] = useState(false);
     const [resetInput, setResetInput] = useState('');
+    const [showBgSettings, setShowBgSettings] = useState(false);
 
     // ── 操作函数和字体列表（委托给 Hook） ──
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
@@ -107,7 +110,7 @@ export const SettingsEditor = () => {
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        (window as any).themeAPI?.openFolder();
+                                        window.themeAPI?.openFolder?.();
                                     }}
                                     className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
                                 >
@@ -120,7 +123,7 @@ export const SettingsEditor = () => {
                                         e.stopPropagation();
                                         const currentDef = availableThemes.find(t => t.id === config.theme);
                                         if (currentDef) {
-                                            (window as any).themeAPI?.openFile(currentDef.id);
+                                            window.themeAPI?.openFile?.(currentDef.id);
                                         }
                                     }}
                                     className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
@@ -142,7 +145,7 @@ export const SettingsEditor = () => {
                                     { label: t('settings.appearance.languages.en-US'), value: 'en-US' },
                                 ]}
                                 value={config.language}
-                                onChange={(val) => updateConfig({ language: val as any })}
+                                onChange={(val) => updateConfig({ language: val as 'zh-CN' | 'en-US' })}
                             />
                         </div>
                     ),
@@ -163,7 +166,7 @@ export const SettingsEditor = () => {
                                     { label: t('settings.layout.sidebarRight'), value: 'right' },
                                 ]}
                                 value={config.ui.sidebarPosition}
-                                onChange={(val) => updateUI({ sidebarPosition: val as any })}
+                                onChange={(val) => updateUI({ sidebarPosition: val as 'left' | 'right' })}
                             />
                         </div>
                     ),
@@ -214,20 +217,149 @@ export const SettingsEditor = () => {
                 {
                     label: t('settings.logFormat.bgImage'),
                     description: t('settings.logFormat.bgImageDesc'),
-                    render: () => (
-                        <div className="flex gap-2 items-center">
-                            <input
-                                type="text"
-                                placeholder={t('settings.logFormat.bgImagePlaceholder')}
-                                value={config.images.rxBackground || ''}
-                                onChange={e => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: e.target.value } }))}
-                                className={`w-56 ${inputCls}`}
-                            />
-                            {config.images.rxBackground && <ImageIcon size={18} className="text-[var(--input-placeholder-color)]" />}
+                    render: () => {
+                        // 显示时去掉 tcom-file:/// 前缀，只显示实际路径
+                        const displayValue = config.images.rxBackground
+                            ? config.images.rxBackground.replace(/^tcom-file:\/\/\//, '')
+                            : '';
+                        return (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex gap-1.5 items-center w-56">
+                                <input
+                                    type="text"
+                                    placeholder={t('settings.logFormat.bgImagePlaceholder')}
+                                    value={displayValue}
+                                    onChange={e => {
+                                        const val = e.target.value.trim();
+                                        updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: val } }));
+                                    }}
+                                    className={`flex-1 min-w-0 ${inputCls}`}
+                                />
+                                <Tooltip content={t('settings.logFormat.bgImageBrowse')} position="top">
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.shellAPI?.showOpenDialog) return;
+                                            const result = await window.shellAPI.showOpenDialog({
+                                                title: t('settings.logFormat.bgImageBrowse'),
+                                                filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] }],
+                                                properties: ['openFile'],
+                                            });
+                                            const res = result as { canceled?: boolean; filePaths?: string[] };
+                                            if (!res.canceled && res.filePaths?.[0]) {
+                                                const filePath = res.filePaths[0].replace(/\\/g, '/');
+                                                updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: `tcom-file:///${filePath}` } }));
+                                            }
+                                        }}
+                                        className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                    >
+                                        <FolderOpen size={16} />
+                                    </button>
+                                </Tooltip>
+                                {config.images.rxBackground && (
+                                    <Tooltip content={t('settings.logFormat.bgImageClear')} position="top">
+                                        <button
+                                            onClick={() => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: '' } }))}
+                                            className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-status-error)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                        >
+                                            <RotateCcw size={14} />
+                                        </button>
+                                    </Tooltip>
+                                )}
+                                {config.images.rxBackground && (
+                                    <Tooltip content={t('settings.logFormat.bgImageSettings')} position="top">
+                                        <button
+                                            onClick={() => setShowBgSettings(v => !v)}
+                                            className={`p-1 rounded transition-colors cursor-pointer flex-shrink-0 ${
+                                                showBgSettings
+                                                    ? 'text-[var(--focus-border-color)] bg-[var(--list-active-background)]'
+                                                    : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
+                                            }`}
+                                        >
+                                            <Settings size={14} />
+                                        </button>
+                                    </Tooltip>
+                                )}
+                            </div>
+                            {/* 展开的高级设置 */}
+                            {showBgSettings && config.images.rxBackground && (
+                                <div className="flex flex-col gap-2 pl-1 pt-1 border-t border-[var(--border-color)]">
+                                    {/* 填充模式 */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgSize')}</span>
+                                        <div className="w-32">
+                                            <CustomSelect
+                                                items={[
+                                                    { label: t('settings.logFormat.bgSizeCover'), value: 'cover' },
+                                                    { label: t('settings.logFormat.bgSizeContain'), value: 'contain' },
+                                                    { label: t('settings.logFormat.bgSizeAuto'), value: 'auto' },
+                                                    { label: t('settings.logFormat.bgSizeStretch'), value: '100% 100%' },
+                                                ]}
+                                                value={config.images.bgSize || 'cover'}
+                                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgSize: val as ThemeImages['bgSize'] } }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    {/* 对齐方向 */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgPosition')}</span>
+                                        <div className="w-32">
+                                            <CustomSelect
+                                                items={[
+                                                    { label: t('settings.logFormat.bgPositionCenter'), value: 'center' },
+                                                    { label: t('settings.logFormat.bgPositionTop'), value: 'top' },
+                                                    { label: t('settings.logFormat.bgPositionBottom'), value: 'bottom' },
+                                                    { label: t('settings.logFormat.bgPositionLeft'), value: 'left' },
+                                                    { label: t('settings.logFormat.bgPositionRight'), value: 'right' },
+                                                    { label: t('settings.logFormat.bgPositionTopLeft'), value: 'top left' },
+                                                    { label: t('settings.logFormat.bgPositionTopRight'), value: 'top right' },
+                                                    { label: t('settings.logFormat.bgPositionBottomLeft'), value: 'bottom left' },
+                                                    { label: t('settings.logFormat.bgPositionBottomRight'), value: 'bottom right' },
+                                                ]}
+                                                value={config.images.bgPosition || 'center'}
+                                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgPosition: val as ThemeImages['bgPosition'] } }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    {/* 不透明度 */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgOpacity')}</span>
+                                        <div className="flex items-center gap-2 w-32">
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={100}
+                                                value={config.images.bgOpacity ?? 100}
+                                                onChange={e => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgOpacity: Number(e.target.value) } }))}
+                                                className="flex-1 accent-[var(--focus-border-color)] h-1 cursor-pointer"
+                                            />
+                                            <span className="text-[11px] text-[var(--input-placeholder-color)] w-8 text-right">{config.images.bgOpacity ?? 100}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    ),
+                        );
+                    },
                 },
             ],
+        },
+        {
+            title: t('settings.groups.keybindings'),
+            items: (
+                Object.keys(DEFAULT_KEYBINDINGS) as KeybindingAction[]
+            ).map(action => ({
+                label: t(`settings.keybindings.${action}`),
+                description: t(`settings.keybindings.${action}Desc`),
+                render: () => (
+                    <KeybindingInput
+                        value={config.keybindings?.[action] || DEFAULT_KEYBINDINGS[action]}
+                        onChange={(binding) => updateConfig(prev => ({
+                            ...prev,
+                            keybindings: { ...DEFAULT_KEYBINDINGS, ...prev.keybindings, [action]: binding }
+                        }))}
+                    />
+                ),
+            })),
         },
         {
             title: t('settings.groups.modules'),
@@ -236,8 +368,8 @@ export const SettingsEditor = () => {
                 .map(descriptor => {
                     const isActive = features.find(f => f.feature.id === descriptor.id)?.isActive ?? false;
                     return {
-                        label: t(descriptor.nameKey as any),
-                        description: t(descriptor.descriptionKey as any),
+                        label: t(descriptor.nameKey),
+                        description: t(descriptor.descriptionKey),
                         render: () => (
                             <Switch
                                 checked={isActive}

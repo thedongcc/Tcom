@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol, net } from 'electron'
 import path from 'node:path'
 
 import { saveWindowState, loadWindowState } from './utils/window-state';
@@ -32,8 +32,7 @@ process.on('uncaughtException', (error) => {
   console.error('[Main] Uncaught Exception:', error);
 });
 
-// ⚡ Windows 高精度定时器 (设置 1ms 精度)
-enableHighResTimer();
+// ⚡ Windows 高精度定时器延迟到 app ready 后加载，避免 koffi 同步加载阻塞启动
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 
@@ -61,6 +60,9 @@ function createWindow() {
     show: false, // 等 ready-to-show 再显示，彻底消除空白帧
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
     },
     titleBarStyle: 'hidden',
     titleBarOverlay: {
@@ -88,14 +90,23 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win?.show();
-    // 主窗口显示后 1 秒在后台预创建主题编辑器，消除首次打开的冷启动延迟
+    // 主窗口显示后 5 秒在后台预创建主题编辑器，避免与首屏渲染竞争资源
     setTimeout(() => {
       prewarmThemeEditor();
-    }, 1000);
+    }, 5000);
   });
 
   win.on('resize', () => saveWindowState(win!));
   win.on('move', () => saveWindowState(win!));
+
+  // 主窗口关闭时，销毁所有子窗口（含预热的主题编辑器），确保 window-all-closed 触发
+  win.on('close', () => {
+    BrowserWindow.getAllWindows().forEach(w => {
+      if (w !== win && !w.isDestroyed()) {
+        w.destroy();
+      }
+    });
+  });
 
 
 
@@ -113,11 +124,48 @@ app.on('activate', () => {
   }
 })
 
+// ─── 进程退出处理 ─────────────────────────────────────────────────────────────
+// 场景1：关闭窗口 → 立即退出
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
-    win = null
+    serialService?.stopAllTimedSends();
+    // 开发模式下用 taskkill 终止整个进程树（Vite + npm），避免残留
+    // 必须用 detached + unref，确保 taskkill 在 Electron 退出后仍能运行
+    if (VITE_DEV_SERVER_URL && process.ppid) {
+      const kill = require('child_process').spawn(
+        'taskkill', ['/F', '/T', '/PID', String(process.ppid)],
+        { detached: true, stdio: 'ignore', windowsHide: true }
+      );
+      kill.unref();
+    }
+    app.exit(0);
   }
 })
 
-app.whenReady().then(createWindow)
+// 场景2：IDE 点击停止 / Ctrl+C → 捕获信号，跳过 cmd.exe 的批处理提示
+process.on('SIGINT', () => {
+  serialService?.stopAllTimedSends();
+  app.exit(0);
+});
+process.on('SIGTERM', () => {
+  serialService?.stopAllTimedSends();
+  app.exit(0);
+});
+
+// 注册自定义协议权限（必须在 app.whenReady 之前）
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'tcom-file', privileges: { bypassCSP: true, supportFetchAPI: true, stream: true } }
+]);
+
+app.whenReady().then(() => {
+    // 注册 tcom-file:// 协议处理器（用于加载本地图片）
+    protocol.handle('tcom-file', (request) => {
+        // tcom-file:///P:/path/to/image.png → file:///P:/path/to/image.png
+        const url = request.url.replace('tcom-file://', 'file://');
+        return net.fetch(url);
+    });
+    createWindow();
+
+    // ⚡ 延迟加载 koffi 设置高精度定时器，不阻塞启动关键路径
+    setTimeout(() => enableHighResTimer(), 500);
+});

@@ -186,7 +186,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                             <CustomSelect
                                 items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.dataBits || 8)}
-                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(val) as any } })}
+                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, dataBits: Number(val) as 5 | 6 | 7 | 8 } })}
                                 disabled={isConnected}
                             />
                         </div>
@@ -195,7 +195,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                             <CustomSelect
                                 items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.stopBits || 1)}
-                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(val) as any } })}
+                                onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, stopBits: Number(val) as 1 | 1.5 | 2 } })}
                                 disabled={isConnected}
                             />
                         </div>
@@ -209,7 +209,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                                 value: p
                             }))}
                             value={monitorConfig.connection?.parity || 'none'}
-                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as any } })}
+                            onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as 'none' | 'even' | 'mark' | 'odd' | 'space' } })}
                             disabled={isConnected}
                         />
                     </div>

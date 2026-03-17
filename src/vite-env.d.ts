@@ -1,3 +1,11 @@
+// Electron WebkitAppRegion CSS 属性扩展
+import 'react';
+declare module 'react' {
+    interface CSSProperties {
+        WebkitAppRegion?: 'drag' | 'no-drag';
+    }
+}
+
 export interface SerialPortInfo {
     path: string;
     manufacturer?: string;
@@ -90,7 +98,7 @@ declare global {
         }
         shellAPI: {
             openExternal: (url: string) => Promise<void>;
-            showOpenDialog: (options: { title?: string; defaultPath?: string; buttonLabel?: string; filters?: Array<{ name: string; extensions: string[] }>; properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'> }) => Promise<unknown>;
+            showOpenDialog: (options: { title?: string; defaultPath?: string; buttonLabel?: string; filters?: Array<{ name: string; extensions: string[] }>; properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'> }) => Promise<{ canceled: boolean; filePaths: string[] }>;
         }
         workspaceAPI: {
             getLastWorkspace: () => Promise<{ success: boolean; path: string | null }>;
@@ -102,6 +110,7 @@ declare global {
             renameSession: (wsPath: string, oldName: string, newName: string) => Promise<{ success: boolean; error?: string }>;
             getRecentWorkspaces: () => Promise<{ success: boolean; workspaces: string[] }>;
             migrateOldSessions: () => Promise<{ success: boolean; migrated: number; path?: string }>;
+            saveSessionOrder: (wsPath: string, order: string[]) => Promise<{ success: boolean; error?: string }>;
         }
         windowAPI: {
             setAlwaysOnTop: (flag: boolean) => Promise<{ success: boolean; alwaysOnTop: boolean }>;
@@ -133,6 +142,11 @@ declare global {
             onApplyPreview?: (callback: (edits: Record<string, string>) => void) => () => void;
             onEditorClosed?: (callback: () => void) => () => void;
             onReload?: (callback: () => void) => () => void;
+            updateTitleBar?: (config: { bgColor: string; symbolColor: string }) => void;
+            openFolder?: () => void;
+            openFile?: (themeId: string) => void;
+            loadAll?: () => Promise<{ success: boolean; themes: Array<{ id: string; name: string; type: 'light' | 'dark'; colors: Record<string, string> }> }>;
+            componentPicked?: (data: { className: string; outerHTML: string; tagName: string }) => void;
         }
         EyeDropper?: unknown;
         eyedropperAPI?: {
@@ -143,6 +157,7 @@ declare global {
             onPicked: (cb: (color: string) => void) => () => void;
             onCanceled: (cb: () => void) => () => void;
         }
+        queryLocalFonts?: () => Promise<Array<{ fullName: string; family: string }>>
     }
 }
 

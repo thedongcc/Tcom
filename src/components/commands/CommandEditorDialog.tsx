@@ -4,6 +4,8 @@ import { CommandEntity, CommandItem } from '../../types/command';
 import { SerialInput } from '../serial/SerialInput';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
+import { useSettings } from '../../context/SettingsContext';
+import { matchesKeybinding, DEFAULT_KEYBINDINGS } from '../../utils/keybindings';
 
 interface Props {
     item: CommandEntity;
@@ -16,6 +18,8 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
     const [name, setName] = useState(item.name);
     const { showToast } = useToast();
     const { t } = useI18n();
+    const { config: settingsConfig } = useSettings();
+    const saveCommandBinding = settingsConfig.keybindings?.saveCommand || DEFAULT_KEYBINDINGS.saveCommand;
     // State to hold current input state from SerialInput
     const inputStateRef = useRef<{ content: string; html: string; tokens: any; mode: 'text' | 'hex'; lineEnding: any } | null>(null);
 
@@ -67,8 +71,8 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
             return;
         }
 
-        // Save on Ctrl+Enter or Cmd+Enter (works anywhere, even in editor)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        // 通过快捷键保存（用户可自定义，默认 Ctrl+Enter）
+        if (matchesKeybinding(e.nativeEvent, saveCommandBinding)) {
             e.preventDefault();
             handleSave();
             return;
@@ -126,11 +130,11 @@ export const CommandEditorDialog = ({ item, onClose, onSave, existingNames }: Pr
                                     onSend={() => { }} // 编辑器模式不发送
                                     initialContent={commandItem.payload}
                                     initialHTML={commandItem.html}
-                                    initialTokens={commandItem.tokens as any}
+                                    initialTokens={commandItem.tokens}
                                     initialMode={commandItem.mode}
                                     initialLineEnding={commandItem.lineEnding}
                                     onStateChange={(state) => {
-                                        inputStateRef.current = state as any;
+                                        inputStateRef.current = state;
                                     }}
                                     hideExtras
                                 />

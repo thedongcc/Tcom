@@ -128,7 +128,7 @@ export const MonitorLogItem = React.memo(({
                 transform: 'translateZ(0)',
                 lineHeight: `${lineHeightPx}px`,
                 '--flash-color': 'var(--selection-background)'
-            } as any}
+            } as React.CSSProperties}
             onContextMenu={(e) => onContextMenu(e, log)}
         >
             {(showTimestamp || (log.repeatCount && log.repeatCount > 1)) && (

@@ -6,14 +6,13 @@
 import { useCallback, useRef } from 'react';
 import { SessionState, SessionConfig, MonitorSessionConfig } from '../types/session';
 import { Com0Com } from '../utils/com0com';
+import { UseSessionLogReturn } from './useSessionLog';
 
 interface UseSessionConnectionParams {
     sessionsRef: React.MutableRefObject<SessionState[]>;
     updateSession: (sessionId: string, updater: (prev: SessionState) => Partial<SessionState>) => void;
     updateSessionConfig: (sessionId: string, updates: Partial<SessionConfig>) => void;
-    sessionLog: {
-        addLog: (sessionId: string, type: string, data: any, crcStatus?: string, topic?: string, commandName?: string, timestamp?: number) => void;
-    };
+    sessionLog: UseSessionLogReturn;
     portScanner: {
         monitorEnabledRef: React.MutableRefObject<boolean>;
         isAdminRef: React.MutableRefObject<boolean>;
@@ -31,10 +30,10 @@ export function useSessionConnection({
         if (!window.mqttAPI) { sessionLog.addLog(sessionId, 'ERROR', 'MQTT API missing'); return false; }
         updateSession(sessionId, () => ({ isConnecting: true }));
         try {
-            const result = await window.mqttAPI.connect(sessionId, session.config as any);
+            const result = await window.mqttAPI.connect(sessionId, session.config as unknown as Record<string, unknown>);
             if (result.success) {
                 updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
-                sessionLog.addLog(sessionId, 'INFO', `Connected to ${(session.config as any).host}`);
+                sessionLog.addLog(sessionId, 'INFO', `Connected to ${'host' in session.config ? (session.config as { host: string }).host : 'unknown'}`);
                 const cleanups: (() => void)[] = [];
                 cleanups.push(window.mqttAPI.onMessage(sessionId, (topic, payload) => sessionLog.addLog(sessionId, 'RX', payload, undefined, topic)));
                 cleanups.push(window.mqttAPI.onStatus(sessionId, (status) => {
@@ -87,7 +86,7 @@ export function useSessionConnection({
         }
         if (window.monitorAPI) {
             try {
-                const res = await window.monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort } as any);
+                const res = await window.monitorAPI.start(sessionId, { ...monitorConfig, pairedPort: actualPort } as unknown as Record<string, unknown>);
                 if (res.success) {
                     updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                     sessionLog.addLog(sessionId, 'INFO', 'Monitor started');
@@ -102,7 +101,7 @@ export function useSessionConnection({
                     cleanupRefs.current.set(sessionId, cleanups);
                     return true;
                 } else {
-                    sessionLog.addLog(sessionId, 'ERROR', res.error);
+                    sessionLog.addLog(sessionId, 'ERROR', res.error || 'Unknown error');
                     updateSession(sessionId, () => ({ isConnecting: false }));
                     return false;
                 }

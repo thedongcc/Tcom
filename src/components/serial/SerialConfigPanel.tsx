@@ -21,7 +21,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
     const { t } = useI18n();
 
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = useSession();
-    const uiState = (config as any).uiState || {};
+    const uiState = config.uiState || {};
     const [highlight, setHighlight] = useState(false);
 
     useEffect(() => {
@@ -114,7 +114,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                         <CustomSelect
                             items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.dataBits)}
-                            onChange={(val) => updateConnection({ dataBits: Number(val) as any })}
+                            onChange={(val) => updateConnection({ dataBits: Number(val) as 5 | 6 | 7 | 8 })}
                             disabled={isConnected}
                         />
                     </div>
@@ -124,7 +124,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                         <CustomSelect
                             items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.stopBits)}
-                            onChange={(val) => updateConnection({ stopBits: Number(val) as any })}
+                            onChange={(val) => updateConnection({ stopBits: Number(val) as 1 | 1.5 | 2 })}
                             disabled={isConnected}
                         />
                     </div>
@@ -142,7 +142,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                             { label: t('configSidebar.space'), value: 'space' },
                         ]}
                         value={connection.parity || 'none'}
-                        onChange={(val) => updateConnection({ parity: val as any })}
+                        onChange={(val) => updateConnection({ parity: val as 'none' | 'even' | 'mark' | 'odd' | 'space' })}
                         disabled={isConnected}
                     />
                 </div>

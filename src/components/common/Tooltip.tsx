@@ -82,17 +82,18 @@ export const Tooltip = ({
             </div>
         );
     } else if (React.isValidElement(children)) {
-        const origEnter = (children.props as any).onMouseEnter;
-        const origLeave = (children.props as any).onMouseLeave;
-        triggerNode = React.cloneElement(children as React.ReactElement<any>, {
-            ref: (node: any) => {
-                (triggerRef as any).current = node;
-                const origRef = (children as any).ref;
+        const childProps = children.props as Record<string, unknown>;
+        const origEnter = childProps.onMouseEnter as ((e: React.MouseEvent) => void) | undefined;
+        const origLeave = childProps.onMouseLeave as ((e: React.MouseEvent) => void) | undefined;
+        triggerNode = React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+            ref: (node: HTMLElement | null) => {
+                (triggerRef as React.MutableRefObject<HTMLElement | null>).current = node;
+                const origRef = (children as React.ReactElement & { ref?: React.Ref<HTMLElement> }).ref;
                 if (typeof origRef === 'function') origRef(node);
-                else if (origRef) origRef.current = node;
+                else if (origRef && typeof origRef === 'object') (origRef as React.MutableRefObject<HTMLElement | null>).current = node;
             },
-            onMouseEnter: (e: any) => { showTooltip(); if (origEnter) origEnter(e); },
-            onMouseLeave: (e: any) => { hideTooltip(); if (origLeave) origLeave(e); },
+            onMouseEnter: (e: React.MouseEvent) => { showTooltip(); if (origEnter) origEnter(e); },
+            onMouseLeave: (e: React.MouseEvent) => { hideTooltip(); if (origLeave) origLeave(e); },
         });
     } else {
         triggerNode = (
