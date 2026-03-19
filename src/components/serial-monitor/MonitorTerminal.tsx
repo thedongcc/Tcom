@@ -12,7 +12,6 @@ import { useToast } from '../../context/ToastContext';
 import { useCommandContext } from '../../context/CommandContext';
 import { formatTimestamp } from '../../utils/format';
 import { SerialInput } from '../serial/SerialInput';
-import { AnimatePresence, motion } from 'framer-motion';
 import { generateUniqueName } from '../../utils/commandUtils';
 import { CommandEditorDialog } from '../commands/CommandEditorDialog';
 import { CommandEntity } from '../../types/command';
@@ -193,16 +192,14 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 onFontSize={onFontSize}
             />
 
-            <AnimatePresence>
-                {isConnected && !partnerConnected && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-amber-600/20 border-b border-amber-600/30">
-                        <div className="px-4 py-2 flex items-center justify-between gap-3 text-amber-400 text-xs">
-                            <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort || '' })}</span></div>
-                            <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => onSendTarget('physical')}>{t('monitor.switchPhysical')}</button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {isConnected && !partnerConnected && (
+                <div className="bg-amber-600/20 border-b border-amber-600/30 transition-all duration-200 ease-out animate-in fade-in slide-in-from-top-1">
+                    <div className="px-4 py-2 flex items-center justify-between gap-3 text-amber-400 text-xs">
+                        <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /><span>{t('monitor.partnerNotOpen', { port: (config as MonitorSessionConfig).virtualSerialPort || '' })}</span></div>
+                        <button className="px-2 py-1 bg-amber-600/30 rounded text-amber-200 text-[10px]" onClick={() => onSendTarget('physical')}>{t('monitor.switchPhysical')}</button>
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>
                 <div className="absolute top-4 right-4 z-10">

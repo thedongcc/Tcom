@@ -1,6 +1,5 @@
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { computeTooltipPosition } from './tooltipPositioning';
 
 interface TooltipProps {
@@ -112,21 +111,15 @@ export const Tooltip = ({
         <>
             {triggerNode}
             {typeof document !== 'undefined' && createPortal(
-                <AnimatePresence>
-                    {isVisible && content && (
-                        <div style={getPositionStyle()} className="fixed z-[99999] pointer-events-none">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.12 }}
-                                className={`px-2 py-1 text-[12px] font-medium rounded shadow-lg bg-[var(--st-tooltip-bg)] text-[var(--st-tooltip-text)] border border-[var(--st-tooltip-border)] max-w-[300px] w-max whitespace-normal break-words text-left leading-snug backdrop-blur-md ${className}`}
-                            >
-                                {content}
-                            </motion.div>
+                isVisible && content ? (
+                    <div style={getPositionStyle()} className="fixed z-[99999] pointer-events-none">
+                        <div
+                            className={`px-2 py-1 text-[12px] font-medium rounded shadow-lg bg-[var(--st-tooltip-bg)] text-[var(--st-tooltip-text)] border border-[var(--st-tooltip-border)] max-w-[300px] w-max whitespace-normal break-words text-left leading-snug backdrop-blur-md transition-all duration-[120ms] ease-out animate-in fade-in zoom-in-95 ${className}`}
+                        >
+                            {content}
                         </div>
-                    )}
-                </AnimatePresence>,
+                    </div>
+                ) : null,
                 document.body
             )}
         </>

@@ -6,7 +6,6 @@
  * - useThemeEditorState.ts — 状态管理、Inspector、颜色变更回调
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Palette, Save, RotateCcw, Search, Crosshair, MapPin } from 'lucide-react';
 import { componentTokenMap } from '../../themes/componentTokenMap';
 import { useI18n } from '../../context/I18nContext';
@@ -265,14 +264,9 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                             </div>
                                         </button>
 
-                                        <AnimatePresence initial={false}>
-                                            {isExpanded && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                                                    className="overflow-hidden"
+                                        {isExpanded && (
+                                                <div
+                                                    className="overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
                                                 >
                                                     <div className="px-2.5 py-2 flex flex-col gap-4 border-t" style={{ borderColor: 'var(--theme-editor-card-border)' }}>
                                                         {group.components.map(compId => {
@@ -306,9 +300,8 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                                             );
                                                         })}
                                                     </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                                </div>
+                                        )}
                                     </div>
                                 );
                             })

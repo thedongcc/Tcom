@@ -17,70 +17,50 @@
   <script src="/src/boot-theme.js"></script>
   <div id="root">
     <style>
-      /* 提前设置字体变量默认值，防止 JS 注入前出现字体大小跳变 */
-      /* 注：@font-face 声明由 index.css 管理（Vite 会正确处理字体文件路径） */
+      /* 骨架屏变量默认值（被 boot-theme.js 覆盖为用户主题颜色） */
       :root {
         --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
         --st-font-size: 15px;
         --st-line-height: 1.5;
-        /* loading 骨架颜色默认值（被上方内联脚本覆盖为用户主题颜色） */
         --loading-bg: #1e1e1e;
-        --loading-titlebar: #3c3c3c;
-        --loading-text: #cccccc;
+        --loading-titlebar: #2d2d2d;
+        --loading-activitybar: #333333;
+        --loading-sidebar: #252526;
+        --loading-text: #888888;
         --loading-spinner-track: #3c3c3c;
+        --loading-spinner-accent: #007acc;
       }
-
-      body {
-        margin: 0;
-        overflow: hidden;
-        background-color: var(--loading-bg);
-      }
-
-      .loading-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: var(--loading-bg);
-        color: var(--loading-text);
-        font-family: monospace;
-        flex-direction: column;
-        gap: 16px;
-        overflow: hidden;
-        padding-top: 30px;
-        /* Space for titlebar */
-      }
-
-      .titlebar-placeholder {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 30px;
-        background-color: var(--loading-titlebar);
-        -webkit-app-region: drag;
-        user-select: none;
-      }
-
-      .spinner {
-        width: 24px;
-        height: 24px;
-        border: 3px solid var(--loading-spinner-track);
-        border-top-color: #007acc;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      body { margin: 0; overflow: hidden; background-color: var(--loading-bg); }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
     </style>
-    <div class="loading-container">
-      <div class="titlebar-placeholder"></div>
-      <div class="spinner"></div>
-      <div>Loading Tcom...</div>
+    <!-- 骨架屏：拟真 IDE 布局（React 挂载后自动替换） -->
+    <div style="height:100vh;width:100vw;display:flex;flex-direction:column;overflow:hidden;background:var(--loading-bg);">
+      <!-- 标题栏 -->
+      <div style="height:35px;background:var(--loading-titlebar);-webkit-app-region:drag;user-select:none;display:flex;align-items:center;padding:0 12px;flex-shrink:0;">
+        <span style="font-size:12px;color:var(--loading-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:0.7;">Tcom</span>
+      </div>
+      <!-- 主体 -->
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <!-- 活动栏 -->
+        <div style="width:48px;background:var(--loading-activitybar);flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;gap:18px;">
+          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite;"></div>
+          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite 0.3s;"></div>
+          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite 0.6s;"></div>
+        </div>
+        <!-- 侧边栏 -->
+        <div style="width:250px;background:var(--loading-sidebar);flex-shrink:0;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;padding:10px;">
+          <div style="height:14px;width:60%;background:var(--loading-spinner-track);border-radius:3px;margin-bottom:16px;animation:pulse 2s ease-in-out infinite;"></div>
+          <div style="height:10px;width:80%;background:var(--loading-spinner-track);border-radius:2px;margin-bottom:8px;opacity:0.5;animation:pulse 2s ease-in-out infinite 0.2s;"></div>
+          <div style="height:10px;width:65%;background:var(--loading-spinner-track);border-radius:2px;margin-bottom:8px;opacity:0.4;animation:pulse 2s ease-in-out infinite 0.4s;"></div>
+          <div style="height:10px;width:75%;background:var(--loading-spinner-track);border-radius:2px;opacity:0.3;animation:pulse 2s ease-in-out infinite 0.6s;"></div>
+        </div>
+        <!-- 主区域 -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+          <div style="width:28px;height:28px;border:3px solid var(--loading-spinner-track);border-top-color:var(--loading-spinner-accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+          <div style="font-size:13px;color:var(--loading-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:0.5px;">Loading Tcom Workstation...</div>
+        </div>
+      </div>
     </div>
   </div>
   <script type="module" src="/src/main.tsx"></script>

@@ -1,6 +1,5 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from './Tooltip';
 import { useI18n } from '../../context/I18nContext';
 
@@ -83,13 +82,9 @@ export const LogSearch: React.FC<LogSearchProps> = ({
 
     return (
         <div className="relative flex items-center">
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ width: 0, opacity: 0, scale: 0.95 }}
-                        animate={{ width: 'auto', opacity: 1, scale: 1 }}
-                        exit={{ width: 0, opacity: 0, scale: 0.95 }}
-                        className={`flex items-center border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-colors focus-within:ring-1 focus-within:ring-[var(--focus-border-color)] ${regexError ? 'border-[var(--st-error-text)] shadow-sm' : ''
+            {isOpen && (
+                    <div
+                        className={`flex items-center border rounded-sm overflow-hidden mr-1 shadow-lg h-7 transition-all duration-200 ease-out focus-within:ring-1 focus-within:ring-[var(--focus-border-color)] animate-in fade-in zoom-in-95 ${regexError ? 'border-[var(--st-error-text)] shadow-sm' : ''
                             }`}
                         style={{
                             backgroundColor: 'var(--st-logsearch-bg)',
@@ -165,9 +160,8 @@ export const LogSearch: React.FC<LogSearchProps> = ({
                                 <ChevronDown size={14} />
                             </button>
                         </Tooltip>
-                    </motion.div>
+                    </div>
                 )}
-            </AnimatePresence>
 
             <Tooltip content={t('search.closeSearch')} position="bottom">
                 <button

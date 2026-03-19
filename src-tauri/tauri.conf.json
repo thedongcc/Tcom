@@ -5,7 +5,7 @@
   "identifier": "com.thedongcc.tcom",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:1420",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -36,7 +36,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ws://localhost:* http://localhost:* ipc: http://ipc.localhost https://ipc.localhost; img-src 'self' data: https: http: asset: https://asset.localhost",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:* ipc: http://ipc.localhost https://ipc.localhost; img-src 'self' data: https: http: asset: https://asset.localhost",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]

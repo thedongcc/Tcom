@@ -9,8 +9,9 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
-  // Tauri v2 期望前端起在 localhost:1420
+  // Tauri v2 期望前端起在 127.0.0.1:1420（避免 localhost 的 IPv6 DNS 解析陷阱）
   server: {
+    host: '127.0.0.1',
     port: 1420,
     strictPort: true,
   },

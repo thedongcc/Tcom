@@ -3,9 +3,9 @@
  * 共享颜色选择器组件 — 从 ElementInspector 提取，供 ThemeColorEditor 等复用
  */
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import { RgbaColorPicker } from 'react-colorful';
 import { Pipette } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
@@ -155,12 +155,9 @@ export const ColorPickerContent: React.FC<{
     };
 
     return (
-        <motion.div
+        <div
             ref={selfRef}
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.13 }}
-            className="color-picker-popover"
+            className="color-picker-popover transition-all duration-[130ms] ease-out animate-in fade-in zoom-in-[0.97] slide-in-from-bottom-1"
             style={{
                 position: 'fixed',
                 left: coords.left,
@@ -242,7 +239,7 @@ export const ColorPickerContent: React.FC<{
                     <ChannelInput label="A%" value={Math.round(rgba.a * 100)} max={100} onChange={v => updateChannel('a', v / 100)} />
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 };
 
