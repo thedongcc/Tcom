@@ -9,107 +9,188 @@ import { CustomSelect } from '../common/CustomSelect';
 
 // 通用输入框样式
 const inputCls = "bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)]";
-const labelCls = "text-[11px] font-medium text-[var(--input-placeholder-color)] uppercase tracking-wider";
+const labelCls = "text-[11px] font-medium text-[var(--input-placeholder-color)]";
 const hintCls = "text-[10px] text-[var(--activitybar-inactive-foreground)] leading-snug";
 
-// ─── Flag 配置表单 ────────────────────────────────────────────────────
+// 通用 Hex/Dec 切换按钮
+const HexDecToggle = ({ mode, onChange }: { mode: 'hex' | 'dec'; onChange: (m: 'hex' | 'dec') => void }) => (
+    <div className="flex rounded overflow-hidden border" style={{ borderColor: 'var(--input-border-color)' }}>
+        {(['hex', 'dec'] as const).map(m => (
+            <button
+                key={m}
+                type="button"
+                className="px-1.5 py-0.5 text-[9px] font-bold uppercase transition-colors cursor-pointer"
+                style={{
+                    backgroundColor: mode === m ? 'var(--accent-color, #007acc)' : 'transparent',
+                    color: mode === m ? '#fff' : 'var(--input-placeholder-color)',
+                }}
+                onClick={() => onChange(m)}
+            >
+                {m}
+            </button>
+        ))}
+    </div>
+);
+
+// 带内嵌前缀的输入框（前缀不占额外宽度，flex 对齐）
+const PrefixInput = ({ prefix, value, onChange, onBlur, onKeyDown, placeholder, onPrefixClick }: {
+    prefix: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onBlur?: () => void;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
+    placeholder?: string;
+    onPrefixClick?: () => void;
+}) => (
+    <div className="flex items-baseline bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-[4px] h-7 focus-within:border-[var(--focus-border-color)]">
+        <span
+            className={`shrink-0 pl-2 text-[12px] font-mono text-[var(--input-placeholder-color)] select-none leading-[28px] ${onPrefixClick ? 'cursor-pointer' : ''}`}
+            style={{ opacity: 0.6 }}
+            onClick={onPrefixClick}
+        >
+            {prefix}
+        </span>
+        <input
+            type="text"
+            className="flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-mono text-[var(--input-foreground)] leading-[28px] px-1"
+            value={value}
+            placeholder={placeholder || '00'}
+            onChange={onChange}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+        />
+    </div>
+);
+
+// ─── 占位符配置表单 ──────────────────────────────────────────────────
 export const FlagConfigForm = ({
     config, setConfig, onKeyDown,
 }: {
     config: FlagConfig;
     setConfig: (c: FlagConfig) => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
-}) => (
-    <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Name (Optional)</label>
-            <input
-                type="text"
-                className={`${inputCls} placeholder-[var(--input-placeholder-color)]`}
-                value={config.name || ''}
-                placeholder="e.g. Frame Header"
-                onChange={e => setConfig({ ...config, name: e.target.value })}
-                onKeyDown={onKeyDown}
-            />
+}) => {
+    const [mode, setMode] = React.useState<'hex' | 'dec'>('hex');
+    const decDisplay = React.useMemo(() => {
+        if (!config.hex) return '';
+        return config.hex.trim().split(/\s+/).filter(Boolean).map(h => parseInt(h, 16)).join(' ');
+    }, [config.hex]);
+    const [decInput, setDecInput] = React.useState(decDisplay);
+
+    React.useEffect(() => { setDecInput(decDisplay); }, [decDisplay]);
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+                <label className={labelCls}>名称（可选）</label>
+                <input
+                    type="text"
+                    className={`${inputCls} placeholder-[var(--input-placeholder-color)]`}
+                    value={config.name || ''}
+                    placeholder="例如 帧头"
+                    onChange={e => setConfig({ ...config, name: e.target.value })}
+                    onKeyDown={onKeyDown}
+                />
+            </div>
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>内容</label>
+                    <HexDecToggle mode={mode} onChange={setMode} />
+                </div>
+                {mode === 'hex' ? (
+                    <textarea
+                        className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] h-24 font-mono resize-none text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)] leading-relaxed"
+                        value={config.hex || ''}
+                        placeholder="0xAA 0xBB 0xCC"
+                        onChange={e => setConfig({ ...config, hex: e.target.value.replace(/[^0-9A-Fa-f\s]/g, '') })}
+                        onKeyDown={onKeyDown}
+                    />
+                ) : (
+                    <textarea
+                        className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] h-24 font-mono resize-none text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)] leading-relaxed"
+                        value={decInput}
+                        placeholder="170 187 204"
+                        onChange={e => {
+                            const val = e.target.value.replace(/[^0-9\s]/g, '');
+                            setDecInput(val);
+                            const hex = val.trim().split(/\s+/).filter(Boolean)
+                                .map(d => Math.min(255, parseInt(d) || 0).toString(16).toUpperCase().padStart(2, '0'))
+                                .join(' ');
+                            setConfig({ ...config, hex });
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                )}
+                <p className={hintCls}>{mode === 'hex' ? '十六进制字节，空格分隔' : '十进制字节 (0-255)，空格分隔'}</p>
+            </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Hex Content</label>
-            <textarea
-                className="bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] p-2 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] h-24 font-mono resize-none text-[var(--input-foreground)] placeholder-[var(--input-placeholder-color)] leading-relaxed"
-                value={config.hex || ''}
-                placeholder="AA BB CC"
-                onChange={e => setConfig({ ...config, hex: e.target.value.replace(/[^0-9A-Fa-f\s]/g, '') })}
-                onKeyDown={onKeyDown}
-            />
-            <p className={hintCls}>Enter hex bytes separated by space</p>
-        </div>
-    </div>
-);
+    );
+};
 
 // ─── Hex 配置表单 ─────────────────────────────────────────────────────
 export const HexConfigForm = ({
-    config, setConfig, byteWidthInput, setByteWidthInput, onKeyDown,
+    config, setConfig, onKeyDown,
 }: {
     config: HexConfig;
     setConfig: (c: HexConfig) => void;
-    byteWidthInput: string;
-    setByteWidthInput: (v: string) => void;
-    onKeyDown: (e: React.KeyboardEvent) => void;
-}) => (
-    <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Byte Width</label>
-            <input
-                type="text"
-                className={`${inputCls} w-16`}
-                value={byteWidthInput}
-                onChange={e => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setByteWidthInput(val);
-                    if (val !== '') {
-                        setConfig({ ...config, byteWidth: Math.max(1, Math.min(8, parseInt(val) || 1)) });
-                    }
-                }}
-                onBlur={() => {
-                    const final = Math.max(1, Math.min(8, parseInt(byteWidthInput) || 1));
-                    setByteWidthInput(final.toString());
-                    setConfig({ ...config, byteWidth: final });
-                }}
-                onKeyDown={onKeyDown}
-            />
-            <p className={hintCls}>Target size in bytes (1-8)</p>
+    onKeyDown?: (e: React.KeyboardEvent) => void;
+}) => {
+    const [byteWidthInput, setByteWidthInput] = React.useState((config.byteWidth ?? 1).toString());
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+                <label className={labelCls}>字节宽度</label>
+                <input
+                    type="text"
+                    className={`${inputCls} w-24`}
+                    value={byteWidthInput}
+                    onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setByteWidthInput(val);
+                        if (val !== '') {
+                            setConfig({ ...config, byteWidth: Math.max(1, Math.min(8, parseInt(val) || 1)) });
+                        }
+                    }}
+                    onBlur={() => {
+                        const final = Math.max(1, Math.min(8, parseInt(byteWidthInput) || 1));
+                        setByteWidthInput(final.toString());
+                        setConfig({ ...config, byteWidth: final });
+                    }}
+                    onKeyDown={onKeyDown}
+                />
+                <p className={hintCls}>目标字节大小 (1-8)</p>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ─── CRC 配置表单 ─────────────────────────────────────────────────────
 export const CRCConfigForm = ({
-    config, setConfig, startIndexInput, setStartIndexInput, endIndexInput: _endIndexInput, setEndIndexInput, onKeyDown,
+    config, setConfig, onKeyDown,
 }: {
     config: CRCConfig;
     setConfig: (c: CRCConfig) => void;
-    startIndexInput: string;
-    setStartIndexInput: (v: string) => void;
-    endIndexInput: string;
-    setEndIndexInput: (v: string) => void;
-    onKeyDown: (e: React.KeyboardEvent) => void;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
+    const [startIndexInput, setStartIndexInput] = React.useState((config.startIndex ?? 0).toString());
+
     const algoItems = [
-        { label: 'Modbus CRC16 (LE)', value: 'modbus-crc16' },
-        { label: 'CCITT CRC116 (BE)', value: 'ccitt-crc16' },
+        { label: 'Modbus CRC16（小端）', value: 'modbus-crc16' },
+        { label: 'CCITT CRC16（大端）', value: 'ccitt-crc16' },
         { label: 'CRC32', value: 'crc32' },
     ];
     const endItems = [
-        { label: '末尾 (End)', value: '0' },
-        { label: '-1 (Last)', value: '-1' },
-        { label: '-2', value: '-2' },
-        { label: '-3', value: '-3' },
+        { label: '末尾', value: '0' },
+        { label: '倒数第 1 字节', value: '-1' },
+        { label: '倒数第 2 字节', value: '-2' },
+        { label: '倒数第 3 字节', value: '-3' },
     ];
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>Algorithm</label>
+                <label className={labelCls}>算法</label>
                 <CustomSelect
                     items={algoItems}
                     value={config.algorithm}
@@ -118,13 +199,13 @@ export const CRCConfigForm = ({
             </div>
 
             <div className="flex items-center gap-2 my-1">
-                <span className="text-[10px] font-bold text-[var(--input-placeholder-color)] uppercase tracking-[0.1em] whitespace-nowrap">Range Settings</span>
+                <span className="text-[10px] font-bold text-[var(--input-placeholder-color)] tracking-[0.1em] whitespace-nowrap">范围设置</span>
                 <div className="h-[1px] bg-[var(--border-color)] flex-1 mt-0.5" />
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
                 <div className="flex flex-col gap-1.5 flex-none w-20">
-                    <label className={labelCls}>Start</label>
+                    <label className={labelCls}>起始</label>
                     <input
                         type="text"
                         className={inputCls}
@@ -145,12 +226,11 @@ export const CRCConfigForm = ({
                     />
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1">
-                    <label className={labelCls}>End</label>
+                    <label className={labelCls}>结束</label>
                     <CustomSelect
                         items={endItems}
                         value={(config.endIndex ?? 0).toString()}
                         onChange={(val) => {
-                            setEndIndexInput(val);
                             setConfig({ ...config, endIndex: parseInt(val) });
                         }}
                     />
@@ -168,18 +248,46 @@ export const TimestampConfigForm = ({
     setConfig: (c: any) => void;
 }) => {
     const formatItems = [
-        { label: 'Seconds (4-byte)', value: 'seconds' },
-        { label: 'Milliseconds (8-byte)', value: 'milliseconds' },
+        { label: '秒 (4 字节)', value: 'seconds' },
+        { label: '毫秒 (8 字节)', value: 'milliseconds' },
     ];
     const orderItems = [
-        { label: 'Big Endian (BE)', value: 'big' },
-        { label: 'Little Endian (LE)', value: 'little' },
+        { label: '大端序 (BE)', value: 'big' },
+        { label: '小端序 (LE)', value: 'little' },
     ];
 
+    // 实时时间预览
+    const [now, setNow] = React.useState(Date.now());
+    const [previewMode, setPreviewMode] = React.useState<'hex' | 'dec'>('dec');
+    React.useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 200);
+        return () => clearInterval(timer);
+    }, []);
+
+    const isMs = config.format === 'milliseconds';
+    const isBE = (config.byteOrder || 'big') === 'big';
+    const tsValue = isMs ? now : Math.floor(now / 1000);
+    const byteCount = isMs ? 8 : 4;
+
+    // 生成字节数组
+    const tsBytes = React.useMemo(() => {
+        const bytes: number[] = [];
+        let v = tsValue;
+        for (let i = 0; i < byteCount; i++) {
+            bytes.unshift(v & 0xFF);
+            v = Math.floor(v / 256);
+        }
+        return isBE ? bytes : bytes.reverse();
+    }, [tsValue, byteCount, isBE]);
+
+    const previewText = previewMode === 'hex'
+        ? tsBytes.map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
+        : tsBytes.map(b => b.toString()).join(' ');
+
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>Format</label>
+                <label className={labelCls}>格式</label>
                 <CustomSelect
                     items={formatItems}
                     value={config.format || 'seconds'}
@@ -187,12 +295,26 @@ export const TimestampConfigForm = ({
                 />
             </div>
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>Byte Order</label>
+                <label className={labelCls}>字节序</label>
                 <CustomSelect
                     items={orderItems}
                     value={config.byteOrder || 'big'}
                     onChange={(val) => setConfig({ ...config, byteOrder: val })}
                 />
+            </div>
+            {/* 实时预览 */}
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>实时预览</label>
+                    <HexDecToggle mode={previewMode} onChange={setPreviewMode} />
+                </div>
+                <div
+                    className="text-[11px] font-mono px-2 py-1.5 rounded-[4px] select-all break-all leading-relaxed"
+                    style={{ backgroundColor: 'var(--input-background)', border: '1px solid var(--input-border-color)', color: 'var(--input-foreground)', opacity: 0.9 }}
+                >
+                    {previewText}
+                </div>
+                <p className={hintCls}>数值: {previewMode === 'hex' ? '0x' + tsValue.toString(16).toUpperCase() : tsValue.toLocaleString()}</p>
             </div>
         </div>
     );
@@ -200,83 +322,164 @@ export const TimestampConfigForm = ({
 
 // ─── AutoInc 配置表单 ─────────────────────────────────────────────────
 export const AutoIncConfigForm = ({
-    config, setConfig, bytesInput, setBytesInput, stepInput, setStepInput, onKeyDown,
+    config, setConfig, onKeyDown,
 }: {
     config: AutoIncConfig;
     setConfig: (c: AutoIncConfig) => void;
-    bytesInput: string;
-    setBytesInput: (v: string) => void;
-    stepInput: string;
-    setStepInput: (v: string) => void;
-    onKeyDown: (e: React.KeyboardEvent) => void;
-}) => (
-    <div className="flex flex-col gap-4">
-        <div className="flex gap-4">
-            <div className="flex flex-col gap-1.5 flex-none w-16">
-                <label className={labelCls}>Bytes</label>
-                <input
-                    type="text"
-                    className={inputCls}
-                    value={bytesInput}
-                    onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        setBytesInput(val);
-                        if (val !== '') {
-                            const bytes = Math.max(1, Math.min(8, parseInt(val) || 1));
-                            setConfig({ ...config, bytes });
-                        }
-                    }}
-                    onBlur={() => {
-                        const bytes = Math.max(1, Math.min(8, parseInt(bytesInput) || 1));
-                        setBytesInput(bytes.toString());
-                        setConfig({ ...config, bytes });
-                    }}
-                    onKeyDown={onKeyDown}
+    onKeyDown?: (e: React.KeyboardEvent) => void;
+}) => {
+    const [initMode, setInitMode] = React.useState<'hex' | 'dec'>('dec');
+    const [stepMode, setStepMode] = React.useState<'hex' | 'dec'>('dec');
+    const bytesItems = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ label: `${n} Byte${n > 1 ? 's' : ''}`, value: n.toString() }));
+
+    const hexVal = (config.defaultValue || '00').replace(/\s/g, '');
+    const decVal = parseInt(hexVal, 16) || 0;
+    const [hexInput, setHexInput] = React.useState(hexVal.toUpperCase());
+    const [decInput, setDecInput] = React.useState(decVal.toString());
+
+    const stepVal = config.step ?? 1;
+    const [stepDec, setStepDec] = React.useState(stepVal.toString());
+    const [stepHex, setStepHex] = React.useState(Math.abs(stepVal).toString(16).toUpperCase());
+    const [stepSign, setStepSign] = React.useState(stepVal < 0 ? '-' : '');
+
+    const decToHex = (dec: number, bytes: number) =>
+        Math.max(0, dec).toString(16).toUpperCase().padStart(bytes * 2, '0');
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+                <label className={labelCls}>字节数</label>
+                <CustomSelect
+                    items={bytesItems}
+                    value={(config.bytes || 1).toString()}
+                    onChange={(val) => setConfig({ ...config, bytes: parseInt(val) || 1 })}
                 />
             </div>
-            <div className="flex flex-col gap-1.5 flex-1">
-                <label className={labelCls}>Initial Val (Hex)</label>
-                <input
-                    type="text"
-                    className={`${inputCls} font-mono placeholder-[var(--input-placeholder-color)]`}
-                    value={config.defaultValue || ''}
-                    placeholder="00 00 05"
-                    onChange={e => {
-                        const val = e.target.value.replace(/[^0-9A-Fa-f\s]/g, '');
-                        setConfig({ ...config, defaultValue: val });
-                    }}
-                    onKeyDown={onKeyDown}
-                />
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>初始值</label>
+                    <HexDecToggle mode={initMode} onChange={(m) => {
+                        setInitMode(m);
+                        const h = (config.defaultValue || '00').replace(/\s/g, '');
+                        setHexInput(h.toUpperCase());
+                        setDecInput((parseInt(h, 16) || 0).toString());
+                    }} />
+                </div>
+                {initMode === 'hex' ? (
+                    <PrefixInput
+                        prefix="0x"
+                        value={hexInput}
+                        placeholder="00"
+                        onChange={e => {
+                            const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+                            setHexInput(val);
+                            if (val) {
+                                const padded = val.padStart((config.bytes || 1) * 2, '0');
+                                setConfig({ ...config, defaultValue: padded, currentValue: padded });
+                            }
+                        }}
+                        onBlur={() => {
+                            const padded = (hexInput || '00').padStart((config.bytes || 1) * 2, '0');
+                            setHexInput(padded);
+                            setConfig({ ...config, defaultValue: padded, currentValue: padded });
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                ) : (
+                    <input
+                        type="text"
+                        className={inputCls}
+                        value={decInput}
+                        placeholder="0"
+                        onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setDecInput(val);
+                            if (val !== '') {
+                                const hex = decToHex(parseInt(val) || 0, config.bytes || 1);
+                                setHexInput(hex);
+                                setConfig({ ...config, defaultValue: hex, currentValue: hex });
+                            }
+                        }}
+                        onBlur={() => {
+                            const dec = parseInt(decInput) || 0;
+                            setDecInput(dec.toString());
+                            const hex = decToHex(dec, config.bytes || 1);
+                            setHexInput(hex);
+                            setConfig({ ...config, defaultValue: hex, currentValue: hex });
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                )}
             </div>
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>步进（偏移量）</label>
+                    <HexDecToggle mode={stepMode} onChange={(m) => {
+                        setStepMode(m);
+                        const s = config.step ?? 1;
+                        setStepDec(s.toString());
+                        setStepSign(s < 0 ? '-' : '');
+                        setStepHex(Math.abs(s).toString(16).toUpperCase());
+                    }} />
+                </div>
+                <div className="flex items-baseline gap-1">
+                    <button
+                        type="button"
+                        className="shrink-0 text-[16px] font-bold h-7 w-7 rounded-[4px] cursor-pointer transition-colors flex items-center justify-center"
+                        style={{ backgroundColor: 'var(--input-background)', border: '1px solid var(--input-border-color)', color: 'var(--input-foreground)' }}
+                        onClick={() => {
+                            const newSign = stepSign === '-' ? '' : '-';
+                            setStepSign(newSign);
+                            const abs = stepMode === 'hex' ? (parseInt(stepHex, 16) || 0) : Math.abs(parseInt(stepDec) || 0);
+                            const final = newSign === '-' ? -abs : abs;
+                            setStepDec(final.toString());
+                            setStepHex(abs.toString(16).toUpperCase());
+                            setConfig({ ...config, step: final });
+                        }}
+                    >
+                        {stepSign || '+'}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                        {stepMode === 'hex' ? (
+                            <PrefixInput
+                                prefix="0x"
+                                value={stepHex}
+                                placeholder="01"
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+                                    setStepHex(val);
+                                    const abs = parseInt(val, 16) || 0;
+                                    const final = stepSign === '-' ? -abs : abs;
+                                    setStepDec(final.toString());
+                                    setConfig({ ...config, step: final });
+                                }}
+                                onKeyDown={onKeyDown}
+                            />
+                        ) : (
+                            <input
+                                type="text"
+                                className={`${inputCls} w-full`}
+                                value={Math.abs(parseInt(stepDec) || 0).toString()}
+                                placeholder="1"
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    const abs = parseInt(val) || 0;
+                                    const final = stepSign === '-' ? -abs : abs;
+                                    setStepDec(final.toString());
+                                    setStepHex(abs.toString(16).toUpperCase());
+                                    setConfig({ ...config, step: final });
+                                }}
+                                onKeyDown={onKeyDown}
+                            />
+                        )}
+                    </div>
+                </div>
+                <p className={hintCls}>每次发送后累加（可为负数）</p>
+            </div>
+            <p className={hintCls} style={{ opacity: 0.7 }}>💡 右键点击 Token 可重置为初始值</p>
         </div>
-        <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Step (Offset)</label>
-            <input
-                type="text"
-                className={inputCls}
-                value={stepInput}
-                onChange={e => {
-                    const val = e.target.value;
-                    if (val === '' || val === '-' || !isNaN(Number(val))) {
-                        setStepInput(val);
-                        const parsed = parseInt(val);
-                        if (!isNaN(parsed)) {
-                            setConfig({ ...config, step: parsed });
-                        }
-                    }
-                }}
-                onBlur={() => {
-                    const parsed = parseInt(stepInput);
-                    const finalStep = isNaN(parsed) ? 0 : parsed;
-                    setStepInput(finalStep.toString());
-                    setConfig({ ...config, step: finalStep });
-                }}
-                onKeyDown={onKeyDown}
-            />
-            <p className={hintCls}>Added after each send (can be negative)</p>
-        </div>
-    </div>
-);
+    );
+};
 
 // ─── RandomBytes 配置表单 ──────────────────────────────────────────────
 export const RandomBytesConfigForm = ({
@@ -287,46 +490,95 @@ export const RandomBytesConfigForm = ({
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
     const bytesItems = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ label: `${n} Byte${n > 1 ? 's' : ''}`, value: n.toString() }));
+    const bytes = config.bytes || 1;
+    const maxPossible = bytes >= 7 ? Number.MAX_SAFE_INTEGER : Math.pow(256, bytes) - 1;
+    const [minMode, setMinMode] = React.useState<'hex' | 'dec'>('dec');
+    const [maxMode, setMaxMode] = React.useState<'hex' | 'dec'>('dec');
+
+    const minVal = config.min ?? 0;
+    const maxVal = config.max ?? maxPossible;
+    const [minDec, setMinDec] = React.useState(minVal.toString());
+    const [maxDec, setMaxDec] = React.useState(maxVal.toString());
+    const [minHex, setMinHex] = React.useState(minVal.toString(16).toUpperCase());
+    const [maxHex, setMaxHex] = React.useState(maxVal.toString(16).toUpperCase());
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>Byte Count</label>
+                <label className={labelCls}>字节数</label>
                 <CustomSelect
                     items={bytesItems}
-                    value={(config.bytes || 1).toString()}
-                    onChange={(val) => setConfig({ ...config, bytes: parseInt(val) || 1 })}
+                    value={bytes.toString()}
+                    onChange={(val) => {
+                        const newBytes = parseInt(val) || 1;
+                        const newMax = newBytes >= 7 ? Number.MAX_SAFE_INTEGER : Math.pow(256, newBytes) - 1;
+                        setConfig({ ...config, bytes: newBytes, min: 0, max: newMax });
+                        setMinDec('0'); setMinHex('0');
+                        setMaxDec(newMax.toString()); setMaxHex(newMax.toString(16).toUpperCase());
+                    }}
                 />
             </div>
-            <div className="flex gap-4">
-                <div className="flex flex-col gap-1.5 flex-1">
-                    <label className={labelCls}>Min (0-255)</label>
-                    <input
-                        type="text"
-                        className={inputCls}
-                        value={config.min ?? 0}
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>最小值</label>
+                    <HexDecToggle mode={minMode} onChange={(m) => {
+                        setMinMode(m);
+                        setMinDec(minVal.toString()); setMinHex(minVal.toString(16).toUpperCase());
+                    }} />
+                </div>
+                {minMode === 'hex' ? (
+                    <PrefixInput prefix="0x" value={minHex} placeholder="0"
                         onChange={e => {
-                            const v = Math.max(0, Math.min(255, parseInt(e.target.value.replace(/\D/g, '') || '0')));
+                            const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+                            setMinHex(val);
+                            const v = Math.max(0, Math.min(maxPossible, parseInt(val, 16) || 0));
                             setConfig({ ...config, min: v });
                         }}
                         onKeyDown={onKeyDown}
                     />
-                </div>
-                <div className="flex flex-col gap-1.5 flex-1">
-                    <label className={labelCls}>Max (0-255)</label>
-                    <input
-                        type="text"
-                        className={inputCls}
-                        value={config.max ?? 255}
+                ) : (
+                    <input type="text" className={inputCls} value={minDec} placeholder="0"
                         onChange={e => {
-                            const v = Math.max(0, Math.min(255, parseInt(e.target.value.replace(/\D/g, '') || '255')));
+                            const val = e.target.value.replace(/\D/g, '');
+                            setMinDec(val);
+                            const v = Math.max(0, Math.min(maxPossible, parseInt(val) || 0));
+                            setConfig({ ...config, min: v });
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                    <label className={labelCls}>最大值</label>
+                    <HexDecToggle mode={maxMode} onChange={(m) => {
+                        setMaxMode(m);
+                        setMaxDec(maxVal.toString()); setMaxHex(maxVal.toString(16).toUpperCase());
+                    }} />
+                </div>
+                {maxMode === 'hex' ? (
+                    <PrefixInput prefix="0x" value={maxHex} placeholder="FF"
+                        onChange={e => {
+                            const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+                            setMaxHex(val);
+                            const v = Math.max(0, Math.min(maxPossible, parseInt(val, 16) || 0));
                             setConfig({ ...config, max: v });
                         }}
                         onKeyDown={onKeyDown}
                     />
-                </div>
+                ) : (
+                    <input type="text" className={inputCls} value={maxDec} placeholder={maxPossible.toString()}
+                        onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setMaxDec(val);
+                            const v = Math.max(0, Math.min(maxPossible, parseInt(val) || 0));
+                            setConfig({ ...config, max: v });
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                )}
             </div>
-            <p className={hintCls}>Each byte is independently randomized within [Min, Max] per send</p>
+            <p className={hintCls}>范围 0 ~ {maxPossible.toLocaleString()}，整体随机</p>
         </div>
     );
 };

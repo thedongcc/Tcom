@@ -72,7 +72,6 @@ pub fn start_timed_send(
 
         let interval = Duration::from_millis(interval_ms);
         let mut next_tick = Instant::now() + interval;
-        let mut tick_count: u64 = 0;
 
         // 统一时钟源
         let base_instant = Instant::now();
@@ -81,18 +80,7 @@ pub fn start_timed_send(
             .unwrap_or_default()
             .as_millis() as u64;
 
-        // 诊断变量
-        let mut last_tick_instant = Instant::now();
-        let mut interval_sum_us: u64 = 0;
-        let mut interval_max_us: u64 = 0;
-        let mut interval_min_us: u64 = u64::MAX;
-        let mut emit_sum_us: u64 = 0;
-        let mut emit_max_us: u64 = 0;
-
         while !stop.load(Ordering::SeqCst) {
-            let tick_start = Instant::now();
-            let interval_us = tick_start.duration_since(last_tick_instant).as_micros() as u64;
-            last_tick_instant = tick_start;
 
             let timestamp = base_system_ms + base_instant.elapsed().as_millis() as u64;
 
@@ -100,7 +88,6 @@ pub fn start_timed_send(
             let _ = write_tx.send(data.clone());
 
             // 通知前端
-            let t_emit = Instant::now();
             let _ = tick_app.emit(
                 "serial:timed-send-tick",
                 TimedSendTickEvent {
@@ -109,7 +96,6 @@ pub fn start_timed_send(
                     timestamp,
                 },
             );
-            let emit_us = t_emit.elapsed().as_micros() as u64;
 
             // 高精度等待
             let now = Instant::now();
@@ -123,36 +109,7 @@ pub fn start_timed_send(
                 }
             }
             next_tick += interval;
-            tick_count += 1;
-
-            // 统计（跳过第 1 次）
-            if tick_count > 1 {
-                interval_sum_us += interval_us;
-                if interval_us > interval_max_us { interval_max_us = interval_us; }
-                if interval_us < interval_min_us { interval_min_us = interval_us; }
-                emit_sum_us += emit_us;
-                if emit_us > emit_max_us { emit_max_us = emit_us; }
-            }
-
-            // 每 20 次输出诊断
-            if tick_count > 1 && (tick_count - 1) % 20 == 0 {
-                let n = 20u64;
-                let ideal_us = interval_ms * 1000;
-                let avg_interval = interval_sum_us / n;
-                let drift_us = if avg_interval > ideal_us { avg_interval - ideal_us } else { ideal_us - avg_interval };
-                println!(
-                    "[TimedSend DIAG] tick#{} | interval(us): avg={} min={} max={} ideal={} drift={}us | emit(us): avg={} max={}",
-                    tick_count, avg_interval, interval_min_us, interval_max_us, ideal_us, drift_us,
-                    emit_sum_us / n, emit_max_us,
-                );
-                interval_sum_us = 0;
-                interval_max_us = 0;
-                interval_min_us = u64::MAX;
-                emit_sum_us = 0;
-                emit_max_us = 0;
-            }
         }
-        println!("[TimedSend] Stopped after {} ticks", tick_count);
     });
 
     Ok(serde_json::json!({ "success": true }))

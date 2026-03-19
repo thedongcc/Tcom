@@ -110,7 +110,7 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 const { id, type, config } = currentNode.attrs;
                 const rect = span.getBoundingClientRect();
                 const event = new CustomEvent(SERIAL_TOKEN_CLICK_EVENT, {
-                    detail: { id, type, config, x: rect.left, y: rect.bottom, pos: getPos() }
+                    detail: { id, type, config, x: rect.left, y: rect.top, pos: getPos() }
                 });
                 window.dispatchEvent(event);
             };

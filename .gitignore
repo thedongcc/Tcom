@@ -16,5 +16,3 @@ startup_analysis.md
 # Tauri
 src-tauri/target/
 
-# Electron 遗留代码备份（迁移完毕后可手动删除）
-_legacy_electron_backup/

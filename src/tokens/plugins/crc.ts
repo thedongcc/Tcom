@@ -11,7 +11,7 @@ import { Hash, Plus } from 'lucide-react';
 
 export const crcPlugin: TokenPlugin = {
     type: 'crc',
-    label: 'CRC Config',
+    label: 'CRC 校验',
     colorVar: '--st-token-crc',
     fallbackColor: '#4ec9b0',
 

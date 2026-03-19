@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Token } from '../../types/token';
 import { X, Check } from 'lucide-react';
 import { tokenRegistry } from '../../tokens';
@@ -50,20 +50,29 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         return <ConfigForm config={config} setConfig={setConfig} onKeyDown={handleKeyDown} />;
     };
 
-    const [size, setSize] = useState({ width: 300, height: 320 });
+    // 弹窗宽度：首次渲染后锁定，不再因内容变化而变宽
+    const [lockedWidth, setLockedWidth] = useState<number | null>(null);
+    const [userWidth, setUserWidth] = useState<number | null>(null);
+    const [userHeight, setUserHeight] = useState<number | null>(null);
     const [pos, setPos] = useState({ x: position.x, y: position.y });
 
     useEffect(() => {
-        const POPOVER_HEIGHT = 320;
-        const screenH = window.innerHeight;
-        const screenW = window.innerWidth;
+        requestAnimationFrame(() => {
+            const el = popoverRef.current;
+            if (!el) return;
+            const actualH = el.offsetHeight;
+            const actualW = el.offsetWidth;
+            // 锁定首次渲染宽度
+            setLockedWidth(actualW);
+            const screenH = window.innerHeight;
+            const screenW = window.innerWidth;
 
-        let newY = position.y + 24;
-        if (newY + POPOVER_HEIGHT > screenH) {
-            newY = Math.max(10, position.y - POPOVER_HEIGHT - 10);
-        }
-        let newX = Math.min(position.x, screenW - 320);
-        setPos({ x: newX, y: newY });
+            let newY = position.y - actualH - 4;
+            if (newY < 10) newY = position.y + 24;
+            let newX = Math.min(position.x, screenW - actualW - 10);
+            if (newX < 10) newX = 10;
+            setPos({ x: newX, y: newY });
+        });
     }, []);
 
     // ─── 拖拽逻辑 ─────────────────────────────────────────────────────
@@ -95,7 +104,8 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         e.preventDefault();
         e.stopPropagation();
         isResizing.current = true;
-        resizeStart.current = { x: e.clientX, y: e.clientY, w: size.width, h: size.height };
+        const el = popoverRef.current;
+        resizeStart.current = { x: e.clientX, y: e.clientY, w: el?.offsetWidth || 250, h: el?.offsetHeight || 200 };
         document.addEventListener('mousemove', handleMouseMoveResize);
         document.addEventListener('mouseup', handleMouseUpResize);
     };
@@ -103,7 +113,8 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
         if (!isResizing.current) return;
         const dx = e.clientX - resizeStart.current.x;
         const dy = e.clientY - resizeStart.current.y;
-        setSize({ width: Math.max(200, resizeStart.current.w + dx), height: Math.max(150, resizeStart.current.h + dy) });
+        setUserWidth(Math.max(200, resizeStart.current.w + dx));
+        setUserHeight(Math.max(150, resizeStart.current.h + dy));
     };
     const handleMouseUpResize = () => {
         isResizing.current = false;
@@ -119,8 +130,15 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
     return (
         <div
             ref={popoverRef}
-            className="fixed z-50 bg-[var(--menu-background)] border border-[var(--widget-border-color)] shadow-xl rounded-md flex flex-col text-[var(--st-dialog-text)] select-none"
-            style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+            className="fixed z-50 rounded-lg flex flex-col select-none shadow-lg overflow-hidden"
+            style={{
+                left: pos.x, top: pos.y,
+                ...(userWidth ? { width: userWidth } : lockedWidth ? { width: lockedWidth } : { width: 'auto', minWidth: 200, maxWidth: 320 }),
+                ...(userHeight ? { height: userHeight } : { maxHeight: 500 }),
+                backgroundColor: 'var(--menu-background)',
+                border: '1px solid var(--theme-editor-card-border, var(--widget-border-color))',
+                color: 'var(--app-foreground, var(--st-dialog-text))',
+            }}
         >
             <style>
                 {`
@@ -134,42 +152,66 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                     }
                 `}
             </style>
+
+            {/* 标题栏 — 参考主题编辑器 header */}
             <div
-                className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--widget-background)] cursor-move select-none rounded-t-md"
+                className="flex items-center justify-between px-3 py-2 cursor-move select-none"
+                style={{ borderBottom: '1px solid var(--theme-editor-card-border, var(--border-color))' }}
                 onMouseDown={handleMouseDownHeader}
             >
-                {/* 标题通过 registry 获取 */}
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--input-placeholder-color)]">
+                <span className="text-[12px] font-semibold tracking-tight opacity-90">
                     {plugin.label}
                 </span>
-                <X size={14} className="cursor-pointer hover:text-[var(--st-dialog-text)] text-[var(--activitybar-inactive-foreground)] transition-colors" onClick={onClose} />
+                <button
+                    onClick={onClose}
+                    className="p-0.5 rounded transition-all cursor-pointer"
+                    style={{ opacity: 0.5 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.backgroundColor = 'var(--theme-editor-btn-hover, rgba(255,255,255,0.06))'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                    <X size={14} />
+                </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 flex flex-col custom-scrollbar">
+            {/* 表单内容 */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2.5 flex flex-col custom-scrollbar">
                 {renderContent()}
+            </div>
 
-                <div className="mt-8 pt-4 flex items-center justify-between border-t border-[var(--st-token-divider)]">
-                    <button
-                        className="px-2 py-1 text-[11px] text-[var(--st-error-text)] hover:bg-[var(--st-error-text)]/20 rounded-[4px] transition-colors"
-                        onClick={() => { onDelete(token.id); onClose(); }}
-                    >
-                        Delete
-                    </button>
-                    <button
-                        className="px-4 py-1.5 bg-[var(--button-background)] text-[var(--button-foreground)] text-[12px] font-medium rounded-[4px] hover:bg-[var(--button-hover-background)] transition-colors flex items-center gap-1.5 shadow-sm"
-                        onClick={handleSave}
-                    >
-                        <Check size={14} /> Apply
-                    </button>
-                </div>
+            {/* 底部操作栏 — 参考主题编辑器 footer */}
+            <div
+                className="px-3 py-2 flex justify-end gap-2 shrink-0"
+                style={{
+                    borderTop: '1px solid var(--theme-editor-card-border, var(--border-color))',
+                    backgroundColor: 'var(--widget-background)',
+                }}
+            >
+                <button
+                    className="px-3 py-1.5 text-[11px] rounded-md transition-all flex items-center gap-1 font-medium cursor-pointer"
+                    style={{ border: '1px solid var(--theme-editor-input-border, var(--input-border-color))', color: 'var(--st-error-text)' }}
+                    onClick={() => { onDelete(token.id); onClose(); }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--theme-editor-btn-hover, rgba(255,255,255,0.06))'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                    删除
+                </button>
+                <button
+                    className="px-4 py-1.5 text-[11px] rounded-md text-white transition-all flex items-center gap-1 font-semibold shadow-sm cursor-pointer"
+                    style={{ backgroundColor: 'var(--accent-color, var(--button-background))' }}
+                    onClick={handleSave}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                >
+                    <Check size={12} /> 应用
+                </button>
             </div>
 
             {/* 缩放手柄 */}
             <div
-                className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-50 flex items-center justify-center opacity-50 hover:opacity-100"
+                className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-50 flex items-center justify-center opacity-30 hover:opacity-70 transition-opacity"
                 onMouseDown={handleMouseDownResize}
             >
-                <div className="w-2 h-2 border-r-2 border-b-2 border-[var(--st-token-arrow)]" />
+                <div className="w-2 h-2 border-r-2 border-b-2" style={{ borderColor: 'var(--app-foreground, var(--st-token-arrow))' }} />
             </div>
         </div>
     );

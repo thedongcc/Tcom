@@ -63,7 +63,7 @@ pub struct MqttConfig {
     #[serde(rename = "keepAlive", default = "default_keepalive")]
     keep_alive: u64,
     #[serde(rename = "connectTimeout", default = "default_timeout")]
-    connect_timeout: u64,
+    _connect_timeout: u64,
     #[serde(rename = "cleanSession", default = "default_true")]
     clean_session: bool,
     #[serde(rename = "autoReconnect", default)]

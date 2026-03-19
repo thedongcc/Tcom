@@ -245,8 +245,6 @@ mod inner {
             );
 
             if overlay.is_null() {
-                let err = GetLastError();
-                log::warn!("[snap_layout] 覆盖窗口创建失败, err={}", err);
                 return;
             }
 
@@ -257,13 +255,10 @@ mod inner {
 
             OVERLAY_HWND.store(overlay as *mut c_void, Ordering::Relaxed);
             update_overlay_pos(parent);
-            log::info!("[snap_layout] 最大化按钮覆盖窗口创建成功, overlay={:?}", overlay);
 
             // 子类化父窗口
-            let prev = SetWindowLongPtrW(parent, GWLP_WNDPROC, parent_wndproc as isize);
+            let prev = SetWindowLongPtrW(parent, GWLP_WNDPROC, parent_wndproc as *const () as isize);
             PARENT_ORIG.store(prev as *mut c_void, Ordering::Relaxed);
-
-            log::info!("[snap_layout] 初始化完成");
         }
     }
 }

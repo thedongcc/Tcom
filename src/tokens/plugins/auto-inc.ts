@@ -33,7 +33,7 @@ function hexToBytes(hex: string, bytes: number): Uint8Array {
 
 export const autoIncPlugin: TokenPlugin = {
     type: 'auto_inc',
-    label: 'Auto Token',
+    label: '自增计数',
     colorVar: '--st-token-auto-inc',
     fallbackColor: '#c586c0',
 
@@ -45,7 +45,9 @@ export const autoIncPlugin: TokenPlugin = {
     }),
 
     getLabel(config: AutoIncConfig): string {
-        return `Val:${config.currentValue || config.defaultValue || '00'}`;
+        const hex = config.currentValue || config.defaultValue || '00';
+        const dec = parseInt(hex.replace(/\s/g, ''), 16);
+        return `Auto:${dec}`;
     },
 
     compile(config: AutoIncConfig, ctx: CompileContext): void {

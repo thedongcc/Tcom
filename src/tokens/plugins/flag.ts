@@ -10,7 +10,7 @@ import { Flag } from 'lucide-react';
 
 export const flagPlugin: TokenPlugin = {
     type: 'flag',
-    label: 'Custom Flag',
+    label: '占位符',
     colorVar: '--st-token-flag',
     fallbackColor: '#c586c0',
 

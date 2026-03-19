@@ -21,11 +21,13 @@ pub fn window_is_always_on_top(window: tauri::Window) -> Result<Value, String> {
 pub fn window_set_bg_color(window: tauri::Window, color: String) -> Result<Value, String> {
     #[cfg(windows)]
     {
+        use std::ffi::c_void;
+        use windows_sys::Win32::Foundation::HWND;
         use windows_sys::Win32::Graphics::Gdi::CreateSolidBrush;
 
         extern "system" {
-            fn SetClassLongPtrW(hwnd: isize, index: i32, new_long: isize) -> isize;
-            fn DeleteObject(obj: isize) -> i32;
+            fn SetClassLongPtrW(hwnd: HWND, index: i32, new_long: isize) -> isize;
+            fn DeleteObject(obj: *mut c_void) -> i32;
         }
         const GCLP_HBRBACKGROUND: i32 = -10;
 
@@ -41,12 +43,12 @@ pub fn window_set_bg_color(window: tauri::Window, color: String) -> Result<Value
         // Win32 COLORREF 是 BGR 格式
         let colorref = (b as u32) << 16 | (g as u32) << 8 | (r as u32);
 
-        let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as HWND;
         unsafe {
             let new_brush = CreateSolidBrush(colorref);
             let old_brush = SetClassLongPtrW(hwnd, GCLP_HBRBACKGROUND, new_brush as isize);
             if old_brush != 0 {
-                DeleteObject(old_brush);
+                DeleteObject(old_brush as *mut c_void);
             }
         }
     }

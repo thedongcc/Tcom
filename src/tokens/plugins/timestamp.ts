@@ -10,7 +10,7 @@ import { Clock } from 'lucide-react';
 
 export const timestampPlugin: TokenPlugin = {
     type: 'timestamp',
-    label: 'Time Token',
+    label: '时间戳',
     colorVar: '--st-token-timestamp',
     fallbackColor: '#4fc1ff',
 

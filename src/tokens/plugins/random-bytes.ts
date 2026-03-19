@@ -10,7 +10,7 @@ import { Shuffle } from 'lucide-react';
 
 export const randomBytesPlugin: TokenPlugin = {
     type: 'random_bytes',
-    label: 'Random Bytes',
+    label: '随机字节',
     colorVar: '--st-token-random',
     fallbackColor: '#ce9178',
 
@@ -27,12 +27,16 @@ export const randomBytesPlugin: TokenPlugin = {
 
     compile(config: RandomBytesConfig, ctx: CompileContext): void {
         const bytes = config.bytes || 1;
-        const min = config.min ?? 0x00;
-        const max = config.max ?? 0xFF;
+        const maxPossible = bytes >= 7 ? Number.MAX_SAFE_INTEGER : Math.pow(256, bytes) - 1;
+        const min = config.min ?? 0;
+        const max = config.max ?? maxPossible;
+        // 整体数值随机后拆分为大端序字节
+        const value = Math.floor(Math.random() * (max - min + 1)) + min;
         const rawBytes = new Uint8Array(bytes);
-
-        for (let i = 0; i < bytes; i++) {
-            rawBytes[i] = Math.floor(Math.random() * (max - min + 1)) + min;
+        let remaining = value;
+        for (let i = bytes - 1; i >= 0; i--) {
+            rawBytes[i] = remaining & 0xFF;
+            remaining = Math.floor(remaining / 256);
         }
 
         ctx.parts.push(rawBytes);
