@@ -10,16 +10,19 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "splashscreen",
         "title": "Tcom",
         "url": "splashscreen.html",
-        "width": 460,
-        "height": 400,
+        "width": 590,
+        "height": 370,
         "decorations": false,
         "resizable": false,
-        "transparent": false,
+        "transparent": true,
+        "shadow": false,
+        "visible": false,
         "center": true,
         "alwaysOnTop": true,
         "skipTaskbar": true

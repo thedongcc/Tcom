@@ -79,6 +79,14 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
         const theme = availableThemes.find(t => t.id === config.theme);
         if (theme) {
             applyTheme(theme);
+
+            // 同步窗口原生背景色（resize 时露出的背景应与主题一致）
+            const bgColor = getComputedStyle(root).getPropertyValue('--editor-background').trim();
+            if (bgColor) {
+                import('@tauri-apps/api/core').then(({ invoke }) => {
+                    invoke('window_set_bg_color', { color: bgColor }).catch(() => {});
+                });
+            }
         }
 
         // 2. 重新注入排版变量（被 applyTheme 清除了）

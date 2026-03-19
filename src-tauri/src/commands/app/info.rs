@@ -15,25 +15,46 @@ pub fn get_version(app: &tauri::AppHandle) -> Result<String, String> {
 pub fn get_stats() -> Result<Value, String> {
     #[cfg(target_os = "windows")]
     {
-        let pid = std::process::id();
-        let ps_script = format!(
-            "(Get-Process -Id {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty WorkingSet64) / 1MB",
-            pid
-        );
-        let mem_used = Command::new("powershell.exe")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
-            .output()
-            .ok()
-            .and_then(|o| {
-                if o.status.success() {
-                    String::from_utf8_lossy(&o.stdout).trim().parse::<f64>().ok()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(0.0);
+        // 直接调用 Win32 API，避免每次 spawn PowerShell 进程（导致 3 秒周期性卡顿）
+        use std::mem;
 
-        Ok(serde_json::json!({ "memUsed": mem_used.round() as u64 }))
+        #[repr(C)]
+        #[allow(non_snake_case)]
+        struct PROCESS_MEMORY_COUNTERS {
+            cb: u32,
+            PageFaultCount: u32,
+            PeakWorkingSetSize: usize,
+            WorkingSetSize: usize,
+            QuotaPeakPagedPoolUsage: usize,
+            QuotaPagedPoolUsage: usize,
+            QuotaPeakNonPagedPoolUsage: usize,
+            QuotaNonPagedPoolUsage: usize,
+            PagefileUsage: usize,
+            PeakPagefileUsage: usize,
+        }
+
+        extern "system" {
+            fn GetCurrentProcess() -> isize;
+            fn K32GetProcessMemoryInfo(
+                process: isize,
+                ppsmemCounters: *mut PROCESS_MEMORY_COUNTERS,
+                cb: u32,
+            ) -> i32;
+        }
+
+        let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { mem::zeroed() };
+        pmc.cb = mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+
+        let mem_used = unsafe {
+            let process = GetCurrentProcess();
+            if K32GetProcessMemoryInfo(process, &mut pmc, pmc.cb) != 0 {
+                (pmc.WorkingSetSize as f64 / 1024.0 / 1024.0).round() as u64
+            } else {
+                0
+            }
+        };
+
+        Ok(serde_json::json!({ "memUsed": mem_used }))
     }
     #[cfg(not(target_os = "windows"))]
     {

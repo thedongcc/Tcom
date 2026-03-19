@@ -69,6 +69,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
   const { t } = useI18n();
   const [isPinned, setIsPinned] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaxHover, setIsMaxHover] = useState(false);
 
   // 初始化时读取状态
   useEffect(() => {
@@ -84,6 +85,15 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
       win.isMaximized().then(setIsMaximized);
     }).then(fn => { unlisten = fn; });
 
+    return () => { unlisten?.(); };
+  }, []);
+
+  // 监听 Snap Layout 覆盖窗口的悬浮事件
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    listen<boolean>('snap-maximize-hover', (event) => {
+      setIsMaxHover(event.payload);
+    }).then(fn => { unlisten = fn; });
     return () => { unlisten?.(); };
   }, []);
 
@@ -165,7 +175,11 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
 
           {/* 最大化 / 还原 */}
           <button
-            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))] transition-colors duration-150"
+            className={`flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] transition-colors duration-150 ${
+              isMaxHover
+                ? 'opacity-100 bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]'
+                : 'opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]'
+            }`}
             onClick={async () => {
               const maximized = await window.windowAPI?.toggleMaximize();
               setIsMaximized(!!maximized);

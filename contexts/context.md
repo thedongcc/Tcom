@@ -402,6 +402,7 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - ❌ 在 TSX 中硬编码用户可见的中文/英文字符串（必须使用 `t()` 函数）
 - ❌ `App.tsx` 中 Provider 嵌套超过 5 层（须使用 `composeProviders` 工具函数扁平化）
 - ❌ 使用 `any` 类型或 `as any` 断言（须使用 `unknown` + 类型守卫）
+- ❌ 在周期性调用（`setInterval` / 定时器）触发的 Rust Command 中 spawn 外部进程（须用 Win32 API / Rust 原生库替代）
 
 ---
 
@@ -448,6 +449,24 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - **模块懒加载**：`App.tsx` → `FullApp.tsx`（React.lazy），确保首帧仅加载最小模块
 - **IPC 预注册**：`registerAllTauriAPIs()` 在 React 渲染前完成，避免运行时查找
 - **主题预注入**：`boot-theme.js` 在 HTML 中同步执行，避免主题闪烁
+
+### 5.7 IPC / 定时任务性能守则
+
+> ⚠️ **历史教训**：`get_stats()` 每 3 秒通过 `Command::new("powershell.exe")` spawn 进程获取内存使用量，
+> 导致整个应用每 3 秒卡顿一次（串口数据、拖拽、动画全受影响）。
+> 修复：改用 Win32 API `K32GetProcessMemoryInfo`（微秒级完成）。
+
+**铁律**：
+- ❌ **禁止在周期性任务（`setInterval` / 定时器循环）中调用会 spawn 外部进程的 Rust Command**
+  - 包括但不限于：`Command::new("powershell.exe")`、`Command::new("cmd.exe")`、`Command::new("wmic")`
+  - ✅ 替代方案：使用 Win32 API（FFI）、Rust 原生库、注册表读取等零开销方式
+- ❌ **禁止 Tauri Command 同步阻塞超过 10ms**
+  - `Command::new().output()` 是同步阻塞的，每次启动 PowerShell 需 200-2000ms
+  - 如必须调用外部进程，应在独立 `tokio::spawn` 中执行并通过 `emit` 返回结果
+- **周期性 IPC 调用自检清单**：
+  - `setInterval(fn, N)` 中的 `fn` 是否触发 Tauri `invoke`？
+  - 该 `invoke` 对应的 Rust Command 是否有 `Command::new` / 文件 I/O / 网络请求？
+  - 如有，是否可用缓存、增量查询或原生 API 替代？
 
 ---
 

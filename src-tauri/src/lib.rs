@@ -17,6 +17,8 @@
  */
 
 mod commands;
+#[cfg(windows)]
+mod snap_layout;
 
 use commands::monitor::MonitorState;
 use commands::mqtt::MqttState;
@@ -28,6 +30,10 @@ use commands::theme::ThemeEditorState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebView2 初始化前设置深色背景，避免 resize 时白色闪烁
+    #[cfg(windows)]
+    std::env::set_var("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "1e1e1e");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -45,6 +51,29 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // 延迟启用 Windows 11 Snap Layout（等待 WebView2 完全初始化）
+            #[cfg(windows)]
+            {
+                use tauri::Manager;
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    let h = handle.clone();
+                    let _ = handle.run_on_main_thread(move || {
+                        if let Some(window) = h.get_webview_window("main") {
+                            if let Ok(hwnd) = window.hwnd() {
+                                snap_layout::setup(hwnd.0, h.app_handle().clone());
+                            } else {
+                                log::warn!("[snap_layout] 获取 HWND 失败");
+                            }
+                        } else {
+                            log::warn!("[snap_layout] 未找到 main 窗口");
+                        }
+                    });
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -102,6 +131,7 @@ pub fn run() {
             // 窗口
             commands::window::window_set_always_on_top,
             commands::window::window_is_always_on_top,
+            commands::window::window_set_bg_color,
             // 更新（占位）
             commands::updater::update_check,
             commands::updater::update_download,

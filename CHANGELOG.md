@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.3] - 2026-03-18
+## [0.0.3] - 2026-03-19
 ### Added
 - 下拉列表组件增加自动滚动定位功能并优化了悬浮交互高亮效果
 - 新增串口监视区显示命令名称功能,如果发送的是命令菜单中的命令,则会在发送的命令右侧显示命令名称
@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化图片背景功能
 - 优化全局滚动条样式
 - 功能模块排序改到设置标签页中
+- 优化splash启动画面
+- 修复aero snap layout
 
 ### Removed
 - 取消侧边栏右键配置显示隐藏功能

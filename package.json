@@ -11,8 +11,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "vite --config config/vite.config.mts",
-    "build": "vite build --config config/vite.config.mts",
+    "dev": "node scripts/sync-splash.mjs && vite --config config/vite.config.mts",
+    "build": "node scripts/sync-splash.mjs && vite build --config config/vite.config.mts",
     "tauri": "tauri",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --config config/.eslintrc.cjs",
     "preview": "vite preview --config config/vite.config.mts"
