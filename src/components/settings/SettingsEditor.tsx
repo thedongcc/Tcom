@@ -1,89 +1,32 @@
-import { useState, useRef, useCallback } from 'react';
-import { Search, RotateCcw, Download, Upload, Check, FolderOpen, FileJson, Settings, GripVertical, Files, Monitor } from 'lucide-react';
+/**
+ * SettingsEditor.tsx
+ * 设置编辑器主入口 — 工具栏 + 搜索 + 各分组设置项的数据定义与渲染。
+ *
+ * 子组件：
+ * - SettingsShared.tsx — Group / SettingRow / Checkbox 公共 UI
+ * - ModuleSettings.tsx — 功能模块 DnD 排序区域
+ * - SettingsComponents.tsx — FactoryResetDialog 对话框
+ * - useSettingsActions.ts — 导入导出/重置等操作逻辑
+ */
+import { useState, useRef } from 'react';
+import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
-import { Switch } from '../common/Switch';
 import { useSettingsActions } from './useSettingsActions';
 import { FactoryResetDialog } from './SettingsComponents';
-import { useFeatureManager } from '../../context/FeatureContextShared';
-import { FEATURE_REGISTRY } from '../../features/registry';
 import { KeybindingInput } from '../common/KeybindingInput';
 import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../../utils/keybindings';
 import type { ThemeImages } from '../../types/theme';
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent
-} from '@dnd-kit/core';
-import {
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-    useSortable,
-    arrayMove
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
-// ─── 分组容器 ─────────────────────────────────────────────────────────────────
-const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="mb-8">
-        <h3 className="text-[11px] font-bold text-[var(--st-settings-title-text)] opacity-50 uppercase tracking-widest mb-3 px-2 border-l-2 border-[var(--focus-border-color)] ml-[-8px] pl-[6px]">
-            {title}
-        </h3>
-        <div className="flex flex-col bg-[var(--settings-editor-bg)] rounded border border-[var(--border-color)] overflow-hidden">
-            {children}
-        </div>
-    </div>
-);
-
-// ─── 普通设置行 ───────────────────────────────────────────────────────────────
-const SettingRow = ({
-    label,
-    description,
-    children,
-    stackContent = false,
-}: {
-    label: string;
-    description?: string;
-    children: React.ReactNode;
-    stackContent?: boolean;
-}) => (
-    <div className={`py-3 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 ${stackContent ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`}>
-        <div className={`flex flex-col ${stackContent ? '' : 'flex-1 mr-4'}`}>
-            <label className="text-[13px] text-[var(--st-settings-text)] font-medium">{label}</label>
-            {description && (
-                <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5">{description}</p>
-            )}
-        </div>
-        <div className={stackContent ? '' : 'flex-shrink-0'}>{children}</div>
-    </div>
-);
-
-// ─── 复选框 ───────────────────────────────────────────────────────────────────
-const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
-    <div
-        onClick={onChange}
-        className={`w-4 h-4 border flex items-center justify-center cursor-pointer transition-colors ${checked
-            ? 'bg-[var(--checkbox-background)] border-[var(--checkbox-border-color)]'
-            : 'bg-[var(--input-background)] border-[var(--input-border-color)]'
-            }`}
-    >
-        {checked && <Check size={12} className="text-[var(--checkbox-foreground)]" />}
-    </div>
-);
+import { Group, SettingRow, Checkbox, INPUT_CLS, type SettingSection } from './SettingsShared';
+import { ModuleSettings } from './ModuleSettings';
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {
     const { config, availableThemes, loadThemes, updateConfig, updateUI, setTheme } =
         useSettings();
     const { t } = useI18n();
-    const { features, activateFeature, deactivateFeature } = useFeatureManager();
     const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,16 +35,11 @@ export const SettingsEditor = () => {
     const [resetInput, setResetInput] = useState('');
     const [showBgSettings, setShowBgSettings] = useState(false);
 
-    // ── 操作函数和字体列表（委托给 Hook） ──
+    // 操作函数和字体列表（委托给 Hook）
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
 
-    // 通用样式
-    const inputCls =
-        'bg-[var(--input-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] text-[13px] px-2 h-7 outline-none focus:border-[var(--focus-border-color)] rounded-[4px]';
-
-    // ── 普通设置区块数据 ──
-    type SettingItem = { label: string; description?: string; render: () => React.ReactNode };
-    const settingSections: { title: string; items: SettingItem[] }[] = [
+    // ── 设置区块数据定义 ──
+    const settingSections: SettingSection[] = [
         {
             title: t('settings.groups.appearance'),
             items: [
@@ -111,10 +49,7 @@ export const SettingsEditor = () => {
                     render: () => (
                         <div
                             className="flex items-center gap-1 w-56"
-                            onClickCapture={() => {
-                                // 任何点击配色方案这一行的行为，都静默尝试刷新一下可用主题列表
-                                loadThemes();
-                            }}
+                            onClickCapture={() => { loadThemes(); }}
                         >
                             <div className="flex-1 min-w-0">
                                 <CustomSelect
@@ -125,10 +60,7 @@ export const SettingsEditor = () => {
                             </div>
                             <Tooltip content={t('settings.openThemeFolder')} position="top">
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.themeAPI?.openFolder?.();
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); window.themeAPI?.openFolder?.(); }}
                                     className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
                                 >
                                     <FolderOpen size={14} />
@@ -139,9 +71,7 @@ export const SettingsEditor = () => {
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         const currentDef = availableThemes.find(t => t.id === config.theme);
-                                        if (currentDef) {
-                                            window.themeAPI?.openFile?.(currentDef.id);
-                                        }
+                                        if (currentDef) { window.themeAPI?.openFile?.(currentDef.id); }
                                     }}
                                     className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
                                 >
@@ -227,7 +157,7 @@ export const SettingsEditor = () => {
                             placeholder="HH:mm:ss.SSS"
                             value={config.timestampFormat}
                             onChange={e => updateConfig({ timestampFormat: e.target.value })}
-                            className={`w-56 ${inputCls}`}
+                            className={`w-56 ${INPUT_CLS}`}
                         />
                     ),
                 },
@@ -235,7 +165,6 @@ export const SettingsEditor = () => {
                     label: t('settings.logFormat.bgImage'),
                     description: t('settings.logFormat.bgImageDesc'),
                     render: () => {
-                        // 直接显示本地路径
                         const displayValue = config.images.rxBackground || '';
                         return (
                         <div className="flex flex-col gap-2">
@@ -248,7 +177,7 @@ export const SettingsEditor = () => {
                                         const val = e.target.value.trim();
                                         updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: val } }));
                                     }}
-                                    className={`flex-1 min-w-0 ${inputCls}`}
+                                    className={`flex-1 min-w-0 ${INPUT_CLS}`}
                                 />
                                 <Tooltip content={t('settings.logFormat.bgImageBrowse')} position="top">
                                     <button
@@ -376,7 +305,6 @@ export const SettingsEditor = () => {
                 ),
             })),
         },
-        // 功能模块区域已迁移为独立的 DnD 排序组件，见下方 moduleSectionJSX
         {
             title: 'Danger Zone',
             items: [
@@ -385,10 +313,7 @@ export const SettingsEditor = () => {
                     description: t('settings.factoryResetDesc'),
                     render: () => (
                         <button
-                            onClick={() => {
-                                setResetInput('');
-                                setShowFactoryReset(true);
-                            }}
+                            onClick={() => { setResetInput(''); setShowFactoryReset(true); }}
                             className="bg-[var(--st-settings-danger-bg)] hover:bg-[var(--st-settings-danger-hover)] text-[var(--st-settings-danger-text)] px-3 py-1.5 rounded-[3px] text-xs transition-colors"
                         >
                             {t('settings.factoryResetBtn')}
@@ -401,7 +326,6 @@ export const SettingsEditor = () => {
 
     // ── 搜索过滤 ──
     const lowerSearch = searchTerm.toLowerCase();
-
     const filteredSettings = searchTerm
         ? settingSections
             .map(sec => {
@@ -411,156 +335,6 @@ export const SettingsEditor = () => {
             })
             .filter(Boolean) as typeof settingSections
         : settingSections;
-    // ── 功能模块 DnD 排序 ──
-    // 默认侧边栏项（不可关闭）
-    const DEFAULT_MODULE_ITEMS = [
-        { id: 'explorer', nameKey: 'sidebar.sessions', descriptionKey: '', icon: Files, tier: 'core' as const },
-        { id: 'serial', nameKey: 'sidebar.configuration', descriptionKey: '', icon: Monitor, tier: 'core' as const },
-    ];
-
-    // 所有模块项（默认 + 可选）
-    const allModuleItems = [
-        ...DEFAULT_MODULE_ITEMS,
-        ...FEATURE_REGISTRY.filter(d => d.tier === 'optional').map(d => ({
-            id: d.id, nameKey: d.nameKey, descriptionKey: d.descriptionKey, icon: d.icon, tier: d.tier,
-        })),
-    ];
-
-    // 模块排序状态
-    const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
-        const saved = localStorage.getItem('activitybar-order');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved) as string[];
-                const allIds = allModuleItems.map(m => m.id);
-                const validIds = new Set(allIds);
-                const order = parsed.filter(id => validIds.has(id));
-                allIds.forEach(id => { if (!order.includes(id)) order.push(id); });
-                return order;
-            } catch { /* 回退默认顺序 */ }
-        }
-        return allModuleItems.map(m => m.id);
-    });
-
-    // 排序变更时写入 localStorage
-    const saveModuleOrder = useCallback((newOrder: string[]) => {
-        setModuleOrder(newOrder);
-        localStorage.setItem('activitybar-order', JSON.stringify(newOrder));
-        // 手动触发 storage 事件让 ActivityBar 实时同步（同一 tab 内不自动触发 StorageEvent）
-        window.dispatchEvent(new StorageEvent('storage', {
-            key: 'activitybar-order',
-            newValue: JSON.stringify(newOrder),
-        }));
-    }, []);
-
-    const moduleSensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-    );
-
-    const handleModuleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (active.id !== over?.id) {
-            const oldIndex = moduleOrder.indexOf(active.id as string);
-            const newIndex = moduleOrder.indexOf(over?.id as string);
-            saveModuleOrder(arrayMove(moduleOrder, oldIndex, newIndex));
-        }
-    };
-
-    // 可拖拽模块行
-    const SortableModuleRow = ({ id }: { id: string }) => {
-        const {
-            attributes, listeners, setNodeRef, transform, transition, isDragging
-        } = useSortable({ id });
-
-        const style = {
-            transform: CSS.Transform.toString(transform),
-            transition,
-            opacity: isDragging ? 0.5 : 1,
-            zIndex: isDragging ? 999 : 'auto' as const,
-        };
-
-        const moduleItem = allModuleItems.find(m => m.id === id);
-        if (!moduleItem) return null;
-
-        const isOptional = moduleItem.tier === 'optional';
-        const isActive = isOptional
-            ? (features.find(f => f.feature.id === id)?.isActive ?? false)
-            : true;
-
-        const IconComponent = moduleItem.icon;
-
-        return (
-            <div
-                ref={setNodeRef}
-                style={style}
-                className={`py-2.5 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 flex items-center gap-3 ${isDragging ? 'bg-[var(--list-active-background)] rounded shadow-lg' : ''}`}
-            >
-                {/* 拖拽手柄 */}
-                <div
-                    {...attributes}
-                    {...listeners}
-                    className="cursor-grab active:cursor-grabbing text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] transition-colors flex-shrink-0"
-                    title={t('settings.modules.dragToReorder')}
-                >
-                    <GripVertical size={16} />
-                </div>
-
-                {/* 图标 */}
-                <div className={`flex-shrink-0 ${isActive ? 'text-[var(--app-foreground)]' : 'text-[var(--input-placeholder-color)]'}`}>
-                    <IconComponent size={18} />
-                </div>
-
-                {/* 名称和描述 */}
-                <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] font-medium ${isActive ? 'text-[var(--st-settings-text)]' : 'text-[var(--input-placeholder-color)]'}`}>
-                        {t(moduleItem.nameKey)}
-                    </div>
-                    {moduleItem.descriptionKey && (
-                        <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5 truncate">
-                            {t(moduleItem.descriptionKey)}
-                        </p>
-                    )}
-                </div>
-
-                {/* 核心模块标签 / 可选模块开关 */}
-                <div className="flex-shrink-0">
-                    {isOptional ? (
-                        <Switch
-                            checked={isActive}
-                            onChange={(checked) => {
-                                if (checked) activateFeature(id);
-                                else deactivateFeature(id);
-                            }}
-                        />
-                    ) : (
-                        <span className="text-[10px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
-                            {t('settings.modules.core')}
-                        </span>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    // 模块区域 JSX
-    const moduleSectionJSX = (!searchTerm || t('settings.groups.modules').toLowerCase().includes(lowerSearch)) ? (
-        <Group title={t('settings.groups.modules')}>
-            <DndContext
-                sensors={moduleSensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleModuleDragEnd}
-            >
-                <SortableContext items={moduleOrder} strategy={verticalListSortingStrategy}>
-                    {moduleOrder.map(id => (
-                        <SortableModuleRow key={id} id={id} />
-                    ))}
-                </SortableContext>
-            </DndContext>
-        </Group>
-    ) : null;
-
-    const hasResults = filteredSettings.length > 0 || moduleSectionJSX !== null;
 
     return (
         <div className="flex flex-col h-full bg-[var(--settings-editor-bg)]" data-component="settings-editor">
@@ -568,30 +342,20 @@ export const SettingsEditor = () => {
             <div className="h-[35px] flex items-center shrink-0 px-4 border-b border-[var(--border-color)] bg-[var(--widget-background)] justify-between">
                 <span className="text-[13px] font-semibold text-[var(--st-settings-title-text)]">{t('settings.title')}</span>
                 <div className="flex items-center gap-1">
-
                     <Tooltip content={t('settings.exportTooltip')} position="bottom">
-                        <button
-                            onClick={handleDownload}
-                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        >
+                        <button onClick={handleDownload} className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
                             <Download size={14} />
                         </button>
                     </Tooltip>
                     <Tooltip content={t('settings.importTooltip')} position="bottom">
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        >
+                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
                             <Upload size={14} />
                         </button>
                     </Tooltip>
                     <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
                     <div className="w-[1px] h-4 bg-[var(--border-color)] mx-1" />
                     <Tooltip content={t('settings.resetTooltip')} position="bottom">
-                        <button
-                            onClick={handleReset}
-                            className="p-1.5 text-[var(--st-status-error)] hover:text-[var(--st-settings-danger-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors"
-                        >
+                        <button onClick={handleReset} className="p-1.5 text-[var(--st-status-error)] hover:text-[var(--st-settings-danger-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
                             <RotateCcw size={14} />
                         </button>
                     </Tooltip>
@@ -601,10 +365,7 @@ export const SettingsEditor = () => {
             {/* 搜索栏 */}
             <div className="p-6 bg-[var(--editor-background)]">
                 <div className="max-w-3xl mx-auto relative group">
-                    <Search
-                        className="absolute left-3 top-2.5 text-[var(--input-placeholder-color)] group-focus-within:text-[var(--focus-border-color)]"
-                        size={16}
-                    />
+                    <Search className="absolute left-3 top-2.5 text-[var(--input-placeholder-color)] group-focus-within:text-[var(--focus-border-color)]" size={16} />
                     <input
                         type="text"
                         placeholder={t('settings.search')}
@@ -619,7 +380,7 @@ export const SettingsEditor = () => {
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-3xl mx-auto px-6 pb-20">
                     {/* 无结果提示 */}
-                    {!hasResults && searchTerm && (
+                    {filteredSettings.length === 0 && searchTerm && (
                         <div className="text-center py-16 text-[var(--input-placeholder-color)] text-[13px]">
                             {t('settings.noResults', { term: searchTerm })}
                         </div>
@@ -637,8 +398,7 @@ export const SettingsEditor = () => {
                     ))}
 
                     {/* 功能模块 DnD 排序区 */}
-                    {moduleSectionJSX}
-
+                    <ModuleSettings searchTerm={searchTerm} />
                 </div>
             </div>
 
