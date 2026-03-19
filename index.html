@@ -3,8 +3,6 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data: https: http: tcom-file:">
   <!-- 最高优先级预加载本地字体，确保首次渲染时字体已就绪，彻底消除字体切换闪烁（FOUT） -->
   <!-- 注：此路径为 Vite dev server 路径，生产构建 Vite 会优化字体 -->
   <link rel="preload" as="font" type="font/ttf" href="/src/assets/fonts/JetBrainsMono-Medium.ttf"

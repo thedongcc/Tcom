@@ -5,21 +5,14 @@
  * 子模块：
  * - timedSendUtils.ts — 定时发送帧预计算和 Token 状态管理
  */
-import { useCallback, useEffect, useRef } from 'react';
-import type React from 'react';
+import { useCallback, useEffect } from 'react';
+import React from 'react';
 import { Editor } from '@tiptap/react';
 import { Token } from '../../types/token';
 import { MessagePipeline } from '../../services/MessagePipeline';
-import { compileSegments } from '../../utils/InputParser';
 import { tokenRegistry } from '../../tokens';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
-import {
-    prepareCachedData,
-    analyzeTimestampSlots,
-    createTimedStates,
-    computeFrames,
-} from './timedSendUtils';
 
 interface UseSerialInputLogicParams {
     editor: Editor | null;
@@ -56,7 +49,7 @@ const extractTokensFromEditor = (editor: Editor): Record<string, Token> => {
 
 export const useSerialInputLogic = ({
     editor, mode, lineEnding, isConnected,
-    sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
+    sessionId, isTimerRunning, timerInterval, contentVersion: _contentVersion, isSyncingRef: _isSyncingRef,
     onSend, onConnectRequest,
 }: UseSerialInputLogicParams) => {
     const { showToast } = useToast();
@@ -107,131 +100,44 @@ export const useSerialInputLogic = ({
 
     }, [isConnected, editor, onConnectRequest, onSend, mode, lineEnding, extractTokens, showToast, t]);
 
-    const handleSendRef = useRef(handleSend);
-    useEffect(() => { handleSendRef.current = handleSend; }, [handleSend]);
 
-    const onSendRef = useRef(onSend);
-    useEffect(() => { onSendRef.current = onSend; }, [onSend]);
 
-    const hasDynamicTokens = useCallback(() => {
-        const tokens = extractTokens();
-        const dynamicTypes = new Set(tokenRegistry.getDynamicTypes());
-        return Object.values(tokens).some(t => dynamicTypes.has(t.type));
-    }, [extractTokens]);
 
-    // 同步编辑器中有状态动态 Token 的显示值
-    const syncEditorDynamicTokens = useCallback((states: Record<string, any>) => {
-        if (!editor) return;
-        isSyncingRef.current = true;
-        try {
-            editor.chain().command(({ tr }) => {
-                let changed = false;
-                tr.doc.descendants((node, pos) => {
-                    if (node.type.name === 'serialToken') {
-                        const state = states[node.attrs.id];
-                        if (state) {
-                            const currentVal = state.getCurrentValue();
-                            const newConfig = { ...node.attrs.config, currentValue: currentVal };
-                            if (JSON.stringify(node.attrs.config) !== JSON.stringify(newConfig)) {
-                                tr.setNodeAttribute(pos, 'config', newConfig);
-                                changed = true;
-                            }
-                        }
-                    }
-                });
-                return changed;
-            }).run();
-        } finally {
-            isSyncingRef.current = false;
-        }
-    }, [editor, isSyncingRef]);
-
-    // ── 定时发送：静态数据（主进程高精度定时器） ──
-    const startStaticTimedSend = useCallback(() => {
-        if (!editor || editor.isEmpty || !sessionId || !window.serialAPI?.timedSendStart) return;
-        const html = editor.getHTML();
-        const text = editor.getText();
-        const tokens = extractTokens();
-        const { data } = MessagePipeline.process(text, html, mode, tokens, lineEnding);
-        const dataArray = data instanceof Uint8Array
-            ? Array.from(data)
-            : Array.from(new TextEncoder().encode(data as string));
-        window.serialAPI.timedSendStart(sessionId, dataArray, timerInterval);
-        return () => { window.serialAPI?.timedSendStop?.(sessionId); };
-    }, [editor, sessionId, extractTokens, mode, lineEnding, timerInterval]);
-
-    // ── 定时发送：动态数据（预计算帧 + Worker Thread） ──
-    const startDynamicTimedSend = useCallback(() => {
-        if (!editor || editor.isEmpty || !sessionId || !window.serialAPI?.timedSendStartDynamic) return;
-        const cachedHtml = editor.getHTML();
-        const cachedTokens = extractTokens();
-        const BATCH_SIZE = 200;
-        const { segments, lineEndingBytes } = prepareCachedData(cachedHtml, mode, lineEnding);
-        const timestampSlots = analyzeTimestampSlots(segments, cachedTokens);
-        const timedStates = createTimedStates(cachedTokens);
-        const initialFrames = computeFrames(BATCH_SIZE, segments, mode, cachedTokens, timedStates, lineEndingBytes);
-
-        window.serialAPI.timedSendStartDynamic(sessionId, initialFrames, timerInterval, timestampSlots);
-
-        const unsubTick = window.serialAPI.onTimedSendTick?.(sessionId, () => {
-            for (const state of Object.values(timedStates)) state.onFrameSent();
-        });
-        const displayIntervalId = setInterval(() => syncEditorDynamicTokens(timedStates), 200);
-
-        return () => {
-            window.serialAPI?.timedSendStop?.(sessionId);
-            unsubTick?.();
-            clearInterval(displayIntervalId);
-            syncEditorDynamicTokens(timedStates);
-        };
-    }, [editor, sessionId, extractTokens, mode, lineEnding, timerInterval, syncEditorDynamicTokens]);
-
-    // ── 定时发送：渲染进程兜底 ──
-    const startFallbackTimedSend = useCallback(() => {
-        if (!editor || editor.isEmpty) return;
-        const cachedHtml = editor.getHTML();
-        const cachedTokens = extractTokens();
-        const { segments, lineEndingBytes } = prepareCachedData(cachedHtml, mode, lineEnding);
-
-        let nextFireTime = performance.now() + timerInterval;
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
-        let cancelled = false;
-
-        const schedule = () => {
-            if (cancelled) return;
-            const delay = Math.max(0, nextFireTime - performance.now());
-            timeoutId = setTimeout(() => {
-                if (cancelled) return;
-                nextFireTime += timerInterval;
-                let data: Uint8Array | string = compileSegments(segments, mode, cachedTokens);
-                if (lineEndingBytes && data instanceof Uint8Array) {
-                    const merged = new Uint8Array(data.length + lineEndingBytes.length);
-                    merged.set(data);
-                    merged.set(lineEndingBytes, data.length);
-                    data = merged;
-                }
-                onSendRef.current(data, mode);
-                schedule();
-            }, delay);
-        };
-        schedule();
-
-        return () => { cancelled = true; if (timeoutId !== null) clearTimeout(timeoutId); };
-    }, [editor, extractTokens, mode, lineEnding, timerInterval]);
-
-    // 定时发送逻辑
+    // ── 定时发送（Rust 端高精度定时器） ──
+    // 用 ref 缓存编辑器参数，避免 effect 依赖变化导致 Rust 定时器频繁重启
+    const editorRef = React.useRef({ editor, mode, lineEnding, extractTokens });
     useEffect(() => {
-        if (!isTimerRunning || timerInterval <= 0) {
+        editorRef.current = { editor, mode, lineEnding, extractTokens };
+    }, [editor, mode, lineEnding, extractTokens]);
+
+    useEffect(() => {
+        if (!isTimerRunning || timerInterval <= 0 || !isConnected || !sessionId) {
             if (sessionId && window.serialAPI?.timedSendStop) window.serialAPI.timedSendStop(sessionId);
             return;
         }
-        if (!isConnected) return;
 
-        const isDynamic = hasDynamicTokens();
-        if (!isDynamic && sessionId && window.serialAPI?.timedSendStart) return startStaticTimedSend();
-        if (sessionId && window.serialAPI?.timedSendStartDynamic) return startDynamicTimedSend();
-        return startFallbackTimedSend();
-    }, [isTimerRunning, timerInterval, isConnected, sessionId, mode, lineEnding, editor, hasDynamicTokens, extractTokens, contentVersion, syncEditorDynamicTokens, startStaticTimedSend, startDynamicTimedSend, startFallbackTimedSend]);
+        const { editor: ed, mode: m, lineEnding: le, extractTokens: et } = editorRef.current;
+        if (!ed || ed.isEmpty) return;
+
+        // 编译发送数据（仅在启动定时器时编译一次）
+        const html = ed.getHTML();
+        const tokens = et();
+        const { data } = MessagePipeline.process(ed.getText(), html, m, tokens, le);
+        const dataArray = data instanceof Uint8Array
+            ? Array.from(data)
+            : Array.from(new TextEncoder().encode(data as string));
+
+        // 调用 Rust 端高精度定时发送
+        if (window.serialAPI?.timedSendStart) {
+            window.serialAPI.timedSendStart(sessionId, dataArray, timerInterval);
+        }
+
+        return () => {
+            if (sessionId && window.serialAPI?.timedSendStop) {
+                window.serialAPI.timedSendStop(sessionId);
+            }
+        };
+    }, [isTimerRunning, timerInterval, isConnected, sessionId]);
 
     return { extractTokens, handleSend };
 };

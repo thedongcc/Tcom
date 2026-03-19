@@ -71,7 +71,18 @@ export const usePortScanner = (): UsePortScannerReturn => {
                 }
             }
         }
-        setPorts(allPorts);
+        // 稳定排序：按端口路径排序，避免每次轮询时顺序抖动
+        allPorts.sort((a, b) => {
+            const numA = parseInt(a.path.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.path.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        });
+        // 只在数据实际变化时更新 state，避免触发下游 useEffect 连锁
+        setPorts(prev => {
+            const prevKey = prev.map(p => `${p.path}|${p.friendlyName}|${p.busy}`).join(',');
+            const newKey = allPorts.map(p => `${p.path}|${p.friendlyName}|${p.busy}`).join(',');
+            return prevKey === newKey ? prev : allPorts;
+        });
     }, [setupcPath]);
 
     const toggleMonitor = useCallback((enabled: boolean) => {

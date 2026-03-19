@@ -7,12 +7,23 @@ export interface ThemeDefinition {
 
 /**
  * 将主题的所有 CSS 变量注入到 :root
- * 同时清除上一个主题残留的变量（通过 data-theme 属性追踪）
+ * 切换时先清除上一个主题的所有 CSS 变量，避免残留
  */
 export function applyTheme(theme: ThemeDefinition): void {
     const root = document.documentElement;
 
-    // 注入所有 CSS 变量
+    // 清除 :root 上所有以 -- 开头的 CSS 变量（上一个主题的残留）
+    const inlineStyle = root.style;
+    const toRemove: string[] = [];
+    for (let i = 0; i < inlineStyle.length; i++) {
+        const prop = inlineStyle[i];
+        if (prop.startsWith('--')) {
+            toRemove.push(prop);
+        }
+    }
+    toRemove.forEach(prop => inlineStyle.removeProperty(prop));
+
+    // 注入新主题的所有 CSS 变量
     Object.entries(theme.colors).forEach(([key, value]) => {
         root.style.setProperty(key, value);
     });

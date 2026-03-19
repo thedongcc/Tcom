@@ -24,9 +24,9 @@ export interface BaseSessionConfig {
     name: string;
     type: SessionType;
     autoConnect: boolean;
-    // Optional properties that might be accessed generically (careful with this)
+    // 通用连接配置（SerialOpenOptions 或其他类型的连接参数）
     uiState?: Record<string, unknown>;
-    connection?: Record<string, unknown>;
+    connection?: SerialOpenOptions | Record<string, unknown>;
     txCRC?: CRCConfig;
     rxCRC?: CRCConfig;
 }
@@ -160,6 +160,8 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         lineEnding?: string;
         inputTimerInterval?: number;
         searchOpen?: boolean;
+        searchQuery?: string;
+        searchRegex?: boolean;
         searchMatchCase?: boolean;
     };
 }

@@ -23,6 +23,9 @@ interface UseSerialMonitorActionsOptions {
     formatData: (data: string | Uint8Array, mode: 'text' | 'hex' | 'both', enc: string) => string;
 }
 
+/** 模块级常量，避免每次 render 创建新 CRC 配置对象 */
+const DEFAULT_CRC_CONFIG: CRCConfig = { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+
 export function useSerialMonitorActions({
     onSend,
     onUpdateConfig,
@@ -37,9 +40,10 @@ export function useSerialMonitorActions({
     const { t } = useI18n();
     const { addCommand, commands } = useCommandContext();
 
+
     // CRC 相关状态（rxCRC 是唯一的 CRC 配置，crcTarget 控制校验哪个方向的数据）
     const crcEnabled = ((config as unknown as Record<string, unknown>).rxCRC as CRCConfig)?.enabled || false;
-    const rxCRC = ((config as unknown as Record<string, unknown>).rxCRC as CRCConfig) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };
+    const rxCRC = ((config as unknown as Record<string, unknown>).rxCRC as CRCConfig) || DEFAULT_CRC_CONFIG;
 
     // ── 操作函数 ──
 
@@ -47,21 +51,32 @@ export function useSerialMonitorActions({
         if (onClearLogs) onClearLogs();
     }, [onClearLogs]);
 
-    const handleSaveLogs = useCallback(() => {
-        const content = logs.map(log => {
-            const timestamp = new Date(log.timestamp).toLocaleTimeString();
-            const data = formatData(log.data, viewMode, encoding);
-            return `[${timestamp}][${log.type}] ${data} `;
-        }).join('\n');
+    const handleSaveLogs = useCallback(async () => {
+        try {
+            const { save } = await import('@tauri-apps/plugin-dialog');
+            const { writeTextFile } = await import('@tauri-apps/plugin-fs');
 
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `serial_log_${Date.now()}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, [logs, viewMode, encoding, formatData]);
+            const content = logs.map(log => {
+                const d = new Date(log.timestamp);
+                const timestamp = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}.${d.getMilliseconds().toString().padStart(3,'0')}`;
+                const data = formatData(log.data, viewMode, encoding);
+                return `[${timestamp}][${log.type}] ${data} `;
+            }).join('\n');
+
+            const filePath = await save({
+                defaultPath: `serial_log_${Date.now()}.txt`,
+                filters: [{ name: 'Text', extensions: ['txt'] }],
+            });
+
+            if (filePath) {
+                await writeTextFile(filePath, content);
+                showToast(t('toast.exportSuccess') || '导出成功', 'success', 1500);
+            }
+        } catch (e) {
+            console.error('导出日志失败:', e);
+            showToast(t('toast.exportFailed') || '导出失败', 'error', 2000);
+        }
+    }, [logs, viewMode, encoding, formatData, showToast, t]);
 
     const getDataLengthText = useCallback((data: string | Uint8Array) => {
         let length = 0;

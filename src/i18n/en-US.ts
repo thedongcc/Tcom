@@ -160,6 +160,12 @@ export const enUS = {
             bgOpacity: 'Opacity',
         },
 
+        // Feature modules
+        modules: {
+            dragToReorder: 'Drag to reorder',
+            core: 'Core',
+        },
+
         noResults: 'No results for "{term}"',
     },
 

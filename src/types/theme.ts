@@ -5,7 +5,7 @@ import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../utils/keybindings
 export type ThemeMode = 'dark' | 'light' | 'hc' | 'one-dark-vivid' | (string & {});
 
 export interface ThemeImages {
-    rxBackground?: string; // tcom-file:///路径 或 https:// URL
+    rxBackground?: string; // 本地文件路径或 https:// URL
     bgSize?: 'cover' | 'contain' | 'auto' | '100% 100%'; // 填充模式
     bgPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right'; // 对齐方向
     bgOpacity?: number; // 不透明度 0-100，默认 100

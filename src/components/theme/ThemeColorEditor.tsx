@@ -117,12 +117,21 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
     return (
         <div
             className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden relative"
-            style={{ WebkitAppRegion: 'drag' }}
         >
             <div className="flex-1 flex flex-col bg-[var(--theme-editor-bg)] overflow-hidden relative">
 
-                {/* 头部 */}
-                <div className="px-3 py-2 border-b flex items-center justify-between shrink-0" style={{ borderColor: 'var(--theme-editor-border)' }}>
+                {/* 头部（可拖拽） */}
+                <div
+                    className="px-3 py-2 border-b flex items-center justify-between shrink-0 cursor-default"
+                    style={{ borderColor: 'var(--theme-editor-border)' }}
+                    onMouseDown={(e) => {
+                        if (e.button !== 0) return;
+                        const target = e.target as HTMLElement;
+                        if (target.closest('button')) return;
+                        e.preventDefault();
+                        import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().startDragging());
+                    }}
+                >
                     <div className="flex items-center gap-2">
                         <Palette size={14} className="text-[var(--accent-color)] shrink-0" />
                         <span className="text-[12px] font-semibold tracking-tight select-none opacity-90">{t('themeEditor.title')}</span>
@@ -132,7 +141,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                             </span>
                         )}
                     </div>
-                    <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' }}>
+                    <div className="flex items-center">
                         <Tooltip content={t('themeEditor.close')} position="bottom" offset={4}>
                             <button
                                 onClick={onClose}
@@ -148,7 +157,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* 搜索 + 检查器 */}
-                <div className="px-3 py-2 border-b shrink-0 flex flex-col gap-1.5" style={{ WebkitAppRegion: 'no-drag', borderColor: 'var(--theme-editor-border)' }}>
+                <div className="px-3 py-2 border-b shrink-0 flex flex-col gap-1.5" style={{ borderColor: 'var(--theme-editor-border)' }}>
                     <div className="relative">
                         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none" style={{ color: 'var(--app-foreground)' }} />
                         <input
@@ -187,7 +196,6 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                         ref={scrollContainerRef}
                         onScroll={handleScroll}
                         className="w-full h-full overflow-y-auto overflow-x-hidden px-2.5 py-2 flex flex-col gap-1.5 scrollbar-none"
-                        style={{ WebkitAppRegion: 'no-drag' }}
                     >
                         {/* CDP 诊断面板 */}
                         {cdpDebugData && (
@@ -321,7 +329,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* 底部操作栏 */}
-                <div className="px-3 py-2 border-t flex justify-end gap-2 shrink-0" style={{ WebkitAppRegion: 'no-drag', borderColor: 'var(--theme-editor-border)', backgroundColor: 'var(--theme-editor-card-bg)' }}>
+                <div className="px-3 py-2 border-t flex justify-end gap-2 shrink-0" style={{ borderColor: 'var(--theme-editor-border)', backgroundColor: 'var(--theme-editor-card-bg)' }}>
                     <button
                         onClick={handleCancel}
                         className="px-2.5 py-1 text-[11px] rounded-md border text-[var(--app-foreground)] hover:text-[var(--app-foreground)] transition-all flex items-center gap-1 font-medium"

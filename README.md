@@ -44,7 +44,7 @@ A powerful, modern serial and protocol assistant.
 
 - **现代 UI 体验**：基于 VSCode 风格设计，支持深浅主题切换，提供极致流畅的交互体验。
 - **高性能渲染**：采用虚拟列表与位图组合渲染技术，轻松应对万级大数据量日志不卡顿。
-- **跨平台支持**：基于 Electron + React 构建，无缝运行在 Windows 系统（深度优化）。
+- **跨平台支持**：基于 Tauri v2 + React 构建，无缝运行在 Windows 系统（深度优化）。
 - **插件化扩展**：灵活的插件架构，易于扩展更多自定义协议与调试视图。
 - **Vibe Coding 产物**：本软件是 AI 协作开发的结晶，兼具开发效率与前沿技术方案。
 
@@ -54,9 +54,9 @@ A powerful, modern serial and protocol assistant.
 
 | 领域 | 技术方案 |
 | :--- | :--- |
-| **基础框架** | [Electron](https://www.electronjs.org/), [React 18](https://react.dev/) |
+| **基础框架** | [Tauri v2](https://v2.tauri.app/) (Rust), [React 18](https://react.dev/) |
 | **状态管理** | Context API & Custom Hooks |
-| **构建工具** | [Vite](https://vitejs.dev/), [Electron Builder](https://www.electron.build/) |
+| **构建工具** | [Vite](https://vitejs.dev/), [Tauri CLI](https://v2.tauri.app/reference/cli/) |
 | **样式方案** | Vanilla CSS (Themed) |
 | **图标系统** | [Lucide React](https://lucide.dev/) |
 | **开发语言** | [TypeScript](https://www.typescriptlang.org/) |

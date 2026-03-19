@@ -50,14 +50,16 @@ export const Com0Com = {
         return pairs;
     },
 
-    listPairs: async (setupcPath: string, silent = false): Promise<PairInfo[]> => {
-        if (!window.com0comAPI) throw new Error('com0comAPI not available');
-        // Command: setupc list
-        // We need to quote path if it has spaces
-        const cmd = `"${setupcPath}" list`;
-        const res = await window.com0comAPI.exec(cmd, silent);
-        if (!res.success) throw new Error(res.error || res.stderr);
-        return Com0Com.parsePairs(res.stdout || '');
+    listPairs: async (_setupcPath?: string, _silent = false): Promise<PairInfo[]> => {
+        if (!window.com0comAPI?.listPairs) throw new Error('com0comAPI not available');
+        // 使用 Rust 注册表直读，无需管理员权限，无需 setupc.exe
+        const res = await window.com0comAPI.listPairs();
+        if (!res.success) throw new Error('Failed to list com0com pairs');
+        return (res.pairs || []).map(p => ({
+            portA: p.portA,
+            portB: p.portB,
+            id: p.id,
+        }));
     },
 
     // install PortName=COM# PortName=COM#

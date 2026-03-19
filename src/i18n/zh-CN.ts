@@ -158,6 +158,12 @@ export const zhCN = {
             bgOpacity: '不透明度',
         },
 
+        // 功能模块排序
+        modules: {
+            dragToReorder: '拖拽调整排序',
+            core: '核心',
+        },
+
         noResults: '未找到与"{term}"相关的设置项',
     },
 

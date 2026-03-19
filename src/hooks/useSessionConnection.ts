@@ -117,12 +117,18 @@ export function useSessionConnection({
     // ── Serial 连接 ──
     const connectSerial = useCallback(async (sessionId: string, session: SessionState) => {
         if (!window.serialAPI) return false;
+        const connection = session.config.connection;
+        if (!connection || !('path' in connection)) {
+            sessionLog.addLog(sessionId, 'ERROR', 'Missing connection config');
+            return false;
+        }
+        const serialOpts = connection as import('../vite-env').SerialOpenOptions;
         updateSession(sessionId, () => ({ isConnecting: true }));
         try {
-            const result = await window.serialAPI.open(sessionId, session.config.connection);
+            const result = await window.serialAPI.open(sessionId, serialOpts);
             if (result.success) {
                 updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
-                sessionLog.addLog(sessionId, 'INFO', `Connected to ${session.config.connection.path}`);
+                sessionLog.addLog(sessionId, 'INFO', `Connected to ${serialOpts.path}`);
                 return true;
             } else {
                 updateSession(sessionId, () => ({ isConnecting: false }));

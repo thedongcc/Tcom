@@ -83,8 +83,11 @@ export const SerialInput = ({
         content: initialHTML || initialContent,
         editorProps,
         onCreate: ({ editor }) => {
-            setIsEmpty(editor.isEmpty);
-            setTimeout(() => { isReadyRef.current = true; }, 0);
+            // 延迟到下一帧执行，避免 React 在组件挂载前触发 state 更新
+            setTimeout(() => {
+                setIsEmpty(editor.isEmpty);
+                isReadyRef.current = true;
+            }, 0);
         },
         onUpdate: ({ editor, transaction }) => {
             const currentEmpty = editor.isEmpty;

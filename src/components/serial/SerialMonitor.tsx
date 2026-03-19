@@ -9,7 +9,7 @@
  * - useSerialMonitorSearch.ts  — 搜索/滚动/过滤/格式化/输入状态
  * - SerialMonitorToolbar.tsx   — 工具栏 UI
  */
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { SessionState, SessionConfig, LogEntry } from '../../types/session';
 import { SerialInput } from './SerialInput';
 import { Copy, FileText } from 'lucide-react';
@@ -79,10 +79,10 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, log: LogEntry } | null>(null);
     const [showCommandEditor, setShowCommandEditor] = useState<Record<string, unknown> | null>(null);
 
-    const handleLogContextMenu = (e: React.MouseEvent, log: LogEntry) => {
+    const handleLogContextMenu = useCallback((e: React.MouseEvent, log: LogEntry) => {
         e.preventDefault(); e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY, log });
-    };
+    }, []);
 
     const doHandleCopyLog = (log: LogEntry | null) => { handleCopyLog(log); setContextMenu(null); };
     const doHandleAddToCommand = (log: LogEntry | null) => { const result = handleAddToCommand(log); if (result) setShowCommandEditor(result); setContextMenu(null); };
@@ -90,6 +90,61 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     const txBytes = session.txBytes || 0;
     const rxBytes = session.rxBytes || 0;
+
+    // ── 鼠标悬浮行高亮（覆盖层方案：overlay 不在滚动内容中，不会跟随数据移动） ──
+    const hoverOverlayRef = useRef<HTMLDivElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const mouseClientPosRef = useRef<{ x: number; y: number } | null>(null);
+
+    const updateHoverOverlay = useCallback((clientX: number, clientY: number) => {
+        const overlay = hoverOverlayRef.current;
+        const wrapper = wrapperRef.current;
+        if (!overlay || !wrapper) return;
+
+        const el = document.elementFromPoint(clientX, clientY);
+        const target = el ? (el as HTMLElement).closest('.log-row') : null;
+
+        if (target) {
+            const rowRect = target.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
+            overlay.style.display = 'block';
+            overlay.style.top = `${rowRect.top - wrapperRect.top}px`;
+            overlay.style.left = `${rowRect.left - wrapperRect.left}px`;
+            overlay.style.width = `${rowRect.width}px`;
+            overlay.style.height = `${rowRect.height}px`;
+        } else {
+            overlay.style.display = 'none';
+        }
+    }, []);
+
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const onMouseMove = (e: MouseEvent) => {
+            mouseClientPosRef.current = { x: e.clientX, y: e.clientY };
+            updateHoverOverlay(e.clientX, e.clientY);
+        };
+        const onScroll = () => {
+            if (mouseClientPosRef.current) {
+                updateHoverOverlay(mouseClientPosRef.current.x, mouseClientPosRef.current.y);
+            }
+        };
+        const onMouseLeave = () => {
+            mouseClientPosRef.current = null;
+            if (hoverOverlayRef.current) hoverOverlayRef.current.style.display = 'none';
+        };
+
+        container.addEventListener('mousemove', onMouseMove);
+        container.addEventListener('scroll', onScroll);
+        container.addEventListener('mouseleave', onMouseLeave);
+        return () => {
+            container.removeEventListener('mousemove', onMouseMove);
+            container.removeEventListener('scroll', onScroll);
+            container.removeEventListener('mouseleave', onMouseLeave);
+        };
+    }, [scrollRef, updateHoverOverlay]);
+
 
     return (
         <div
@@ -107,7 +162,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 onClearLogs={doClearLogs} onSaveLogs={handleSaveLogs} scrollRef={scrollRef}
             />
 
-            <div className="flex-1 relative overflow-hidden">
+            <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>
                 <div className="absolute top-4 right-4 z-10">
                     <LogSearch
                         isOpen={searchOpen} onToggle={handleToggleSearch}
@@ -118,6 +173,12 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         viewMode={viewMode} formatData={formatData} encoding={encoding} regexError={regexError}
                     />
                 </div>
+                {/* 悬浮高亮覆盖层 —— 不在滚动内容中，不会跟随数据移动 */}
+                <div
+                    ref={hoverOverlayRef}
+                    className="absolute pointer-events-none rounded-sm"
+                    style={{ background: 'var(--list-hover-background)', display: 'none' }}
+                />
                 <div
                     className="absolute inset-0 overflow-auto p-4"
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}
@@ -130,7 +191,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
                         return (
                             <LogItem
-                                key={`${log.id}-${log.repeatCount || 1}`}
+                                key={log.id}
                                 log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
                                 showTimestamp={displayState.showTimestamp} showPacketType={displayState.showPacketType}
                                 showDataLength={displayState.showDataLength}

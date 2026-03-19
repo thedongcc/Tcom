@@ -121,7 +121,7 @@ export const MonitorLogItem = React.memo(({
     // 常规数据日志渲染
     return (
         <div
-            className={`flex items-start gap-1.5 mb-1 hover:bg-[var(--list-hover-background)] rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} border border-transparent`}
+            className={`log-row flex items-start gap-1.5 mb-1 rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} border border-transparent`}
             style={{
                 fontSize: 'inherit',
                 fontFamily: 'inherit',

@@ -69,18 +69,31 @@ export const useMqttMonitorActions = ({
     }, [isConnected, topic, payload, publishFormat, qos, retain, onPublish, onShowSettings, onConnectRequest, showToast, t]);
 
     // 保存日志到文件
-    const handleSaveLogs = useCallback(() => {
-        const content = logs.map(log => {
-            const timestamp = new Date(log.timestamp).toLocaleTimeString();
-            return `[${timestamp}][${log.type}] ${log.topic ? `[${log.topic}] ` : ''}${formatData(log.data, viewMode)}`;
-        }).join('\n');
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `mqtt_log_${Date.now()}.txt`;
-        a.click();
-    }, [logs, viewMode, formatData]);
+    const handleSaveLogs = useCallback(async () => {
+        try {
+            const { save } = await import('@tauri-apps/plugin-dialog');
+            const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+
+            const content = logs.map(log => {
+                const d = new Date(log.timestamp);
+                const timestamp = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}.${d.getMilliseconds().toString().padStart(3,'0')}`;
+                return `[${timestamp}][${log.type}] ${log.topic ? `[${log.topic}] ` : ''}${formatData(log.data, viewMode)}`;
+            }).join('\n');
+
+            const filePath = await save({
+                defaultPath: `mqtt_log_${Date.now()}.txt`,
+                filters: [{ name: 'Text', extensions: ['txt'] }],
+            });
+
+            if (filePath) {
+                await writeTextFile(filePath, content);
+                showToast(t('toast.exportSuccess') || '导出成功', 'success', 1500);
+            }
+        } catch (e) {
+            console.error('导出日志失败:', e);
+            showToast(t('toast.exportFailed') || '导出失败', 'error', 2000);
+        }
+    }, [logs, viewMode, formatData, showToast, t]);
 
     // 格式化时间戳
     const formatTimestamp = useCallback((ts: number) => {

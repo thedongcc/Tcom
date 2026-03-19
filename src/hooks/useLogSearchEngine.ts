@@ -6,6 +6,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SearchMatch } from '../components/common/LogSearch';
 
+/** 模块级常量，避免每次 setState([]) 创建新引用 */
+const EMPTY_MATCHES: SearchMatch[] = [];
+
 /**
  * 在匹配列表中找到最接近屏幕中心的 match 索引
  */
@@ -57,7 +60,7 @@ export const useLogSearchEngine = (
     const [isRegex, setIsRegex] = useState(initialIsRegex);
     const [matchCase, setMatchCase] = useState(initialIsMatchCase);
     const [currentIndex, setCurrentIndex] = useState(-1);
-    const [matches, setMatches] = useState<SearchMatch[]>([]);
+    const [matches, setMatches] = useState<SearchMatch[]>(EMPTY_MATCHES);
     const [regexError, setRegexError] = useState(false);
     const [activeMatchRev, setActiveMatchRev] = useState(0);
 
@@ -84,7 +87,10 @@ export const useLogSearchEngine = (
 
     useEffect(() => {
         if (!query) {
-            setMatches([]); setCurrentIndex(-1); setRegexError(false);
+            // 只在真正需要清除时才 setState，避免创建新引用触发下游重渲染
+            setMatches(prev => prev.length === 0 ? prev : EMPTY_MATCHES);
+            setCurrentIndex(prev => prev === -1 ? prev : -1);
+            setRegexError(prev => prev === false ? prev : false);
             lastSearchRef.current.query = '';
             lastSearchRef.current.activeMatch = null;
             return;

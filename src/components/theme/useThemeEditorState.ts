@@ -222,13 +222,15 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         }
     }, [editCount, allEdits, availableThemes, loadThemes, onClose]);
 
-    const handleCancel = useCallback(() => {
+    const handleCancel = useCallback(async () => {
         if (window.themeAPI) {
-            window.themeAPI.applyPreview?.({});
+            // 先发送颜色恢复事件，等待 emit 完成
+            await window.themeAPI.applyPreview?.({});
             window.themeAPI.setPendingEdits?.(currentThemeDef?.id || config.theme || 'dark', null);
             window.themeAPI.clearAllPendingEdits?.();
         }
-        onClose();
+        // 延迟关闭，确保主窗口有时间处理恢复事件
+        setTimeout(() => onClose(), 150);
     }, [currentThemeDef, config.theme, onClose]);
 
     const handleCopy = useCallback((text: string) => {

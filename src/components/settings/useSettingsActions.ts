@@ -39,15 +39,23 @@ export const useSettingsActions = () => {
     }, [importConfig]);
 
     // 导出配置文件
-    const handleDownload = useCallback(() => {
-        const json = exportConfig();
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tcom-settings.json';
-        a.click();
-        URL.revokeObjectURL(url);
+    const handleDownload = useCallback(async () => {
+        try {
+            const { save } = await import('@tauri-apps/plugin-dialog');
+            const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+
+            const json = exportConfig();
+            const filePath = await save({
+                defaultPath: 'tcom-settings.json',
+                filters: [{ name: 'JSON', extensions: ['json'] }],
+            });
+
+            if (filePath) {
+                await writeTextFile(filePath, json);
+            }
+        } catch (e) {
+            console.error('导出配置失败:', e);
+        }
     }, [exportConfig]);
 
     // 重置确认

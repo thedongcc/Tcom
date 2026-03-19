@@ -1,31 +1,90 @@
-import { Pin, PinOff, Palette } from 'lucide-react';
+import { Pin, PinOff, Palette, Minus, Square, X, Copy } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+
+/** 调色盘按钮 — 带编辑器窗口打开状态高亮 */
+const EditorToggleButton = () => {
+  const [isEditorOpen, setEditorOpen] = useState(false);
+
+  useEffect(() => {
+    // 监听窗口创建和销毁事件
+    const unlisteners: (() => void)[] = [];
+
+    // 检查初始状态
+    import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
+      WebviewWindow.getByLabel('theme-editor').then(win => {
+        setEditorOpen(win !== null);
+      });
+    });
+
+    // 监听窗口创建
+    listen('tauri://window-created', () => {
+      import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
+        WebviewWindow.getByLabel('theme-editor').then(win => {
+          setEditorOpen(win !== null);
+        });
+      });
+    }).then(fn => unlisteners.push(fn));
+
+    // 监听窗口销毁
+    listen('tauri://destroyed', () => {
+      // 延迟检查，确保窗口已销毁
+      setTimeout(() => {
+        import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
+          WebviewWindow.getByLabel('theme-editor').then(win => {
+            setEditorOpen(win !== null);
+          });
+        });
+      }, 100);
+    }).then(fn => unlisteners.push(fn));
+
+    return () => { unlisteners.forEach(fn => fn()); };
+  }, []);
+
+  return (
+    <Tooltip content="主题颜色编辑器" position="bottom" wrapperClassName="h-full">
+      <button
+        className={[
+          'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
+          isEditorOpen
+            ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
+            : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
+        ].join(' ')}
+        onClick={() => window.themeAPI?.openThemeEditor()}
+      >
+        <Palette size={14} />
+      </button>
+    </Tooltip>
+  );
+};
 
 interface TitleBarProps {
   workspaceName?: string | null;
 }
 
-// Windows 上 Electron titleBarOverlay 原生按钮（最小化/最大化/关闭）的宽度约为 138px
-const NATIVE_CONTROLS_WIDTH = 138;
-
 export const TitleBar = ({ workspaceName }: TitleBarProps) => {
   const { t } = useI18n();
   const [isPinned, setIsPinned] = useState(false);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // 初始化时读取状态
   useEffect(() => {
     window.windowAPI?.isAlwaysOnTop().then((res) => {
       if (res?.success) setIsPinned(res.alwaysOnTop);
     });
+    window.windowAPI?.isMaximized().then(setIsMaximized);
 
-    // 监听编辑器开启状态广播
-    const unsub = window.themeAPI?.onStatusChanged((isOpen: boolean) => {
-      setIsEditorOpen(isOpen);
-    });
-    return () => unsub?.();
+    // 监听窗口 resize 事件以同步最大化状态
+    const win = getCurrentWindow();
+    let unlisten: (() => void) | null = null;
+    win.onResized(() => {
+      win.isMaximized().then(setIsMaximized);
+    }).then(fn => { unlisten = fn; });
+
+    return () => { unlisten?.(); };
   }, []);
 
   // 切换置顶状态
@@ -37,47 +96,42 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
     }
   }, [isPinned]);
 
+  // 标题栏拖拽：使用 Tauri startDragging()
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[data-no-drag]')) return;
+    e.preventDefault();
+    getCurrentWindow().startDragging();
+  }, []);
+
+  // 双击标题栏切换最大化
+  const handleDoubleClick = useCallback(async (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[data-no-drag]')) return;
+    const maximized = await window.windowAPI?.toggleMaximize();
+    setIsMaximized(!!maximized);
+  }, []);
+
   const title = workspaceName ? `Tcom - ${workspaceName}` : 'Tcom';
 
   return (
     <>
       <div
         className="h-[30px] bg-[var(--titlebar-background)] flex items-center select-none relative z-50"
-        style={{ WebkitAppRegion: 'drag' }}
+        onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
         data-component="titlebar"
       >
-        {/* 左侧：菜单图标 + 标题 */}
+        {/* 左侧：标题 */}
         <div className="flex items-center h-full px-2 flex-1 min-w-0">
           <div className="text-xs text-[var(--st-titlebar-text)] font-medium truncate ml-2">{title}</div>
         </div>
 
-        {/* 右侧：颜色编辑器 + 置顶按钮，紧靠原生控件左侧 */}
-        <div
-          className="flex items-center h-full shrink-0"
-          style={{
-            WebkitAppRegion: 'no-drag',
-            marginRight: `${NATIVE_CONTROLS_WIDTH}px`,
-          } as React.CSSProperties}
-        >
+        {/* 右侧：功能按钮 + 窗口控件 */}
+        <div className="flex items-center h-full shrink-0" data-no-drag>
           {/* 调色盘图标（主题颜色编辑器入口） */}
-          <Tooltip content="主题颜色编辑器" position="bottom" wrapperClassName="h-full">
-            <button
-              className={[
-                'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
-                isEditorOpen
-                  ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
-                  : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
-              ].join(' ')}
-              onClick={async () => {
-                await window.themeAPI?.openThemeEditor();
-                // 再次主动校验状态
-                const isOpen = await window.themeAPI?.isWindowOpen();
-                setIsEditorOpen(!!isOpen);
-              }}
-            >
-              <Palette size={14} />
-            </button>
-          </Tooltip>
+          <EditorToggleButton />
 
           {/* 置顶按钮 */}
           <Tooltip content={isPinned ? t('titleBar.unpinWindow') : t('titleBar.pinWindow')} position="bottom" wrapperClassName="h-full">
@@ -97,6 +151,36 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
               )}
             </button>
           </Tooltip>
+
+          {/* ── 窗口控件分隔 ── */}
+          <div className="w-px h-3.5 bg-[var(--st-titlebar-icon)] opacity-20 mx-0.5" />
+
+          {/* 最小化 */}
+          <button
+            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))] transition-colors duration-150"
+            onClick={() => window.windowAPI?.minimize()}
+          >
+            <Minus size={16} />
+          </button>
+
+          {/* 最大化 / 还原 */}
+          <button
+            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))] transition-colors duration-150"
+            onClick={async () => {
+              const maximized = await window.windowAPI?.toggleMaximize();
+              setIsMaximized(!!maximized);
+            }}
+          >
+            {isMaximized ? <Copy size={12} /> : <Square size={12} />}
+          </button>
+
+          {/* 关闭 */}
+          <button
+            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[#e81123] hover:text-white transition-colors duration-150"
+            onClick={() => window.windowAPI?.close()}
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
     </>

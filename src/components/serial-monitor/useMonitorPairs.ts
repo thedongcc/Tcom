@@ -16,15 +16,13 @@ interface UseMonitorPairsParams {
 }
 
 /**
- * 从端口对列表中自动选择第一对（按 COM 号排序）
+ * 从端口对列表中自动选择第一对
+ * portA = 外部端口（Tcom Virtual Port），portB = 内部桥接
  */
 function autoSelectPair(pairs: PairInfo[]): { virtual: string; paired: string } {
     if (pairs.length === 0) return { virtual: '', paired: '' };
     const first = pairs[0];
-    const getNum = (p: string) => parseInt(p.replace('COM', '')) || 999;
-    return getNum(first.portA) <= getNum(first.portB)
-        ? { virtual: first.portA, paired: first.portB }
-        : { virtual: first.portB, paired: first.portA };
+    return { virtual: first.portA, paired: first.portB };
 }
 
 /**
@@ -87,14 +85,13 @@ export function useMonitorPairs({ monitorConfig, setupcPath, monitorEnabled, isA
         }
     }, [setupcPath, monitorEnabled, isAdmin, refreshPairs]);
 
-    // 构建可选端口列表
-    const availablePairOptions = existingPairs.flatMap(p => [
-        { value: p.portA, label: p.portA, paired: p.portB },
-        { value: p.portB, label: p.portB, paired: p.portA }
-    ]).reduce((acc, cur) => {
-        if (!acc.find(item => item.value === cur.value)) acc.push(cur);
-        return acc;
-    }, [] as { value: string; label: string; paired: string }[]);
+    // 构建可选端口列表 — 只显示 portA（Tcom Virtual Port / 外部端口）
+    // portB（Tcom Internal Interface / 内部桥接）由创建时确定，不允许用户交换
+    const availablePairOptions = existingPairs.map(p => ({
+        value: p.portA,
+        label: p.portA,
+        paired: p.portB
+    }));
 
     return {
         existingPairs,

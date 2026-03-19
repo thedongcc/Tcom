@@ -30,7 +30,7 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
         isAdmin, monitorEnabled,
         existingPairs, isCreatingPair,
         newPairExt, setNewPairExt, newPairInt, setNewPairInt,
-        usedPorts, physicalPorts,
+        usedPorts, physicalPorts, ghostPorts,
         refreshPairs, suggestNextPair, createNewPair, handleToggleMonitor,
     } = useVirtualPortState(sessionManager);
 
@@ -129,8 +129,10 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                             <div className="flex gap-1 items-center">
                                 <CustomSelect
                                     items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                        label: com, value: com,
-                                        disabled: usedPorts.has(com) || physicalPorts.includes(com)
+                                        label: ghostPorts.has(com) ? `👻 ${com}` : com,
+                                        value: com,
+                                        disabled: usedPorts.has(com) || physicalPorts.includes(com) || ghostPorts.has(com),
+                                        description: ghostPorts.has(com) ? '此端口被已拔出的设备占用' : undefined
                                     }))}
                                     value={newPairExt}
                                     onChange={val => setNewPairExt(val)}
@@ -139,8 +141,10 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                                 <ArrowRightLeft size={10} className="text-[var(--activitybar-inactive-foreground)] shrink-0" />
                                 <CustomSelect
                                     items={Array.from({ length: 255 }, (_, i) => `COM${i + 1}`).map(com => ({
-                                        label: com, value: com,
-                                        disabled: usedPorts.has(com) || physicalPorts.includes(com) || com === newPairExt
+                                        label: ghostPorts.has(com) ? `👻 ${com}` : com,
+                                        value: com,
+                                        disabled: usedPorts.has(com) || physicalPorts.includes(com) || ghostPorts.has(com) || com === newPairExt,
+                                        description: ghostPorts.has(com) ? '此端口被已拔出的设备占用' : undefined
                                     }))}
                                     value={newPairInt}
                                     onChange={val => setNewPairInt(val)}

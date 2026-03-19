@@ -1,4 +1,4 @@
-// Electron WebkitAppRegion CSS 属性扩展
+// WebkitAppRegion CSS 属性扩展（Tauri 自定义标题栏拖拽区域）
 import 'react';
 declare module 'react' {
     interface CSSProperties {
@@ -70,6 +70,7 @@ declare global {
             isAdmin: () => Promise<boolean>;
             checkPath: (path: string) => Promise<{ success: boolean; version?: string | null }>;
             launchInstaller: () => Promise<{ success: boolean; error?: string }>;
+            listPairs: () => Promise<{ success: boolean; pairs: Array<{ portA: string; portB: string; id: string }> }>;
         }
         monitorAPI: {
             start: (sessionId: string, config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
@@ -115,6 +116,12 @@ declare global {
         windowAPI: {
             setAlwaysOnTop: (flag: boolean) => Promise<{ success: boolean; alwaysOnTop: boolean }>;
             isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
+            minimize: () => Promise<void>;
+            maximize: () => Promise<void>;
+            unmaximize: () => Promise<void>;
+            isMaximized: () => Promise<boolean>;
+            close: () => Promise<void>;
+            toggleMaximize: () => Promise<boolean>;
         }
         appAPI: {
             factoryReset: () => Promise<{ success: true } | { success: false; error: string }>;

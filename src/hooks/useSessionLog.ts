@@ -54,16 +54,20 @@ export const useSessionLog = (
     setSessions: React.Dispatch<React.SetStateAction<SessionState[]>>
 ): UseSessionLogReturn => {
     const logBufferRef = useRef<Map<string, LogEntry[]>>(new Map());
-    const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rxBuffersRef = useRef<Map<string, Uint8Array[]>>(new Map());
     const rxTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
     const flushLogBuffer = useCallback(() => {
+        batchTimerRef.current = null;
         if (logBufferRef.current.size === 0) return;
 
+        const t0 = performance.now();
         const buffer = new Map(logBufferRef.current);
         logBufferRef.current.clear();
-        batchTimerRef.current = null;
+
+        let totalEntries = 0;
+        buffer.forEach(v => totalEntries += v.length);
 
         setSessions(prev => prev.map(s => {
             const bufferLogs = buffer.get(s.id);
@@ -85,6 +89,11 @@ export const useSessionLog = (
 
             return { ...s, logs: newLogs, txBytes: newTxBytes, rxBytes: newRxBytes };
         }));
+
+        const elapsed = performance.now() - t0;
+        if (elapsed > 5) {
+            console.warn(`[Flush DIAG] ${elapsed.toFixed(1)}ms | entries=${totalEntries}`);
+        }
     }, [setSessions]);
 
     const addLog = useCallback((
@@ -114,7 +123,7 @@ export const useSessionLog = (
         batch.push(entry);
 
         if (!batchTimerRef.current) {
-            batchTimerRef.current = setTimeout(flushLogBuffer, 16); // 每帧批处理 (~60fps)
+            batchTimerRef.current = setTimeout(flushLogBuffer, 16);
         }
     }, [flushLogBuffer]);
 

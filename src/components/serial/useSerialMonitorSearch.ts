@@ -3,7 +3,7 @@
  * 串口监视器搜索/滚动/过滤/格式化逻辑 — 从 SerialMonitor.tsx 中提取。
  * 管理搜索状态持久化、日志过滤、自动滚动和 formatData。
  */
-import { useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { LogEntry } from '../../types/session';
 import { useLogSearch } from '../common/LogSearch';
 import { Token } from '../../types/token';
@@ -122,32 +122,25 @@ export function useSerialMonitorSearch({
         }
     }, [activeMatchRev, activeMatch]);
 
-    // ── 自动滚动 ──
-    useLayoutEffect(() => {
+    // ── 自动滚动（异步，不阻塞 WebView 事件循环） ──
+    useEffect(() => {
         if (autoScroll && scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            scrollPositions.set(sessionId, scrollRef.current.scrollHeight);
+            const raf = requestAnimationFrame(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    scrollPositions.set(sessionId, scrollRef.current.scrollHeight);
+                }
+            });
+            return () => cancelAnimationFrame(raf);
         }
     }, [logs, autoScroll, sessionId]);
 
-    useLayoutEffect(() => {
+    // session 切换时恢复滚动位置
+    useEffect(() => {
         if (scrollRef.current && scrollPositions.has(sessionId)) {
             scrollRef.current.scrollTop = scrollPositions.get(sessionId) as number;
         }
     }, [sessionId]);
-
-    useEffect(() => {
-        if (!scrollRef.current || !autoScroll) return;
-        const observer = new ResizeObserver(() => {
-            if (scrollRef.current && scrollRef.current.clientHeight > 0) {
-                if (scrollPositions.has(sessionId)) {
-                    scrollRef.current.scrollTop = scrollPositions.get(sessionId) as number;
-                }
-            }
-        });
-        observer.observe(scrollRef.current);
-        return () => observer.disconnect();
-    }, [sessionId, autoScroll]);
 
     // ── 日志过滤 ──
     const filteredLogs = logs.filter(log => {

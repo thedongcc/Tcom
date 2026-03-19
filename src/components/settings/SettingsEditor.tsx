@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Search, RotateCcw, Download, Upload, Check, FolderOpen, FileJson, Settings } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Search, RotateCcw, Download, Upload, Check, FolderOpen, FileJson, Settings, GripVertical, Files, Monitor } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { CustomSelect } from '../common/CustomSelect';
@@ -12,6 +12,23 @@ import { FEATURE_REGISTRY } from '../../features/registry';
 import { KeybindingInput } from '../common/KeybindingInput';
 import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../../utils/keybindings';
 import type { ThemeImages } from '../../types/theme';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+    arrayMove
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // ─── 分组容器 ─────────────────────────────────────────────────────────────────
 const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -218,10 +235,8 @@ export const SettingsEditor = () => {
                     label: t('settings.logFormat.bgImage'),
                     description: t('settings.logFormat.bgImageDesc'),
                     render: () => {
-                        // 显示时去掉 tcom-file:/// 前缀，只显示实际路径
-                        const displayValue = config.images.rxBackground
-                            ? config.images.rxBackground.replace(/^tcom-file:\/\/\//, '')
-                            : '';
+                        // 直接显示本地路径
+                        const displayValue = config.images.rxBackground || '';
                         return (
                         <div className="flex flex-col gap-2">
                             <div className="flex gap-1.5 items-center w-56">
@@ -247,7 +262,7 @@ export const SettingsEditor = () => {
                                             const res = result as { canceled?: boolean; filePaths?: string[] };
                                             if (!res.canceled && res.filePaths?.[0]) {
                                                 const filePath = res.filePaths[0].replace(/\\/g, '/');
-                                                updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: `tcom-file:///${filePath}` } }));
+                                                updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: filePath } }));
                                             }
                                         }}
                                         className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
@@ -361,27 +376,7 @@ export const SettingsEditor = () => {
                 ),
             })),
         },
-        {
-            title: t('settings.groups.modules'),
-            items: FEATURE_REGISTRY
-                .filter(descriptor => descriptor.tier === 'optional')
-                .map(descriptor => {
-                    const isActive = features.find(f => f.feature.id === descriptor.id)?.isActive ?? false;
-                    return {
-                        label: t(descriptor.nameKey),
-                        description: t(descriptor.descriptionKey),
-                        render: () => (
-                            <Switch
-                                checked={isActive}
-                                onChange={(checked) => {
-                                    if (checked) activateFeature(descriptor.id);
-                                    else deactivateFeature(descriptor.id);
-                                }}
-                            />
-                        ),
-                    };
-                }),
-        },
+        // 功能模块区域已迁移为独立的 DnD 排序组件，见下方 moduleSectionJSX
         {
             title: 'Danger Zone',
             items: [
@@ -416,10 +411,156 @@ export const SettingsEditor = () => {
             })
             .filter(Boolean) as typeof settingSections
         : settingSections;
+    // ── 功能模块 DnD 排序 ──
+    // 默认侧边栏项（不可关闭）
+    const DEFAULT_MODULE_ITEMS = [
+        { id: 'explorer', nameKey: 'sidebar.sessions', descriptionKey: '', icon: Files, tier: 'core' as const },
+        { id: 'serial', nameKey: 'sidebar.configuration', descriptionKey: '', icon: Monitor, tier: 'core' as const },
+    ];
 
+    // 所有模块项（默认 + 可选）
+    const allModuleItems = [
+        ...DEFAULT_MODULE_ITEMS,
+        ...FEATURE_REGISTRY.filter(d => d.tier === 'optional').map(d => ({
+            id: d.id, nameKey: d.nameKey, descriptionKey: d.descriptionKey, icon: d.icon, tier: d.tier,
+        })),
+    ];
 
+    // 模块排序状态
+    const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
+        const saved = localStorage.getItem('activitybar-order');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved) as string[];
+                const allIds = allModuleItems.map(m => m.id);
+                const validIds = new Set(allIds);
+                const order = parsed.filter(id => validIds.has(id));
+                allIds.forEach(id => { if (!order.includes(id)) order.push(id); });
+                return order;
+            } catch { /* 回退默认顺序 */ }
+        }
+        return allModuleItems.map(m => m.id);
+    });
 
-    const hasResults = filteredSettings.length > 0;
+    // 排序变更时写入 localStorage
+    const saveModuleOrder = useCallback((newOrder: string[]) => {
+        setModuleOrder(newOrder);
+        localStorage.setItem('activitybar-order', JSON.stringify(newOrder));
+        // 手动触发 storage 事件让 ActivityBar 实时同步（同一 tab 内不自动触发 StorageEvent）
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'activitybar-order',
+            newValue: JSON.stringify(newOrder),
+        }));
+    }, []);
+
+    const moduleSensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleModuleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (active.id !== over?.id) {
+            const oldIndex = moduleOrder.indexOf(active.id as string);
+            const newIndex = moduleOrder.indexOf(over?.id as string);
+            saveModuleOrder(arrayMove(moduleOrder, oldIndex, newIndex));
+        }
+    };
+
+    // 可拖拽模块行
+    const SortableModuleRow = ({ id }: { id: string }) => {
+        const {
+            attributes, listeners, setNodeRef, transform, transition, isDragging
+        } = useSortable({ id });
+
+        const style = {
+            transform: CSS.Transform.toString(transform),
+            transition,
+            opacity: isDragging ? 0.5 : 1,
+            zIndex: isDragging ? 999 : 'auto' as const,
+        };
+
+        const moduleItem = allModuleItems.find(m => m.id === id);
+        if (!moduleItem) return null;
+
+        const isOptional = moduleItem.tier === 'optional';
+        const isActive = isOptional
+            ? (features.find(f => f.feature.id === id)?.isActive ?? false)
+            : true;
+
+        const IconComponent = moduleItem.icon;
+
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                className={`py-2.5 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 flex items-center gap-3 ${isDragging ? 'bg-[var(--list-active-background)] rounded shadow-lg' : ''}`}
+            >
+                {/* 拖拽手柄 */}
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] transition-colors flex-shrink-0"
+                    title={t('settings.modules.dragToReorder')}
+                >
+                    <GripVertical size={16} />
+                </div>
+
+                {/* 图标 */}
+                <div className={`flex-shrink-0 ${isActive ? 'text-[var(--app-foreground)]' : 'text-[var(--input-placeholder-color)]'}`}>
+                    <IconComponent size={18} />
+                </div>
+
+                {/* 名称和描述 */}
+                <div className="flex-1 min-w-0">
+                    <div className={`text-[13px] font-medium ${isActive ? 'text-[var(--st-settings-text)]' : 'text-[var(--input-placeholder-color)]'}`}>
+                        {t(moduleItem.nameKey)}
+                    </div>
+                    {moduleItem.descriptionKey && (
+                        <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5 truncate">
+                            {t(moduleItem.descriptionKey)}
+                        </p>
+                    )}
+                </div>
+
+                {/* 核心模块标签 / 可选模块开关 */}
+                <div className="flex-shrink-0">
+                    {isOptional ? (
+                        <Switch
+                            checked={isActive}
+                            onChange={(checked) => {
+                                if (checked) activateFeature(id);
+                                else deactivateFeature(id);
+                            }}
+                        />
+                    ) : (
+                        <span className="text-[10px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
+                            {t('settings.modules.core')}
+                        </span>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    // 模块区域 JSX
+    const moduleSectionJSX = (!searchTerm || t('settings.groups.modules').toLowerCase().includes(lowerSearch)) ? (
+        <Group title={t('settings.groups.modules')}>
+            <DndContext
+                sensors={moduleSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleModuleDragEnd}
+            >
+                <SortableContext items={moduleOrder} strategy={verticalListSortingStrategy}>
+                    {moduleOrder.map(id => (
+                        <SortableModuleRow key={id} id={id} />
+                    ))}
+                </SortableContext>
+            </DndContext>
+        </Group>
+    ) : null;
+
+    const hasResults = filteredSettings.length > 0 || moduleSectionJSX !== null;
 
     return (
         <div className="flex flex-col h-full bg-[var(--settings-editor-bg)]" data-component="settings-editor">
@@ -494,6 +635,9 @@ export const SettingsEditor = () => {
                             ))}
                         </Group>
                     ))}
+
+                    {/* 功能模块 DnD 排序区 */}
+                    {moduleSectionJSX}
 
                 </div>
             </div>

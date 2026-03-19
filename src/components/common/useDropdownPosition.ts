@@ -12,6 +12,7 @@ interface DropdownPositionStyle {
     left: number;
     width: number | string;
     minWidth: number;
+    maxWidth?: number;
     maxHeight: number;
     zIndex: number;
 }
@@ -35,6 +36,7 @@ export function useDropdownPosition(
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
         const defaultMaxH = 240;
         const spaceBelow = viewportHeight - rect.bottom - 10;
         const spaceAbove = rect.top - 10;
@@ -53,13 +55,20 @@ export function useDropdownPosition(
             maxHeight = Math.min(defaultMaxH, Math.max(0, spaceAbove));
         }
 
+        // 始终左对齐到触发器，用 maxWidth 防止超出右边界
+        const leftPos = rect.left;
+        const rightPadding = 8;
+        const availableWidth = Math.max(rect.width, viewportWidth - leftPos - rightPadding);
+
         setDropdownStyle({
             position: 'fixed',
             ...(top !== undefined ? { top } : {}),
             ...(bottom !== undefined ? { bottom } : {}),
-            left: rect.left,
-            width: dropdownWidth || rect.width,
+            left: leftPos,
+            // 如果指定了固定宽度则使用，否则自适应内容宽度（至少和触发器一样宽）
+            width: dropdownWidth || 'auto',
             minWidth: rect.width,
+            maxWidth: availableWidth,
             maxHeight,
             zIndex: 999999,
         });

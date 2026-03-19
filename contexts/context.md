@@ -1,16 +1,16 @@
-# Tcom 项目统一开发规范 (v2.0)
+# Tcom 项目统一开发规范 (v3.0 — Tauri v2)
 
-> **本文件是 Tcom 项目的唯一权威规范**。融合了 `optimize/`、`design-system/` 及所有架构优化文档。
+> **本文件是 Tcom 项目的唯一权威规范**。融合了架构设计、UI 设计系统及所有开发规范。
 > 所有新增代码、重构和 UI 开发必须严格遵循本规范。
 
 ---
 
 ## 一、项目概述
 
-**Tcom** — 一款基于 Electron + React + TypeScript 的专业级串口调试工具。
+**Tcom** — 一款基于 Tauri v2 + React + TypeScript 的专业级串口调试工具。
 支持串口通信、MQTT、TCP 桥接、虚拟串口、命令管理、功能模块系统等功能。
 
-**技术栈**: Electron 28 + React 18 + TypeScript 5 + Vite + TipTap + dnd-kit
+**技术栈**: Tauri v2 (Rust) + React 18 + TypeScript 5 + Vite + TipTap + dnd-kit
 
 ---
 
@@ -19,49 +19,73 @@
 ### 2.1 架构质量目标
 
 | 特性 | 要求 | 落地方式 |
-|------|------|---------|
-| **安全** | 全局异常捕获、硬件资源严格释放 | `SystemCrashHandler` + `try/catch` 边界防护 |
-| **可靠** | 串口掉线自动重连、无僵尸进程 | Service 层熔断重试 + `removeAllListeners()` |
-| **健壮** | 防御性编程、输入边界校验 | 参数校验 + 类型守卫 + fallback 机制 |
-| **解耦** | 业务逻辑与 UI 分离 | Custom Hook 提取 + Service 层隔离 |
-| **高内聚** | 单一职责、功能模块化 | 每个 Hook/Service 仅负责一个领域 |
-| **低耦合** | 模块间通过接口/事件通信 | EventEmitter + 依赖注入 + Context |
-| **稳定** | 快速插拔不崩溃、休眠唤醒不断联 | 端口状态机 + 心跳检测 |
-| **多并发** | 高频数据不阻塞 UI | 缓冲队列 + Worker 线程 + libuv 定时器 |
-| **实时性** | 串口数据毫秒级显示 | RAF 渲染管理 + 虚拟列表 |
-| **动画丝滑** | 过渡动画 60FPS | `transform`/`opacity` GPU 加速 + CSS transitions |
+|------|------|---------| 
+| **安全** | CSP 策略 + 最小权限 + 参数校验 | Tauri capabilities + Rust 类型系统 |
+| **可靠** | 串口掉线自动检测、无僵尸线程 | Rust `AtomicBool` 信号 + `Arc<Mutex>` |
+| **健壮** | 防御性编程、输入边界校验 | Rust `Result<T, String>` + 前端类型守卫 |
+| **解耦** | 业务逻辑与 UI 分离 | Custom Hook + Tauri Command 层隔离 |
+| **高内聚** | 单一职责、功能模块化 | 每个 Hook/Command 仅负责一个领域 |
+| **低耦合** | 模块间通过事件通信 | Tauri `emit`/`listen` + React Context |
+| **稳定** | 快速插拔不崩溃、休眠唤醒不断联 | Rust 线程安全 + 超时重试 |
+| **多并发** | 高频数据不阻塞 UI | Rust 原生线程 + 前端 RAF 渲染管理 |
+| **实时性** | 串口数据毫秒级显示 | Rust 线程直推 `emit` + 虚拟列表 |
+| **动画丝滑** | 过渡动画 60FPS | `transform`/`opacity` GPU 加速 |
 
-### 2.2 Electron 主进程分层架构
+### 2.2 Tauri Rust 后端分层架构
 
 ```
-electron/
-├── main.ts                    # Bootstrap Layer — 仅 App 生命周期 + 窗口创建（≤130行）
-├── ipc/                       # Controller Layer — IPC 路由，参数校验，调用 Service
-│   ├── serial.ipc.ts
-│   ├── monitor.ipc.ts
-│   ├── com0com.ipc.ts
-│   └── theme.ipc.ts
-├── services/                  # Service Layer — 纯业务逻辑，相互隔离
-│   ├── SerialService.ts
-│   ├── MonitorService.ts
-│   └── TcpService.ts
-└── utils/                     # Utility Layer — 纯函数、系统调用
-    ├── WindowsRegistry.ts
-    ├── FileWriteQueue.ts
-    └── SystemCrashHandler.ts
+src-tauri/src/
+├── main.rs                    # 入口 — 调用 lib::run()
+├── lib.rs                     # Bootstrap — 插件注册 + Command 注册 + State 管理
+└── commands/                  # Command Layer — 参数解析 + 业务逻辑
+    ├── mod.rs                 # 模块导出
+    ├── serial.rs              # 串口扫描/连接/读写/定时发送（SerialState）
+    ├── mqtt.rs                # MQTT 客户端（MqttState + rumqttc）
+    ├── monitor.rs             # 虚拟串口监控双向桥接（MonitorState）
+    ├── tcp.rs                 # TCP 服务器（TcpState）
+    ├── workspace.rs           # 工作区/会话 CRUD + 路径安全
+    ├── theme.rs               # 主题管理 + 编辑器状态 + 取色器
+    ├── app.rs                 # 版本/统计/字体/com0com
+    └── shell.rs               # 外部链接 + 文件对话框
 ```
 
 **铁律**：
-- `main.ts` 禁止编写任何业务逻辑
-- IPC 层仅做参数校验和 Service 调用
-- Service 层相互隔离，通过 EventEmitter 交互
-- 每个 Service 文件 ≤ 300 行
+- `lib.rs` 禁止编写任何业务逻辑，仅做 Plugin/State/Command 注册
+- Command 函数必须返回 `Result<T, String>`，错误信息清晰可读
+- 全局状态使用 `tauri::State<T>` + `Mutex<HashMap>` 管理
+- 每个模块文件 ≤ 400 行
+- 跨线程共享使用 `Arc<Mutex<T>>` + `Arc<AtomicBool>` 信号控制
 
-### 2.3 渲染进程组件架构
+### 2.3 前端 IPC 适配层架构
+
+```
+src/lib/tauri-api/
+├── index.ts                   # 注册入口 — registerAllTauriAPIs()
+├── serial.ts                  # serialAPI
+├── mqtt.ts                    # mqttAPI
+├── monitor.ts                 # monitorAPI
+├── tcp.ts                     # tcpAPI
+├── workspace.ts               # workspaceAPI
+├── session.ts                 # sessionAPI
+├── com0com.ts                 # com0comAPI
+├── theme.ts                   # themeAPI
+├── eyedropper.ts              # eyedropperAPI
+├── app.ts                     # appAPI
+├── update.ts                  # updateAPI
+├── shell.ts                   # shellAPI
+└── windowApi.ts               # windowAPI
+```
+
+**铁律**：
+- 适配层通过 `window.xxxAPI = { ... }` 注入全局对象，与 React 组件解耦
+- 所有 invoke 调用必须有 `catch` 错误处理
+- 事件监听使用 Tauri `listen()` + cleanup 函数模式
+
+### 2.4 渲染进程组件架构
 
 ```
 src/components/<feature>/
-├── FeatureComponent.tsx        # UI 组件 — 仅 JSX 渲染（≤250行）
+├── FeatureComponent.tsx        # UI 组件 — 仅 JSX 渲染
 ├── useFeatureState.ts          # 状态 Hook — 状态管理 + UI 状态持久化
 ├── useFeatureActions.ts        # 操作 Hook — 业务逻辑 + 副作用
 ├── featureHelpers.ts           # 纯函数 — 数据处理、格式化、计算
@@ -69,22 +93,22 @@ src/components/<feature>/
 ```
 
 **铁律**：
-- 组件文件 ≤ 250 行，超出必须拆分子组件或 Hook
-- 函数体认知复杂度（Cognitive Complexity）≤ 20
+- **分级行数限制**（按组件职责分类）：
+  - **基础 UI 组件**（Common UI，如 Button/Tooltip/Switch）：**≤ 150 行**
+  - **核心业务组件**（Smart Components，如 MonitorTerminal/SerialMonitor）：**≤ 250 行**（超出必须拆分子组件或提取 Hook）
+  - **配置面板 / 长表单**（Settings/Forms，如 SettingsEditor）：**豁免至 600 - 800 行**（前提：超出的行数必须是无深层逻辑嵌套的纯声明式 JSX 排版）
+- **核心红线**：无论物理行数多少，函数体认知复杂度（Cognitive Complexity）必须严格 **≤ 20**
 - 复杂 `useCallback`/`useEffect` 逻辑提取为自定义 Hook
 - 重复代码（≥2处相同逻辑）必须提取为工具函数
 
-### 2.4 Electron 安全规范
+### 2.5 Tauri 安全规范
 
 **铁律**：
-- 主窗口与所有子窗口 `webPreferences` 必须**显式声明**以下配置（即使是默认值）：
-  - `nodeIntegration: false`
-  - `contextIsolation: true`
-  - `sandbox: true`
-- `index.html` 必须配置 CSP（Content Security Policy）meta 标签
-- 禁止在渲染进程中使用 `require()`
-- Preload 脚本通过 `contextBridge.exposeInMainWorld()` 白名单暴露 API，**禁止透传原始 `ipcRenderer`**
-- 所有 IPC handler 在 Controller 层必须做参数校验（类型守卫 + 非空检查），再调用 Service
+- `tauri.conf.json` 必须配置 CSP（Content Security Policy），严格限制 `script-src`、`connect-src` 等
+- `src-tauri/capabilities/default.json` 遵循**最小权限原则**，仅声明必需的 plugin 权限
+- 所有 Command 函数的路径参数必须做安全校验（防路径遍历、非空检查、绝对路径验证）
+- 禁止在前端直接暴露文件系统操作，必须通过 Command 中转
+- Tauri invoke 白名单由 `generate_handler![]` 宏限定，未注册的 Command 前端无法调用
 
 ---
 
@@ -119,7 +143,34 @@ function isSerialConfig(obj: unknown): obj is SerialConfig {
 - 接口优先于 `type`（除联合类型）
 - 枚举使用 `const enum` 或字面量联合类型
 
-### 3.2 React 组件规范
+### 3.2 Rust 规范
+
+```rust
+// ✅ 正确：明确返回类型，中文注释
+#[tauri::command]
+pub fn serial_open(
+    app: tauri::AppHandle,
+    connection_id: String,
+    options: SerialOpenOptions,
+) -> Result<Value, String> {
+    // 解析参数并打开串口
+}
+
+// ❌ 禁止：unwrap() 直接调用（须使用 ? 或 map_err）
+let port = serialport::new(&path, baud).open().unwrap(); // 禁止
+
+// ✅ 正确：错误转换
+let port = serialport::new(&path, baud).open().map_err(|e| e.to_string())?;
+```
+
+**规则**：
+- 禁止 `unwrap()` 用于可能失败的操作（仅允许用于已知安全的初始化）
+- `Mutex` 锁获取统一使用 `lock().map_err(lock_err)?` 模式
+- 线程退出信号统一使用 `Arc<AtomicBool>` + `Ordering::SeqCst`
+- 大块数据传递使用 `Vec<u8>` 而非 `String`
+- Windows 特定代码使用 `#[cfg(target_os = "windows")]` 条件编译
+
+### 3.3 React 组件规范
 
 ```tsx
 // ✅ 组件结构（按顺序）
@@ -153,7 +204,7 @@ export const MyComponent = ({ prop1, prop2 }: Props) => {
 - Context 按变动频率分片，禁止全局单一 Context
 - 组件 Props 超过 5 个时使用接口声明
 
-### 3.3 注释规范
+### 3.4 注释规范
 
 ```typescript
 // ✅ 中文注释
@@ -176,7 +227,7 @@ export const MyComponent = ({ prop1, prop2 }: Props) => {
 const hasCollision = commands.some(c => c.name === item.name);
 ```
 
-### 3.4 命名规范
+### 3.5 命名规范
 
 | 类别 | 规则 | 示例 |
 |------|------|------|
@@ -186,8 +237,10 @@ const hasCollision = commands.some(c => c.name === item.name);
 | CSS 变量 | `--st-` 前缀 | `--st-monitor-rx-bg` |
 | 常量 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
 | 事件处理 | `handle` 前缀 | `handleDragEnd` |
+| Rust Command | snake_case | `serial_list_ports` |
+| Rust State | PascalCase + `State` 后缀 | `SerialState` |
 
-### 3.5 Git 提交规范
+### 3.6 Git 提交规范
 
 ```
 feat: 添加虚拟串口监控功能
@@ -220,6 +273,9 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 | 选中背景 | `--list-active-selection-background` | 已选中项 |
 | 按钮背景 | `--button-background` | 主操作按钮 |
 | 边框 | `--border-color` | 通用分割线 |
+
+**全局状态同步要求（非常重要！）**：
+- 新增任何 CSS 变量后，除了在 `index.css` 定义备用值和在 `componentTokenMap.ts` 注册之外，**必须同步将其默认值添加到 `src-tauri/default-dark.json`、`src-tauri/default-light.json`、`src-tauri/default-mono.json`** 中。如果不加，切换或重置主题时将会丢失这些变量！
 
 ### 4.2 字体系统
 
@@ -318,7 +374,6 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 /* ✅ 正确：组件专属变量 */
 --serial-config-bg: var(--sidebar-background);
 --serial-config-text: var(--st-monitor-config-text);
---serial-config-label: var(--st-monitor-config-label);
 
 /* ❌ 禁止：组件直接引用功能级变量 */
 .my-component {
@@ -332,9 +387,6 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - `--{component}-text` — 文字色
 - `--{component}-border` — 边框色
 - 按钮/切换类组件额外需要：`--{component}-hover`、`--{component}-active`
-
-**全局状态同步要求 (非常重要！)**：
-- 新增任何 CSS 变量后，除了在 `index.css` 定义备用值和在 `componentTokenMap.ts` 注册之外，**必须同步将其默认值添加到 `electron/ipc/theme-defaults.ts` 中的 `DEFAULT_DARK_COLORS` 和 `DEFAULT_LIGHT_COLORS` 里**。如果不加，切换或重置主题时将会丢失这些变量！
 
 ### 4.10 反模式（禁止）
 
@@ -362,32 +414,40 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - **状态分片**：频繁变化的值（缓冲区数据）与低频状态（主题）分离
 - **`useMemo`/`useCallback`**：依赖项明确，避免不必要的重新计算
 
-### 5.2 主进程稳定性
+### 5.2 Rust 后端稳定性
 
-- **防御性编程**：所有硬件操作（`open`/`close`/`write`）必须 `try/catch`
-- **资源释放**：串口关闭后必须 `port.removeAllListeners()`
-- **内存泄漏防护**：事件解绑、定时器清理、Observer 断开
-- **熔断机制**：连续失败 3 次后暂停重试，等待用户手动触发
+- **防御性编程**：所有硬件操作（`open`/`close`/`write`）必须 `map_err` 转换错误
+- **资源释放**：串口关闭后通过 `AtomicBool` 信号停止读取线程
+- **内存安全**：使用 `Arc<Mutex<T>>` 管理共享状态，避免裸指针
+- **线程退出**：所有后台线程必须通过 `AtomicBool` 标志位优雅退出
+- **锁竞争**：持锁时间尽可能短，重操作在锁外执行
 
 ### 5.3 数据流性能
 
-- **串口写入**：采用缓冲队列管理，降低 I/O 阻塞
-- **高频发送**：使用 Node.js `libuv` 定时器实现高精度发送
-- **文件写入**：使用 `FileWriteQueue` 解决并发写入竞争
+- **串口读取**：Rust 原生线程 + 4096 字节缓冲区，通过 `emit` 直推前端
+- **定时发送**：`Instant` + `thread::sleep` 实现高精度定时
+- **MQTT 事件循环**：独立 tokio 运行时 + 专用线程
 
 ### 5.4 资源释放规范
 
-- **串口关闭顺序**：`port.removeAllListeners()` → `port.close()` → `Map.delete()`
-- **TCP Server 关闭顺序**：销毁所有活跃 socket → `server.close()` → `Map.delete()`
-- **定时器清理**：所有 `setInterval`/`setTimeout` 在模块/组件卸载时必须 `clearInterval`/`clearTimeout`
-- **事件监听器**：组件 `useEffect` 返回的清理函数中必须解绑所有 IPC/DOM 监听器
-- **Worker Thread**：使用完毕必须 `terminate()`，不得泄漏
+- **串口关闭顺序**：停止定时发送 → `alive.store(false)` 停止读取线程 → `emit` 关闭事件 → `HashMap.remove()`
+- **TCP Server 关闭**：`alive.store(false)` → listener 自然退出 → 客户端线程结束 → `HashMap.remove()`
+- **Monitor 关闭**：设置 `STATE_STOPPING` → `alive.store(false)` → 双向线程退出 → `emit` 关闭事件
+- **MQTT 断开**：`try_disconnect()` → 事件循环退出 → `HashMap.remove()`
+- **前端事件监听**：组件 `useEffect` 返回的清理函数中必须调用 `unlisten`
 
 ### 5.5 残留文件清理规则
 
 - 重构后旧文件必须删除，不得保留在原位置
-- 同一模块不得在多个位置存在副本（如 `electron/TcpService.ts` vs `electron/services/TcpService.ts`）
-- 定期检查项目根目录及各子目录是否有不属于当前架构的孤立文件
+- 同一模块不得在多个位置存在副本
+- 定期检查项目各子目录是否有不属于当前架构的孤立文件
+
+### 5.6 启动性能
+
+- **窗口隐藏启动**：`tauri.conf.json` 主窗口 `visible: false`，前端就绪后 `getCurrentWindow().show()`
+- **模块懒加载**：`App.tsx` → `FullApp.tsx`（React.lazy），确保首帧仅加载最小模块
+- **IPC 预注册**：`registerAllTauriAPIs()` 在 React 渲染前完成，避免运行时查找
+- **主题预注入**：`boot-theme.js` 在 HTML 中同步执行，避免主题闪烁
 
 ---
 
@@ -403,9 +463,6 @@ python "$env:USERPROFILE\.skillhub\skills_store_cli.py" search "关键词"
 
 # 安装 Skill 到当前项目
 python "$env:USERPROFILE\.skillhub\skills_store_cli.py" install <slug>
-
-# 示例：安装 electron 相关 skill
-python "$env:USERPROFILE\.skillhub\skills_store_cli.py" install electron-best-practices
 ```
 
 ### 6.1 已安装 Skill 清单（4 个）
@@ -414,82 +471,36 @@ python "$env:USERPROFILE\.skillhub\skills_store_cli.py" install electron-best-pr
 - **路径**: `.agent/skills/ui-ux-pro-max/`
 - **功能**: 综合 UI/UX 设计智能，含 67 种风格、96 个色板、57 种字体搭配、99 条 UX 准则
 - **何时调用**: 新建 UI 组件、设计交互、选择色板字体时
-- **调用方式**:
-  ```bash
-  # 生成完整设计系统
-  python3 .agent/skills/ui-ux-pro-max/scripts/search.py "serial IDE dark" --design-system -p "Tcom"
-  # 查询 UX 准则
-  python3 .agent/skills/ui-ux-pro-max/scripts/search.py "animation accessibility" --domain ux
-  # 获取 React 栈指南
-  python3 .agent/skills/ui-ux-pro-max/scripts/search.py "performance" --stack react
-  ```
 
 #### ② typescript-pro
 - **路径**: `.agent/skills/typescript-pro/`
-- **功能**: 高级类型系统、泛型、全栈类型安全、tRPC 集成
-- **何时调用**: 设计复杂类型、类型守卫、条件类型、映射类型时
-- **参考文档**: `references/advanced-types.md`、`type-guards.md`、`utility-types.md`、`patterns.md`、`configuration.md`
+- **功能**: 高级类型系统、泛型、全栈类型安全
+- **何时调用**: 设计复杂类型、类型守卫、条件类型时
 
 #### ③ typescript-lsp
 - **路径**: `.agent/skills/typescript-lsp/`
-- **功能**: TypeScript LSP 诊断、实时代码检查、错误检测
-- **何时调用**: 代码审查、提交前检查、类型错误诊断时
+- **功能**: TypeScript LSP 诊断、实时代码检查
+- **何时调用**: 代码审查、提交前检查时
 
 #### ④ afrexai-react-production
 - **路径**: `.agent/skills/afrexai-react-production/`
-- **功能**: 生产级 React 应用架构、组件设计、状态管理、性能优化、测试、部署
-- **何时调用**: 组件重构、性能优化、Hooks 设计、状态提升策略时
+- **功能**: 生产级 React 应用架构、性能优化
+- **何时调用**: 组件重构、Hooks 设计时
 
-### 6.2 Skill 调用时机表
-
-| 开发场景 | 应调用的 Skill | 具体操作 |
-|---------|---------------|---------|
-| **新建 UI 组件** | `ui-ux-pro-max` | 1. 运行 `--design-system` 获取设计建议<br>2. 运行 `--domain ux` 获取 UX 准则<br>3. 对照本规范 §4 交付检查清单 |
-| **组件样式设计** | `ui-ux-pro-max` | 运行 `--domain style "dark IDE developer"` 获取风格推荐 |
-| **复杂类型设计** | `typescript-pro` | 查阅 `references/advanced-types.md` 和 `utility-types.md` |
-| **组件重构** | `afrexai-react-production` | 参考 Hooks 重构模式、状态提升策略、渲染优化 |
-| **性能优化** | `ui-ux-pro-max` + `afrexai-react-production` | 1. `--domain ux "animation"` 获取动画准则<br>2. 参考 React Production 性能章节 |
-| **代码审查** | `typescript-lsp` | 提交前执行 LSP 静态检查，确保类型安全 |
-| **类型错误诊断** | `typescript-lsp` | 实时代码检查和错误定位 |
-
-### 6.4 新建组件完整工作流
-
-当需要新建一个组件时，按以下流程操作：
+### 6.2 新建组件完整工作流
 
 ```
 步骤 1: 设计（调用 ui-ux-pro-max）
-─────────────────────────────────
-python3 .agent/skills/ui-ux-pro-max/scripts/search.py \
-  "serial IDE developer tool dark" --design-system -p "Tcom"
-
-→ 获取：色板、字体、间距、动画规范
-→ 对照本规范 §4.1~§4.6 确认一致性
-
-步骤 2: 架构（遵循本规范 §2.3）
-─────────────────────────────────
-src/components/<feature>/
-├── NewComponent.tsx        # ≤250 行
-├── useNewComponentState.ts # 状态管理 Hook
-├── useNewComponentActions.ts # 操作逻辑 Hook
-└── newComponentHelpers.ts  # 纯函数
-
+步骤 2: 架构（遵循本规范 §2.4）
 步骤 3: 编码（遵循本规范 §3）
-─────────────────────────────────
-- 中文注释
-- 明确类型（禁止 any）
-- 组件结构按 §3.2 顺序
-- 事件处理用 useCallback
-
-步骤 4: 交付前检查
-─────────────────────────────────
+步骤 4: Rust Command（如需后端交互，遵循 §2.2）
+步骤 5: 交付前检查
 ☐ 无 Emoji 图标（使用 Lucide）
 ☐ 可点击元素有 cursor:pointer
 ☐ hover 有 150-300ms 过渡动画
-☐ 文字对比度 ≥ 4.5:1
-☐ 焦点状态可见
 ☐ TypeScript 零错误
+☐ Rust cargo check 零错误
 ☐ 组件 ≤ 250 行
-☐ 函数复杂度 ≤ 20
 ```
 
 ---
@@ -498,17 +509,20 @@ src/components/<feature>/
 
 所有代码变更必须满足：
 
-1. **编译通过**: `npx tsc --noEmit` 零新增错误
-2. **构建通过**: `npm run build:app` 成功
-3. **复杂度**: 所有函数认知复杂度 ≤ 20
-4. **文件大小**: 组件 ≤ 250 行、Service ≤ 300 行
-5. **运行稳定**: 快速插拔虚拟串口不崩溃、休眠唤醒不断联
+1. **TypeScript 编译通过**: `npx tsc --noEmit` 零新增错误
+2. **Rust 编译通过**: `cd src-tauri && cargo check` 零错误
+3. **Vite 构建通过**: `npm run build` 成功
+4. **Tauri 构建通过**: `npm run tauri build` 成功（可选，发布前必须）
+5. **复杂度**: 所有函数认知复杂度 ≤ 20
+6. **文件大小**: 基础 UI 组件 ≤ 150 行、业务组件 ≤ 250 行、配置面板 ≤ 800 行、Rust Command 模块 ≤ 400 行
+7. **运行稳定**: 快速插拔虚拟串口不崩溃、休眠唤醒不断联
 
 ---
 
 ## 八、文档更新规则
 
 - 新增模块/Hook 时，更新模块注释中的 `子模块` 列表
-- 修改架构（如新增 Service）时，更新本文件 §2
+- 修改架构（如新增 Command 模块）时，更新本文件 §2
 - 新增交互组件时，更新本文件 §4.4
 - 引入新 Skill 时，更新本文件 §6
+- 新增 Rust crate 依赖时，在 `Cargo.toml` 添加注释说明用途
