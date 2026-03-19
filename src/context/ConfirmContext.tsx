@@ -1,56 +1,32 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ConfirmDialog, ConfirmType } from '../components/common/ConfirmDialog';
+/**
+ * ConfirmContext.tsx
+ * Confirm 渲染容器 — 无 Provider 包裹，订阅 confirmManager 状态后自渲染。
+ *
+ * 用法：在 FullApp.tsx 中 <ConfirmContainer /> 平铺即可。
+ * 业务代码直接 import { confirm } from '@/services/confirmManager'。
+ */
+import { useSyncExternalStore } from 'react';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { confirmStore, confirm } from '../services/confirmManager';
 
-interface ConfirmOptions {
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    type?: ConfirmType;
-}
+/** Confirm 渲染容器（无需 Provider，平铺使用） */
+export const ConfirmContainer = () => {
+    const confirmState = useSyncExternalStore(confirmStore.subscribe, confirmStore.getSnapshot);
 
-interface ConfirmContextType {
-    confirm: (options: ConfirmOptions) => Promise<boolean>;
-}
-
-const ConfirmContext = createContext<ConfirmContextType | undefined>(undefined);
-
-export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [confirmState, setConfirmState] = useState<{
-        options: ConfirmOptions;
-        resolve: (value: boolean) => void;
-    } | null>(null);
-
-    const confirm = useCallback((options: ConfirmOptions) => {
-        return new Promise<boolean>((resolve) => {
-            setConfirmState({ options, resolve });
-        });
-    }, []);
-
-    const handleResolve = useCallback((value: boolean) => {
-        if (confirmState) {
-            confirmState.resolve(value);
-            setConfirmState(null);
-        }
-    }, [confirmState]);
+    if (!confirmState) return null;
 
     return (
-        <ConfirmContext.Provider value={{ confirm }}>
-            {children}
-            {confirmState && (
-                <ConfirmDialog
-                    {...confirmState.options}
-                    onResolve={handleResolve}
-                />
-            )}
-        </ConfirmContext.Provider>
+        <ConfirmDialog
+            {...confirmState.options}
+            onResolve={confirmState.resolve}
+        />
     );
 };
 
+/**
+ * @deprecated 保留旧 API 签名的兼容函数。
+ * 新代码请直接使用 import { confirm } from '@/services/confirmManager'。
+ */
 export const useConfirm = () => {
-    const context = useContext(ConfirmContext);
-    if (!context) {
-        throw new Error('useConfirm must be used within a ConfirmProvider');
-    }
-    return context;
+    return { confirm };
 };

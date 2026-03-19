@@ -13,19 +13,29 @@ import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { I18nProvider, useI18n } from './context/I18nContext'
-import { ToastProvider } from './context/ToastContext'
+import { ToastContainer } from './context/ToastContext'
 import { CommandProvider } from './context/CommandContext'
-import { ConfirmProvider } from './context/ConfirmContext'
+import { ConfirmContainer } from './context/ConfirmContext'
 import { SessionProvider } from './context/SessionContext'
 import { FeatureProvider } from './context/FeatureContext'
 import { useSessionManager } from './hooks/useSessionManager'
 import { useEditorLayout } from './hooks/useEditorLayout'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
+import { composeProviders } from './utils/composeProviders'
 
 // 重型组件懒加载
 const Layout = React.lazy(() => import('./components/layout/Layout').then(m => ({ default: m.Layout })));
 
+// ─── Provider 组合（声明式扁平化） ────────────────────────────────
+const RootProviders = composeProviders(
+    SettingsProvider,
+    I18nProvider,
+    ErrorBoundary,
+    CommandProvider,
+);
+
 // ─── 窗口位置持久化 ─────────────────────────────────────────────
+
 
 const WINDOW_STATE_KEY = 'tcom-window-state';
 
@@ -97,19 +107,9 @@ async function saveWindowState() {
 /** 完整应用入口（仅主窗口使用，编辑器窗口由 ThemeEditorApp.tsx 处理） */
 export default function FullApp() {
     return (
-        <SettingsProvider>
-            <I18nProvider>
-                <ErrorBoundary>
-                    <ToastProvider>
-                        <ConfirmProvider>
-                            <CommandProvider>
-                                <AppContent />
-                            </CommandProvider>
-                        </ConfirmProvider>
-                    </ToastProvider>
-                </ErrorBoundary>
-            </I18nProvider>
-        </SettingsProvider>
+        <RootProviders>
+            <AppContent />
+        </RootProviders>
     )
 }
 
@@ -223,6 +223,11 @@ function AppContent() {
                     </Layout>
                 </Suspense>
             </FeatureProvider>
+
+            {/* 命令式 UI 渲染容器 — 平铺，不包裹子组件 */}
+            <ToastContainer />
+            <ConfirmContainer />
         </SessionProvider>
     );
 }
+
