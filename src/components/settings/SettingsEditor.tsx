@@ -21,6 +21,7 @@ import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../../utils/keybindi
 import type { ThemeImages } from '../../types/theme';
 import { Group, SettingRow, Checkbox, INPUT_CLS, type SettingSection } from './SettingsShared';
 import { ModuleSettings } from './ModuleSettings';
+import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashReporter';
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {
@@ -34,6 +35,7 @@ export const SettingsEditor = () => {
     const [showFactoryReset, setShowFactoryReset] = useState(false);
     const [resetInput, setResetInput] = useState('');
     const [showBgSettings, setShowBgSettings] = useState(false);
+    const [crashReportOn, setCrashReportOn] = useState(isCrashReportEnabled);
 
     // 操作函数和字体列表（委托给 Hook）
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
@@ -304,6 +306,25 @@ export const SettingsEditor = () => {
                     />
                 ),
             })),
+        },
+        {
+            title: t('settings.groups.privacy'),
+            items: [
+                {
+                    label: t('settings.privacy.crashReport'),
+                    description: t('settings.privacy.crashReportDesc'),
+                    render: () => (
+                        <Checkbox
+                            checked={crashReportOn}
+                            onChange={() => {
+                                const next = !crashReportOn;
+                                setCrashReportOn(next);
+                                setCrashReportEnabled(next);
+                            }}
+                        />
+                    ),
+                },
+            ],
         },
         {
             title: 'Danger Zone',

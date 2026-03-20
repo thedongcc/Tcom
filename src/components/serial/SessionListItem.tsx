@@ -6,6 +6,7 @@ import { Tooltip } from '../common/Tooltip';
 
 import { SerialPortInfo } from '../../vite-env';
 import { formatPortInfo } from '../../utils/format';
+import { useI18n } from '../../context/I18nContext';
 interface SessionListItemProps {
     session: SessionConfig;
     portInfo?: SerialPortInfo;
@@ -41,6 +42,7 @@ export const SessionListItem = ({
     onClick,
     onContextMenu
 }: SessionListItemProps) => {
+    const { t } = useI18n();
     const {
         attributes,
         listeners,
@@ -95,7 +97,7 @@ export const SessionListItem = ({
                     <div className="flex items-center gap-1.5 overflow-hidden min-h-[16px]">
                         {session.type === 'serial' && portInfo && (
                             <span className="flex items-center justify-center flex-shrink-0 mb-[1.5px]">
-                                <Tooltip content={isPortBusy ? `Occupied: ${portInfo.error || 'Accessed by another program'}` : (isConnected ? 'Connected' : 'Available')} position="top" wrapperClassName="flex items-center justify-center">
+                                <Tooltip content={isPortBusy ? t('session.portOccupied', { error: portInfo.error || t('session.portOccupiedDefault') }) : (isConnected ? t('session.portConnected') : t('session.portAvailable'))} position="top" wrapperClassName="flex items-center justify-center">
                                     <span
                                         className={`size-1.5 rounded-full ${isPortBusy ? 'bg-[var(--st-status-error)] shadow-[0_0_4px_var(--st-status-error)]' : 'bg-[var(--st-status-success)] shadow-[0_0_4px_var(--st-status-success)]'}`}
                                     />
@@ -106,9 +108,9 @@ export const SessionListItem = ({
                             {session.type === 'serial'
                                 ? (portInfo
                                     ? formatPortInfo(portInfo)
-                                    : (session.type === 'serial' ? (session.lastDescription || session.connection?.path || 'No Port') : 'No Port'))
+                                    : (session.type === 'serial' ? (session.lastDescription || session.connection?.path || t('session.noPort')) : t('session.noPort')))
                                 : session.type === 'mqtt'
-                                    ? (session.host && session.port ? `${session.host}:${session.port}` : 'Not Configured')
+                                    ? (session.host && session.port ? `${session.host}:${session.port}` : t('session.notConfigured'))
                                     : session.type}
                         </span>
                     </div>

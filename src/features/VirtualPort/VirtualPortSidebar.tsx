@@ -78,7 +78,7 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                                 onClick={async () => {
                                     try {
                                         const result = await window.shellAPI?.showOpenDialog({
-                                            title: '选择 setupc.exe',
+                                            title: t('monitor.selectSetupcExe'),
                                             filters: [{ name: 'com0com installer (setupc.exe)', extensions: ['exe'] }],
                                             properties: ['openFile']
                                         });
@@ -132,7 +132,7 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                                         label: ghostPorts.has(com) ? `👻 ${com}` : com,
                                         value: com,
                                         disabled: usedPorts.has(com) || physicalPorts.includes(com) || ghostPorts.has(com),
-                                        description: ghostPorts.has(com) ? '此端口被已拔出的设备占用' : undefined
+                                        description: ghostPorts.has(com) ? t('monitor.ghostPortDesc') : undefined
                                     }))}
                                     value={newPairExt}
                                     onChange={val => setNewPairExt(val)}
@@ -144,7 +144,7 @@ export const VirtualPortSidebar = ({ onNavigate: _onNavigate, editorLayout: _edi
                                         label: ghostPorts.has(com) ? `👻 ${com}` : com,
                                         value: com,
                                         disabled: usedPorts.has(com) || physicalPorts.includes(com) || ghostPorts.has(com) || com === newPairExt,
-                                        description: ghostPorts.has(com) ? '此端口被已拔出的设备占用' : undefined
+                                        description: ghostPorts.has(com) ? t('monitor.ghostPortDesc') : undefined
                                     }))}
                                     value={newPairInt}
                                     onChange={val => setNewPairInt(val)}

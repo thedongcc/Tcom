@@ -165,6 +165,11 @@ declare global {
             onCanceled: (cb: () => void) => () => void;
         }
         queryLocalFonts?: () => Promise<Array<{ fullName: string; family: string }>>
+        crashReportAPI: {
+            send: (payload: string) => Promise<void>;
+            check: () => Promise<string | null>;
+            clear: () => Promise<void>;
+        }
     }
 }
 

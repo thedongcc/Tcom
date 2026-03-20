@@ -118,7 +118,7 @@ export const CommandItemComponent = ({ item, onEdit, onSend, onContextMenu, disa
                             // But if empty, parent handles blocking too.
                             const isEmpty = !item.payload && (!item.tokens || Object.keys(item.tokens).length === 0);
                             if (isEmpty) {
-                                showToast('发送内容不能为空', 'warning');
+                                showToast(t('toast.sendEmpty'), 'warning');
                                 return;
                             }
 

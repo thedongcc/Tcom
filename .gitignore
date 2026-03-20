@@ -15,4 +15,5 @@ startup_analysis.md
 
 # Tauri
 src-tauri/target/
+src-tauri/.env
 

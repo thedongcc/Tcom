@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Token } from '../../types/token';
 import { X, Check } from 'lucide-react';
 import { tokenRegistry } from '../../tokens';
+import { useI18n } from '../../context/I18nContext';
 
 interface TokenConfigPopoverProps {
     token: Token;
@@ -12,6 +13,7 @@ interface TokenConfigPopoverProps {
 }
 
 export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, position }: TokenConfigPopoverProps) => {
+    const { t } = useI18n();
     const popoverRef = useRef<HTMLDivElement>(null);
     const [config, setConfig] = useState<any>(token.config);
 
@@ -160,7 +162,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                 onMouseDown={handleMouseDownHeader}
             >
                 <span className="text-[12px] font-semibold tracking-tight opacity-90">
-                    {plugin.label}
+                    {t(`serial.token${plugin.type.charAt(0).toUpperCase() + plugin.type.slice(1).replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase())}`) || plugin.label}
                 </span>
                 <button
                     onClick={onClose}
@@ -193,7 +195,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--theme-editor-btn-hover, rgba(255,255,255,0.06))'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                    删除
+                    {t('common.delete')}
                 </button>
                 <button
                     className="px-4 py-1.5 text-[11px] rounded-md text-white transition-all flex items-center gap-1 font-semibold shadow-sm cursor-pointer"
@@ -202,7 +204,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                     onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                 >
-                    <Check size={12} /> 应用
+                    <Check size={12} /> {t('common.confirm')}
                 </button>
             </div>
 

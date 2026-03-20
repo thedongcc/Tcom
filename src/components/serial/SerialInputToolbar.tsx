@@ -60,6 +60,7 @@ export const SerialInputToolbar = React.memo(({
             {mode === 'text' && (
                 <div className="flex items-center gap-1">
                     <div className="shrink-0 w-[1px] h-4 bg-[var(--st-sendarea-toolbar-border)] mr-1" />
+                    <span className="text-[10px] text-[var(--activitybar-inactive-foreground)] whitespace-nowrap">{t('serial.appendLabel')}</span>
                     <CustomSelect
                         value={lineEnding}
                         onChange={(val) => setLineEnding(val)}
@@ -92,7 +93,7 @@ export const SerialInputToolbar = React.memo(({
                                     ) : (
                                         <div className={`flex items-center justify-center w-[14px] h-[14px] border ${tb.icon.borderColorClass} ${tb.icon.textColorClass} text-[9px] font-mono rounded-[2px] leading-none`}>{tb.icon.letter}</div>
                                     )}
-                                    <span>{tb.shortLabel}</span>
+                                    <span>{t(`serial.token${plugin.type.charAt(0).toUpperCase() + plugin.type.slice(1).replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())}`) || tb.shortLabel}</span>
                                 </button>
                             </Tooltip>
                         );
@@ -102,7 +103,7 @@ export const SerialInputToolbar = React.memo(({
                     <Tooltip content={t('serial.loadFile')} position="bottom" wrapperClassName="flex">
                         <button className="shrink-0 flex items-center gap-1 px-2 py-0.5 hover:bg-[var(--list-hover-background)] text-[12px] text-[var(--st-input-btn-text)] rounded-sm transition-colors opacity-50 cursor-not-allowed whitespace-nowrap">
                             <Upload size={14} />
-                            <span>File</span>
+                            <span>{t('serial.fileLabel')}</span>
                         </button>
                     </Tooltip>
                     <div className="flex-1 shrink min-w-0" />
@@ -125,7 +126,7 @@ export const SerialInputToolbar = React.memo(({
                                 }}
                             >
                                 <Timer size={14} />
-                                <span>{isTimerRunning ? 'Stop' : 'Timed'}</span>
+                                <span>{isTimerRunning ? t('serial.timerStop') : t('serial.timerStart')}</span>
                             </button>
                         </Tooltip>
                         <input

@@ -16,6 +16,7 @@ import { registerUpdateAPI } from './update'
 import { registerCom0comAPI } from './com0com'
 import { registerThemeAPI } from './theme'
 import { registerEyedropperAPI } from './eyedropper'
+import { registerCrashReportAPI } from './crashReport'
 
 /** 注册所有 Tauri IPC 适配层到 window 对象 */
 export function registerAllTauriAPIs(): void {
@@ -32,4 +33,5 @@ export function registerAllTauriAPIs(): void {
     registerCom0comAPI()
     registerThemeAPI()
     registerEyedropperAPI()
+    registerCrashReportAPI()
 }

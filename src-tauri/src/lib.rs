@@ -43,14 +43,12 @@ pub fn run() {
         .manage(MqttState::default())
         .manage(MonitorState::default())
         .manage(TcpState::default())
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
 
             // 延迟启用 Windows 11 Snap Layout（等待 WebView2 完全初始化）
             #[cfg(windows)]
@@ -158,6 +156,10 @@ pub fn run() {
             commands::theme::eyedropper_pick,
             commands::theme::eyedropper_watch_start,
             commands::theme::eyedropper_watch_stop,
+            // 崩溃上报
+            commands::crash_report::crash_report_send,
+            commands::crash_report::crash_report_check,
+            commands::crash_report::crash_report_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

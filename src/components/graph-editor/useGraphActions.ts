@@ -8,6 +8,7 @@ import { DragEndEvent } from '@dnd-kit/core';
 import { graphService, GraphNode as IGraphNode, GraphEdge as IGraphEdge } from '../../services/GraphService';
 import { GraphLayout } from './GraphStyles';
 import { useConfirm } from '../../context/ConfirmContext';
+import { useI18n } from '../../context/I18nContext';
 
 interface UseGraphActionsParams {
     nodes: IGraphNode[];
@@ -29,6 +30,7 @@ export const useGraphActions = ({
     setSelectedNodeId, setSelectedEdgeId,
 }: UseGraphActionsParams) => {
     const { confirm } = useConfirm();
+    const { t } = useI18n();
     const tempEdgeRef = useRef<{ sourceNode: string; type: 'source' | 'target' } | null>(null);
 
     // ─── 拖放处理 ──────────────────────────────────────────────────────
@@ -80,15 +82,15 @@ export const useGraphActions = ({
 
     const clearGraph = useCallback(async () => {
         const ok = await confirm({
-            title: '清空图形',
-            message: '确定要清空整个图形吗？所有节点和连接都将丢失。',
+            title: t('graph.clearGraphTitle'),
+            message: t('graph.clearGraphMessage'),
             type: 'danger',
-            confirmText: '继续清空'
+            confirmText: t('graph.clearGraphConfirm')
         });
         if (ok) {
             graphService.updateGraph([], []);
         }
-    }, [confirm]);
+    }, [confirm, t]);
 
     // ─── 连线逻辑 ──────────────────────────────────────────────────────
     const getHandlePos = useCallback((nodeId: string, type: 'source' | 'target') => {

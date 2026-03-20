@@ -331,7 +331,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                         <RotateCcw size={12} />
-                        放弃更改
+                        {t('themeEditor.discardChanges')}
                     </button>
                     <button
                         onClick={handleSave}
@@ -339,7 +339,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                         className="px-3 py-1 text-[11px] rounded-md bg-[var(--accent-color)]/90 hover:opacity-90 text-white transition-all disabled:opacity-90 disabled:grayscale-[0.5] disabled:cursor-not-allowed flex items-center gap-1 font-semibold shadow-sm"
                     >
                         <Save size={12} />
-                        保存更改
+                        {t('themeEditor.saveChanges')}
                     </button>
                 </div>
             </div>

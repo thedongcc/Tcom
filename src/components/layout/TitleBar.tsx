@@ -7,6 +7,7 @@ import { Tooltip } from '../common/Tooltip';
 
 /** 调色盘按钮 — 带编辑器窗口打开状态高亮 */
 const EditorToggleButton = () => {
+  const { t } = useI18n();
   const [isEditorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ const EditorToggleButton = () => {
   }, []);
 
   return (
-    <Tooltip content="主题颜色编辑器" position="bottom" wrapperClassName="h-full">
+    <Tooltip content={t('titleBar.themeEditor')} position="bottom" wrapperClassName="h-full">
       <button
         className={[
           'flex items-center justify-center w-[46px] h-full transition-colors duration-150',

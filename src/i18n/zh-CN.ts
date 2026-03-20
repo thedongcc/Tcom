@@ -54,6 +54,7 @@ export const zhCN = {
             customThemes: '自定义主题',
             keybindings: '快捷键',
             modules: '功能模块',
+            privacy: '隐私与数据',
         },
 
         // 快捷键
@@ -164,6 +165,12 @@ export const zhCN = {
             core: '核心',
         },
 
+        // 隐私与数据
+        privacy: {
+            crashReport: '发送匿名崩溃报告',
+            crashReportDesc: '允许自动发送匿名崩溃信息，帮助开发者快速定位和修复问题。不会收集任何个人数据。',
+        },
+
         noResults: '未找到与"{term}"相关的设置项',
     },
 
@@ -190,6 +197,12 @@ export const zhCN = {
         noSessions: '尚无会话。点 "+" 创建一个。',
         deleteTitle: '删除会话',
         deleteConfirm: '确定要删除会话 "{name}" 吗？\n此操作将永久移除该会话的所有配置。',
+        portOccupied: '占用中: {error}',
+        portOccupiedDefault: '已被其他程序访问',
+        portConnected: '已连接',
+        portAvailable: '可用',
+        noPort: '未配置端口',
+        notConfigured: '未配置',
     },
 
     // 串口
@@ -220,7 +233,20 @@ export const zhCN = {
         loadFile: '上传文件',
         startTimer: '开始定时发送',
         stopTimer: '停止定时发送',
-        timerEmpty: '请输入内容后再开始定时发送',
+        timerEmpty: '请先输入内容再启用定时发送',
+        timerStop: '停止',
+        timerStart: '定时',
+        appendLabel: '追加:',
+        fileLabel: '文件',
+        // Token 类型标签
+        tokenCrc: 'CRC 校验',
+        tokenFlag: '占位符',
+        tokenTimestamp: '时间戳',
+        tokenAutoInc: '自增计数',
+        tokenRandomBytes: '随机字节',
+        noMatchFound: '无匹配结果',
+        tokenClickHint: '左键点击打开配置',
+        tokenAutoIncHint: '左键点击配置 · 右键重置计数',
     },
 
     // MQTT
@@ -255,6 +281,9 @@ export const zhCN = {
         addTopicPlaceholder: '添加主题，如 code/+/status...',
         addTopic: '添加主题',
         noSubscriptions: '暂无订阅主题',
+        topicSubscribed: '已订阅并显示在监视器',
+        topicPaused: '暂停订阅并从监视器隐藏',
+        publishPlaceholder: '输入或选择主题...',
     },
 
     // 监控器 (MQTT & Serial Monitor 共享)
@@ -361,6 +390,8 @@ export const zhCN = {
         pathValid: '路径有效 {version}',
         pathInvalid: '未找到有效的 setupc.exe',
         installCom0com: '安装com0com',
+        selectSetupcExe: '选择 setupc.exe',
+        ghostPortDesc: '此端口被已拔出的设备占用',
         installMethodTitle: '安装 com0com 虚拟串口驱动',
         installMethodDesc: '需要安装 com0com 驱动才能开启虚拟串口功能。\n本软件内置了一个安装包，您也可以自行前往官网下载安装。\n\n免责声明：驱动安装可能需要管理员权限或重启电脑。',
         builtinInstall: '内置安装包',
@@ -387,6 +418,13 @@ export const zhCN = {
         noCommands: '暂无命令。',
         noCommandsHint: '使用菜单添加分组或命令。',
         menu: '命令菜单',
+        clearAllTitle: '清空指令',
+        clearAllMessage: '确定要清空所有指令吗？此操作不可撤销。',
+        clearAllConfirm: '清空全部',
+        importTitle: '导入指令',
+        importMessage: '是否将导入的指令合并到现有列表中？点击取消将替换现有指令。',
+        importMerge: '合并',
+        importReplace: '替换',
         // 右键菜单
         edit: '编辑',
         duplicate: '复制',
@@ -409,6 +447,7 @@ export const zhCN = {
     titleBar: {
         pinWindow: '置顶窗口',
         unpinWindow: '取消置顶',
+        themeEditor: '主题颜色编辑器',
     },
 
     // 状态栏
@@ -446,6 +485,9 @@ export const zhCN = {
         moveConflict: '操作取消：目标位置已有同名命令 "{name}"',
         topicRequired: 'Topic 不能为空',
         invalidHex: '无效的 Hex 字符串',
+        exportSuccess: '导出成功',
+        exportFailed: '导出失败',
+        launchFailed: '启动失败',
     },
 
     // 编辑器区域
@@ -483,6 +525,8 @@ export const zhCN = {
         matchedVars: '匹配到的颜色变量',
         noVarsFound: '该元素未解析到 var(--) 颜色变量',
         noMatchingVars: '未查找到匹配的颜色变量',
+        discardChanges: '放弃更改',
+        saveChanges: '保存更改',
     },
 
     // 软件更新
@@ -519,6 +563,9 @@ export const zhCN = {
         clearGraph: '清空图形',
         portInput: '输入 (RX)',
         portOutput: '输出 (TX)',
+        clearGraphTitle: '清空图形',
+        clearGraphMessage: '确定要清空整个图形吗？所有节点和连接都将丢失。',
+        clearGraphConfirm: '继续清空',
     },
 
     // 侧边栏标题
@@ -597,6 +644,60 @@ export const zhCN = {
         newConnection: '新建连接',
         openLog: '打开日志...',
         recent: '最近',
+    },
+
+    // Token 配置表单
+    tokenConfig: {
+        nameLabel: '名称（可选）',
+        namePlaceholder: '例如 帧头',
+        content: '内容',
+        hexHint: '十六进制字节，空格分隔',
+        decHint: '十进制字节 (0-255)，空格分隔',
+        byteWidth: '字节宽度',
+        byteWidthHint: '目标字节大小 (1-8)',
+        algorithm: '算法',
+        rangeSettings: '范围设置',
+        start: '起始',
+        end: '结束',
+        modbusCrc16: 'Modbus CRC16（小端）',
+        ccittCrc16: 'CCITT CRC16（大端）',
+        endTail: '末尾',
+        endMinus1: '倒数第 1 字节',
+        endMinus2: '倒数第 2 字节',
+        endMinus3: '倒数第 3 字节',
+        format: '格式',
+        byteOrder: '字节序',
+        livePreview: '实时预览',
+        valueLabel: '数值',
+        seconds4B: '秒 (4 字节)',
+        milliseconds8B: '毫秒 (8 字节)',
+        bigEndian: '大端序 (BE)',
+        littleEndian: '小端序 (LE)',
+        byteCount: '字节数',
+        initialValue: '初始值',
+        stepOffset: '步进（偏移量）',
+        stepHint: '每次发送后累加（可为负数）',
+        resetHint: '💡 右键点击 Token 可重置为初始值',
+        minValue: '最小值',
+        maxValue: '最大值',
+        randomRangeHint: '范围 0 ~ {max}，整体随机',
+    },
+
+    // 错误边界 & 崩溃上报
+    errorBoundary: {
+        title: '组件渲染出错',
+        description: '应用的某个部分遇到了意外错误。您可以发送错误报告帮助我们修复，或尝试重试。',
+        sendReport: '发送错误报告',
+        sending: '发送中...',
+        reportSent: '✓ 已发送，感谢反馈！',
+        reportFailed: '发送失败，点击重试',
+        reportSentHint: '错误信息已发送给开发者，我们会尽快修复 🙏',
+        retry: '重试',
+        refresh: '刷新页面',
+        restart: '重启应用',
+        details: '查看错误详情',
+        crashDetected: '检测到上次异常退出，已自动上报错误日志',
+        rateLimitReached: '已达发送上限',
     },
 } as const;
 

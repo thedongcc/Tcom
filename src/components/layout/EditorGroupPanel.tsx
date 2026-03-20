@@ -83,7 +83,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                                         id={compositeId}
                                         active={isTabActive}
                                         isGroupActive={isActive}
-                                        label={session.config.name || '(Unknown)'}
+                                        label={session.config.type === 'settings' ? t('editor.settingsTabName') : (session.config.name || '(Unknown)')}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             sessionManager.setActiveSessionId(viewId);

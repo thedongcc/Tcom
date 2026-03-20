@@ -54,6 +54,7 @@ export const enUS = {
             customThemes: 'Custom Themes',
             keybindings: 'Keybindings',
             modules: 'Feature Modules',
+            privacy: 'Privacy & Data',
         },
 
         // Keybindings
@@ -166,6 +167,12 @@ export const enUS = {
             core: 'Core',
         },
 
+        // Privacy & Data
+        privacy: {
+            crashReport: 'Send Anonymous Crash Reports',
+            crashReportDesc: 'Allow automatic anonymous crash report submission to help developers quickly identify and fix issues. No personal data is collected.',
+        },
+
         noResults: 'No results for "{term}"',
     },
 
@@ -192,6 +199,12 @@ export const enUS = {
         noSessions: 'No sessions yet. Click "+" to create one.',
         deleteTitle: 'Delete Session',
         deleteConfirm: 'Are you sure you want to delete session "{name}"?\nThis action will permanently remove all configuration for this session.',
+        portOccupied: 'Occupied: {error}',
+        portOccupiedDefault: 'Accessed by another program',
+        portConnected: 'Connected',
+        portAvailable: 'Available',
+        noPort: 'No Port',
+        notConfigured: 'Not Configured',
     },
 
     // Serial
@@ -223,6 +236,19 @@ export const enUS = {
         startTimer: 'Start Timed Send',
         stopTimer: 'Stop Timed Send',
         timerEmpty: 'Type a message first to start timed send',
+        timerStop: 'Stop',
+        timerStart: 'Timed',
+        appendLabel: 'Append:',
+        fileLabel: 'File',
+        // Token type labels
+        tokenCrc: 'CRC Check',
+        tokenFlag: 'Placeholder',
+        tokenTimestamp: 'Timestamp',
+        tokenAutoInc: 'Auto Increment',
+        tokenRandomBytes: 'Random Bytes',
+        noMatchFound: 'No match found',
+        tokenClickHint: 'Click to configure',
+        tokenAutoIncHint: 'Click to configure · Right-click to reset',
     },
 
     // MQTT
@@ -257,6 +283,9 @@ export const enUS = {
         addTopicPlaceholder: 'Add topic e.g. code/+/status...',
         addTopic: 'Add Topic',
         noSubscriptions: 'No subscriptions added.',
+        topicSubscribed: 'Subscribed and shown in monitor',
+        topicPaused: 'Paused and hidden from monitor',
+        publishPlaceholder: 'Type or select topic...',
     },
 
     // Monitor (MQTT & Serial Monitor Shared)
@@ -361,6 +390,8 @@ export const enUS = {
         pathValid: 'Path Valid {version}',
         pathInvalid: 'Valid setupc.exe not found',
         installCom0com: 'Install com0com',
+        selectSetupcExe: 'Select setupc.exe',
+        ghostPortDesc: 'This port is occupied by a removed device',
         installMethodTitle: 'Install com0com Virtual Serial Port Driver',
         installMethodDesc: 'You need to install the com0com driver to enable virtual serial port features.\nThis software includes a built-in installer, or you can download it from the official website.\n\nDisclaimer: Driver installation may require administrator privileges or a system restart.',
         builtinInstall: 'Built-in Installer',
@@ -387,6 +418,13 @@ export const enUS = {
         noCommands: 'No commands.',
         noCommandsHint: 'Use the menu to add groups or commands.',
         menu: 'Command Menu',
+        clearAllTitle: 'Clear All Commands',
+        clearAllMessage: 'Are you sure you want to clear all commands? This action cannot be undone.',
+        clearAllConfirm: 'Clear All',
+        importTitle: 'Import Commands',
+        importMessage: 'Merge imported commands with existing list? Click cancel to replace.',
+        importMerge: 'Merge',
+        importReplace: 'Replace',
         // Context menu
         edit: 'Edit',
         duplicate: 'Duplicate',
@@ -409,6 +447,7 @@ export const enUS = {
     titleBar: {
         pinWindow: 'Pin Window',
         unpinWindow: 'Unpin Window',
+        themeEditor: 'Theme Color Editor',
     },
 
     // Status bar
@@ -446,6 +485,9 @@ export const enUS = {
         moveConflict: 'Operation cancelled: A command named "{name}" already exists in the destination',
         topicRequired: 'Topic is required',
         invalidHex: 'Invalid Hex String',
+        exportSuccess: 'Export successful',
+        exportFailed: 'Export failed',
+        launchFailed: 'Launch failed',
     },
 
     // Editor area
@@ -482,6 +524,8 @@ export const enUS = {
         matchedVars: 'Matched Color Variables',
         noVarsFound: 'No var(--) color variables found in this element',
         noMatchingVars: 'No matching color variables found',
+        discardChanges: 'Discard Changes',
+        saveChanges: 'Save Changes',
     },
 
     // Software Update
@@ -518,6 +562,9 @@ export const enUS = {
         clearGraph: 'Clear Graph',
         portInput: 'Input (RX)',
         portOutput: 'Output (TX)',
+        clearGraphTitle: 'Clear Graph',
+        clearGraphMessage: 'Are you sure you want to clear the entire graph? All nodes and connections will be lost.',
+        clearGraphConfirm: 'Clear',
     },
 
     // Sidebar titles
@@ -595,5 +642,59 @@ export const enUS = {
         newConnection: 'New Connection',
         openLog: 'Open Log...',
         recent: 'Recent',
+    },
+
+    // Token Config Forms
+    tokenConfig: {
+        nameLabel: 'Name (optional)',
+        namePlaceholder: 'e.g. Frame Header',
+        content: 'Content',
+        hexHint: 'Hex bytes, space separated',
+        decHint: 'Decimal bytes (0-255), space separated',
+        byteWidth: 'Byte Width',
+        byteWidthHint: 'Target byte size (1-8)',
+        algorithm: 'Algorithm',
+        rangeSettings: 'Range Settings',
+        start: 'Start',
+        end: 'End',
+        modbusCrc16: 'Modbus CRC16 (LE)',
+        ccittCrc16: 'CCITT CRC16 (BE)',
+        endTail: 'End',
+        endMinus1: 'Last -1 byte',
+        endMinus2: 'Last -2 bytes',
+        endMinus3: 'Last -3 bytes',
+        format: 'Format',
+        byteOrder: 'Byte Order',
+        livePreview: 'Live Preview',
+        valueLabel: 'Value',
+        seconds4B: 'Seconds (4 bytes)',
+        milliseconds8B: 'Milliseconds (8 bytes)',
+        bigEndian: 'Big Endian (BE)',
+        littleEndian: 'Little Endian (LE)',
+        byteCount: 'Byte Count',
+        initialValue: 'Initial Value',
+        stepOffset: 'Step (Offset)',
+        stepHint: 'Increment per send (can be negative)',
+        resetHint: '💡 Right-click token to reset to initial value',
+        minValue: 'Min Value',
+        maxValue: 'Max Value',
+        randomRangeHint: 'Range 0 ~ {max}, random',
+    },
+
+    // Error Boundary & Crash Reporting
+    errorBoundary: {
+        title: 'Component Rendering Error',
+        description: 'Part of the application encountered an unexpected error. You can send a report to help us fix it, or try again.',
+        sendReport: 'Send Error Report',
+        sending: 'Sending...',
+        reportSent: '✓ Sent, thank you!',
+        reportFailed: 'Send failed, click to retry',
+        reportSentHint: 'The error report has been sent to the developer. We will fix it soon 🙏',
+        retry: 'Retry',
+        refresh: 'Refresh Page',
+        restart: 'Restart App',
+        details: 'View Error Details',
+        crashDetected: 'Abnormal exit detected from last session. Crash log has been auto-reported.',
+        rateLimitReached: 'Rate limit reached',
     },
 } as const;

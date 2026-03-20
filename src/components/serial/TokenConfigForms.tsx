@@ -6,6 +6,7 @@
 import React from 'react';
 import { CRCConfig, FlagConfig, HexConfig, AutoIncConfig, RandomBytesConfig } from '../../types/token';
 import { CustomSelect } from '../common/CustomSelect';
+import { useI18n } from '../../context/I18nContext';
 
 // 通用输入框样式
 const inputCls = "bg-[var(--input-background)] border border-[var(--input-border-color)] text-[12px] px-2 h-7 outline-none rounded-[4px] focus:border-[var(--focus-border-color)] text-[var(--input-foreground)]";
@@ -70,6 +71,7 @@ export const FlagConfigForm = ({
     setConfig: (c: FlagConfig) => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
 }) => {
+    const { t } = useI18n();
     const [mode, setMode] = React.useState<'hex' | 'dec'>('hex');
     const decDisplay = React.useMemo(() => {
         if (!config.hex) return '';
@@ -82,19 +84,19 @@ export const FlagConfigForm = ({
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>名称（可选）</label>
+                <label className={labelCls}>{t('tokenConfig.nameLabel')}</label>
                 <input
                     type="text"
                     className={`${inputCls} placeholder-[var(--input-placeholder-color)]`}
                     value={config.name || ''}
-                    placeholder="例如 帧头"
+                    placeholder={t('tokenConfig.namePlaceholder')}
                     onChange={e => setConfig({ ...config, name: e.target.value })}
                     onKeyDown={onKeyDown}
                 />
             </div>
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>内容</label>
+                    <label className={labelCls}>{t('tokenConfig.content')}</label>
                     <HexDecToggle mode={mode} onChange={setMode} />
                 </div>
                 {mode === 'hex' ? (
@@ -121,7 +123,7 @@ export const FlagConfigForm = ({
                         onKeyDown={onKeyDown}
                     />
                 )}
-                <p className={hintCls}>{mode === 'hex' ? '十六进制字节，空格分隔' : '十进制字节 (0-255)，空格分隔'}</p>
+                <p className={hintCls}>{mode === 'hex' ? t('tokenConfig.hexHint') : t('tokenConfig.decHint')}</p>
             </div>
         </div>
     );
@@ -135,12 +137,13 @@ export const HexConfigForm = ({
     setConfig: (c: HexConfig) => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
+    const { t } = useI18n();
     const [byteWidthInput, setByteWidthInput] = React.useState((config.byteWidth ?? 1).toString());
 
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>字节宽度</label>
+                <label className={labelCls}>{t('tokenConfig.byteWidth')}</label>
                 <input
                     type="text"
                     className={`${inputCls} w-24`}
@@ -159,7 +162,7 @@ export const HexConfigForm = ({
                     }}
                     onKeyDown={onKeyDown}
                 />
-                <p className={hintCls}>目标字节大小 (1-8)</p>
+                <p className={hintCls}>{t('tokenConfig.byteWidthHint')}</p>
             </div>
         </div>
     );
@@ -173,24 +176,25 @@ export const CRCConfigForm = ({
     setConfig: (c: CRCConfig) => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
+    const { t } = useI18n();
     const [startIndexInput, setStartIndexInput] = React.useState((config.startIndex ?? 0).toString());
 
     const algoItems = [
-        { label: 'Modbus CRC16（小端）', value: 'modbus-crc16' },
-        { label: 'CCITT CRC16（大端）', value: 'ccitt-crc16' },
+        { label: t('tokenConfig.modbusCrc16'), value: 'modbus-crc16' },
+        { label: t('tokenConfig.ccittCrc16'), value: 'ccitt-crc16' },
         { label: 'CRC32', value: 'crc32' },
     ];
     const endItems = [
-        { label: '末尾', value: '0' },
-        { label: '倒数第 1 字节', value: '-1' },
-        { label: '倒数第 2 字节', value: '-2' },
-        { label: '倒数第 3 字节', value: '-3' },
+        { label: t('tokenConfig.endTail'), value: '0' },
+        { label: t('tokenConfig.endMinus1'), value: '-1' },
+        { label: t('tokenConfig.endMinus2'), value: '-2' },
+        { label: t('tokenConfig.endMinus3'), value: '-3' },
     ];
 
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>算法</label>
+                <label className={labelCls}>{t('tokenConfig.algorithm')}</label>
                 <CustomSelect
                     items={algoItems}
                     value={config.algorithm}
@@ -199,13 +203,13 @@ export const CRCConfigForm = ({
             </div>
 
             <div className="flex items-center gap-2 my-1">
-                <span className="text-[10px] font-bold text-[var(--input-placeholder-color)] tracking-[0.1em] whitespace-nowrap">范围设置</span>
+                <span className="text-[10px] font-bold text-[var(--input-placeholder-color)] tracking-[0.1em] whitespace-nowrap">{t('tokenConfig.rangeSettings')}</span>
                 <div className="h-[1px] bg-[var(--border-color)] flex-1 mt-0.5" />
             </div>
 
             <div className="flex gap-3">
                 <div className="flex flex-col gap-1.5 flex-none w-20">
-                    <label className={labelCls}>起始</label>
+                    <label className={labelCls}>{t('tokenConfig.start')}</label>
                     <input
                         type="text"
                         className={inputCls}
@@ -226,7 +230,7 @@ export const CRCConfigForm = ({
                     />
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1">
-                    <label className={labelCls}>结束</label>
+                    <label className={labelCls}>{t('tokenConfig.end')}</label>
                     <CustomSelect
                         items={endItems}
                         value={(config.endIndex ?? 0).toString()}
@@ -247,13 +251,14 @@ export const TimestampConfigForm = ({
     config: any;
     setConfig: (c: any) => void;
 }) => {
+    const { t } = useI18n();
     const formatItems = [
-        { label: '秒 (4 字节)', value: 'seconds' },
-        { label: '毫秒 (8 字节)', value: 'milliseconds' },
+        { label: t('tokenConfig.seconds4B'), value: 'seconds' },
+        { label: t('tokenConfig.milliseconds8B'), value: 'milliseconds' },
     ];
     const orderItems = [
-        { label: '大端序 (BE)', value: 'big' },
-        { label: '小端序 (LE)', value: 'little' },
+        { label: t('tokenConfig.bigEndian'), value: 'big' },
+        { label: t('tokenConfig.littleEndian'), value: 'little' },
     ];
 
     // 实时时间预览
@@ -287,7 +292,7 @@ export const TimestampConfigForm = ({
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>格式</label>
+                <label className={labelCls}>{t('tokenConfig.format')}</label>
                 <CustomSelect
                     items={formatItems}
                     value={config.format || 'seconds'}
@@ -295,7 +300,7 @@ export const TimestampConfigForm = ({
                 />
             </div>
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>字节序</label>
+                <label className={labelCls}>{t('tokenConfig.byteOrder')}</label>
                 <CustomSelect
                     items={orderItems}
                     value={config.byteOrder || 'big'}
@@ -305,7 +310,7 @@ export const TimestampConfigForm = ({
             {/* 实时预览 */}
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>实时预览</label>
+                    <label className={labelCls}>{t('tokenConfig.livePreview')}</label>
                     <HexDecToggle mode={previewMode} onChange={setPreviewMode} />
                 </div>
                 <div
@@ -314,7 +319,7 @@ export const TimestampConfigForm = ({
                 >
                     {previewText}
                 </div>
-                <p className={hintCls}>数值: {previewMode === 'hex' ? '0x' + tsValue.toString(16).toUpperCase() : tsValue.toLocaleString()}</p>
+                <p className={hintCls}>{t('tokenConfig.valueLabel')}: {previewMode === 'hex' ? '0x' + tsValue.toString(16).toUpperCase() : tsValue.toLocaleString()}</p>
             </div>
         </div>
     );
@@ -328,6 +333,7 @@ export const AutoIncConfigForm = ({
     setConfig: (c: AutoIncConfig) => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
+    const { t } = useI18n();
     const [initMode, setInitMode] = React.useState<'hex' | 'dec'>('dec');
     const [stepMode, setStepMode] = React.useState<'hex' | 'dec'>('dec');
     const bytesItems = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ label: `${n} Byte${n > 1 ? 's' : ''}`, value: n.toString() }));
@@ -348,7 +354,7 @@ export const AutoIncConfigForm = ({
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>字节数</label>
+                <label className={labelCls}>{t('tokenConfig.byteCount')}</label>
                 <CustomSelect
                     items={bytesItems}
                     value={(config.bytes || 1).toString()}
@@ -357,7 +363,7 @@ export const AutoIncConfigForm = ({
             </div>
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>初始值</label>
+                    <label className={labelCls}>{t('tokenConfig.initialValue')}</label>
                     <HexDecToggle mode={initMode} onChange={(m) => {
                         setInitMode(m);
                         const h = (config.defaultValue || '00').replace(/\s/g, '');
@@ -413,7 +419,7 @@ export const AutoIncConfigForm = ({
             </div>
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>步进（偏移量）</label>
+                    <label className={labelCls}>{t('tokenConfig.stepOffset')}</label>
                     <HexDecToggle mode={stepMode} onChange={(m) => {
                         setStepMode(m);
                         const s = config.step ?? 1;
@@ -474,9 +480,9 @@ export const AutoIncConfigForm = ({
                         )}
                     </div>
                 </div>
-                <p className={hintCls}>每次发送后累加（可为负数）</p>
+                <p className={hintCls}>{t('tokenConfig.stepHint')}</p>
             </div>
-            <p className={hintCls} style={{ opacity: 0.7 }}>💡 右键点击 Token 可重置为初始值</p>
+            <p className={hintCls} style={{ opacity: 0.7 }}>{t('tokenConfig.resetHint')}</p>
         </div>
     );
 };
@@ -489,6 +495,7 @@ export const RandomBytesConfigForm = ({
     setConfig: (c: RandomBytesConfig) => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
 }) => {
+    const { t } = useI18n();
     const bytesItems = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ label: `${n} Byte${n > 1 ? 's' : ''}`, value: n.toString() }));
     const bytes = config.bytes || 1;
     const maxPossible = bytes >= 7 ? Number.MAX_SAFE_INTEGER : Math.pow(256, bytes) - 1;
@@ -505,7 +512,7 @@ export const RandomBytesConfigForm = ({
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-                <label className={labelCls}>字节数</label>
+                <label className={labelCls}>{t('tokenConfig.byteCount')}</label>
                 <CustomSelect
                     items={bytesItems}
                     value={bytes.toString()}
@@ -520,7 +527,7 @@ export const RandomBytesConfigForm = ({
             </div>
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>最小值</label>
+                    <label className={labelCls}>{t('tokenConfig.minValue')}</label>
                     <HexDecToggle mode={minMode} onChange={(m) => {
                         setMinMode(m);
                         setMinDec(minVal.toString()); setMinHex(minVal.toString(16).toUpperCase());
@@ -550,7 +557,7 @@ export const RandomBytesConfigForm = ({
             </div>
             <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                    <label className={labelCls}>最大值</label>
+                    <label className={labelCls}>{t('tokenConfig.maxValue')}</label>
                     <HexDecToggle mode={maxMode} onChange={(m) => {
                         setMaxMode(m);
                         setMaxDec(maxVal.toString()); setMaxHex(maxVal.toString(16).toUpperCase());
@@ -578,7 +585,7 @@ export const RandomBytesConfigForm = ({
                     />
                 )}
             </div>
-            <p className={hintCls}>范围 0 ~ {maxPossible.toLocaleString()}，整体随机</p>
+            <p className={hintCls}>{t('tokenConfig.randomRangeHint', { max: maxPossible.toLocaleString() })}</p>
         </div>
     );
 };

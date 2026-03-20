@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X, AlertTriangle, AlertCircle, Info as InfoIcon } from 'lucide-react';
+import { useI18n } from '../../context/I18nContext';
 
 export type ConfirmType = 'info' | 'warning' | 'danger';
 
@@ -15,11 +16,14 @@ interface ConfirmDialogProps {
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     title,
     message,
-    confirmText = '确定',
-    cancelText = '取消',
+    confirmText,
+    cancelText,
     type = 'info',
     onResolve
 }) => {
+    const { t } = useI18n();
+    const resolvedConfirmText = confirmText || t('common.ok');
+    const resolvedCancelText = cancelText || t('common.cancel');
     const cancelRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
@@ -74,13 +78,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         onClick={() => onResolve(false)}
                         className="px-4 py-1.5 text-[var(--st-dialog-text)] hover:bg-[var(--st-dialog-header-bg)] rounded-sm text-xs transition-colors min-w-[70px]"
                     >
-                        {cancelText}
+                        {resolvedCancelText}
                     </button>
                     <button
                         onClick={() => onResolve(true)}
                         className={`px-4 py-1.5 text-white rounded-sm text-xs transition-all min-w-[70px] ${getConfirmColor()}`}
                     >
-                        {confirmText}
+                        {resolvedConfirmText}
                     </button>
                 </div>
             </div>

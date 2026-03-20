@@ -7,17 +7,30 @@ import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { registerAllTauriAPIs } from './lib/tauri-api'
+import { reportError, addBreadcrumb, initAutoBreadcrumbs } from './lib/crashReporter'
 import './index.css'
 
 // 在 React 渲染前注册所有 Tauri IPC 适配层到 window 对象
 registerAllTauriAPIs()
 
-// 全局错误捕获
+// 初始化自动面包屑采集（点击事件追踪）
+initAutoBreadcrumbs()
+
+// 全局错误捕获 → 自动上报到飞书
 window.onerror = (message, source, lineno, colno, error) => {
     console.error(`[Renderer] Error: ${message}\nSource: ${source}\nLine: ${lineno}:${colno}\nStack: ${error?.stack}`);
+    // 添加错误面包屑
+    addBreadcrumb('error', String(message));
+    // 异步上报到飞书（不阻塞主线程）
+    if (error) {
+        reportError(error, `global:${source}:${lineno}:${colno}`).catch(() => {});
+    }
 };
 window.onunhandledrejection = (event) => {
     console.error('[Renderer] Unhandled promise rejection:', event.reason);
+    addBreadcrumb('error', `UnhandledRejection: ${String(event.reason)}`);
+    const err = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+    reportError(err, 'unhandled-promise-rejection').catch(() => {});
 };
 
 // 根据窗口标签决定渲染内容

@@ -8,3 +8,4 @@ pub mod monitor;
 pub mod tcp;
 pub mod window;
 pub mod updater;
+pub mod crash_report;

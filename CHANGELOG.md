@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加快捷键相关设置
 - 增加启动动画
 - 切换架构为Tauri+Rust
+- 添加崩溃信息显示和上报功能
 
 ### Fixed
 - 修复工作区加载问题

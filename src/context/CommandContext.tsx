@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { CommandEntity, CommandGroup, CommandItem } from '../types/command';
 import { useHistory } from '../hooks/useHistory';
 import { useConfirm } from './ConfirmContext';
+import { useI18n } from './I18nContext';
 import { cloneRecursive, readCommandsFromFile, downloadCommandsAsJson } from '../hooks/useCommandActions';
 
 const STORAGE_KEY = 'tcom-commands';
@@ -29,6 +30,7 @@ const CommandContext = createContext<CommandContextType | undefined>(undefined);
 
 export const CommandProvider = ({ children }: { children: ReactNode }) => {
     const { confirm } = useConfirm();
+    const { t } = useI18n();
     // using useHistory for Undo/Redo support
     const { state: commands, set: setCommands, undo, redo, canUndo, canRedo, reset } = useHistory<CommandEntity[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -153,15 +155,15 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
 
     const clearAll = useCallback(async () => {
         const ok = await confirm({
-            title: '清空指令',
-            message: '确定要清空所有指令吗？此操作不可撤销。',
+            title: t('command.clearAllTitle'),
+            message: t('command.clearAllMessage'),
             type: 'danger',
-            confirmText: '清空全部'
+            confirmText: t('command.clearAllConfirm')
         });
         if (ok) {
             setCommands([]);
         }
-    }, [confirm, setCommands]);
+    }, [confirm, setCommands, t]);
 
     const setAllCommands = useCallback((newCommands: CommandEntity[]) => {
         setCommands(newCommands);
@@ -171,11 +173,11 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
         readCommandsFromFile().then(imported => {
             if (!imported) return;
             confirm({
-                title: '导入指令',
-                message: '是否将导入的指令合并到现有列表中？点击取消将替换现有指令。',
+                title: t('command.importTitle'),
+                message: t('command.importMessage'),
                 type: 'info',
-                confirmText: '合并',
-                cancelText: '替换'
+                confirmText: t('command.importMerge'),
+                cancelText: t('command.importReplace')
             }).then(ok => {
                 if (ok) {
                     setCommands(prev => [...prev, ...imported]);

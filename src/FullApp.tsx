@@ -22,6 +22,7 @@ import { useSessionManager } from './hooks/useSessionManager'
 import { useEditorLayout } from './hooks/useEditorLayout'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { composeProviders } from './utils/composeProviders'
+import { checkCrashOnStartup } from './lib/crashReporter'
 
 // 重型组件懒加载
 const Layout = React.lazy(() => import('./components/layout/Layout').then(m => ({ default: m.Layout })));
@@ -115,6 +116,7 @@ export default function FullApp() {
 
 /** 主内容区 — Provider 就绪后渲染，Layout 挂载后关闭 Splash 并显示主窗口 */
 function AppContent() {
+
     const sessionManager = useSessionManager();
     const editorLayout = useEditorLayout();
     const { t } = useI18n();
@@ -127,6 +129,12 @@ function AppContent() {
         windowShown.current = true;
 
         const showMainWindow = async () => {
+            // 0. 检查上次是否 Rust Panic 闪退，若有则自动上报
+            const crashInfo = await checkCrashOnStartup();
+            if (crashInfo) {
+                console.warn('[启动检查] 检测到上次异常退出，已自动上报崩溃日志');
+            }
+
             // 1. 恢复窗口位置（窗口仍不可见，不会闪烁）
             await restoreWindowState();
 

@@ -1,7 +1,19 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { tokenRegistry } from '../../tokens';
+import { createTranslator, type Language } from '../../i18n';
 
 export const SERIAL_TOKEN_CLICK_EVENT = 'serial-token-click';
+
+// 非 React 上下文中获取当前翻译函数
+const getT = () => {
+    try {
+        const raw = localStorage.getItem('tcom-settings');
+        const lang = raw ? (JSON.parse(raw)?.language as Language) : 'zh-CN';
+        return createTranslator(lang || 'zh-CN');
+    } catch {
+        return createTranslator('zh-CN');
+    }
+};
 
 export interface SerialTokenOptions {
     HTMLAttributes: Record<string, any>;
@@ -101,12 +113,59 @@ export const SerialToken = Node.create<SerialTokenOptions>({
             };
 
             updateColors(node.attrs.type);
-            span.title = 'Click to configure';
             updateLabel(node.attrs);
+
+            // ─── 自定义 Tooltip（与项目 Tooltip 组件样式一致） ──────────
+            let tooltipEl: HTMLDivElement | null = null;
+            let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+            const showDomTooltip = () => {
+                tooltipTimer = setTimeout(() => {
+                    if (tooltipEl) return;
+
+                    // 获取操作提示文案（auto_inc 额外显示右键重置）
+                    const t = getT();
+                    const isAutoInc = currentNode.attrs.type === 'auto_inc';
+                    const tooltipText = isAutoInc
+                        ? t('serial.tokenAutoIncHint')
+                        : t('serial.tokenClickHint');
+
+                    tooltipEl = document.createElement('div');
+                    tooltipEl.className = 'fixed z-[99999] pointer-events-none';
+
+                    const inner = document.createElement('div');
+                    inner.className = 'px-2 py-1 text-[12px] font-medium rounded shadow-lg border max-w-[300px] w-max whitespace-normal break-words text-left leading-snug backdrop-blur-md';
+                    inner.style.cssText = 'background: var(--st-tooltip-bg); color: var(--st-tooltip-text); border-color: var(--st-tooltip-border); animation: fadeIn 120ms ease-out;';
+                    inner.textContent = tooltipText;
+                    tooltipEl.appendChild(inner);
+                    document.body.appendChild(tooltipEl);
+
+                    // 定位：显示在 token 正上方
+                    const rect = span.getBoundingClientRect();
+                    const tooltipRect = tooltipEl.getBoundingClientRect();
+                    const offset = 4;
+                    let top = rect.top - offset - tooltipRect.height;
+
+                    // 顶部溢出则翻转到下方
+                    if (top < 4) top = rect.bottom + offset;
+
+                    tooltipEl.style.top = `${top}px`;
+                    tooltipEl.style.left = `${Math.max(4, rect.left + rect.width / 2 - tooltipRect.width / 2)}px`;
+                }, 300);
+            };
+
+            const hideDomTooltip = () => {
+                if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+                if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+            };
+
+            span.addEventListener('mouseenter', showDomTooltip);
+            span.addEventListener('mouseleave', hideDomTooltip);
 
             // ─── 点击打开配置弹窗 ───────────────────────────────────────
             span.onclick = (e) => {
                 e.stopPropagation();
+                hideDomTooltip();
                 const { id, type, config } = currentNode.attrs;
                 const rect = span.getBoundingClientRect();
                 const event = new CustomEvent(SERIAL_TOKEN_CLICK_EVENT, {
@@ -146,6 +205,11 @@ export const SerialToken = Node.create<SerialTokenOptions>({
                 },
                 deselectNode: () => {
                     span.classList.remove('ring-1', 'ring-[var(--focus-border-color)]');
+                },
+                destroy: () => {
+                    hideDomTooltip();
+                    span.removeEventListener('mouseenter', showDomTooltip);
+                    span.removeEventListener('mouseleave', hideDomTooltip);
                 }
             };
         };

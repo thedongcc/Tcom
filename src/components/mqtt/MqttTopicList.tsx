@@ -102,7 +102,7 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
                                 />
 
                                 {/* 订阅开关 */}
-                                <Tooltip content={topic.subscribed ? '已订阅并显示在监视器' : '暂停订阅并从监视器隐藏'} position="bottom" wrapperClassName="flex items-center px-0.5">
+                                <Tooltip content={topic.subscribed ? t('mqtt.topicSubscribed') : t('mqtt.topicPaused')} position="bottom" wrapperClassName="flex items-center px-0.5">
                                     <button
                                         className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[var(--st-config-success-bg)]' : 'bg-[var(--input-border-color)]'}`}
                                         onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}

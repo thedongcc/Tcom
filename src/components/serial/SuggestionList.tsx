@@ -1,6 +1,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { Hash } from 'lucide-react';
+import { useI18n } from '../../context/I18nContext';
 
 export interface SuggestionListRef {
     onKeyDown: (props: { event: KeyboardEvent }) => boolean;
@@ -12,6 +13,7 @@ interface SuggestionListProps {
 }
 
 export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>((props, ref) => {
+    const { t } = useI18n();
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     const selectItem = (index: number) => {
@@ -84,7 +86,7 @@ export const SuggestionList = forwardRef<SuggestionListRef, SuggestionListProps>
                     );
                 })
             ) : (
-                <div className="px-2 py-1.5 text-xs text-[var(--input-placeholder-color)] italic">No match found</div>
+                <div className="px-2 py-1.5 text-xs text-[var(--input-placeholder-color)] italic">{t('serial.noMatchFound')}</div>
             )}
         </div>
     );
