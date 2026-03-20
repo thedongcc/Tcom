@@ -2,7 +2,7 @@
  * registry.ts
  * 功能模块注册表 — 定义所有可用模块的元数据和懒加载策略。
  */
-import { Terminal, ArrowRightLeft } from 'lucide-react';
+import { Terminal, ArrowRightLeft, Reply } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { Feature } from '../types/module';
 
@@ -55,6 +55,18 @@ export const FEATURE_REGISTRY: FeatureDescriptor[] = [
         loadingStrategy: 'lazy',
         tier: 'optional',
         load: () => import('./VirtualPort'),
+    },
+    {
+        id: 'auto-reply',
+        name: 'Auto Reply',
+        nameKey: 'modules.autoReplyName',
+        descriptionKey: 'modules.autoReplyDesc',
+        version: '1.0.0',
+        description: '自动回复',
+        icon: Reply as any,
+        loadingStrategy: 'lazy',
+        tier: 'optional',
+        load: () => import('./AutoReply'),
     },
 ];
 

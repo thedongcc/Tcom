@@ -575,6 +575,7 @@ export const zhCN = {
         commands: '命令',
         virtualPort: '虚拟串口',
         modules: '模块管理',
+        autoReply: '自动回复',
     },
 
     // 面板区域
@@ -616,6 +617,8 @@ export const zhCN = {
         commandsDesc: '管理和发送常用串口命令',
         virtualPortName: '虚拟串口',
         virtualPortDesc: '虚拟串口管理与监控（com0com）',
+        autoReplyName: '自动回复',
+        autoReplyDesc: '监视接收数据并自动回复预设内容',
     },
 
     // 系统消息
@@ -698,6 +701,32 @@ export const zhCN = {
         details: '查看错误详情',
         crashDetected: '检测到上次异常退出，已自动上报错误日志',
         rateLimitReached: '已达发送上限',
+    },
+
+    // 自动回复
+    autoReply: {
+        title: '自动回复',
+        noRules: '暂无规则，点击下方添加',
+        addRule: '添加规则',
+        untitled: '未命名规则',
+        ruleName: '规则名称',
+        ruleNamePlaceholder: '例如：心跳应答',
+        matchConfig: '匹配条件',
+        matchContains: '包含',
+        matchExact: '精确',
+        matchRegex: '正则',
+        matchPlaceholder: '输入匹配内容...',
+        replyConfig: '回复内容',
+        replyPlaceholder: '输入回复内容...',
+        delay: '延迟',
+        directionRx: 'RX',
+        directionTx: 'TX',
+        directionBoth: 'RX+TX',
+        allPorts: '全部端口',
+        targetPort: '生效端口',
+        enabled: '已开启',
+        disabled: '已关闭',
+        rulesActive: '条规则生效',
     },
 } as const;
 

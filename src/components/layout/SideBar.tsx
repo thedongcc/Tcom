@@ -85,6 +85,7 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
             'serial': t('sidebar.configuration'),
             'commands': t('sidebar.commands'),
             'virtual-port': t('sidebar.virtualPort'),
+            'auto-reply': t('sidebar.autoReply'),
         };
         const translated = viewMap[activeView];
         if (translated) return translated;

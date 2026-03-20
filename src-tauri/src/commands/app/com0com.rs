@@ -334,19 +334,43 @@ pub fn check_path(path: String) -> Result<Value, String> {
     }
 }
 
-/// 启动 com0com 安装器
+/// 启动 com0com 安装器（内置安装包）
 pub fn launch_installer() -> Result<Value, String> {
     #[cfg(target_os = "windows")]
     {
-        match find_setupc_path() {
+        use std::os::windows::process::CommandExt;
+
+        // 查找内置安装包路径：
+        // 1. 生产环境：exe 同目录下的 resources/drivers/com0com_setup.exe
+        // 2. 开发环境：项目根目录下的 resources/drivers/com0com_setup.exe
+        let installer_path = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|dir| dir.join("resources/drivers/com0com_setup.exe")))
+            .filter(|p| p.exists())
+            .or_else(|| {
+                // 开发模式回退：从 cargo manifest 目录向上查找
+                let dev_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .map(|root| root.join("resources/drivers/com0com_setup.exe"))?;
+                if dev_path.exists() { Some(dev_path) } else { None }
+            });
+
+        match installer_path {
             Some(path) => {
-                let dir = std::path::Path::new(&path).parent().unwrap_or(std::path::Path::new("."));
-                open::that(dir).map_err(|e| e.to_string())?;
+                // 使用 ShellExecuteW 以管理员权限启动安装程序
+                let path_str = path.to_string_lossy().to_string();
+
+                // 使用 cmd /c start 方式以管理员权限启动
+                Command::new("cmd")
+                    .args(["/c", "start", "", &path_str])
+                    .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                    .spawn()
+                    .map_err(|e| format!("Failed to launch installer: {}", e))?;
+
                 Ok(serde_json::json!({ "success": true }))
             }
             None => {
-                open::that("https://sourceforge.net/projects/com0com/").map_err(|e| e.to_string())?;
-                Ok(serde_json::json!({ "success": true, "openedUrl": true }))
+                Err("Built-in installer not found (com0com_setup.exe)".into())
             }
         }
     }

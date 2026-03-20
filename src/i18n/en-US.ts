@@ -574,6 +574,7 @@ export const enUS = {
         commands: 'Commands',
         virtualPort: 'Virtual Port',
         modules: 'Modules',
+        autoReply: 'Auto Reply',
     },
 
     // Panel area
@@ -614,6 +615,8 @@ export const enUS = {
         commandsDesc: 'Manage and send frequently used serial commands',
         virtualPortName: 'Virtual Port',
         virtualPortDesc: 'Virtual serial port management & monitoring (com0com)',
+        autoReplyName: 'Auto Reply',
+        autoReplyDesc: 'Monitor received data and auto-reply with preset content',
     },
 
     // System Messages
@@ -696,5 +699,31 @@ export const enUS = {
         details: 'View Error Details',
         crashDetected: 'Abnormal exit detected from last session. Crash log has been auto-reported.',
         rateLimitReached: 'Rate limit reached',
+    },
+
+    // Auto Reply
+    autoReply: {
+        title: 'Auto Reply',
+        noRules: 'No rules yet. Click below to add one.',
+        addRule: 'Add Rule',
+        untitled: 'Untitled Rule',
+        ruleName: 'Rule Name',
+        ruleNamePlaceholder: 'e.g. Heartbeat Response',
+        matchConfig: 'Match Condition',
+        matchContains: 'Contains',
+        matchExact: 'Exact',
+        matchRegex: 'Regex',
+        matchPlaceholder: 'Enter match pattern...',
+        replyConfig: 'Reply Content',
+        replyPlaceholder: 'Enter reply data...',
+        delay: 'Delay',
+        directionRx: 'RX',
+        directionTx: 'TX',
+        directionBoth: 'RX+TX',
+        allPorts: 'All Ports',
+        targetPort: 'Target Port',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        rulesActive: 'rules active',
     },
 } as const;
