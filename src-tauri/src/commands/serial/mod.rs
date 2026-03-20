@@ -42,12 +42,17 @@ pub fn serial_close(app: tauri::AppHandle, connection_id: String) -> Result<Valu
 }
 
 #[tauri::command]
-pub fn serial_write(
+pub async fn serial_write(
     app: tauri::AppHandle,
     connection_id: String,
     data: Value,
 ) -> Result<Value, String> {
-    io::write_data(&app, connection_id, data)
+    // 在异步上下文中，将阻塞的串口写入移到 blocking 线程
+    tokio::task::spawn_blocking(move || {
+        io::write_data(&app, connection_id, data)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 #[tauri::command]

@@ -69,6 +69,7 @@ export const useSessionLog = (
         let totalEntries = 0;
         buffer.forEach(v => totalEntries += v.length);
 
+
         setSessions(prev => prev.map(s => {
             const bufferLogs = buffer.get(s.id);
             if (!bufferLogs?.length) return s;
@@ -91,6 +92,7 @@ export const useSessionLog = (
         }));
 
         const elapsed = performance.now() - t0;
+
         if (elapsed > 5) {
             console.warn(`[Flush DIAG] ${elapsed.toFixed(1)}ms | entries=${totalEntries}`);
         }

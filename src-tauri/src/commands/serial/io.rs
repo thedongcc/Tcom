@@ -15,13 +15,8 @@ pub fn write_data(
     data: Value,
 ) -> Result<Value, String> {
     let state = app.state::<SerialState>();
-    let ports = state.ports.lock().map_err(lock_err)?;
 
-    let handle = ports
-        .get(&connection_id)
-        .ok_or("Port not open")?;
-
-    // 将 data 转为 Vec<u8>
+    // 将 data 转为 Vec<u8>（在获取锁之前处理，减少锁持有时间）
     let bytes: Vec<u8> = match &data {
         Value::String(s) => s.as_bytes().to_vec(),
         Value::Array(arr) => arr
@@ -31,9 +26,17 @@ pub fn write_data(
         _ => return Err("Invalid data format".into()),
     };
 
-    let mut port = handle.writer.lock().map_err(lock_err)?;
+    // 仅在查找 PortHandle 时短暂持有 ports 锁，
+    // 克隆 writer Arc 后立即释放，避免阻塞其他端口操作。
+    let writer = {
+        let ports = state.ports.lock().map_err(lock_err)?;
+        let handle = ports.get(&connection_id).ok_or("Port not open")?;
+        handle.writer.clone()
+    }; // ← ports 锁在此释放
+
+    // 独立获取 writer 锁，仅与同端口的定时发送竞争
+    let mut port = writer.lock().map_err(lock_err)?;
     port.write_all(&bytes).map_err(|e| e.to_string())?;
-    port.flush().map_err(|e| e.to_string())?;
 
     Ok(serde_json::json!({ "success": true }))
 }

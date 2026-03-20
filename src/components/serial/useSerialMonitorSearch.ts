@@ -3,7 +3,7 @@
  * 串口监视器搜索/滚动/过滤/格式化逻辑 — 从 SerialMonitor.tsx 中提取。
  * 管理搜索状态持久化、日志过滤、自动滚动和 formatData。
  */
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { LogEntry } from '../../types/session';
 import { useLogSearch } from '../common/LogSearch';
 import { Token } from '../../types/token';
@@ -12,6 +12,7 @@ interface UseSerialMonitorSearchParams {
     sessionId: string;
     logs: LogEntry[];
     autoScroll: boolean;
+    setAutoScroll: (v: boolean) => void;
     viewMode: 'text' | 'hex' | 'both';
     encoding: string;
     filterMode: 'all' | 'rx' | 'tx';
@@ -25,7 +26,7 @@ interface UseSerialMonitorSearchParams {
 const scrollPositions = new Map<string, number>();
 
 export function useSerialMonitorSearch({
-    sessionId, logs, autoScroll,
+    sessionId, logs, autoScroll, setAutoScroll,
     viewMode, encoding, filterMode,
     searchOpen, setSearchOpen, uiState, saveUIState,
 }: UseSerialMonitorSearchParams) {
@@ -122,16 +123,19 @@ export function useSerialMonitorSearch({
         }
     }, [activeMatchRev, activeMatch]);
 
-    // ── 自动滚动（异步，不阻塞 WebView 事件循环） ──
-    useEffect(() => {
+    // ── 滚动来源标记 ──
+    const isProgrammaticScrollRef = useRef(false);
+    const userScrollUpTimeRef = useRef(0);
+
+    // ── 自动滚动（useLayoutEffect 在 DOM 变更后、浏览器绘制前同步执行，scrollHeight 已确定） ──
+    useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) {
-            const raf = requestAnimationFrame(() => {
-                if (scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                    scrollPositions.set(sessionId, scrollRef.current.scrollHeight);
-                }
+            isProgrammaticScrollRef.current = true;
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            // 下一帧重置标记（确保程序滚动触发的 scroll 事件被忽略）
+            requestAnimationFrame(() => {
+                isProgrammaticScrollRef.current = false;
             });
-            return () => cancelAnimationFrame(raf);
         }
     }, [logs, autoScroll, sessionId]);
 
@@ -165,10 +169,30 @@ export function useSerialMonitorSearch({
         });
     }, [saveUIState]);
 
-    // ── 滚动事件回调 ──
+    // ── 滚动事件回调：仅用户主动滚到底部时才重新开启自动滚动 ──
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        if (!autoScroll) scrollPositions.set(sessionId, e.currentTarget.scrollTop);
-    }, [autoScroll, sessionId]);
+        // 忽略程序触发的滚动事件
+        if (isProgrammaticScrollRef.current) return;
+        // 用户向上滚动后 1 秒内不允许自动重新开启（防止闪烁）
+        if (performance.now() - userScrollUpTimeRef.current < 1000) return;
+
+        const el = e.currentTarget;
+        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10;
+        if (atBottom && !autoScroll) {
+            setAutoScroll(true);
+            saveUIState({ autoScroll: true });
+        }
+        if (!autoScroll) scrollPositions.set(sessionId, el.scrollTop);
+    }, [autoScroll, sessionId, setAutoScroll, saveUIState]);
+
+    // ── 滚轮事件：向上滚动自动关闭自动滚动 ──
+    const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+        if (e.deltaY < 0 && autoScroll) {
+            userScrollUpTimeRef.current = performance.now();
+            setAutoScroll(false);
+            saveUIState({ autoScroll: false });
+        }
+    }, [autoScroll, setAutoScroll, saveUIState]);
 
     return {
         scrollRef, initialLogCountRef, mountTimeRef, scrollPositions,
@@ -178,6 +202,6 @@ export function useSerialMonitorSearch({
         handleQueryChange, handleRegexChange, handleMatchCaseChange, handleToggleSearch,
         nextMatch, prevMatch,
         // 输入与滚动
-        handleInputStateChange, handleScroll,
+        handleInputStateChange, handleScroll, handleWheel,
     };
 }

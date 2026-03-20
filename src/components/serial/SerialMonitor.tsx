@@ -52,7 +52,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
 
     // ── 搜索/滚动/过滤/格式化（委托给 Hook） ──
     const search = useSerialMonitorSearch({
-        sessionId: session.id, logs, autoScroll,
+        sessionId: session.id, logs, autoScroll, setAutoScroll: displayState.setAutoScroll,
         viewMode, encoding, filterMode,
         searchOpen, setSearchOpen, uiState, saveUIState,
     });
@@ -62,7 +62,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         query, isRegex, matchCase, matches, currentIndex, activeMatch, regexError,
         handleQueryChange, handleRegexChange, handleMatchCaseChange, handleToggleSearch,
         nextMatch, prevMatch,
-        handleInputStateChange, handleScroll,
+        handleInputStateChange, handleScroll, handleWheel,
     } = search;
 
     // ── 操作函数 ──
@@ -180,9 +180,9 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     style={{ background: 'var(--list-hover-background)', display: 'none' }}
                 />
                 <div
-                    className="absolute inset-0 overflow-auto p-4"
+                    className="absolute inset-0 overflow-auto pt-4 px-4 pb-6"
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}
-                    ref={scrollRef} onScroll={handleScroll}
+                    ref={scrollRef} onScroll={handleScroll} onWheel={handleWheel}
                 >
                     {filteredLogs.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]"><p>No data</p></div>

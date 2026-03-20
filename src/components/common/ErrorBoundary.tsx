@@ -10,7 +10,7 @@
  * - 错误详情默认展开
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, RotateCcw, Send, Power } from 'lucide-react';
+import { AlertTriangle, RefreshCw, RotateCcw, Send, Power, XCircle } from 'lucide-react';
 import { reportError, addBreadcrumb } from '../../lib/crashReporter';
 
 interface ErrorBoundaryProps {
@@ -56,6 +56,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     /** 重启应用（刷新页面重载） */
     handleRestart = () => {
         window.location.reload();
+    };
+
+    /** 关闭软件 */
+    handleQuit = async () => {
+        try {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            await getCurrentWindow().close();
+        } catch {
+            window.close();
+        }
     };
 
     /** 发送错误报告到飞书 */
@@ -145,13 +155,22 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                                 刷新
                             </button>
 
-                            {/* 重启应用（危险操作放最右） */}
+                            {/* 重启应用 */}
                             <button
                                 onClick={this.handleRestart}
-                                className="flex items-center gap-2 px-4 py-2 bg-transparent text-[var(--st-status-error,#f14c4c)] text-sm rounded-sm hover:bg-[#3a1d1d] transition-colors border border-[var(--st-status-error,#f14c4c33)]"
+                                className="flex items-center gap-2 px-4 py-2 bg-transparent text-[var(--st-status-warning,#cca700)] text-sm rounded-sm hover:bg-[#3a3520] transition-colors border border-[var(--st-status-warning,#cca70033)]"
                             >
                                 <Power size={14} />
                                 重启
+                            </button>
+
+                            {/* 关闭软件 */}
+                            <button
+                                onClick={this.handleQuit}
+                                className="flex items-center gap-2 px-4 py-2 bg-transparent text-[var(--st-status-error,#f14c4c)] text-sm rounded-sm hover:bg-[#3a1d1d] transition-colors border border-[var(--st-status-error,#f14c4c33)]"
+                            >
+                                <XCircle size={14} />
+                                关闭软件
                             </button>
                         </div>
 

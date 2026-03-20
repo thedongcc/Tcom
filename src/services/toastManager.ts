@@ -31,15 +31,23 @@ function notify() {
 
 function removeToast(id: string) {
     toasts = toasts.filter(t => t.id !== id);
+    // 移除后检查是否有过期但尚未 closing 的 toast，触发最旧那个的关闭动画
+    triggerNextClosing();
     notify();
+}
+
+/** 触发最旧的已过期且未 closing 的 toast 的关闭动画 */
+function triggerNextClosing() {
+    const pendingExpired = toasts.find(t => t.expired && !t.closing);
+    if (pendingExpired) {
+        toasts = toasts.map(t => t.id === pendingExpired.id ? { ...t, closing: true } : t);
+    }
 }
 
 function markAsExpired(id: string) {
     toasts = toasts.map(t => t.id === id ? { ...t, expired: true } : t);
-    // 触发最旧过期 toast 的 closing 动画
-    if (toasts.length > 0 && toasts[0].expired && !toasts[0].closing) {
-        toasts = toasts.map((t, i) => i === 0 ? { ...t, closing: true } : t);
-    }
+    // 找到最旧的已过期但未 closing 的 toast，触发其关闭动画
+    triggerNextClosing();
     notify();
 }
 

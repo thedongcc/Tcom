@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.3] - 2026-03-19
+## [0.0.3] - 2026-03-20
 ### Added
 - 下拉列表组件增加自动滚动定位功能并优化了悬浮交互高亮效果
 - 新增串口监视区显示命令名称功能,如果发送的是命令菜单中的命令,则会在发送的命令右侧显示命令名称
@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 增加启动动画
 - 切换架构为Tauri+Rust
 - 添加崩溃信息显示和上报功能
+- 崩溃界面增加关闭按钮
+- 增加在监视区滚动滚轮自动开关自动滚动的功能
 
 ### Fixed
 - 修复工作区加载问题
@@ -40,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 功能模块排序改到设置标签页中
 - 优化splash启动画面
 - 修复aero snap layout
+- 修复串口手动发送数据卡顿问题
+- 修复串口数据刷新最下方显示不完整数据帧的问题
+- 修复toast消息卡住问题
 
 ### Removed
 - 取消侧边栏右键配置显示隐藏功能

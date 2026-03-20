@@ -24,20 +24,25 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
         else if (ArrayBuffer.isView(data)) rawData = data as Uint8Array;
         else rawData = new Uint8Array(data);
 
-        // 直接发送原始数据（不做任何修改）
-        const result = await window.serialAPI.write(sessionId, rawData);
-        if (result.success) {
-            // 根据 crcTarget 决定是否对 TX 日志数据做 CRC 校验显示
-            const uiState = session.config.uiState as Record<string, unknown> || {};
-            const crcTarget = (uiState.crcTarget as string) || 'rx';
-            const shouldValidateTx = session.config.rxCRC?.enabled && (crcTarget === 'tx' || crcTarget === 'both');
-            const txCrcStatus: 'ok' | 'error' | 'none' = shouldValidateTx
-                ? (validateRXCRC(rawData, session.config.rxCRC!) ? 'ok' : 'error')
-                : 'none';
-            sessionLog.addLog(sessionId, 'TX', rawData, txCrcStatus, undefined, options?.commandName, Date.now());
-        } else {
-            sessionLog.addLog(sessionId, 'ERROR', `Write failed: ${result.error}`);
-        }
+        // 根据 crcTarget 决定是否对 TX 日志数据做 CRC 校验显示
+        const uiState = session.config.uiState as Record<string, unknown> || {};
+        const crcTarget = (uiState.crcTarget as string) || 'rx';
+        const shouldValidateTx = session.config.rxCRC?.enabled && (crcTarget === 'tx' || crcTarget === 'both');
+        const txCrcStatus: 'ok' | 'error' | 'none' = shouldValidateTx
+            ? (validateRXCRC(rawData, session.config.rxCRC!) ? 'ok' : 'error')
+            : 'none';
+
+        // 立即添加 TX 日志 — 用户瞬间看到发送记录，不等待 IPC
+        sessionLog.addLog(sessionId, 'TX', rawData, txCrcStatus, undefined, options?.commandName, Date.now());
+
+        // 异步发送数据到串口（fire-and-forget），失败时追加 ERROR 日志
+        window.serialAPI.write(sessionId, rawData).then(result => {
+            if (!result.success) {
+                sessionLog.addLog(sessionId, 'ERROR', `Write failed: ${result.error}`);
+            }
+        }).catch(err => {
+            sessionLog.addLog(sessionId, 'ERROR', `Write error: ${err}`);
+        });
     }, [sessionsRef, sessionLog]);
 
     // MQTT 消息发布
