@@ -82,7 +82,7 @@ const SortableModuleRow = ({
         <div
             ref={setNodeRef}
             style={style}
-            className={`py-2.5 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 flex items-center gap-3 ${isDragging ? 'bg-[var(--list-active-background)] rounded shadow-lg' : ''}`}
+            className={`h-[42px] border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 flex items-center gap-3 ${isDragging ? 'bg-[var(--list-active-background)] rounded shadow-lg' : ''}`}
         >
             {/* 拖拽手柄 */}
             <div
@@ -100,14 +100,14 @@ const SortableModuleRow = ({
             </div>
 
             {/* 名称和描述 */}
-            <div className="flex-1 min-w-0">
-                <div className={`text-[13px] font-medium ${isActive ? 'text-[var(--st-settings-text)]' : 'text-[var(--input-placeholder-color)]'}`}>
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className={`text-[13px] font-medium shrink-0 ${isActive ? 'text-[var(--st-settings-text)]' : 'text-[var(--input-placeholder-color)]'}`}>
                     {t(moduleItem.nameKey)}
-                </div>
+                </span>
                 {moduleItem.descriptionKey && (
-                    <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5 truncate">
+                    <span className="text-[11px] text-[var(--input-placeholder-color)] truncate">
                         {t(moduleItem.descriptionKey)}
-                    </p>
+                    </span>
                 )}
             </div>
 
@@ -122,7 +122,7 @@ const SortableModuleRow = ({
                         }}
                     />
                 ) : (
-                    <span className="text-[10px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
+                    <span className="text-[13px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
                         {t('settings.modules.core')}
                     </span>
                 )}

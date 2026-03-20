@@ -4,7 +4,7 @@
  * 从 MqttMonitor.tsx 中拆分出来，负责消息发布 UI（Topic 选择、Payload 输入、QoS、Retain、发送按钮）。
  */
 import React, { useRef, useEffect } from 'react';
-import { Send, ChevronDown } from 'lucide-react';
+import { Send, ChevronDown, Check } from 'lucide-react';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
@@ -135,8 +135,13 @@ export const MqttPublishArea = React.memo(({
                         onChange={(val) => setQos(Number(val) as 0 | 1 | 2)}
                     />
                 </div>
-                <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--input-background)] border border-[var(--input-border-color)] px-2 rounded h-full hover:bg-[var(--list-hover-background)] transition-colors shrink-0">
-                    <input type="checkbox" className="accent-[var(--button-background)] w-3 h-3 cursor-pointer" checked={retain} onChange={e => setRetain(e.target.checked)} />
+                <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--input-background)] border border-[var(--input-border-color)] px-2 rounded h-full hover:bg-[var(--list-hover-background)] transition-colors shrink-0" onClick={() => setRetain(!retain)}>
+                    <div className={`w-[14px] h-[14px] rounded-[2px] flex items-center justify-center transition-all shrink-0 ${retain
+                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
+                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)]'
+                    }`}>
+                        {retain && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                    </div>
                     <span className="text-[var(--input-foreground)] text-[11px]">Retain</span>
                 </label>
             </div>

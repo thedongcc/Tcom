@@ -3,7 +3,7 @@
  * 自动回复规则配置面板 — 规则列表与内联编辑器。
  * 仅对 RX 数据进行自动匹配回复。
  */
-import { Plus, Trash2, ChevronDown, ChevronRight, Zap } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Zap, Check } from 'lucide-react';
 import { useState } from 'react';
 import { CustomSelect } from '../common/CustomSelect';
 import { useI18n } from '../../context/I18nContext';
@@ -85,13 +85,15 @@ export const AutoReplyPanel = ({
                                 ? <ChevronDown size={12} className="text-[var(--activitybar-inactive-foreground)] shrink-0" />
                                 : <ChevronRight size={12} className="text-[var(--activitybar-inactive-foreground)] shrink-0" />
                             }
-                            <input
-                                type="checkbox"
-                                className="shrink-0 accent-[var(--accent-color)] cursor-pointer"
-                                checked={rule.enabled}
-                                onChange={(e) => { e.stopPropagation(); onToggleRule(rule.id); }}
-                                onClick={(e) => e.stopPropagation()}
-                            />
+                            <div
+                                className={`w-[14px] h-[14px] rounded-[2px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${rule.enabled
+                                    ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
+                                    : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)]'
+                                }`}
+                                onClick={(e) => { e.stopPropagation(); onToggleRule(rule.id); }}
+                            >
+                                {rule.enabled && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                            </div>
                             <span className={`text-[12px] flex-1 truncate ${rule.enabled ? 'text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] line-through opacity-60'}`}>
                                 {rule.name || rule.matchPattern || t('autoReply.untitled')}
                             </span>

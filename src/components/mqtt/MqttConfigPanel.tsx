@@ -6,7 +6,7 @@
  * - MqttTopicList.tsx — 订阅主题列表组件
  */
 import { MqttSessionConfig } from '../../types/session';
-import { Play, Square, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { Play, Square, ChevronDown, ChevronRight, RefreshCw, Check } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import { MqttTopicList } from './MqttTopicList';
@@ -186,23 +186,27 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
 
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    className="accent-[var(--accent-color)]"
-                                    checked={config.cleanSession}
-                                    onChange={(e) => onUpdate({ cleanSession: e.target.checked })}
-                                    disabled={isLocked}
-                                />
+                                <div
+                                    onClick={() => !isLocked && onUpdate({ cleanSession: !config.cleanSession })}
+                                    className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${config.cleanSession
+                                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
+                                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
+                                    } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {config.cleanSession && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                                </div>
                                 <label className={labelCls}>{t('mqtt.cleanSession')}</label>
                             </div>
                             <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    className="accent-[var(--accent-color)]"
-                                    checked={config.autoReconnect}
-                                    onChange={(e) => onUpdate({ autoReconnect: e.target.checked })}
-                                    disabled={isLocked}
-                                />
+                                <div
+                                    onClick={() => !isLocked && onUpdate({ autoReconnect: !config.autoReconnect })}
+                                    className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${config.autoReconnect
+                                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
+                                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
+                                    } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {config.autoReconnect && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                                </div>
                                 <label className={labelCls}>{t('mqtt.autoReconnect')}</label>
                             </div>
                         </div>

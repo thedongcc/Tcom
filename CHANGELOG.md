@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 添加崩溃信息显示和上报功能
 - 崩溃界面增加关闭按钮
 - 增加在监视区滚动滚轮自动开关自动滚动的功能
+- 设置标签页左侧增加目录
 
 ### Fixed
 - 修复工作区加载问题
@@ -45,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修复串口手动发送数据卡顿问题
 - 修复串口数据刷新最下方显示不完整数据帧的问题
 - 修复toast消息卡住问题
+- 优化splash窗口,取消窗口阴影,增加底部文字不透明度
+- 优化主题颜色编辑器元素拾取框
 
 ### Removed
 - 取消侧边栏右键配置显示隐藏功能

@@ -99,26 +99,11 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
                 highlightEl.style.pointerEvents = 'none';
                 highlightEl.style.zIndex = '2147483647';
                 highlightEl.style.border = '2px solid #007acc';
-                highlightEl.style.outline = '1px solid white';
                 highlightEl.style.backgroundColor = 'rgba(0, 122, 204, 0.15)';
                 highlightEl.style.whiteSpace = 'nowrap';
                 highlightEl.style.transition = 'all 0.08s cubic-bezier(0.23, 1, 0.32, 1)';
                 highlightEl.style.borderRadius = '4px';
                 highlightEl.style.animation = 'tcom-pulse 1.5s infinite';
-
-                const label = document.createElement('div');
-                label.id = 'tcom-inspector-label';
-                label.textContent = '拾取元素 (点击选定)';
-                label.style.position = 'absolute';
-                label.style.bottom = '100%';
-                label.style.left = '0';
-                label.style.backgroundColor = '#007acc';
-                label.style.color = 'white';
-                label.style.fontSize = '12px';
-                label.style.padding = '2px 8px';
-                label.style.borderRadius = '3px 3px 0 0';
-                label.style.fontWeight = 'bold';
-                highlightEl.appendChild(label);
 
                 document.body.appendChild(highlightEl);
             }

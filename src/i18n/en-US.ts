@@ -65,6 +65,22 @@ export const enUS = {
             saveCommandDesc: 'Save command in command editor',
             recording: 'Press key combination...',
             unset: 'Click to set keybinding',
+            // System shortcuts (read-only reference)
+            systemTitle: 'System Shortcuts',
+            undo: 'Undo',
+            undoDesc: 'Undo last action in command menu',
+            redo: 'Redo',
+            redoDesc: 'Redo last undone action in command menu',
+            copy: 'Copy',
+            copyDesc: 'Copy selected commands in command menu',
+            paste: 'Paste',
+            pasteDesc: 'Paste copied commands in command menu',
+            delete: 'Delete',
+            deleteDesc: 'Delete selected commands or graph nodes',
+            graphZoom: 'Canvas Zoom',
+            graphZoomDesc: 'Zoom canvas in graph editor',
+            selectAll: 'Select All',
+            selectAllDesc: 'Select all commands in command menu',
         },
 
         // Appearance

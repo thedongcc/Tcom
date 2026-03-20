@@ -65,6 +65,22 @@ export const zhCN = {
             saveCommandDesc: '命令编辑器中保存命令',
             recording: '按下快捷键组合...',
             unset: '点击设置快捷键',
+            // 系统快捷键（只读参考）
+            systemTitle: '系统快捷键',
+            undo: '撤销',
+            undoDesc: '命令菜单中撤销上一步操作',
+            redo: '重做',
+            redoDesc: '命令菜单中恢复已撤销的操作',
+            copy: '复制',
+            copyDesc: '命令菜单中复制选中的命令项',
+            paste: '粘贴',
+            pasteDesc: '命令菜单中粘贴已复制的命令项',
+            delete: '删除',
+            deleteDesc: '删除选中的命令项或图形节点',
+            graphZoom: '画布缩放',
+            graphZoomDesc: '在图形编辑器中缩放画布',
+            selectAll: '全选',
+            selectAllDesc: '命令菜单中全选命令项',
         },
 
         // 外观方案

@@ -1,7 +1,7 @@
 /**
  * SettingsShared.tsx
- * 设置编辑器的公共 UI 组件 — Group 容器、SettingRow 行、Checkbox。
- * 从 SettingsEditor.tsx 中提炼，供所有设置子组件复用。
+ * 设置编辑器的公共 UI 组件 — Obsidian 风格。
+ * Group 容器（深色卡片）、SettingRow（水平布局）、Checkbox。
  */
 import React from 'react';
 import { Check } from 'lucide-react';
@@ -18,19 +18,19 @@ export interface SettingSection {
     items: SettingItem[];
 }
 
-// ─── 分组容器 ─────────────────────────────────────────────────────────────────
-export const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="mb-8">
-        <h3 className="text-[11px] font-bold text-[var(--st-settings-title-text)] opacity-50 uppercase tracking-widest mb-3 px-2 border-l-2 border-[var(--focus-border-color)] ml-[-8px] pl-[6px]">
+// ─── 分组容器（Obsidian 风格：粗体标题 + 深色圆角卡片） ────────────────────────
+export const Group = ({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) => (
+    <div className="mb-6" id={id}>
+        <h3 className="text-[15px] font-bold text-[var(--st-settings-title-text)] mb-3">
             {title}
         </h3>
-        <div className="flex flex-col bg-[var(--settings-editor-bg)] rounded border border-[var(--border-color)] overflow-hidden">
+        <div className="flex flex-col bg-[var(--settings-editor-bg,var(--input-background))] rounded-lg border border-[var(--border-color)] overflow-hidden">
             {children}
         </div>
     </div>
 );
 
-// ─── 普通设置行 ───────────────────────────────────────────────────────────────
+// ─── 设置行（Obsidian 风格：左标签+描述 | 右控件，水平布局） ────────────────────
 export const SettingRow = ({
     label,
     description,
@@ -42,27 +42,27 @@ export const SettingRow = ({
     children: React.ReactNode;
     stackContent?: boolean;
 }) => (
-    <div className={`py-3 border-b border-[var(--settings-row-hover-background)] last:border-0 hover:bg-[var(--list-hover-background)] px-3 ${stackContent ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`}>
-        <div className={`flex flex-col ${stackContent ? '' : 'flex-1 mr-4'}`}>
-            <label className="text-[13px] text-[var(--st-settings-text)] font-medium">{label}</label>
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5 border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--list-hover-background)] transition-colors">
+        <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-[13px] text-[var(--st-settings-text)] font-semibold">{label}</label>
             {description && (
-                <p className="text-[11px] text-[var(--input-placeholder-color)] mt-0.5">{description}</p>
+                <p className="text-[12px] text-[var(--input-placeholder-color)] mt-0.5 leading-relaxed">{description}</p>
             )}
         </div>
-        <div className={stackContent ? '' : 'flex-shrink-0'}>{children}</div>
+        <div className="flex-shrink-0">{children}</div>
     </div>
 );
 
-// ─── 复选框 ───────────────────────────────────────────────────────────────────
+// ─── 复选框（VSCode 风格圆角蓝色） ─────────────────────────────────────────────
 export const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
     <div
         onClick={onChange}
-        className={`w-4 h-4 border flex items-center justify-center cursor-pointer transition-colors ${checked
-            ? 'bg-[var(--checkbox-background)] border-[var(--checkbox-border-color)]'
-            : 'bg-[var(--input-background)] border-[var(--input-border-color)]'
+        className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all ${checked
+            ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
+            : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
             }`}
     >
-        {checked && <Check size={12} className="text-[var(--checkbox-foreground)]" />}
+        {checked && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
     </div>
 );
 

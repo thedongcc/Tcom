@@ -8,7 +8,7 @@
  * - SettingsComponents.tsx — FactoryResetDialog 对话框
  * - useSettingsActions.ts — 导入导出/重置等操作逻辑
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
@@ -17,11 +17,15 @@ import { Tooltip } from '../common/Tooltip';
 import { useSettingsActions } from './useSettingsActions';
 import { FactoryResetDialog } from './SettingsComponents';
 import { KeybindingInput } from '../common/KeybindingInput';
-import { DEFAULT_KEYBINDINGS, type KeybindingAction } from '../../utils/keybindings';
+import { DEFAULT_KEYBINDINGS, formatKeybinding, type KeybindingAction } from '../../utils/keybindings';
 import type { ThemeImages } from '../../types/theme';
 import { Group, SettingRow, Checkbox, INPUT_CLS, type SettingSection } from './SettingsShared';
 import { ModuleSettings } from './ModuleSettings';
 import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashReporter';
+
+// ── 生成分组 ID ──
+const sectionId = (index: number) => `settings-section-${index}`;
+const MODULE_SECTION_ID = 'settings-section-modules';
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {
@@ -30,6 +34,8 @@ export const SettingsEditor = () => {
     const { t } = useI18n();
     const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [activeSection, setActiveSection] = useState(0);
 
     // Factory Reset State
     const [showFactoryReset, setShowFactoryReset] = useState(false);
@@ -291,21 +297,40 @@ export const SettingsEditor = () => {
         },
         {
             title: t('settings.groups.keybindings'),
-            items: (
-                Object.keys(DEFAULT_KEYBINDINGS) as KeybindingAction[]
-            ).map(action => ({
-                label: t(`settings.keybindings.${action}`),
-                description: t(`settings.keybindings.${action}Desc`),
-                render: () => (
-                    <KeybindingInput
-                        value={config.keybindings?.[action] || DEFAULT_KEYBINDINGS[action]}
-                        onChange={(binding) => updateConfig(prev => ({
-                            ...prev,
-                            keybindings: { ...DEFAULT_KEYBINDINGS, ...prev.keybindings, [action]: binding }
-                        }))}
-                    />
-                ),
-            })),
+            items: [
+                // 可配置快捷键
+                ...(Object.keys(DEFAULT_KEYBINDINGS) as KeybindingAction[]).map(action => ({
+                    label: t(`settings.keybindings.${action}`),
+                    description: t(`settings.keybindings.${action}Desc`),
+                    render: () => (
+                        <KeybindingInput
+                            value={config.keybindings?.[action] || DEFAULT_KEYBINDINGS[action]}
+                            onChange={(binding) => updateConfig(prev => ({
+                                ...prev,
+                                keybindings: { ...DEFAULT_KEYBINDINGS, ...prev.keybindings, [action]: binding }
+                            }))}
+                        />
+                    ),
+                })),
+                // 系统快捷键（只读）
+                ...[
+                    { key: 'undo', binding: 'Ctrl+Z' },
+                    { key: 'redo', binding: 'Ctrl+Shift+Z' },
+                    { key: 'copy', binding: 'Ctrl+C' },
+                    { key: 'paste', binding: 'Ctrl+V' },
+                    { key: 'selectAll', binding: 'Ctrl+A' },
+                    { key: 'delete', binding: 'Delete' },
+                    { key: 'graphZoom', binding: 'Ctrl+Scroll' },
+                ].map(({ key, binding }) => ({
+                    label: t(`settings.keybindings.${key}`),
+                    description: t(`settings.keybindings.${key}Desc`),
+                    render: () => (
+                        <span className="inline-flex items-center px-2.5 py-1 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded text-[12px] text-[var(--input-placeholder-color)] font-mono select-none">
+                            {formatKeybinding(binding)}
+                        </span>
+                    ),
+                })),
+            ],
         },
         {
             title: t('settings.groups.privacy'),
@@ -345,6 +370,12 @@ export const SettingsEditor = () => {
         },
     ];
 
+    // 目录数据（普通分组 + 功能模块）
+    const tocItems = [
+        ...settingSections.map((sec, i) => ({ id: sectionId(i), title: sec.title })),
+        { id: MODULE_SECTION_ID, title: t('settings.groups.modules') },
+    ];
+
     // ── 搜索过滤 ──
     const lowerSearch = searchTerm.toLowerCase();
     const filteredSettings = searchTerm
@@ -357,71 +388,154 @@ export const SettingsEditor = () => {
             .filter(Boolean) as typeof settingSections
         : settingSections;
 
+    // 目录项点击滚动
+    const handleTocClick = useCallback((id: string, index: number) => {
+        setActiveSection(index);
+        const el = document.getElementById(id);
+        if (el && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const elTop = el.offsetTop - container.offsetTop;
+            container.scrollTo({ top: elTop - 8, behavior: 'smooth' });
+        }
+    }, []);
+
+    // 滚动时自动检测当前可见分组
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container || searchTerm) return;
+
+        const onScroll = () => {
+            const containerTop = container.scrollTop + 20;
+            let current = 0;
+            for (let i = 0; i < tocItems.length; i++) {
+                const el = document.getElementById(tocItems[i].id);
+                if (el) {
+                    const elTop = el.offsetTop - container.offsetTop;
+                    if (containerTop >= elTop) current = i;
+                }
+            }
+            setActiveSection(current);
+        };
+
+        container.addEventListener('scroll', onScroll, { passive: true });
+        return () => container.removeEventListener('scroll', onScroll);
+    }, [tocItems, searchTerm]);
+
     return (
-        <div className="flex flex-col h-full bg-[var(--settings-editor-bg)]" data-component="settings-editor">
-            {/* 头部工具栏 */}
-            <div className="h-[35px] flex items-center shrink-0 px-4 border-b border-[var(--border-color)] bg-[var(--widget-background)] justify-between">
-                <span className="text-[13px] font-semibold text-[var(--st-settings-title-text)]">{t('settings.title')}</span>
-                <div className="flex items-center gap-1">
-                    <Tooltip content={t('settings.exportTooltip')} position="bottom">
-                        <button onClick={handleDownload} className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
-                            <Download size={14} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={t('settings.importTooltip')} position="bottom">
-                        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
-                            <Upload size={14} />
-                        </button>
-                    </Tooltip>
-                    <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
-                    <div className="w-[1px] h-4 bg-[var(--border-color)] mx-1" />
-                    <Tooltip content={t('settings.resetTooltip')} position="bottom">
-                        <button onClick={handleReset} className="p-1.5 text-[var(--st-status-error)] hover:text-[var(--st-settings-danger-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
-                            <RotateCcw size={14} />
-                        </button>
-                    </Tooltip>
-                </div>
-            </div>
-
-            {/* 搜索栏 */}
-            <div className="p-6 bg-[var(--editor-background)]">
-                <div className="max-w-3xl mx-auto relative group">
-                    <Search className="absolute left-3 top-2.5 text-[var(--input-placeholder-color)] group-focus-within:text-[var(--focus-border-color)]" size={16} />
-                    <input
-                        type="text"
-                        placeholder={t('settings.search')}
-                        className="w-full bg-[var(--settings-header-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] pl-10 pr-4 py-2 text-[13px] outline-none focus:border-[var(--focus-border-color)] shadow-sm rounded-md"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* 配置内容区 */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="max-w-3xl mx-auto px-6 pb-20">
-                    {/* 无结果提示 */}
-                    {filteredSettings.length === 0 && searchTerm && (
-                        <div className="text-center py-16 text-[var(--input-placeholder-color)] text-[13px]">
-                            {t('settings.noResults', { term: searchTerm })}
+        <div className="flex h-full bg-[var(--editor-background)]" data-component="settings-editor">
+            {/* 左侧导航面板 */}
+            {!searchTerm && (
+                <nav className="w-[210px] shrink-0 overflow-y-auto custom-scrollbar bg-[var(--editor-background)] border-r border-[var(--border-color)] flex flex-col py-3 pl-4">
+                    {/* 搜索 + 工具栏 */}
+                    <div className="px-3 mb-3 flex items-center gap-1">
+                        <div className="flex-1 relative group">
+                            <Search className="absolute left-2 top-1.5 text-[var(--input-placeholder-color)] group-focus-within:text-[var(--focus-border-color)]" size={13} />
+                            <input
+                                type="text"
+                                placeholder={t('settings.search')}
+                                className="w-full bg-[var(--input-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] pl-7 pr-2 py-1 text-[11px] outline-none focus:border-[var(--focus-border-color)] rounded-[3px]"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                    )}
+                        <div className="flex items-center">
+                            <Tooltip content={t('settings.exportTooltip')} position="bottom">
+                                <button onClick={handleDownload} className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
+                                    <Download size={12} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('settings.importTooltip')} position="bottom">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
+                                    <Upload size={12} />
+                                </button>
+                            </Tooltip>
+                            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
+                            <Tooltip content={t('settings.resetTooltip')} position="bottom">
+                                <button onClick={handleReset} className="p-1 text-[var(--st-status-error)] hover:text-[var(--st-settings-danger-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors">
+                                    <RotateCcw size={12} />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    </div>
 
-                    {/* 普通设置区块 */}
-                    {filteredSettings.map((sec, i) => (
-                        <Group key={`s-${i}`} title={sec.title}>
-                            {sec.items.map((item, j) => (
-                                <SettingRow key={j} label={item.label} description={item.description}>
-                                    {item.render()}
-                                </SettingRow>
+                    {/* 目录项 */}
+                    <div className="flex flex-col gap-0.5 px-2">
+                        {tocItems.map((item, i) => (
+                            <button
+                                key={item.id}
+                                onClick={() => handleTocClick(item.id, i)}
+                                className={`w-full text-left text-[13px] px-3 py-1.5 rounded-md transition-colors truncate ${
+                                    activeSection === i
+                                        ? 'text-[var(--st-settings-title-text)] bg-[var(--list-active-background)] font-medium'
+                                        : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
+                                }`}
+                            >
+                                {item.title}
+                            </button>
+                        ))}
+                    </div>
+                </nav>
+            )}
+
+            {/* 搜索模式下的顶部搜索栏 */}
+            {searchTerm && (
+                <div className="flex flex-col flex-1 overflow-hidden">
+                    <div className="shrink-0 flex items-center gap-2 px-5 py-3 border-b border-[var(--border-color)]">
+                        <div className="flex-1 relative group">
+                            <Search className="absolute left-3 top-2 text-[var(--input-placeholder-color)] group-focus-within:text-[var(--focus-border-color)]" size={15} />
+                            <input
+                                type="text"
+                                placeholder={t('settings.search')}
+                                className="w-full bg-[var(--input-background)] text-[var(--input-foreground)] border border-[var(--input-border-color)] pl-9 pr-4 py-1.5 text-[13px] outline-none focus:border-[var(--focus-border-color)] rounded-[3px]"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="max-w-[720px] mx-auto px-8 pb-20 pt-4">
+                            {filteredSettings.length === 0 && (
+                                <div className="text-center py-16 text-[var(--input-placeholder-color)] text-[13px]">
+                                    {t('settings.noResults', { term: searchTerm })}
+                                </div>
+                            )}
+                            {filteredSettings.map((sec, i) => (
+                                <Group key={`s-${i}`} title={sec.title} id={sectionId(i)}>
+                                    {sec.items.map((item, j) => (
+                                        <SettingRow key={j} label={item.label} description={item.description}>
+                                            {item.render()}
+                                        </SettingRow>
+                                    ))}
+                                </Group>
                             ))}
-                        </Group>
-                    ))}
-
-                    {/* 功能模块 DnD 排序区 */}
-                    <ModuleSettings searchTerm={searchTerm} />
+                            <div id={MODULE_SECTION_ID}>
+                                <ModuleSettings searchTerm={searchTerm} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* 右侧设置内容（非搜索模式） */}
+            {!searchTerm && (
+                <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollContainerRef}>
+                    <div className="max-w-[720px] mx-auto px-8 pb-20 pt-4">
+                        {filteredSettings.map((sec, i) => (
+                            <Group key={`s-${i}`} title={sec.title} id={sectionId(i)}>
+                                {sec.items.map((item, j) => (
+                                    <SettingRow key={j} label={item.label} description={item.description}>
+                                        {item.render()}
+                                    </SettingRow>
+                                ))}
+                            </Group>
+                        ))}
+
+                        <div id={MODULE_SECTION_ID}>
+                            <ModuleSettings searchTerm={searchTerm} />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showFactoryReset && (
                 <FactoryResetDialog
