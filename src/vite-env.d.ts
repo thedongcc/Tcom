@@ -39,7 +39,7 @@ export interface SerialAPI {
     // ⚡ 高精度主进程定时发送
     timedSendStart?: (connectionId: string, data: number[], intervalMs: number) => Promise<{ success: boolean; error?: string }>;
     timedSendStop?: (connectionId: string) => Promise<{ success: boolean }>;
-    onTimedSendTick?: (connectionId: string, callback: (data: number[], timestamp: number) => void) => () => void;
+    onTimedSendTickBatch?: (connectionId: string, callback: (events: { data: number[], timestamp: number }[]) => void) => () => void;
     // ⚡ 高精度动态定时发送（Worker 用模运算循环帧，无需 feed/replace/refill）
     timedSendStartDynamic?: (connectionId: string, frames: number[][], intervalMs: number, timestampSlots: Array<{ byteOffset: number; byteSize: number; byteOrder: string; format: string }>) => Promise<{ success: boolean; error?: string }>;
 }
@@ -76,10 +76,14 @@ declare global {
             start: (sessionId: string, config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
             stop: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
             write: (sessionId: string, target: 'virtual' | 'physical', data: string | number[]) => Promise<{ success: boolean; error?: string }>;
-            onData: (sessionId: string, callback: (type: 'RX' | 'TX', data: Uint8Array) => void) => () => void;
+            onData: (sessionId: string, callback: (type: 'RX' | 'TX', data: Uint8Array, timestamp?: number) => void) => () => void;
             onError: (sessionId: string, callback: (err: string) => void) => () => void;
             onClosed: (sessionId: string, callback: (args: { origin: string, path: string }) => void) => () => void;
             onPartnerStatus: (sessionId: string, callback: (connected: boolean) => void) => () => void;
+            // 高精度监视器专用发送
+            startTimedSend: (sessionId: string, target: 'virtual' | 'physical', data: number[], intervalMs: number) => Promise<{ success: boolean; error?: string }>;
+            stopTimedSend: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+            onTimedSendTickBatch?: (sessionId: string, callback: (events: { data: number[], timestamp: number }[]) => void) => () => void;
         }
         tcpAPI: {
             start: (port: number) => Promise<{ success: boolean; error?: string }>;
@@ -100,18 +104,6 @@ declare global {
         shellAPI: {
             openExternal: (url: string) => Promise<void>;
             showOpenDialog: (options: { title?: string; defaultPath?: string; buttonLabel?: string; filters?: Array<{ name: string; extensions: string[] }>; properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'> }) => Promise<{ canceled: boolean; filePaths: string[] }>;
-        }
-        workspaceAPI: {
-            getLastWorkspace: () => Promise<{ success: boolean; path: string | null }>;
-            setLastWorkspace: (wsPath: string | null) => Promise<{ success: boolean }>;
-            openFolder: () => Promise<{ success: boolean; canceled?: boolean; path?: string }>;
-            listSessions: (wsPath: string) => Promise<{ success: boolean; data?: Record<string, unknown>[]; error?: string }>;
-            saveSession: (wsPath: string, config: Record<string, unknown>) => Promise<{ success: boolean; filePath?: string; error?: string }>;
-            deleteSession: (wsPath: string, config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
-            renameSession: (wsPath: string, oldName: string, newName: string) => Promise<{ success: boolean; error?: string }>;
-            getRecentWorkspaces: () => Promise<{ success: boolean; workspaces: string[] }>;
-            migrateOldSessions: () => Promise<{ success: boolean; migrated: number; path?: string }>;
-            saveSessionOrder: (wsPath: string, order: string[]) => Promise<{ success: boolean; error?: string }>;
         }
         windowAPI: {
             setAlwaysOnTop: (flag: boolean) => Promise<{ success: boolean; alwaysOnTop: boolean }>;
@@ -169,6 +161,38 @@ declare global {
             send: (payload: string) => Promise<void>;
             check: () => Promise<string | null>;
             clear: () => Promise<void>;
+        }
+        profileAPI: {
+            // Profile CRUD
+            list: () => Promise<{ success: boolean; profiles: Array<{ name: string; createdAt?: string }> }>;
+            create: (name: string) => Promise<{ success: boolean; profile?: { name: string; createdAt: string } }>;
+            delete: (name: string) => Promise<{ success: boolean }>;
+            rename: (oldName: string, newName: string) => Promise<{ success: boolean }>;
+            duplicate: (oldName: string, newName: string) => Promise<{ success: boolean }>;
+            // Session 管理
+            listSessions: (profileName: string) => Promise<{ success: boolean; data?: Record<string, unknown>[] }>;
+            saveSession: (profileName: string, config: Record<string, unknown>) => Promise<{ success: boolean; filePath?: string }>;
+            deleteSession: (profileName: string, config: Record<string, unknown>) => Promise<{ success: boolean }>;
+            renameSession: (profileName: string, oldName: string, newName: string) => Promise<{ success: boolean }>;
+            // 命令菜单
+            getCommands: (profileName: string) => Promise<{ success: boolean; data: unknown[] }>;
+            saveCommands: (profileName: string, data: unknown) => Promise<{ success: boolean }>;
+            // 自动回复
+            getAutoReply: (profileName: string) => Promise<{ success: boolean; data: { enabled: boolean; rules: unknown[]; targetSessionIds: string[] } }>;
+            saveAutoReply: (profileName: string, data: unknown) => Promise<{ success: boolean }>;
+        }
+        globalSettingsAPI: {
+            // 全局设置
+            load: () => Promise<{ success: boolean; data: Record<string, unknown> | null }>;
+            save: (data: Record<string, unknown>) => Promise<{ success: boolean }>;
+            // 运行时状态
+            loadState: () => Promise<{ success: boolean; data: { lastProfile: string; recentProfiles: string[]; migrated: boolean; windowState: unknown; setupcPath?: string; monitorEnabled?: boolean; migratedAt?: number } }>;
+            saveState: (data: Record<string, unknown>) => Promise<{ success: boolean }>;
+            // 备份
+            exportProfile: (profileName: string) => Promise<{ success: boolean; canceled?: boolean; path?: string }>;
+            importProfile: () => Promise<{ success: boolean; canceled?: boolean; profileName?: string }>;
+            exportAll: () => Promise<{ success: boolean; canceled?: boolean; path?: string }>;
+            importAll: () => Promise<{ success: boolean; canceled?: boolean }>;
         }
     }
 }

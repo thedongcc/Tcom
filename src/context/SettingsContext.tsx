@@ -1,6 +1,7 @@
 /**
  * SettingsContext.tsx
  * 全局设置 Context — 配置状态管理、主题列表加载、配置 CRUD。
+ * 数据通过 globalSettingsAPI 持久化到文件系统。
  *
  * 副效应委托：
  * - useThemeEffects — 主题/排版/背景图的 DOM 副效应
@@ -9,12 +10,13 @@
  * 子模块：
  * - settingsConfigMigration.ts — 配置合并与旧版本迁移
  */
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { ThemeConfig, DEFAULT_THEME } from '../types/theme';
 import { ThemeDefinition } from '../themes';
 import { useColorPicker } from '../hooks/useColorPicker';
 import { useThemeEffects } from '../hooks/useThemeEffects';
-import { loadAndMigrateConfig, mergeAndMigrate } from './settingsConfigMigration';
+import { loadInitialConfig, mergeAndMigrate } from './settingsConfigMigration';
+import { flushRegistry } from '../hooks/useFlushOnExit';
 
 interface SettingsContextType {
     config: ThemeConfig;
@@ -31,8 +33,10 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-    const [config, setConfig] = useState<ThemeConfig>(loadAndMigrateConfig);
+    const [config, setConfig] = useState<ThemeConfig>(loadInitialConfig);
     const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
     // ── 加载主题 ──
     const loadThemes = async () => {
@@ -49,31 +53,74 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    // 初次挂载 + 跨窗口同步
+    // 初次挂载：从文件加载设置 + 加载主题
     useEffect(() => {
-        // ⚡ 使用 queueMicrotask 代替 setTimeout(0) 以更快触发主题加载
         let cancelled = false;
-        queueMicrotask(() => { if (!cancelled) loadThemes(); });
 
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'tcom-settings' && e.newValue) {
-                try {
-                    const parsed = JSON.parse(e.newValue);
-                    setConfig(prev => ({ ...prev, ...parsed }));
-                } catch (err) {
-                    console.error('Cross-window sync failed for settings', err);
+        const init = async () => {
+            // 加载主题
+            queueMicrotask(() => { if (!cancelled) loadThemes(); });
+
+            // 从 globalSettingsAPI 加载设置
+            try {
+                const res = await window.globalSettingsAPI?.load();
+                if (cancelled) return;
+                if (res?.success && res.data) {
+                    const merged = mergeAndMigrate(res.data as Partial<ThemeConfig> & Record<string, unknown>);
+                    setConfig(merged);
                 }
-            } else if (e.key === 'tcom-theme' && e.newValue) {
-                setConfig(prev => ({ ...prev, theme: e.newValue! }));
+            } catch (e) {
+                console.error('加载全局设置失败:', e);
+            }
+
+            if (!cancelled) setIsLoaded(true);
+        };
+
+        init();
+        return () => { cancelled = true; };
+    }, []);
+
+    // 防抖保存到文件（变更后 500ms 写盘）
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+        }
+        saveTimerRef.current = setTimeout(() => {
+            window.globalSettingsAPI?.save(config as unknown as Record<string, unknown>).catch(e => {
+                console.error('保存全局设置失败:', e);
+            });
+            // 同时写入 localStorage 作为快速启动缓存（仅字体相关）
+            try {
+                localStorage.setItem('tcom-settings', JSON.stringify(config));
+                localStorage.setItem('tcom-theme', config.theme);
+            } catch { /* localStorage 满或不可用时静默失败 */ }
+        }, 500);
+
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [config, isLoaded]);
+
+    // 注册 Flush 回调（窗口关闭前立即保存）
+    useEffect(() => {
+        const flush = async () => {
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+                saveTimerRef.current = undefined;
+            }
+            if (isLoaded) {
+                await window.globalSettingsAPI?.save(config as unknown as Record<string, unknown>);
+                try {
+                    localStorage.setItem('tcom-settings', JSON.stringify(config));
+                    localStorage.setItem('tcom-theme', config.theme);
+                } catch { /* 静默失败 */ }
             }
         };
-
-        window.addEventListener('storage', handleStorage);
-        return () => {
-            cancelled = true;
-            window.removeEventListener('storage', handleStorage);
-        };
-    }, []);
+        flushRegistry.register(flush);
+        return () => { flushRegistry.unregister(flush); };
+    }, [config, isLoaded]);
 
     // ── 副效应委托 ──
     useThemeEffects({ config, availableThemes });

@@ -8,7 +8,7 @@
  * - commands/mqtt.rs — MQTT 客户端
  * - commands/monitor.rs — 虚拟串口监控（双向桥接）
  * - commands/tcp.rs — TCP 服务器
- * - commands/workspace.rs — 工作区/会话 CRUD
+ * - commands/profile.rs — Profile（配置档案）CRUD + Session/命令/自动回复
  * - commands/theme.rs — 主题管理 + 编辑器状态
  * - commands/app.rs — 应用级功能 + com0com
  * - commands/shell.rs — 外部链接 + 文件对话框
@@ -93,23 +93,12 @@ pub fn run() {
             commands::monitor::monitor_start,
             commands::monitor::monitor_stop,
             commands::monitor::monitor_write,
+            commands::monitor::monitor_start_timed_send,
+            commands::monitor::monitor_stop_timed_send,
             // TCP
             commands::tcp::tcp_start,
             commands::tcp::tcp_stop,
             commands::tcp::tcp_write,
-            // 工作区
-            commands::workspace::workspace_get_last,
-            commands::workspace::workspace_set_last,
-            commands::workspace::workspace_open_folder,
-            commands::workspace::workspace_list_sessions,
-            commands::workspace::workspace_save_session,
-            commands::workspace::workspace_delete_session,
-            commands::workspace::workspace_rename_session,
-            commands::workspace::workspace_get_recent,
-            commands::workspace::workspace_migrate_old,
-            commands::workspace::workspace_save_session_order,
-            commands::workspace::session_save,
-            commands::workspace::session_load,
             // 应用
             commands::app::app_get_version,
             commands::app::app_get_stats,
@@ -160,6 +149,30 @@ pub fn run() {
             commands::crash_report::crash_report_send,
             commands::crash_report::crash_report_check,
             commands::crash_report::crash_report_clear,
+            // Profile（替代 workspace）
+            commands::profile::profile_list,
+            commands::profile::profile_create,
+            commands::profile::profile_delete,
+            commands::profile::profile_rename,
+            commands::profile::profile_duplicate,
+            commands::profile::profile_list_sessions,
+            commands::profile::profile_save_session,
+            commands::profile::profile_delete_session,
+            commands::profile::profile_rename_session,
+            commands::profile::profile_get_commands,
+            commands::profile::profile_save_commands,
+            commands::profile::profile_get_auto_reply,
+            commands::profile::profile_save_auto_reply,
+            // 全局设置
+            commands::global_settings::global_settings_load,
+            commands::global_settings::global_settings_save,
+            commands::global_settings::app_state_load,
+            commands::global_settings::app_state_save,
+            // 备份
+            commands::backup::backup_export_profile,
+            commands::backup::backup_import_profile,
+            commands::backup::backup_export_all,
+            commands::backup::backup_import_all,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

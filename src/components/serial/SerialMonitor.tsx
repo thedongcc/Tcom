@@ -159,7 +159,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 displayState={displayState} isConnected={isConnected} config={config}
                 txBytes={txBytes} rxBytes={rxBytes}
                 crcEnabled={crcEnabled} toggleCRC={toggleCRC} rxCRC={rxCRC} updateRxCRC={updateRxCRC}
-                onClearLogs={doClearLogs} onSaveLogs={handleSaveLogs} scrollRef={scrollRef}
+                onClearLogs={doClearLogs} onSaveLogs={handleSaveLogs} hasLogs={logs.length > 0} scrollRef={scrollRef}
             />
 
             <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>
@@ -211,6 +211,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
             <SerialInput
                 key={session.id} sessionId={session.id}
                 onSend={handleSend}
+                onTimedSendStart={window.serialAPI?.timedSendStart}
+                onTimedSendStop={window.serialAPI?.timedSendStop}
                 initialContent={uiState.inputContent || ''} initialHTML={uiState.inputHTML || ''}
                 initialTokens={uiState.inputTokens as Record<string, Token> || {}}
                 initialMode={uiState.inputMode || 'hex'}

@@ -32,6 +32,8 @@ interface SerialMonitorToolbarProps {
     onClearLogs: () => void;
     /** 导出日志 */
     onSaveLogs: () => void;
+    /** 是否有日志（控制导出按钮禁用） */
+    hasLogs: boolean;
     /** 滚动容器引用（用于自动滚动切换） */
     scrollRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -48,6 +50,7 @@ export function SerialMonitorToolbar({
     updateRxCRC,
     onClearLogs,
     onSaveLogs,
+    hasLogs,
     scrollRef,
 }: SerialMonitorToolbarProps) {
     const { t } = useI18n();
@@ -161,6 +164,7 @@ export function SerialMonitorToolbar({
                         availableFonts={availableFonts}
                         uiState={uiState} saveUIState={saveUIState}
                         handleSaveLogs={onSaveLogs}
+                        hasLogs={hasLogs}
                     />
                 </div>
 

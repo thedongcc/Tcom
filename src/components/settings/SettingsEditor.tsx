@@ -9,9 +9,10 @@
  * - useSettingsActions.ts — 导入导出/重置等操作逻辑
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
+import { confirm } from '../../services/confirmManager';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
 import { useSettingsActions } from './useSettingsActions';
@@ -347,6 +348,57 @@ export const SettingsEditor = () => {
                                 setCrashReportEnabled(next);
                             }}
                         />
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.dataBackup'),
+            items: [
+                {
+                    label: t('settings.dataBackup.exportAll'),
+                    description: t('settings.dataBackup.exportAllDesc'),
+                    render: () => (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await window.globalSettingsAPI?.exportAll();
+                                } catch (e) {
+                                    console.error('全量导出失败:', e);
+                                }
+                            }}
+                            className="flex items-center gap-1.5 bg-[var(--st-status-info)] hover:bg-[#1177bb] text-white px-3 py-1.5 rounded-[3px] text-xs transition-colors"
+                        >
+                            <Package size={13} />
+                            {t('settings.dataBackup.exportAllBtn')}
+                        </button>
+                    ),
+                },
+                {
+                    label: t('settings.dataBackup.importAll'),
+                    description: t('settings.dataBackup.importAllDesc'),
+                    render: () => (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const res = await window.globalSettingsAPI?.importAll();
+                                    if (res?.success && !res.canceled) {
+                                        await confirm({
+                                            title: t('settings.groups.dataBackup'),
+                                            message: t('settings.dataBackup.importSuccess'),
+                                            confirmText: t('common.ok'),
+                                        });
+                                        window.location.reload();
+                                    }
+                                } catch (e) {
+                                    console.error('全量恢复失败:', e);
+                                }
+                            }}
+                            className="flex items-center gap-1.5 bg-[var(--st-settings-danger-bg)] hover:bg-[#c93f24] text-white px-3 py-1.5 rounded-[3px] text-xs transition-colors"
+                        >
+                            <ArchiveRestore size={13} />
+                            {t('settings.dataBackup.importAllBtn')}
+                        </button>
                     ),
                 },
             ],

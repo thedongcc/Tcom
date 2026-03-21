@@ -55,6 +55,7 @@ export const zhCN = {
             keybindings: '快捷键',
             modules: '功能模块',
             privacy: '隐私与数据',
+            dataBackup: '数据与备份',
         },
 
         // 快捷键
@@ -187,6 +188,17 @@ export const zhCN = {
             crashReportDesc: '允许自动发送匿名崩溃信息，帮助开发者快速定位和修复问题。不会收集任何个人数据。',
         },
 
+        // 数据与备份
+        dataBackup: {
+            exportAll: '一键导出全部数据',
+            exportAllDesc: '将所有配置档案、全局设置打包为 ZIP 文件。',
+            exportAllBtn: '导出全部数据 (.zip)',
+            importAll: '从备份全量恢复',
+            importAllDesc: 'ℹ️ 此操作会覆盖当前所有配置档案和设置，请确保已导出当前数据。',
+            importAllBtn: '从备份恢复',
+            importSuccess: '恢复成功，即将重载应用以加载最新数据',
+        },
+
         noResults: '未找到与"{term}"相关的设置项',
     },
 
@@ -206,9 +218,9 @@ export const zhCN = {
         sessionName: '会话名称',
         sessionNamePlaceholder: '输入会话名称...',
         sessionNameExists: '该名称已被使用，请输入其他名称',
-        recentWorkspaces: '最近的工作区',
-        noWorkspaceOpen: '未打开工作区',
-        openWorkspace: '打开工作区',
+        recentWorkspaces: '切换配置档案',
+        noWorkspaceOpen: '未加载配置档案',
+        openWorkspace: '新建配置档案',
         openOther: '打开其他...',
         noSessions: '尚无会话。点 "+" 创建一个。',
         deleteTitle: '删除会话',
@@ -387,6 +399,8 @@ export const zhCN = {
         physicalPort: '物理端口（设备）',
         refreshPorts: '刷新端口',
         autoDestroyPair: '停止时自动销毁串口对',
+        nagleTimeout: '合并转发延迟 (ms)',
+        nagleTimeoutTooltip: '将短时间内的多个小包合并转发以降低系统开销。设为 0 则为纯实时无合并透传。',
         baudRate: '波特率（物理端口）',
         dataBits: '数据位',
         stopBits: '停止位',

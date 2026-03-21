@@ -2,34 +2,11 @@
  * useAutoReply.ts
  * 自动回复核心引擎 Hook。
  * 监听指定会话的日志变化，当新数据匹配预设规则时自动发送回复。
- * 规则存储在 localStorage 中（全局，不与单个 session 绑定）。
+ * 规则存储在 Profile 文件中（通过 profileAPI 读写）。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AutoReplyRule, createDefaultRule } from '../types/autoReply';
 import { LogEntry } from '../types/session';
-
-const STORAGE_KEY = 'tcom:autoReply';
-
-// ── 持久化工具 ──
-
-interface AutoReplyStore {
-    enabled: boolean;
-    rules: AutoReplyRule[];
-    /** 生效的会话 ID 列表，空数组 = 全部会话 */
-    targetSessionIds: string[];
-}
-
-function loadStore(): AutoReplyStore {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch { /* 忽略 */ }
-    return { enabled: false, rules: [], targetSessionIds: [] };
-}
-
-function saveStore(store: AutoReplyStore): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-}
 
 // ── 匹配工具函数 ──
 
@@ -74,9 +51,7 @@ function matchRule(rule: AutoReplyRule, data: string | Uint8Array): boolean {
         case 'exact':
             return dataStr === pattern;
         case 'contains':
-            return rule.matchDataMode === 'hex'
-                ? dataStr.includes(pattern)
-                : dataStr.includes(pattern);
+            return dataStr.includes(pattern);
         case 'regex': {
             try {
                 return new RegExp(pattern).test(dataStr);
@@ -97,29 +72,84 @@ function prepareReplyData(rule: AutoReplyRule): string | Uint8Array {
     return rule.replyData;
 }
 
+// ── 持久化 Store 类型 ──
+
+interface AutoReplyStore {
+    enabled: boolean;
+    rules: AutoReplyRule[];
+    /** 生效的会话 ID 列表，空数组 = 全部会话 */
+    targetSessionIds: string[];
+}
+
+const DEFAULT_STORE: AutoReplyStore = { enabled: false, rules: [], targetSessionIds: [] };
+
 // ── Hook ──
 
 interface UseAutoReplyParams {
+    /** 当前活跃 Profile 名称 */
+    activeProfile: string;
+    /** Profile 是否已加载就绪 */
+    profileLoaded: boolean;
     /** 所有会话的日志（按 sessionId 索引） */
     sessionsData: Array<{ id: string; logs: LogEntry[]; isConnected: boolean }>;
-    /** 发送回调（支持 commandName 标识） */
+    /** 发送回调 */
     writeToSession: (sessionId: string, data: string | Uint8Array, options?: { commandName?: string }) => void;
 }
 
-export function useAutoReply({ sessionsData, writeToSession }: UseAutoReplyParams) {
-    // 从 localStorage 加载初始状态
-    const [store, setStore] = useState<AutoReplyStore>(loadStore);
+export function useAutoReply({ activeProfile, profileLoaded, sessionsData, writeToSession }: UseAutoReplyParams) {
+    const [store, setStore] = useState<AutoReplyStore>(DEFAULT_STORE);
+    const [isLoaded, setIsLoaded] = useState(false);
     // 每个 session 处理过的日志数量
     const processedCountRef = useRef<Map<string, number>>(new Map());
     // 延迟定时器
     const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+    // 防抖保存定时器
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
     const { enabled, rules, targetSessionIds } = store;
 
-    // 持久化到 localStorage
+    // 从 Profile 文件加载自动回复数据
     useEffect(() => {
-        saveStore(store);
-    }, [store]);
+        if (!profileLoaded) return;
+        let cancelled = false;
+
+        const load = async () => {
+            try {
+                const res = await window.profileAPI?.getAutoReply(activeProfile);
+                if (cancelled) return;
+                if (res?.success && res.data) {
+                    setStore(res.data as unknown as AutoReplyStore);
+                } else {
+                    setStore(DEFAULT_STORE);
+                }
+            } catch (e) {
+                console.error('加载自动回复规则失败:', e);
+                if (!cancelled) setStore(DEFAULT_STORE);
+            }
+            if (!cancelled) setIsLoaded(true);
+        };
+        setIsLoaded(false);
+        load();
+        return () => { cancelled = true; };
+    }, [activeProfile, profileLoaded]);
+
+    // 防抖保存到 Profile 文件
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+        }
+        saveTimerRef.current = setTimeout(() => {
+            window.profileAPI?.saveAutoReply(activeProfile, store).catch(e => {
+                console.error('保存自动回复规则失败:', e);
+            });
+        }, 500);
+
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [store, isLoaded, activeProfile]);
 
     // 清理定时器
     useEffect(() => {

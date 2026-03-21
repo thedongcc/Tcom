@@ -1,15 +1,15 @@
 /**
  * MonitorToolbar.tsx
  * 串口监控器工具栏 — 过滤器、视图模式、选项菜单、自动滚动和清除。
- * 从 MonitorTerminal.tsx 中拆分出来。
+ * 选项菜单使用通用 MonitorOptionsPanel 组件。
  */
-import React from 'react';
-import { Trash2, ArrowDownToLine, Download, Menu, X } from 'lucide-react';
-import { CustomSelect } from '../common/CustomSelect';
-import { Switch } from '../common/Switch';
+import React, { useRef } from 'react';
+import { Trash2, ArrowDownToLine, Menu } from 'lucide-react';
 import { MonitorSessionConfig } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+import { MonitorOptionsPanel } from '../common/MonitorOptionsPanel';
+import type { CRCConfig } from '../../utils/crc';
 
 interface MonitorToolbarProps {
     isConnected: boolean;
@@ -23,6 +23,7 @@ interface MonitorToolbarProps {
     // 选项菜单内部状态
     showTimestamp: boolean;
     showPacketType: boolean;
+    showControlChars: boolean;
     showDataLength: boolean;
     mergeRepeats: boolean;
     flashNewMessage: boolean;
@@ -30,6 +31,16 @@ interface MonitorToolbarProps {
     fontFamily: string;
     fontSize: number;
     availableFonts: any[];
+    // CRC
+    crcEnabled: boolean;
+    toggleCRC: () => void;
+    rxCRC: CRCConfig;
+    updateRxCRC: (updates: Partial<CRCConfig>) => void;
+    showCRCPanel: boolean;
+    setShowCRCPanel: (v: boolean) => void;
+    // 分包 & 持久化
+    uiState: Record<string, any>;
+    saveUIState: (updates: Record<string, unknown>) => void;
     // 回调
     onFilterChange: (mode: 'all' | 'rx' | 'tx') => void;
     onViewModeChange: (mode: 'text' | 'hex' | 'both') => void;
@@ -37,9 +48,11 @@ interface MonitorToolbarProps {
     onToggleOptionsMenu: () => void;
     onClearLogs: () => void;
     onSaveLogs: () => void;
+    hasLogs: boolean;
     // 选项变更
     onShowTimestamp: (v: boolean) => void;
     onShowPacketType: (v: boolean) => void;
+    onShowControlChars: (v: boolean) => void;
     onShowDataLength: (v: boolean) => void;
     onMergeRepeats: (v: boolean) => void;
     onFlashNewMessage: (v: boolean) => void;
@@ -51,14 +64,17 @@ interface MonitorToolbarProps {
 export const MonitorToolbar = React.memo(({
     isConnected, config, txBytes, rxBytes,
     filterMode, viewMode, autoScroll, showOptionsMenu,
-    showTimestamp, showPacketType, showDataLength, mergeRepeats, flashNewMessage,
+    showTimestamp, showPacketType, showControlChars, showDataLength, mergeRepeats, flashNewMessage,
     encoding, fontFamily, fontSize, availableFonts,
+    crcEnabled, toggleCRC, rxCRC, updateRxCRC, showCRCPanel, setShowCRCPanel,
+    uiState, saveUIState,
     onFilterChange, onViewModeChange, onAutoScrollToggle, onToggleOptionsMenu,
-    onClearLogs, onSaveLogs,
-    onShowTimestamp, onShowPacketType, onShowDataLength, onMergeRepeats, onFlashNewMessage,
+    onClearLogs, onSaveLogs, hasLogs,
+    onShowTimestamp, onShowPacketType, onShowControlChars, onShowDataLength, onMergeRepeats, onFlashNewMessage,
     onEncoding, onFontFamily, onFontSize
 }: MonitorToolbarProps) => {
     const { t } = useI18n();
+    const optionsButtonRef = useRef<HTMLButtonElement>(null);
 
     return (
         <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--st-widget-border)] bg-[var(--st-toolbar-bg)] shrink-0">
@@ -102,45 +118,35 @@ export const MonitorToolbar = React.memo(({
 
                     {/* 选项菜单 */}
                     <div className="relative">
-                        <button className={`h-[26px] px-2 hover:bg-[var(--monitor-options-hover-bg)] rounded-[3px] text-[var(--st-ter-btn-options-text)] bg-[var(--st-ter-btn-options-bg)] border-[var(--st-ter-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--monitor-options-hover-bg)]' : ''}`} onClick={onToggleOptionsMenu}>
+                        <button
+                            ref={optionsButtonRef}
+                            className={`h-[26px] px-2 hover:bg-[var(--monitor-options-hover-bg)] rounded-[3px] text-[var(--st-ter-btn-options-text)] bg-[var(--st-ter-btn-options-bg)] border-[var(--st-ter-btn-options-border)] transition-colors flex items-center gap-1.5 ${showOptionsMenu ? 'bg-[var(--monitor-options-hover-bg)]' : ''}`}
+                            onClick={onToggleOptionsMenu}
+                        >
                             <Menu size={14} /> <span className="text-[11px] font-medium">{t('monitor.options')}</span>
                         </button>
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={onToggleOptionsMenu} />
-                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[260px]">
-                                    <div className="flex items-center justify-between mb-4 pb-1 border-b border-[var(--menu-border-color)]">
-                                        <div className="text-[12px] text-[var(--menu-foreground)] font-bold">{t('monitor.logSettings')}</div>
-                                        <X size={14} className="cursor-pointer text-[var(--activitybar-inactive-foreground)] hover:text-[var(--menu-foreground)]" onClick={onToggleOptionsMenu} />
-                                    </div>
-                                    <div className="space-y-4 px-1">
-                                        <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2 hidden">{t('monitor.encoding')}</div>
-                                            <CustomSelect items={[{ label: 'UTF-8', value: 'utf-8' }, { label: 'GBK', value: 'gbk' }, { label: 'ASCII', value: 'ascii' }]} value={encoding} onChange={(val) => onEncoding(val)} />
-                                            <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={onShowTimestamp} />
-                                            <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={onShowPacketType} />
-                                            <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={onShowDataLength} />
-                                            <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={onMergeRepeats} />
-                                            <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={onFlashNewMessage} />
-                                            <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
-                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
-                                                <div className="flex flex-col gap-2">
-                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontFamily')}:</span>
-                                                    <CustomSelect items={availableFonts} value={fontFamily} onChange={(val) => onFontFamily(val)} />
-                                                </div>
-                                                <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('monitor.fontSize')}:</span>
-                                                    <CustomSelect items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({ label: `${size}px`, value: size.toString() }))} value={fontSize.toString()} onChange={(val) => onFontSize(Number(val))} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--st-monitor-btn-export-bg)] text-white text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { onSaveLogs(); onToggleOptionsMenu(); }}>
-                                                <Download size={14} /> {t('monitor.exportLog')}
-                                            </button>
-                                        </div>
-                                    </div>
+                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[280px] max-h-[calc(100vh-120px)] overflow-y-auto">
+                                    <MonitorOptionsPanel
+                                        encoding={encoding} setEncoding={(v) => onEncoding(v)}
+                                        showTimestamp={showTimestamp} setShowTimestamp={onShowTimestamp}
+                                        showPacketType={showPacketType} setShowPacketType={onShowPacketType}
+                                        showControlChars={showControlChars} setShowControlChars={onShowControlChars}
+                                        showDataLength={showDataLength} setShowDataLength={onShowDataLength}
+                                        mergeRepeats={mergeRepeats} setMergeRepeats={onMergeRepeats}
+                                        flashNewMessage={flashNewMessage} setFlashNewMessage={onFlashNewMessage}
+                                        crcEnabled={crcEnabled} toggleCRC={toggleCRC}
+                                        rxCRC={rxCRC} updateRxCRC={updateRxCRC}
+                                        showCRCPanel={showCRCPanel} setShowCRCPanel={setShowCRCPanel}
+                                        fontSize={fontSize} setFontSize={onFontSize}
+                                        fontFamily={fontFamily} setFontFamily={onFontFamily}
+                                        availableFonts={availableFonts}
+                                        uiState={uiState} saveUIState={saveUIState}
+                                        hasLogs={hasLogs}
+                                        onExportLogs={() => { onSaveLogs(); onToggleOptionsMenu(); }}
+                                    />
                                 </div>
                             </>
                         )}

@@ -1,19 +1,19 @@
 /**
- * SerialPacketSettings.tsx
+ * PacketSettingsPanel.tsx
  * 接收分包策略配置面板 — 分包模式选择及参数配置。
- * 从 SerialOptionsMenu.tsx 中拆分出来。
+ * 通用组件，可被串口、虚拟串口监控等监视器复用。
  */
 import React from 'react';
-import { CustomSelect } from '../common/CustomSelect';
-import { Tooltip } from '../common/Tooltip';
+import { CustomSelect } from './CustomSelect';
+import { Tooltip } from './Tooltip';
 import { useI18n } from '../../context/I18nContext';
 
-interface SerialPacketSettingsProps {
+interface PacketSettingsPanelProps {
     uiState: Record<string, any>;
     saveUIState: (updates: Record<string, unknown>) => void;
 }
 
-export const SerialPacketSettings = React.memo(({ uiState, saveUIState }: SerialPacketSettingsProps) => {
+export const PacketSettingsPanel = React.memo(({ uiState, saveUIState }: PacketSettingsPanelProps) => {
     const { t } = useI18n();
     const rxPacketMode = uiState.rxPacketMode as string || 'none';
 
@@ -114,4 +114,4 @@ export const SerialPacketSettings = React.memo(({ uiState, saveUIState }: Serial
     );
 });
 
-SerialPacketSettings.displayName = 'SerialPacketSettings';
+PacketSettingsPanel.displayName = 'PacketSettingsPanel';

@@ -6,6 +6,7 @@
 import { useMemo, useCallback } from 'react';
 import { useSession } from '../../context/SessionContext';
 import { useI18n } from '../../context/I18nContext';
+import { useProfile } from '../../context/ProfileContext';
 import { useAutoReply } from '../../hooks/useAutoReply';
 import { AutoReplyPanel } from './AutoReplyPanel';
 import { CustomSelect } from '../common/CustomSelect';
@@ -15,6 +16,7 @@ import type { FeatureSidebarProps } from '../../types/module';
 export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
     const { sessions, writeToSession } = useSession();
     const { t } = useI18n();
+    const { activeProfile, isLoaded: profileLoaded } = useProfile();
 
     // 仅串口类型的会话
     const serialSessions = useMemo(() =>
@@ -34,6 +36,8 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
     }, [writeToSession]);
 
     const autoReply = useAutoReply({
+        activeProfile,
+        profileLoaded,
         sessionsData,
         writeToSession: handleWriteToSession,
     });

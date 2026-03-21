@@ -1,21 +1,14 @@
 /**
  * MqttMonitorToolbar.tsx
  * MQTT 监视器工具栏组件。
- * 从 MqttMonitor.tsx 中拆分出来，负责统计数据、视图模式切换、选项菜单、操作按钮。
+ * 选项菜单使用通用 MonitorOptionsPanel，隐藏 CRC 和接收分包（MQTT 不需要）。
  */
 import React from 'react';
-import { Trash2, ArrowDownToLine, Menu, Download } from 'lucide-react';
-import { CustomSelect } from '../common/CustomSelect';
-import { Switch } from '../common/Switch';
+import { Trash2, ArrowDownToLine, Menu } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { LogEntry } from '../../types/session';
-
-interface FontItem {
-    label: string;
-    value: string;
-    disabled?: boolean;
-}
+import { MonitorOptionsPanel } from '../common/MonitorOptionsPanel';
 
 interface MqttMonitorToolbarProps {
     // 连接信息
@@ -33,6 +26,12 @@ interface MqttMonitorToolbarProps {
     showOptionsMenu: boolean;
     setShowOptionsMenu: (show: boolean) => void;
     // 显示设置
+    encoding: 'utf-8' | 'gbk' | 'ascii';
+    setEncoding: (v: 'utf-8' | 'gbk' | 'ascii') => void;
+    showControlChars: boolean;
+    setShowControlChars: (v: boolean) => void;
+    showPacketType: boolean;
+    setShowPacketType: (v: boolean) => void;
     flashNewMessage: boolean;
     setFlashNewMessage: (v: boolean) => void;
     showTimestamp: boolean;
@@ -46,12 +45,13 @@ interface MqttMonitorToolbarProps {
     setFontSize: (v: number) => void;
     fontFamily: string;
     setFontFamily: (v: string) => void;
-    availableFonts: FontItem[];
+    availableFonts: any[];
     // 自动滚动
     autoScroll: boolean;
     setAutoScroll: (v: boolean) => void;
     // 操作回调
     saveUIState: (updates: Record<string, unknown>) => void;
+    uiState: Record<string, any>;
     onClearLogs?: () => void;
     handleSaveLogs: () => void;
 }
@@ -61,6 +61,9 @@ export const MqttMonitorToolbar = React.memo(({
     filterMode, setFilterMode,
     viewMode, setViewMode,
     showOptionsMenu, setShowOptionsMenu,
+    encoding, setEncoding,
+    showControlChars, setShowControlChars,
+    showPacketType, setShowPacketType,
     flashNewMessage, setFlashNewMessage,
     showTimestamp, setShowTimestamp,
     showDataLength, setShowDataLength,
@@ -69,7 +72,7 @@ export const MqttMonitorToolbar = React.memo(({
     fontFamily, setFontFamily,
     availableFonts,
     autoScroll, setAutoScroll,
-    saveUIState, onClearLogs, handleSaveLogs,
+    saveUIState, uiState, onClearLogs, handleSaveLogs,
 }: MqttMonitorToolbarProps) => {
     const { t } = useI18n();
 
@@ -138,47 +141,34 @@ export const MqttMonitorToolbar = React.memo(({
                         {showOptionsMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowOptionsMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[240px]">
-                                    <div className="text-[12px] text-[var(--st-monitor-btn-text)] font-bold mb-4 pb-1 border-b border-[var(--menu-border-color)]">{t('monitor.logSettings')}</div>
-                                    <div className="space-y-4 px-1">
-                                        <div className="space-y-2.5">
-                                            <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.display')}</div>
-                                            <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={val => { setFlashNewMessage(val); saveUIState({ flashNewMessage: val }); }} />
-                                            <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={val => { setShowTimestamp(val); saveUIState({ showTimestamp: val }); }} />
-                                            <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={val => { setShowDataLength(val); saveUIState({ showDataLength: val }); }} />
-                                            <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={val => { setMergeRepeats(val); saveUIState({ mergeRepeats: val }); }} />
-
-                                            <div className="pt-2 mt-2 border-t border-[var(--menu-border-color)]">
-                                                <div className="text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider mb-2">{t('monitor.typography')}</div>
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex flex-col gap-2">
-                                                        <span className="text-[11px] text-[var(--st-monitor-toolbar-foreground)]">{t('monitor.fontFamily')}:</span>
-                                                        <CustomSelect
-                                                            items={availableFonts}
-                                                            value={fontFamily}
-                                                            onChange={(val) => { setFontFamily(val); saveUIState({ fontFamily: val }); }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2 mt-2">
-                                                    <span className="text-[11px] text-[var(--st-monitor-toolbar-foreground)]">{t('monitor.fontSize')}:</span>
-                                                    <CustomSelect
-                                                        items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                            label: `${size}px`,
-                                                            value: size.toString()
-                                                        }))}
-                                                        value={fontSize.toString()}
-                                                        onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="pt-2 border-t border-[var(--menu-border-color)]">
-                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[var(--st-monitor-btn-export-bg)] text-white text-[11px] rounded hover:bg-[var(--button-hover-background)] transition-colors" onClick={() => { handleSaveLogs(); setShowOptionsMenu(false); }}>
-                                                <Download size={14} /> {t('monitor.exportLog')}
-                                            </button>
-                                        </div>
-                                    </div>
+                                <div className="absolute right-0 top-full mt-1 bg-[var(--menu-background)] border border-[var(--menu-border-color)] rounded-[3px] shadow-2xl p-3 z-50 min-w-[280px] max-h-[calc(100vh-120px)] overflow-y-auto">
+                                    <MonitorOptionsPanel
+                                        encoding={encoding}
+                                        setEncoding={(v) => { setEncoding(v); saveUIState({ encoding: v }); }}
+                                        showTimestamp={showTimestamp}
+                                        setShowTimestamp={(v) => { setShowTimestamp(v); }}
+                                        showPacketType={showPacketType}
+                                        setShowPacketType={(v) => { setShowPacketType(v); }}
+                                        showControlChars={showControlChars}
+                                        setShowControlChars={(v) => { setShowControlChars(v); }}
+                                        showDataLength={showDataLength}
+                                        setShowDataLength={(v) => { setShowDataLength(v); }}
+                                        mergeRepeats={mergeRepeats}
+                                        setMergeRepeats={(v) => { setMergeRepeats(v); }}
+                                        flashNewMessage={flashNewMessage}
+                                        setFlashNewMessage={(v) => { setFlashNewMessage(v); }}
+                                        fontSize={fontSize}
+                                        setFontSize={(v) => { setFontSize(v); }}
+                                        fontFamily={fontFamily}
+                                        setFontFamily={(v) => { setFontFamily(v); }}
+                                        availableFonts={availableFonts}
+                                        uiState={uiState}
+                                        saveUIState={saveUIState}
+                                        hasLogs={logs.length > 0}
+                                        onExportLogs={() => { handleSaveLogs(); setShowOptionsMenu(false); }}
+                                        hideCRC={true}
+                                        hidePacketSettings={true}
+                                    />
                                 </div>
                             </>
                         )}

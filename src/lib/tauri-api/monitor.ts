@@ -39,9 +39,9 @@ export function registerMonitorAPI(): void {
             invoke('monitor_write', { sessionId, target, data }),
 
         onData: (sessionId, callback) =>
-            createListener<{ sessionId: string; type: 'RX' | 'TX'; data: number[] }>(
+            createListener<{ sessionId: string; type: 'RX' | 'TX'; data: number[]; timestamp?: number }>(
                 'monitor:data', sessionId,
-                (p) => callback(p.type, new Uint8Array(p.data)),
+                (p) => callback(p.type, new Uint8Array(p.data), p.timestamp),
             ),
 
         onError: (sessionId, callback) =>
@@ -61,5 +61,32 @@ export function registerMonitorAPI(): void {
                 'monitor:partner-status', sessionId,
                 (p) => callback(p.connected),
             ),
+            
+        startTimedSend: (sessionId, target, data, intervalMs) =>
+            invoke('monitor_start_timed_send', { sessionId, target, data, intervalMs }),
+
+        stopTimedSend: (sessionId) =>
+            invoke('monitor_stop_timed_send', { sessionId }),
+
+        onTimedSendTickBatch: (sessionId, callback) => {
+            let unlisten: import('@tauri-apps/api/event').UnlistenFn | null = null;
+            let disposed = false;
+            import('@tauri-apps/api/event').then(({ listen }) => {
+                listen<{ sessionId: string; type: string; target?: string; data: number[]; timestamp: number }[]>('monitor:timed-send-tick-batch', (event) => {
+                    const batch = event.payload;
+                    console.log("[Monitor Batch Received]", batch);
+                    if (batch && batch.length > 0 && batch[0].sessionId === sessionId) {
+                        callback(batch.map(e => ({ data: e.data, timestamp: e.timestamp, target: e.target })));
+                    }
+                }).then(fn => {
+                    if (disposed) fn();
+                    else unlisten = fn;
+                });
+            });
+            return () => {
+                disposed = true;
+                unlisten?.();
+            };
+        },
     }
 }

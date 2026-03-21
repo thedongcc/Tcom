@@ -1,4 +1,3 @@
-pub mod workspace;
 pub mod theme;
 pub mod app;
 pub mod shell;
@@ -9,3 +8,7 @@ pub mod tcp;
 pub mod window;
 pub mod updater;
 pub mod crash_report;
+pub mod profile;
+pub mod global_settings;
+pub mod backup;
+pub mod fs_utils;

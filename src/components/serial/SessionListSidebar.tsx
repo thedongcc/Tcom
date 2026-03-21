@@ -4,8 +4,9 @@
  *
  * 子模块：
  * - useSessionListActions.ts — 拖拽排序、新建/重命名/删除会话逻辑
- * - WorkspaceHeader.tsx — 工作区头部区域
- * - RecentWorkspacesMenu.tsx — 最近工作区弹出菜单
+ * - WorkspaceHeader.tsx — Profile 头部区域
+ * - RecentWorkspacesMenu.tsx — Profile 切换弹出菜单
+ * - ProfileManagerModal.tsx — 配置档案管理弹窗
  */
 import { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit2 } from 'lucide-react';
@@ -20,6 +21,7 @@ import { useSession } from '../../context/SessionContext';
 import { SessionConfig } from '../../types/session';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { RecentWorkspacesMenu } from './RecentWorkspacesMenu';
+import { ProfileManagerModal } from '../profile/ProfileManagerModal';
 
 interface SessionListSidebarProps {
     editorLayout: ReturnType<typeof useEditorLayout>;
@@ -31,6 +33,7 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, sessionId: string } | null>(null);
     const [recentMenu, setRecentMenu] = useState<{ x: number, y: number } | null>(null);
     const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
+    const [showProfileManager, setShowProfileManager] = useState(false);
     const addButtonRef = useRef<HTMLDivElement>(null);
     const recentButtonRef = useRef<HTMLDivElement>(null);
 
@@ -61,19 +64,16 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
         setContextMenu({ x: e.clientX, y: e.clientY, sessionId });
     };
 
-    const workspaceFolderName = sessionManager.workspacePath
-        ? sessionManager.workspacePath.split(/[\\/]/).pop() || '...'
-        : null;
+    const profileName = sessionManager.activeProfile || 'default';
 
     return (
         <div className="flex flex-col h-full bg-[var(--session-list-sidebar-bg)] text-[var(--session-list-sidebar-text)] relative" data-component="session-list-sidebar">
-            {/* 工作区头部 */}
+            {/* Profile 头部 */}
             <WorkspaceHeader
-                workspacePath={sessionManager.workspacePath}
-                workspaceFolderName={workspaceFolderName}
+                workspaceFolderName={profileName}
                 onRefreshWorkspace={() => {
-                    if (sessionManager.workspacePath) {
-                        sessionManager.openWorkspace(sessionManager.workspacePath);
+                    if (sessionManager.activeProfile) {
+                        sessionManager.switchProfile(sessionManager.activeProfile);
                     }
                 }}
                 onShowRecentMenu={(e) => {
@@ -82,28 +82,27 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
                     if (rect) setRecentMenu({ x: rect.left, y: rect.bottom + 5 });
                 }}
                 onShowNewSession={() => setShowNewSessionDialog(true)}
-                onBrowseWorkspace={() => sessionManager.browseAndOpenWorkspace()}
                 recentButtonRef={recentButtonRef}
                 addButtonRef={addButtonRef}
                 t={t}
             />
 
-            {/* 最近工作区菜单 */}
+            {/* Profile 切换菜单 */}
             {recentMenu && (
                 <RecentWorkspacesMenu
                     position={recentMenu}
-                    currentWorkspacePath={sessionManager.workspacePath}
-                    recentWorkspaces={sessionManager.recentWorkspaces}
-                    onOpenWorkspace={(ws) => sessionManager.openWorkspace(ws)}
-                    onBrowseWorkspace={() => sessionManager.browseAndOpenWorkspace()}
+                    currentWorkspacePath={profileName}
+                    recentWorkspaces={sessionManager.profiles?.map(p => p.name) || []}
+                    onOpenWorkspace={(name) => sessionManager.switchProfile(name)}
                     onClose={() => setRecentMenu(null)}
+                    onManageProfiles={() => setShowProfileManager(true)}
                     t={t}
                 />
             )}
 
             {/* 会话列表 */}
             <div className="flex flex-col flex-1 overflow-y-auto" onClick={() => setEditingId(null)}>
-                {sessionManager.workspacePath && sessionManager.savedSessions.length === 0 && (
+                {sessionManager.savedSessions.length === 0 && (
                     <div className="p-4 text-[11px] text-[var(--activitybar-inactive-foreground)] italic text-center">
                         {t('session.noSessions')}
                     </div>
@@ -187,6 +186,11 @@ export const SessionListSidebar = ({ editorLayout }: SessionListSidebarProps) =>
                         {t('common.delete')}
                     </div>
                 </div>
+            )}
+
+            {/* Profile 管理弹窗 */}
+            {showProfileManager && (
+                <ProfileManagerModal onClose={() => setShowProfileManager(false)} />
             )}
         </div>
     );

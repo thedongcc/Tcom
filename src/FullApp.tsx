@@ -15,6 +15,7 @@ import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { I18nProvider, useI18n } from './context/I18nContext'
 import { ToastContainer } from './context/ToastContext'
 import { CommandProvider } from './context/CommandContext'
+import { ProfileProvider } from './context/ProfileContext'
 import { ConfirmContainer } from './context/ConfirmContext'
 import { SessionProvider } from './context/SessionContext'
 import { FeatureProvider } from './context/FeatureContext'
@@ -23,6 +24,7 @@ import { useEditorLayout } from './hooks/useEditorLayout'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { composeProviders } from './utils/composeProviders'
 import { checkCrashOnStartup } from './lib/crashReporter'
+import { initFlushOnExit } from './hooks/useFlushOnExit'
 
 // 重型组件懒加载
 const Layout = React.lazy(() => import('./components/layout/Layout').then(m => ({ default: m.Layout })));
@@ -32,6 +34,7 @@ const RootProviders = composeProviders(
     SettingsProvider,
     I18nProvider,
     ErrorBoundary,
+    ProfileProvider,
     CommandProvider,
 );
 
@@ -122,6 +125,11 @@ function AppContent() {
     const { t } = useI18n();
     const { config } = useSettings();
     const windowShown = useRef(false);
+
+    // 初始化退出 Flush 机制（窗口关闭前强制保存所有防抖中的数据）
+    useEffect(() => {
+        initFlushOnExit();
+    }, []);
 
     // 组件挂载后：恢复窗口位置 → 关闭 Splash → 显示主窗口
     useEffect(() => {

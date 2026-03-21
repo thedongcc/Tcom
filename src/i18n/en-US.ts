@@ -55,6 +55,7 @@ export const enUS = {
             keybindings: 'Keybindings',
             modules: 'Feature Modules',
             privacy: 'Privacy & Data',
+            dataBackup: 'Data & Backup',
         },
 
         // Keybindings
@@ -189,6 +190,17 @@ export const enUS = {
             crashReportDesc: 'Allow automatic anonymous crash report submission to help developers quickly identify and fix issues. No personal data is collected.',
         },
 
+        // Data & Backup
+        dataBackup: {
+            exportAll: 'Export All Data',
+            exportAllDesc: 'Package all profiles and global settings into a ZIP file.',
+            exportAllBtn: 'Export All Data (.zip)',
+            importAll: 'Restore from Backup',
+            importAllDesc: 'ℹ️ This will overwrite all current profiles and settings. Make sure you have exported your current data first.',
+            importAllBtn: 'Restore from Backup',
+            importSuccess: 'Restore successful. The app will reload to apply the latest data.',
+        },
+
         noResults: 'No results for "{term}"',
     },
 
@@ -208,9 +220,9 @@ export const enUS = {
         sessionName: 'Session Name',
         sessionNamePlaceholder: 'Enter session name...',
         sessionNameExists: 'This name is already in use, please choose another.',
-        recentWorkspaces: 'Recent Workspaces',
-        noWorkspaceOpen: 'No workspace open',
-        openWorkspace: 'Open Workspace',
+        recentWorkspaces: 'Switch Profile',
+        noWorkspaceOpen: 'No profile loaded',
+        openWorkspace: 'New Profile',
         openOther: 'Open Other...',
         noSessions: 'No sessions yet. Click "+" to create one.',
         deleteTitle: 'Delete Session',
@@ -387,6 +399,8 @@ export const enUS = {
         physicalPort: 'Physical Port (Device)',
         refreshPorts: 'Refresh Ports',
         autoDestroyPair: 'Auto-destroy Pair on Stop',
+        nagleTimeout: 'Nagle Debounce (ms)',
+        nagleTimeoutTooltip: 'Combines multiple small packets into a single frame to reduce system overhead. Set to 0 for pure real-time streaming without merging.',
         baudRate: 'Baud Rate (Physical)',
         dataBits: 'Data Bits',
         stopBits: 'Stop Bits',

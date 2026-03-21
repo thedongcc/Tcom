@@ -1,17 +1,17 @@
 /**
- * SerialCRCPanel.tsx
+ * CRCPanel.tsx
  * CRC 校验配置面板 — 包含校验对象选择、算法选择、偏移量配置。
- * 从 SerialOptionsMenu.tsx 中拆分出来。
+ * 通用组件，可被串口、虚拟串口监控等监视器复用。
  */
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
-import { CustomSelect } from '../common/CustomSelect';
-import { Switch } from '../common/Switch';
-import { Tooltip } from '../common/Tooltip';
+import { CustomSelect } from './CustomSelect';
+import { Switch } from './Switch';
+import { Tooltip } from './Tooltip';
 import { useI18n } from '../../context/I18nContext';
 
-interface SerialCRCPanelProps {
+interface CRCPanelProps {
     crcEnabled: boolean;
     toggleCRC: () => void;
     rxCRC: CRCConfig;
@@ -22,11 +22,11 @@ interface SerialCRCPanelProps {
     saveUIState: (updates: Record<string, unknown>) => void;
 }
 
-export const SerialCRCPanel = React.memo(({
+export const CRCPanel = React.memo(({
     crcEnabled, toggleCRC, rxCRC, updateRxCRC,
     showCRCPanel, setShowCRCPanel,
     uiState, saveUIState,
-}: SerialCRCPanelProps) => {
+}: CRCPanelProps) => {
     const { t } = useI18n();
 
     return (
@@ -101,4 +101,4 @@ export const SerialCRCPanel = React.memo(({
     );
 });
 
-SerialCRCPanel.displayName = 'SerialCRCPanel';
+CRCPanel.displayName = 'CRCPanel';

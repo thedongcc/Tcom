@@ -84,8 +84,13 @@ export const useSessionLog = (
             let newRxBytes = s.rxBytes || 0;
             for (const incoming of bufferLogs) {
                 const len = getLogByteLength(incoming.data) * (incoming.repeatCount || 1);
-                if (incoming.type === 'TX' && (!incoming.topic || incoming.topic === 'virtual')) newTxBytes += len;
-                else if (incoming.type === 'RX' && (!incoming.topic || incoming.topic === 'physical')) newRxBytes += len;
+                if (s.config.type === 'monitor') {
+                    if (incoming.type === 'TX' && incoming.topic === 'virtual' && incoming.sender !== 'tcom') newTxBytes += len;
+                    else if (incoming.type === 'RX' && incoming.topic === 'physical') newRxBytes += len;
+                } else {
+                    if (incoming.type === 'TX') newTxBytes += len;
+                    else if (incoming.type === 'RX') newRxBytes += len;
+                }
             }
 
             return { ...s, logs: newLogs, txBytes: newTxBytes, rxBytes: newRxBytes };
@@ -105,7 +110,8 @@ export const useSessionLog = (
         crcStatus: LogEntry['crcStatus'] = 'none',
         topic?: string,
         commandName?: string,
-        tsOverride?: number
+        tsOverride?: number,
+        sender?: string
     ) => {
         const entry: LogEntry = {
             id: crypto.randomUUID(),
@@ -115,6 +121,7 @@ export const useSessionLog = (
             crcStatus,
             topic,
             commandName,
+            sender,
         };
 
         let batch = logBufferRef.current.get(sessionId);

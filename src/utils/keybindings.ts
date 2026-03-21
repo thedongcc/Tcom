@@ -8,7 +8,8 @@
 /**
  * 将实际按键名转为标准显示名
  */
-function normalizeKey(key: string): string {
+function normalizeKey(key: string | undefined): string {
+    if (!key) return '';
     const map: Record<string, string> = {
         ' ': 'Space',
         'ArrowUp': 'Up',
@@ -29,8 +30,8 @@ function normalizeKey(key: string): string {
  * 仅在按下非修饰键时才生成有效绑定（纯修饰键返回空字符串）。
  */
 export function serializeKeyEvent(e: KeyboardEvent): string {
-    // 排除纯修饰键
-    if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return '';
+    // 排除纯修饰键和 undefined key（IME 事件）
+    if (!e.key || ['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return '';
 
     const parts: string[] = [];
     if (e.ctrlKey || e.metaKey) parts.push('Ctrl'); // Mac ⌘ 映射为 Ctrl

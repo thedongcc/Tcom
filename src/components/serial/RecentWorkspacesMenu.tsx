@@ -1,17 +1,17 @@
 /**
  * RecentWorkspacesMenu.tsx
- * 最近工作区弹出菜单 — 从 SessionListSidebar 拆分出来。
+ * Profile 切换弹出菜单 — 显示所有 Profile 列表，支持快速切换。
+ * 底部提供「管理配置档案」入口。
  */
-import { Check } from 'lucide-react';
-import { Tooltip } from '../common/Tooltip';
+import { Check, User, Settings } from 'lucide-react';
 
 interface RecentWorkspacesMenuProps {
     position: { x: number; y: number };
     currentWorkspacePath: string | null;
     recentWorkspaces: string[];
     onOpenWorkspace: (path: string) => void;
-    onBrowseWorkspace: () => void;
     onClose: () => void;
+    onManageProfiles?: () => void;
     t: (path: string, vars?: Record<string, string>) => string;
 }
 
@@ -20,8 +20,8 @@ export const RecentWorkspacesMenu = ({
     currentWorkspacePath,
     recentWorkspaces,
     onOpenWorkspace,
-    onBrowseWorkspace,
     onClose,
+    onManageProfiles,
     t,
 }: RecentWorkspacesMenuProps) => {
     return (
@@ -42,26 +42,27 @@ export const RecentWorkspacesMenu = ({
                         onClose();
                     }}
                 >
-                    <Tooltip content={ws} position="right" wrapperClassName="truncate flex-1" className="max-w-[300px] whitespace-normal">
-                        <span className="truncate flex-1">
-                            {ws.split(/[\\/]/).pop()}
-                        </span>
-                    </Tooltip>
+                    <User size={12} className="opacity-50 shrink-0" />
+                    <span className="truncate flex-1">{ws}</span>
                     {currentWorkspacePath === ws && <Check size={12} className="opacity-70" />}
                 </div>
             ))}
             {recentWorkspaces.length > 0 && (
                 <div className="h-[1px] bg-[var(--border-color)] my-1 opacity-50" />
             )}
-            <div
-                className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer"
-                onClick={() => {
-                    onBrowseWorkspace();
-                    onClose();
-                }}
-            >
-                {t('session.openOther')}
-            </div>
+            {/* 管理配置档案入口 */}
+            {onManageProfiles && (
+                <div
+                    className="px-3 py-1.5 text-[12px] hover:bg-[var(--list-hover-background)] hover:text-[var(--st-sidebar-text)] cursor-pointer flex items-center gap-2"
+                    onClick={() => {
+                        onManageProfiles();
+                        onClose();
+                    }}
+                >
+                    <Settings size={12} className="opacity-50" />
+                    <span>管理配置档案...</span>
+                </div>
+            )}
         </div>
     );
 };

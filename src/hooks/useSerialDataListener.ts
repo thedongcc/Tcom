@@ -70,7 +70,7 @@ export function useSerialDataListener(
                     jsIntervalSum = 0;
                 }
 
-                sessionLog.addLog(session.id, 'TX', new Uint8Array(data), 'none', undefined, undefined, timestamp);
+                sessionLog.addLog(session.id, 'TX', new Uint8Array(data), 'none', undefined, undefined, timestamp, 'tcom');
             });
 
             registeredSessions.current.add(session.id);

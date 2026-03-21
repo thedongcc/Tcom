@@ -59,7 +59,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
     // ── 日志操作 ──
     const handleClearLogs = () => sessionManager.clearLogs(session.id);
 
-    const handleSend = (data: string | Uint8Array, mode: 'text' | 'hex') => {
+    const handleSend = useCallback((data: string | Uint8Array, mode: 'text' | 'hex') => {
         if (!isConnected) { showToast(t('toast.connectFirst'), 'error'); return; }
         let finalData = data;
         if (mode === 'hex' && typeof data === 'string') {
@@ -71,7 +71,15 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
             }
         }
         void sessionManager.writeToMonitor(session.id, sendTarget, finalData);
-    };
+    }, [isConnected, sendTarget, session.id, sessionManager, showToast, t]);
+
+    const handleTimedSendStart = useCallback((sid: string, data: number[], intervalMs: number) => {
+        void window.monitorAPI?.startTimedSend(sid, sendTarget, data, intervalMs);
+    }, [sendTarget]);
+
+    const handleTimedSendStop = useCallback((sid: string) => {
+        void window.monitorAPI?.stopTimedSend(sid);
+    }, []);
 
     // ── 右键菜单和命令添加 ──
     const { addCommand, commands } = useCommandContext();
@@ -175,15 +183,30 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
             <MonitorToolbar
                 isConnected={isConnected} config={config} txBytes={txBytes} rxBytes={rxBytes}
                 filterMode={filterMode} viewMode={viewMode} autoScroll={autoScroll} showOptionsMenu={showOptionsMenu}
-                showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength}
+                showTimestamp={showTimestamp} showPacketType={showPacketType}
+                showControlChars={state.showControlChars}
+                showDataLength={showDataLength}
                 mergeRepeats={mergeRepeats} flashNewMessage={flashNewMessage}
                 encoding={encoding} fontFamily={fontFamily} fontSize={fontSize} availableFonts={availableFonts}
+                crcEnabled={config.rxCRC?.enabled || false}
+                toggleCRC={() => {
+                    const current = config.rxCRC || { enabled: false, algorithm: 'modbus-crc16' as const, startIndex: 0, endIndex: 0 };
+                    void sessionManager.updateSessionConfig(session.id, { rxCRC: { ...current, enabled: !current.enabled } } as any);
+                }}
+                rxCRC={config.rxCRC || { enabled: false, algorithm: 'modbus-crc16' as const, startIndex: 0, endIndex: 0 }}
+                updateRxCRC={(updates) => {
+                    const current = config.rxCRC || { enabled: false, algorithm: 'modbus-crc16' as const, startIndex: 0, endIndex: 0 };
+                    void sessionManager.updateSessionConfig(session.id, { rxCRC: { ...current, ...updates } } as any);
+                }}
+                showCRCPanel={state.showCRCPanel} setShowCRCPanel={state.setShowCRCPanel}
+                uiState={uiState} saveUIState={state.saveUIState}
                 onFilterChange={handleFilterChange} onViewModeChange={handleViewModeChange}
                 onAutoScrollToggle={handleAutoScrollToggle}
                 onToggleOptionsMenu={() => setShowOptionsMenu(!showOptionsMenu)}
-                onClearLogs={handleClearLogs} onSaveLogs={handleSaveLogs}
+                onClearLogs={handleClearLogs} onSaveLogs={handleSaveLogs} hasLogs={state.logs.length > 0}
                 onShowTimestamp={onShowTimestamp}
                 onShowPacketType={onShowPacketType}
+                onShowControlChars={state.onShowControlChars}
                 onShowDataLength={onShowDataLength}
                 onMergeRepeats={onMergeRepeats}
                 onFlashNewMessage={onFlashNewMessage}
@@ -229,6 +252,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                                 key={`${log.id}-${log.repeatCount || 1}`}
                                 log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
                                 showTimestamp={showTimestamp} showPacketType={showPacketType} showDataLength={showDataLength}
+                                showControlChars={state.showControlChars}
                                 virtualSerialPort={virtualSerPort || ''} physicalPortPath={physPort}
                                 onContextMenu={handleLogContextMenu}
                                 formatData={formatData} formatTimestamp={(ts: number, fmt?: string) => formatTimestamp(ts, fmt || 'HH:mm:ss.SSS')} getDataLengthText={getDataLengthText}
@@ -248,7 +272,10 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 </div>
                 <SerialInput
                     key={session.id}
+                    sessionId={session.id}
                     onSend={handleSend}
+                    onTimedSendStart={handleTimedSendStart}
+                    onTimedSendStop={handleTimedSendStop}
                     initialContent={uiState.inputContent as string} initialHTML={uiState.inputHTML as string}
                     initialTokens={uiState.inputTokens as Record<string, import('../../types/token').Token>} initialMode={(uiState.inputMode as string as 'text' | 'hex') || 'hex'}
                     initialLineEnding={(uiState.lineEnding as string) ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}

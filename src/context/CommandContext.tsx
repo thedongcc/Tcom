@@ -1,11 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { CommandEntity, CommandGroup, CommandItem } from '../types/command';
 import { useHistory } from '../hooks/useHistory';
 import { useConfirm } from './ConfirmContext';
 import { useI18n } from './I18nContext';
+import { useProfile } from './ProfileContext';
 import { cloneRecursive, readCommandsFromFile, downloadCommandsAsJson } from '../hooks/useCommandActions';
-
-const STORAGE_KEY = 'tcom-commands';
+import { flushRegistry } from '../hooks/useFlushOnExit';
 
 interface CommandContextType {
     commands: CommandEntity[];
@@ -31,29 +31,69 @@ const CommandContext = createContext<CommandContextType | undefined>(undefined);
 export const CommandProvider = ({ children }: { children: ReactNode }) => {
     const { confirm } = useConfirm();
     const { t } = useI18n();
-    // using useHistory for Undo/Redo support
+    const { activeProfile, isLoaded: profileLoaded } = useProfile();
+    // 使用 useHistory 支持 Undo/Redo
     const { state: commands, set: setCommands, undo, redo, canUndo, canRedo, reset } = useHistory<CommandEntity[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-    // Load from local storage on mount
+    // 从 Profile 文件加载命令菜单数据
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
+        if (!profileLoaded) return;
+        let cancelled = false;
+
+        const load = async () => {
             try {
-                reset(JSON.parse(stored));
+                const res = await window.profileAPI?.getCommands(activeProfile);
+                if (cancelled) return;
+                if (res?.success && Array.isArray(res.data)) {
+                    reset(res.data as CommandEntity[]);
+                } else {
+                    reset([]);
+                }
             } catch (e) {
-                console.error('Failed to load commands', e);
+                console.error('加载命令菜单失败:', e);
+                if (!cancelled) reset([]);
             }
-        }
-        setIsLoaded(true);
-    }, [reset]);
+            if (!cancelled) setIsLoaded(true);
+        };
+        setIsLoaded(false);
+        load();
+        return () => { cancelled = true; };
+    }, [activeProfile, profileLoaded, reset]);
 
-    // Save to local storage whenever commands change
+    // 防抖保存到 Profile 文件（数据变更后 500ms 写盘）
     useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(commands));
+        if (!isLoaded) return;
+
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
         }
-    }, [commands, isLoaded]);
+        saveTimerRef.current = setTimeout(() => {
+            window.profileAPI?.saveCommands(activeProfile, commands).catch(e => {
+                console.error('保存命令菜单失败:', e);
+            });
+        }, 500);
+
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [commands, isLoaded, activeProfile]);
+
+    // 注册 Flush 回调（窗口关闭前立即保存防抖中的数据）
+    useEffect(() => {
+        const flush = async () => {
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+                saveTimerRef.current = undefined;
+            }
+            if (isLoaded) {
+                await window.profileAPI?.saveCommands(activeProfile, commands);
+            }
+        };
+        flushRegistry.register(flush);
+        return () => { flushRegistry.unregister(flush); };
+    }, [commands, isLoaded, activeProfile]);
 
     const addGroup = useCallback((name: string, parentId: string | null = null) => {
         const newGroup: CommandGroup = {
@@ -99,7 +139,6 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
 
             ids.forEach(id => {
                 allToDelete.add(id);
-                // Also delete descendants of groups
                 const item = prev.find(p => p.id === id);
                 if (item && item.type === 'group') {
                     collectDescendants(id);
@@ -138,7 +177,7 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
         });
     }, [setCommands]);
 
-    // 批量深复制（一次性在单个历史记录中完成，支持一次撤回）
+    // 批量深复制
     const duplicateEntities = useCallback((ids: string[], newParentId?: string) => {
         setCommands(prev => {
             let accumulated = [...prev];

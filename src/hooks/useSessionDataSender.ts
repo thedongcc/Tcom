@@ -33,7 +33,7 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
             : 'none';
 
         // 立即添加 TX 日志 — 用户瞬间看到发送记录，不等待 IPC
-        sessionLog.addLog(sessionId, 'TX', rawData, txCrcStatus, undefined, options?.commandName, Date.now());
+        sessionLog.addLog(sessionId, 'TX', rawData, txCrcStatus, undefined, options?.commandName, Date.now(), 'tcom');
 
         // 异步发送数据到串口（fire-and-forget），失败时追加 ERROR 日志
         window.serialAPI.write(sessionId, rawData).then(result => {
@@ -59,9 +59,13 @@ export function useSessionDataSender({ sessionsRef, sessionLog }: UseSessionData
         const session = sessionsRef.current.find(s => s.id === sessionId);
         if (!session || !session.isConnected || session.config.type !== 'monitor' || !window.monitorAPI) return;
         const pData = ArrayBuffer.isView(data) ? Array.from(data as Uint8Array) : typeof data === 'string' ? data : data;
-        const res = await window.monitorAPI.write(sessionId, target, pData);
-        if (res.success) sessionLog.addLog(sessionId, 'TX', data as Uint8Array, 'none', target, options?.commandName);
-        else sessionLog.addLog(sessionId, 'ERROR', `Write failed: ${res.error}`);
+        try {
+            const res = await window.monitorAPI.write(sessionId, target, pData);
+            if (res.success) sessionLog.addLog(sessionId, 'TX', data as Uint8Array, 'none', target, options?.commandName, undefined, 'tcom');
+            else sessionLog.addLog(sessionId, 'ERROR', `Write failed: ${res.error}`);
+        } catch (e: any) {
+            sessionLog.addLog(sessionId, 'ERROR', `Write error: ${e.message || String(e)}`);
+        }
     }, [sessionsRef, sessionLog]);
 
     return { writeToSession, publishMqtt, writeToMonitor };

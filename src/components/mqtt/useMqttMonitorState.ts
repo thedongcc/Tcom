@@ -34,6 +34,9 @@ export function useMqttMonitorState({ config, onUpdateConfig }: UseMqttMonitorSt
     const [fontFamily, setFontFamily] = useState<string>(uiState.fontFamily || 'AppCoreFont');
     const [mergeRepeats, setMergeRepeats] = useState(uiState.mergeRepeats !== undefined ? uiState.mergeRepeats : false);
     const [filterMode, setFilterMode] = useState<'all' | 'rx' | 'tx'>(uiState.filterMode || 'all');
+    const [encoding, setEncoding] = useState<'utf-8' | 'gbk' | 'ascii'>(uiState.encoding || 'utf-8');
+    const [showControlChars, setShowControlChars] = useState(uiState.showControlChars !== undefined ? uiState.showControlChars : false);
+    const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? uiState.showPacketType : true);
     const [availableFonts, setAvailableFonts] = useState<FontItem[]>([]);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
@@ -96,7 +99,7 @@ export function useMqttMonitorState({ config, onUpdateConfig }: UseMqttMonitorSt
                 ...updates,  // updates 最后展开，确保新值不被旧 state 覆盖
             }
         });
-    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, flashNewMessage, fontSize, fontFamily, mergeRepeats, filterMode]);
+    }, [onUpdateConfig, config.uiState, viewMode, showTimestamp, showDataLength, autoScroll, flashNewMessage, fontSize, fontFamily, mergeRepeats, filterMode, encoding, showControlChars, showPacketType]);
 
     // 已订阅的主题列表
     const subscribedTopics = useMemo(() =>
@@ -115,6 +118,9 @@ export function useMqttMonitorState({ config, onUpdateConfig }: UseMqttMonitorSt
         fontFamily, setFontFamily,
         mergeRepeats, setMergeRepeats,
         filterMode, setFilterMode,
+        encoding, setEncoding,
+        showControlChars, setShowControlChars,
+        showPacketType, setShowPacketType,
         availableFonts,
         showOptionsMenu, setShowOptionsMenu,
         // 搜索

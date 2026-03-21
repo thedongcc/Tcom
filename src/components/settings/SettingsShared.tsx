@@ -35,12 +35,10 @@ export const SettingRow = ({
     label,
     description,
     children,
-    stackContent = false,
 }: {
     label: string;
     description?: string;
     children: React.ReactNode;
-    stackContent?: boolean;
 }) => (
     <div className="flex items-center justify-between gap-4 px-4 py-3.5 border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--list-hover-background)] transition-colors">
         <div className="flex flex-col flex-1 min-w-0">

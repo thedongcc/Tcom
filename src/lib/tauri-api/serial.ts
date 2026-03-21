@@ -70,11 +70,24 @@ export function registerSerialAPI(): void {
         timedSendStop: (connectionId) =>
             invoke('serial_timed_send_stop', { connectionId }),
 
-        onTimedSendTick: (connectionId, callback) =>
-            createListener<{ connectionId: string; data: number[]; timestamp: number }>(
-                'serial:timed-send-tick', connectionId, 'connectionId',
-                (p) => callback(p.data, p.timestamp),
-            ),
+        onTimedSendTickBatch: (connectionId, callback) => {
+            let unlisten: import('@tauri-apps/api/event').UnlistenFn | null = null;
+            let disposed = false;
+            listen<{ connectionId: string; data: number[]; timestamp: number }[]>('serial:timed-send-tick-batch', (event) => {
+                const batch = event.payload;
+                console.log("[Serial Batch Received]", batch);
+                if (batch && batch.length > 0 && batch[0].connectionId === connectionId) {
+                    callback(batch);
+                }
+            }).then(fn => {
+                if (disposed) fn();
+                else unlisten = fn;
+            });
+            return () => {
+                disposed = true;
+                unlisten?.();
+            };
+        },
 
         // 动态定时发送
         timedSendStartDynamic: (connectionId, frames, intervalMs, timestampSlots) =>

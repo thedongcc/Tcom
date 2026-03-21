@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { RefreshCw, Play, Square } from 'lucide-react';
+import { RefreshCw, Play, Square, Info } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { MonitorSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { Com0Com } from '../../utils/com0com';
@@ -212,6 +212,32 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                             onChange={(val) => updateConfig({ connection: { ...monitorConfig.connection, parity: val as 'none' | 'even' | 'mark' | 'odd' | 'space' } })}
                             disabled={isConnected}
                         />
+                    </div>
+
+                    <div className="flex flex-col gap-1 pt-2 border-t border-[var(--border-color)] mt-1">
+                        <label className="text-[11px] text-[var(--app-foreground)] font-medium flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                                {t('monitor.nagleTimeout')}
+                                <Tooltip content={t('monitor.nagleTimeoutTooltip')} position="right" delay={200}>
+                                    <Info size={12} className="text-[var(--activitybar-inactive-foreground)] cursor-help hover:text-[var(--app-foreground)] transition-colors" />
+                                </Tooltip>
+                            </span>
+                            <span className="text-[10px] text-[var(--activitybar-inactive-foreground)]">{monitorConfig.nagleTimeout ?? 15} ms</span>
+                        </label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="50"
+                            step="1"
+                            value={monitorConfig.nagleTimeout ?? 15}
+                            onChange={(e) => updateConfig({ nagleTimeout: parseInt(e.target.value) || 0 })}
+                            disabled={isConnected}
+                            className="w-full accent-[var(--button-background)] h-1 bg-[var(--widget-border-color)] rounded-full appearance-none outline-none"
+                        />
+                        <div className="flex justify-between text-[10px] text-[var(--activitybar-inactive-foreground)] opacity-70 mt-0.5">
+                            <span>0 (Flow)</span>
+                            <span>50</span>
+                        </div>
                     </div>
 
                 </div>

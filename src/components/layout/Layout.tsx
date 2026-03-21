@@ -31,13 +31,13 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
     // 侧边栏位置逻辑
     const sidebarAtRight = config.ui.sidebarPosition === 'right';
 
-    // 基于工作区持久化布局
+    // 基于 Profile 持久化布局
     useEffect(() => {
-        if (sessionManager.workspacePath) {
-            editorLayout.setPersistenceKey(sessionManager.workspacePath);
+        if (sessionManager.activeProfile) {
+            editorLayout.setPersistenceKey(sessionManager.activeProfile);
             restoredIdsRef.current.clear();
         }
-    }, [sessionManager.workspacePath]);
+    }, [sessionManager.activeProfile]);
 
     // 恢复会话
     useEffect(() => {

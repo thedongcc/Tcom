@@ -80,6 +80,10 @@ pub fn start_timed_send(
             .unwrap_or_default()
             .as_millis() as u64;
 
+        let mut batch = Vec::new();
+        let mut last_emit = Instant::now();
+        let batch_interval = Duration::from_millis(16);
+
         while !stop.load(Ordering::SeqCst) {
 
             let timestamp = base_system_ms + base_instant.elapsed().as_millis() as u64;
@@ -87,20 +91,24 @@ pub fn start_timed_send(
             // 异步发送写请求到 writer 线程
             let _ = write_tx.send(data.clone());
 
-            // 通知前端
-            let _ = tick_app.emit(
-                "serial:timed-send-tick",
-                TimedSendTickEvent {
-                    connection_id: tick_id.clone(),
-                    data: data.clone(),
-                    timestamp,
-                },
-            );
+            // 压入批处理队列
+            batch.push(TimedSendTickEvent {
+                connection_id: tick_id.clone(),
+                data: data.clone(),
+                timestamp,
+            });
+
+            let now = Instant::now();
+            if now.duration_since(last_emit) >= batch_interval {
+                let _ = tick_app.emit("serial:timed-send-tick-batch", batch.clone());
+                batch.clear();
+                last_emit = now;
+            }
 
             // 高精度等待
-            let now = Instant::now();
-            if next_tick > now {
-                let remaining = next_tick - now;
+            let current = Instant::now();
+            if next_tick > current {
+                let remaining = next_tick - current;
                 if remaining > Duration::from_millis(2) {
                     thread::sleep(remaining - Duration::from_millis(2));
                 }
@@ -109,6 +117,10 @@ pub fn start_timed_send(
                 }
             }
             next_tick += interval;
+        }
+
+        if !batch.is_empty() {
+            let _ = tick_app.emit("serial:timed-send-tick-batch", batch);
         }
     });
 

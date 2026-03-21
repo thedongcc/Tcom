@@ -75,6 +75,8 @@ export function useMonitorTerminalState(session: SessionState) {
     const [autoScroll, setAutoScroll] = useState(uiState.autoScroll !== undefined ? uiState.autoScroll : true);
     const [flashNewMessage, setFlashNewMessage] = useState(uiState.flashNewMessage !== false);
     const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+    const [showControlChars, setShowControlChars] = useState(uiState.showControlChars !== undefined ? uiState.showControlChars : false);
+    const [showCRCPanel, setShowCRCPanel] = useState(false);
     const [sendTarget, setSendTarget] = useState<'virtual' | 'physical'>(uiState.sendTarget || 'physical');
     const [partnerConnected] = useState(true);
     const [searchOpen, setSearchOpen] = useState(uiState.searchOpen || false);
@@ -192,10 +194,10 @@ export function useMonitorTerminalState(session: SessionState) {
         // UI 状态
         viewMode, showTimestamp, showPacketType, showDataLength,
         mergeRepeats, filterMode, encoding, fontSize, fontFamily,
-        autoScroll, flashNewMessage, showOptionsMenu, sendTarget,
+        autoScroll, flashNewMessage, showOptionsMenu, showControlChars, showCRCPanel, sendTarget,
         partnerConnected, searchOpen, availableFonts,
         // 状态 setter（需要同步持久化的用 handle* 包装）
-        setShowOptionsMenu, setSendTarget,
+        setShowOptionsMenu, setShowCRCPanel, setSendTarget,
         // 格式化
         formatData, getDataLengthText,
         // 搜索
@@ -211,6 +213,7 @@ export function useMonitorTerminalState(session: SessionState) {
         onShowDataLength: (v: boolean) => { setShowDataLength(v); saveUIState({ showDataLength: v }); },
         onMergeRepeats: (v: boolean) => { setMergeRepeats(v); saveUIState({ mergeRepeats: v }); },
         onFlashNewMessage: (v: boolean) => { setFlashNewMessage(v); saveUIState({ flashNewMessage: v }); },
+        onShowControlChars: (v: boolean) => { setShowControlChars(v); saveUIState({ showControlChars: v }); },
         onEncoding: (v: string) => { setEncoding(v as 'utf-8' | 'gbk' | 'ascii'); saveUIState({ encoding: v }); },
         onFontFamily: (v: string) => { setFontFamily(v); saveUIState({ fontFamily: v }); },
         onFontSize: (v: number) => { setFontSize(v); saveUIState({ fontSize: v }); },

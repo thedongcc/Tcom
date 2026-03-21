@@ -15,6 +15,7 @@ export interface LogEntry {
     topic?: string;
     repeatCount?: number;
     commandName?: string;
+    sender?: string;
 }
 
 export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'graph' | 'monitor';
@@ -109,6 +110,9 @@ export interface MqttSessionConfig extends BaseSessionConfig {
         filterMode?: 'all' | 'rx' | 'tx';
         smoothScroll?: boolean;
         flashNewMessage?: boolean;
+        encoding?: 'utf-8' | 'gbk' | 'ascii';
+        showControlChars?: boolean;
+        showPacketType?: boolean;
         connectionExpanded?: boolean;
         publishTopic?: string;
         publishPayload?: string;
@@ -139,6 +143,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
     // Pairing Logic
     pairedPort?: string; // The internal port (e.g. COM101) automatically paired with virtualSerialPort
     autoDestroyPair?: boolean; // Whether to destroy the pair on session close/delete
+    nagleTimeout?: number; // Nagle debounce window in milliseconds. 0 means pure streaming.
     uiState?: {
         viewMode?: 'text' | 'hex' | 'both';
         showTimestamp?: boolean;
@@ -148,6 +153,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
         smoothScroll?: boolean;
         flashNewMessage?: boolean;
         mergeRepeats?: boolean;
+        showControlChars?: boolean;
         filterMode?: 'all' | 'rx' | 'tx';
         inputContent?: string;
         inputHTML?: string;

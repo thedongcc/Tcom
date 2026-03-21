@@ -48,42 +48,49 @@ export function processIncomingData(
     timestamp: number,
     session: SessionState,
     sessionLog: UseSessionLogReturn,
+    type: 'RX' | 'TX' = 'RX',
+    topic?: string
 ) {
     const uiState = (session.config as any).uiState as Record<string, unknown> || {};
     const packetMode = uiState.rxPacketMode || 'none';
     const legacyTimeout = uiState.chunkTimeout || 0;
     const crcTarget = (uiState.crcTarget as string) || 'rx';
 
-    // 是否需要对 RX 数据做 CRC 校验（crcTarget='tx' 时跳过 RX 校验）
-    const shouldValidateRx = session.config.rxCRC?.enabled && (crcTarget === 'rx' || crcTarget === 'both');
+    // 是否需要按方向做 CRC 校验
+    const shouldValidate = type === 'RX' 
+        ? session.config.rxCRC?.enabled && (crcTarget === 'rx' || crcTarget === 'both')
+        : (session.config as any).txCRC?.enabled && (crcTarget === 'tx' || crcTarget === 'both');
+    const crcConfig = type === 'RX' ? session.config.rxCRC : (session.config as any).txCRC;
+    
+    const bufferKey = `${sessionId}_${type}_${topic || ''}`;
 
     // 无帧模式且无遗留超时：直接输出
     if (packetMode === 'none' && legacyTimeout === 0) {
-        sessionLog.addLog(sessionId, 'RX', data, getCrcStatus(data, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
+        sessionLog.addLog(sessionId, type, data, getCrcStatus(data, !!shouldValidate, crcConfig), topic, undefined, timestamp);
         return;
     }
 
     // 缓冲数据
-    let buffer = sessionLog.rxBuffersRef.current.get(sessionId);
+    let buffer = sessionLog.rxBuffersRef.current.get(bufferKey);
     if (!buffer) {
         buffer = [];
-        sessionLog.rxBuffersRef.current.set(sessionId, buffer);
+        sessionLog.rxBuffersRef.current.set(bufferKey, buffer);
     }
     buffer.push(data);
 
     // 清除已有定时器
-    const existingTimer = sessionLog.rxTimersRef.current.get(sessionId);
+    const existingTimer = sessionLog.rxTimersRef.current.get(bufferKey);
     if (existingTimer) clearTimeout(existingTimer);
 
     // 刷新缓冲区辅助函数
     const flushBuffer = () => {
-        const finalBuffer = sessionLog.rxBuffersRef.current.get(sessionId);
+        const finalBuffer = sessionLog.rxBuffersRef.current.get(bufferKey);
         if (finalBuffer && finalBuffer.length > 0) {
             const mergedData = mergeBuffers(finalBuffer);
-            sessionLog.addLog(sessionId, 'RX', mergedData, getCrcStatus(mergedData, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
-            sessionLog.rxBuffersRef.current.set(sessionId, []);
+            sessionLog.addLog(sessionId, type, mergedData, getCrcStatus(mergedData, !!shouldValidate, crcConfig), topic, undefined, timestamp);
+            sessionLog.rxBuffersRef.current.set(bufferKey, []);
         }
-        sessionLog.rxTimersRef.current.delete(sessionId);
+        sessionLog.rxTimersRef.current.delete(bufferKey);
     };
 
     const mergedBuf = mergeBuffers(buffer);
@@ -97,13 +104,13 @@ export function processIncomingData(
             const remainingBuffer: Uint8Array[] = [];
             while (processOffset + fixedLen <= currentBufferLen) {
                 const frame = mergedBuf.slice(processOffset, processOffset + fixedLen);
-                sessionLog.addLog(sessionId, 'RX', frame, getCrcStatus(frame, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
+                sessionLog.addLog(sessionId, type, frame, getCrcStatus(frame, !!shouldValidate, crcConfig), topic, undefined, timestamp);
                 processOffset += fixedLen;
             }
             if (processOffset < currentBufferLen) {
                 remainingBuffer.push(mergedBuf.slice(processOffset));
             }
-            sessionLog.rxBuffersRef.current.set(sessionId, remainingBuffer);
+            sessionLog.rxBuffersRef.current.set(bufferKey, remainingBuffer);
             return;
         }
     } else if (packetMode === 'delimiter' || packetMode === 'delimiterWithTimeout') {
@@ -119,14 +126,16 @@ export function processIncomingData(
                 }
                 if (match) {
                     const frame = mergedBuf.slice(startIdx, i + delimBytes.length);
-                    sessionLog.addLog(sessionId, 'RX', frame, getCrcStatus(frame, !!shouldValidateRx, session.config.rxCRC), undefined, undefined, timestamp);
+                    sessionLog.addLog(sessionId, type, frame, getCrcStatus(frame, !!shouldValidate, crcConfig), topic, undefined, timestamp);
                     startIdx = i + delimBytes.length;
                     i = startIdx - 1;
                 }
             }
             if (startIdx < currentBufferLen) remainingBuffer.push(mergedBuf.slice(startIdx));
-            sessionLog.rxBuffersRef.current.set(sessionId, remainingBuffer);
-            if (packetMode === 'delimiter') return;
+            sessionLog.rxBuffersRef.current.set(bufferKey, remainingBuffer);
+            if (packetMode === 'delimiter') {
+                return;
+            }
         }
     }
 
@@ -137,6 +146,6 @@ export function processIncomingData(
 
     if (timeoutMs > 0) {
         const newTimer = setTimeout(flushBuffer, timeoutMs);
-        sessionLog.rxTimersRef.current.set(sessionId, newTimer);
+        sessionLog.rxTimersRef.current.set(bufferKey, newTimer);
     }
 }

@@ -7,6 +7,7 @@ import { useCallback, useRef } from 'react';
 import { SessionState, SessionConfig, MonitorSessionConfig } from '../types/session';
 import { Com0Com } from '../utils/com0com';
 import { UseSessionLogReturn } from './useSessionLog';
+import { processIncomingData } from './useRxPacketHandler';
 
 interface UseSessionConnectionParams {
     sessionsRef: React.MutableRefObject<SessionState[]>;
@@ -91,7 +92,19 @@ export function useSessionConnection({
                     updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                     sessionLog.addLog(sessionId, 'INFO', 'Monitor started');
                     const cleanups: (() => void)[] = [];
-                    cleanups.push(window.monitorAPI.onData(sessionId, (type, data) => sessionLog.addLog(sessionId, type, data, 'ok', type === 'TX' ? 'virtual' : 'physical')));
+                    cleanups.push(window.monitorAPI.onData(sessionId, (type, data, timestamp) => {
+                        const rxTs = timestamp ?? Date.now();
+                        const latestSession = sessionsRef.current.find(s => s.id === sessionId);
+                        if (!latestSession) return;
+                        processIncomingData(sessionId, data, rxTs, latestSession, sessionLog, type, type === 'TX' ? 'virtual' : 'physical');
+                    }));
+                    if (window.monitorAPI.onTimedSendTickBatch) {
+                        cleanups.push(window.monitorAPI.onTimedSendTickBatch(sessionId, (events) => {
+                            events.forEach(e => {
+                                sessionLog.addLog(sessionId, 'TX', new Uint8Array(e.data), 'none', e.target, undefined, e.timestamp, 'tcom');
+                            });
+                        }));
+                    }
                     cleanups.push(window.monitorAPI.onError(sessionId, (err) => sessionLog.addLog(sessionId, 'ERROR', err)));
                     cleanups.push(window.monitorAPI.onClosed(sessionId, (data: { origin: string, path: string }) => {
                         const { origin, path } = data;

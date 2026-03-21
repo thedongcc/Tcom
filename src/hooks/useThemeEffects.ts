@@ -126,14 +126,5 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
             bgActiveRef.current = false;
         }
     }, [config.theme, config.images, config.typography, availableThemes]);
-
-    // ── 持久化到 localStorage ──
-    useEffect(() => {
-        try {
-            localStorage.setItem('tcom-settings', JSON.stringify(config));
-            localStorage.setItem('tcom-theme', config.theme);
-        } catch {
-            // localStorage 满或不可用时静默失败
-        }
-    }, [config]);
+    // 注意：持久化逻辑已迁移到 SettingsContext 中统一管理（文件系统 + localStorage 缓存）
 }

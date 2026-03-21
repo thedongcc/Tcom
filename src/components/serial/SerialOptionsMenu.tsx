@@ -1,19 +1,13 @@
 /**
  * SerialOptionsMenu.tsx
- * 串口监视器选项菜单面板 — 组合编码/功能开关/排版/CRC/分包/导出子模块。
- *
- * 子模块：
- * - SerialCRCPanel.tsx       — CRC 校验配置
- * - SerialPacketSettings.tsx — 接收分包策略
+ * 串口监视器选项菜单 — 按钮 + 浮层定位 Shell。
+ * 内部包裹通用 MonitorOptionsPanel 组件，透传所有 Props。
  */
-import { Download, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { CRCConfig } from '../../utils/crc';
-import { CustomSelect } from '../common/CustomSelect';
-import { Switch } from '../common/Switch';
 import { useI18n } from '../../context/I18nContext';
 import { useRef } from 'react';
-import { SerialCRCPanel } from './SerialCRCPanel';
-import { SerialPacketSettings } from './SerialPacketSettings';
+import { MonitorOptionsPanel } from '../common/MonitorOptionsPanel';
 
 interface SerialOptionsMenuProps {
     // 展示状态
@@ -61,6 +55,7 @@ interface SerialOptionsMenuProps {
 
     // 操作
     handleSaveLogs: () => void;
+    hasLogs: boolean;
 }
 
 export const SerialOptionsMenu = ({
@@ -76,7 +71,7 @@ export const SerialOptionsMenu = ({
     showCRCPanel, setShowCRCPanel,
     fontSize, setFontSize, fontFamily, setFontFamily, availableFonts,
     uiState, saveUIState,
-    handleSaveLogs,
+    handleSaveLogs, hasLogs,
 }: SerialOptionsMenuProps) => {
     const { t } = useI18n();
     const optionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -112,104 +107,27 @@ export const SerialOptionsMenu = ({
                             overflowY: 'auto'
                         }}
                     >
-                        {/* 编码 */}
-                        <div className="mb-3 px-1">
-                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
-                                <span>{t('monitor.encoding')}</span>
-                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                                <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.encoding')}</span>
-                                <div className="flex-1 max-w-[150px]">
-                                    <CustomSelect
-                                        items={[
-                                            { label: 'UTF-8', value: 'utf-8' },
-                                            { label: 'GBK', value: 'gbk' },
-                                            { label: 'ASCII', value: 'ascii' }
-                                        ]}
-                                        value={encoding}
-                                        onChange={(val) => { setEncoding(val as 'utf-8' | 'gbk' | 'ascii'); saveUIState({ encoding: val }); }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 功能开关 */}
-                        <div className="mb-3 px-1">
-                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
-                                <span>{t('monitor.logFeatures')}</span>
-                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
-                            </div>
-                            <div className="space-y-2.5">
-                                <Switch label={t('monitor.timestamp')} checked={showTimestamp} onChange={(checked) => { setShowTimestamp(checked); saveUIState({ showTimestamp: checked }); }} />
-                                <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={(checked) => { setShowPacketType(checked); saveUIState({ showPacketType: checked }); }} />
-                                <Switch label={t('monitor.showControlChars') || '控制字符可视化'} checked={showControlChars} onChange={(checked) => { setShowControlChars(checked); saveUIState({ showControlChars: checked }); }} />
-                                <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={(checked) => { setShowDataLength(checked); saveUIState({ showDataLength: checked }); }} />
-                                <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={(checked) => { setMergeRepeats(checked); saveUIState({ mergeRepeats: checked }); }} />
-                                <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={(checked) => { setFlashNewMessage(checked); saveUIState({ flashNewMessage: checked }); }} />
-
-                                {/* CRC 配置 */}
-                                <SerialCRCPanel
-                                    crcEnabled={crcEnabled} toggleCRC={toggleCRC}
-                                    rxCRC={rxCRC} updateRxCRC={updateRxCRC}
-                                    showCRCPanel={showCRCPanel} setShowCRCPanel={setShowCRCPanel}
-                                    uiState={uiState} saveUIState={saveUIState}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 排版 & 分包 */}
-                        <div className="mb-4 px-1">
-                            <div className="flex items-center gap-2 mb-3 text-[10px] font-bold text-[var(--activitybar-inactive-foreground)] uppercase tracking-wider">
-                                <span>{t('monitor.typography')}</span>
-                                <div className="h-[1px] bg-[var(--menu-border-color)] flex-1" />
-                            </div>
-                            <div className="space-y-3">
-                                {/* 字号 */}
-                                <div className="flex items-center justify-between gap-4">
-                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.fontSize')}</span>
-                                    <div className="flex-1 max-w-[150px]">
-                                        <CustomSelect
-                                            items={[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(size => ({
-                                                label: `${size}px`,
-                                                value: size.toString()
-                                            }))}
-                                            value={fontSize.toString()}
-                                            onChange={(val) => { const size = Number(val); setFontSize(size); saveUIState({ fontSize: size }); }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* 字体 */}
-                                <div className="flex items-center justify-between gap-4">
-                                    <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium shrink-0">{t('monitor.fontFamily')}</span>
-                                    <div className="flex-1 max-w-[150px]">
-                                        <CustomSelect
-                                            items={availableFonts}
-                                            value={fontFamily}
-                                            onChange={(val) => { setFontFamily(val); saveUIState({ fontFamily: val }); }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* 接收分包策略 */}
-                                <SerialPacketSettings uiState={uiState} saveUIState={saveUIState} />
-                            </div>
-                        </div>
-
-                        {/* 导出按钮 */}
-                        <div className="pt-2 border-t border-[var(--st-monitor-divider)]">
-                            <button
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--st-btn-primary-bg)] hover:bg-[var(--st-btn-primary-hover)] text-white text-[11px] rounded transition-colors"
-                                onClick={() => {
-                                    handleSaveLogs();
-                                    setShowOptionsMenu(false);
-                                }}
-                            >
-                                <Download size={14} />
-                                <span>{t('monitor.exportLog')}</span>
-                            </button>
-                        </div>
+                        <MonitorOptionsPanel
+                            encoding={encoding} setEncoding={setEncoding}
+                            showTimestamp={showTimestamp} setShowTimestamp={setShowTimestamp}
+                            showPacketType={showPacketType} setShowPacketType={setShowPacketType}
+                            showControlChars={showControlChars} setShowControlChars={setShowControlChars}
+                            showDataLength={showDataLength} setShowDataLength={setShowDataLength}
+                            mergeRepeats={mergeRepeats} setMergeRepeats={setMergeRepeats}
+                            flashNewMessage={flashNewMessage} setFlashNewMessage={setFlashNewMessage}
+                            crcEnabled={crcEnabled} toggleCRC={toggleCRC}
+                            rxCRC={rxCRC} updateRxCRC={updateRxCRC}
+                            showCRCPanel={showCRCPanel} setShowCRCPanel={setShowCRCPanel}
+                            fontSize={fontSize} setFontSize={setFontSize}
+                            fontFamily={fontFamily} setFontFamily={setFontFamily}
+                            availableFonts={availableFonts}
+                            uiState={uiState} saveUIState={saveUIState}
+                            hasLogs={hasLogs}
+                            onExportLogs={() => {
+                                handleSaveLogs();
+                                setShowOptionsMenu(false);
+                            }}
+                        />
                     </div>
                 </>
             )}

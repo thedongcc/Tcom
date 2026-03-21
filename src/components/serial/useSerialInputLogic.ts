@@ -29,6 +29,10 @@ interface UseSerialInputLogicParams {
     isSyncingRef: React.MutableRefObject<boolean>;
     onSend: (data: string | Uint8Array, mode: 'text' | 'hex') => void;
     onConnectRequest?: () => Promise<void> | void;
+    /** 原生高精度定时器启动接口 */
+    onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
+    /** 原生高精度定时器停止接口 */
+    onTimedSendStop?: (sessionId: string) => void;
 }
 
 // 从编辑器 JSON 中提取 Token 映射
@@ -50,7 +54,7 @@ const extractTokensFromEditor = (editor: Editor): Record<string, Token> => {
 export const useSerialInputLogic = ({
     editor, mode, lineEnding, isConnected,
     sessionId, isTimerRunning, timerInterval, contentVersion: _contentVersion, isSyncingRef: _isSyncingRef,
-    onSend, onConnectRequest,
+    onSend, onConnectRequest, onTimedSendStart, onTimedSendStop
 }: UseSerialInputLogicParams) => {
     const { showToast } = useToast();
     const { t } = useI18n();
@@ -104,11 +108,11 @@ export const useSerialInputLogic = ({
 
 
     // ── 定时发送（Rust 端高精度定时器） ──
-    // 用 ref 缓存编辑器参数，避免 effect 依赖变化导致 Rust 定时器频繁重启
-    const editorRef = React.useRef({ editor, mode, lineEnding, extractTokens });
+    // 用 ref 缓存编辑器参数和发送回调，避免 effect 依赖频繁变化导致定时器不断重启
+    const editorRef = React.useRef({ editor, mode, lineEnding, extractTokens, onSend });
     useEffect(() => {
-        editorRef.current = { editor, mode, lineEnding, extractTokens };
-    }, [editor, mode, lineEnding, extractTokens]);
+        editorRef.current = { editor, mode, lineEnding, extractTokens, onSend };
+    }, [editor, mode, lineEnding, extractTokens, onSend]);
 
     useEffect(() => {
         if (!isTimerRunning || timerInterval <= 0 || !isConnected || !sessionId) {
@@ -116,7 +120,7 @@ export const useSerialInputLogic = ({
             return;
         }
 
-        const { editor: ed, mode: m, lineEnding: le, extractTokens: et } = editorRef.current;
+        const { editor: ed, mode: m, lineEnding: le, extractTokens: et, onSend: sendFn } = editorRef.current;
         if (!ed || ed.isEmpty) return;
 
         // 编译发送数据（仅在启动定时器时编译一次）
@@ -127,17 +131,20 @@ export const useSerialInputLogic = ({
             ? Array.from(data)
             : Array.from(new TextEncoder().encode(data as string));
 
-        // 调用 Rust 端高精度定时发送
-        if (window.serialAPI?.timedSendStart) {
-            window.serialAPI.timedSendStart(sessionId, dataArray, timerInterval);
+        // 分流：优先调用传递进来的高精度发送接口（如 Physical Serial）
+        if (onTimedSendStart && onTimedSendStop) {
+            onTimedSendStart(sessionId, dataArray, timerInterval);
+            return () => {
+                onTimedSendStop(sessionId);
+            };
+        } else {
+            // 容错降级：依靠闭包的纯 JS 定时轮询，绕开依赖的反复触惹
+            const timerId = setInterval(() => {
+                sendFn(data, m);
+            }, timerInterval);
+            return () => clearInterval(timerId);
         }
-
-        return () => {
-            if (sessionId && window.serialAPI?.timedSendStop) {
-                window.serialAPI.timedSendStop(sessionId);
-            }
-        };
-    }, [isTimerRunning, timerInterval, isConnected, sessionId]);
+    }, [isTimerRunning, timerInterval, isConnected, sessionId, onTimedSendStart, onTimedSendStop]);
 
     return { extractTokens, handleSend };
 };

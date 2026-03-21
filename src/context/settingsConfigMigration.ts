@@ -6,20 +6,24 @@
 import { ThemeConfig, DEFAULT_THEME } from '../types/theme';
 
 /**
- * 从持久化存储加载并合并配置，处理旧版本兼容性迁移。
+ * 从持久化存储加载配置的初始值。
+ * 注意：实际的异步加载在 SettingsContext 中完成。
+ * 这里仅提供 DEFAULT_THEME 并注入字体变量防止首帧闪变。
  */
-export function loadAndMigrateConfig(): ThemeConfig {
-    const saved = localStorage.getItem('tcom-settings');
+export function loadInitialConfig(): ThemeConfig {
     let result: ThemeConfig = DEFAULT_THEME;
 
-    if (saved) {
-        try {
+    // 尝试从 localStorage 快速读取字体配置（防止首帧字体闪变）
+    // 正式数据由 globalSettingsAPI 异步加载后覆盖
+    try {
+        const saved = localStorage.getItem('tcom-settings');
+        if (saved) {
             const parsed = JSON.parse(saved);
-            result = mergeAndMigrate(parsed);
-        } catch (e) {
-            console.error('Failed to parse settings', e);
+            if (parsed?.typography) {
+                result = { ...result, typography: { ...result.typography, ...parsed.typography } };
+            }
         }
-    }
+    } catch { /* 忽略 */ }
 
     // 同步注入字体变量到 :root，防止首帧渲染出现字体大小闪变
     try {
@@ -36,7 +40,7 @@ export function loadAndMigrateConfig(): ThemeConfig {
 
 /**
  * 深度合并解析后的配置并执行迁移。
- * 同时用于初次加载和导入配置。
+ * 同时用于从文件加载和导入配置。
  */
 export function mergeAndMigrate(parsed: Partial<ThemeConfig> & Record<string, unknown>): ThemeConfig {
     const merged: ThemeConfig = {
@@ -53,12 +57,6 @@ export function mergeAndMigrate(parsed: Partial<ThemeConfig> & Record<string, un
     // 迁移旧版字体名
     if (merged.typography.fontFamily === 'mono' || merged.typography.fontFamily === 'var(--font-mono)') {
         merged.typography.fontFamily = 'AppCoreFont';
-    }
-
-    // 兼容旧版 tcom-theme 键
-    const legacyTheme = localStorage.getItem('tcom-theme');
-    if (legacyTheme) {
-        merged.theme = legacyTheme;
     }
 
     // 每次启动强制默认侧边栏为 'explorer'

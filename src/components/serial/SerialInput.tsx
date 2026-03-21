@@ -40,6 +40,10 @@ interface SerialInputProps {
     onStateChange?: (state: { content: string, html: string, tokens: Record<string, any>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => void;
     /** Hide toolbar, timer, and send button (e.g. for Command Editor) */
     hideExtras?: boolean;
+    /** 原生高精度定时器启动接口 */
+    onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
+    /** 原生高精度定时器停止接口 */
+    onTimedSendStop?: (sessionId: string) => void;
 }
 
 export const SerialInput = ({
@@ -47,7 +51,8 @@ export const SerialInput = ({
     initialContent = '', initialHTML = '',
     initialMode = 'hex', initialLineEnding = '', initialTimerInterval = 1000,
     isConnected = false, fontSize = 15, fontFamily = 'AppCoreFont',
-    onConnectRequest, onStateChange, hideExtras = false
+    onConnectRequest, onStateChange, hideExtras = false,
+    onTimedSendStart, onTimedSendStop
 }: SerialInputProps) => {
     const { t } = useI18n();
     const [mode, setMode] = useState<'text' | 'hex'>(initialMode);
@@ -167,7 +172,7 @@ export const SerialInput = ({
     const { handleSend } = useSerialInputLogic({
         editor, mode, lineEnding, isConnected, isEmpty,
         sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
-        onSend, onConnectRequest,
+        onSend, onConnectRequest, onTimedSendStart, onTimedSendStop
     });
 
     return (

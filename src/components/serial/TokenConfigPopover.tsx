@@ -66,7 +66,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
             const actualW = el.offsetWidth;
             // 锁定首次渲染宽度
             setLockedWidth(actualW);
-            const screenH = window.innerHeight;
+            // 锁定首次渲染宽度
             const screenW = window.innerWidth;
 
             let newY = position.y - actualH - 4;

@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { useSystemMessage } from '../../hooks/useSystemMessage';
+import { renderHighlightedText } from '../serial/logRenderHelpers';
 
 interface SearchMatch {
     logId: string;
@@ -33,6 +34,7 @@ export interface MonitorLogItemProps {
     mergeRepeats?: boolean;
     flashNewMessage?: boolean;
     fontSize?: number;
+    showControlChars?: boolean;
     rxCRC?: any;
     crcEnabled?: boolean;
 }
@@ -58,39 +60,10 @@ export const MonitorLogItem = React.memo(({
     mergeRepeats = true,
     flashNewMessage,
     fontSize = 15,
+    showControlChars,
     rxCRC: _rxCRC,
     crcEnabled: _crcEnabled
 }: MonitorLogItemProps) => {
-    // 高亮搜索匹配文本
-    const renderHighlightedText = (log: any, text: string) => {
-        const logMatches = matches.filter((m: any) => m.logId === log.id);
-        if (logMatches.length === 0) return text;
-
-        const sortedMatches = [...logMatches].sort((a: any, b: any) => a.startIndex - b.startIndex);
-        const result: React.ReactNode[] = [];
-        let lastIndex = 0;
-
-        sortedMatches.forEach((match: any, i: number) => {
-            if (match.startIndex > lastIndex) {
-                result.push(text.substring(lastIndex, match.startIndex));
-            }
-            const isActive = activeMatch === match;
-            result.push(
-                <span
-                    key={`${log.id}-match-${i}`}
-                    className={isActive ? 'bg-[var(--focus-border-color)] text-[var(--st-monitor-tab-active-text)] shadow-sm' : 'bg-[var(--st-logsearch-match-highlight)] text-[var(--st-monitor-tab-inactive-text)]'}
-                >
-                    {text.substring(match.startIndex, match.endIndex)}
-                </span>
-            );
-            lastIndex = match.endIndex;
-        });
-
-        if (lastIndex < text.length) {
-            result.push(text.substring(lastIndex));
-        }
-        return result;
-    };
 
     const { parseSystemMessage } = useSystemMessage();
 
@@ -144,12 +117,12 @@ export const MonitorLogItem = React.memo(({
                 {showPacketType && (
                     <div
                         className={`grid grid-cols-[1fr_auto_1fr] items-center gap-[0.2em] font-bold font-mono rounded-[0.2em] text-[0.8em] leading-none border shadow-sm px-1 w-[8.5em] shrink-0 select-none pt-[1px]
-                        ${log.type === 'TX' && log.crcStatus === 'none' 
+                        ${log.sender === 'tcom' 
                             ? (log.topic === 'virtual' ? 'bg-[var(--st-tcom-v-bg)] text-[var(--st-tcom-v-text)] border-[var(--st-tcom-v-border)]' : 'bg-[var(--st-tcom-p-bg)] text-[var(--st-tcom-p-text)] border-[var(--st-tcom-p-border)]')
                             : (log.topic === 'virtual' ? 'bg-[var(--st-monitor-log-tx-label-bg)] text-[var(--st-monitor-virtual-label-text)] border-[var(--st-monitor-log-tx-label-bg)]/40' : 'bg-[var(--st-monitor-log-rx-label-bg)] text-[var(--st-monitor-rx-label-text)] border-[var(--st-monitor-log-rx-label-bg)]/40')}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
-                        {log.type === 'TX' && log.crcStatus === 'none' ? (
+                        {log.sender === 'tcom' ? (
                             <>
                                 <span className={`font-extrabold truncate text-center shrink-0`}>Tcom</span>
                                 <span className={`opacity-50 text-[0.8em] shrink-0 mx-0.5 text-center`}>-&gt;</span>
@@ -191,11 +164,11 @@ export const MonitorLogItem = React.memo(({
                 )}
             </div>
             <span className={`whitespace-pre-wrap break-all select-text cursor-text flex-1 ${
-                log.type === 'TX' && log.crcStatus === 'none'
+                log.sender === 'tcom'
                     ? (log.topic === 'virtual' ? 'text-[var(--st-tcom-v-msg-text)] font-semibold' : 'text-[var(--st-tcom-p-msg-text)] font-semibold')
                     : (log.topic === 'virtual' ? 'text-[var(--st-tx-text)]' : 'text-[var(--st-rx-text)]')
             }`}>
-                {renderHighlightedText(log, formatData(log.data, viewMode, encoding))}
+                {renderHighlightedText(log, formatData(log.data, viewMode, encoding), matches as any, activeMatch, showControlChars)}
             </span>
         </div>
     );

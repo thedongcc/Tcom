@@ -34,6 +34,7 @@ export const ToastContainer = () => {
         };
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (!e.key) return; // IME 事件防御
             const isCtrlOrMeta = e.ctrlKey || e.metaKey;
             const key = e.key.toLowerCase();
             if (isCtrlOrMeta && key === 'v') {

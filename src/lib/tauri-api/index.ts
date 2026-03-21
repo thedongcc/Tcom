@@ -7,7 +7,6 @@ import { registerSerialAPI } from './serial'
 import { registerMqttAPI } from './mqtt'
 import { registerMonitorAPI } from './monitor'
 import { registerTcpAPI } from './tcp'
-import { registerWorkspaceAPI } from './workspace'
 import { registerSessionAPI } from './session'
 import { registerAppAPI } from './app'
 import { registerShellAPI } from './shell'
@@ -17,6 +16,8 @@ import { registerCom0comAPI } from './com0com'
 import { registerThemeAPI } from './theme'
 import { registerEyedropperAPI } from './eyedropper'
 import { registerCrashReportAPI } from './crashReport'
+import { registerProfileAPI } from './profile'
+import { registerGlobalSettingsAPI } from './globalSettings'
 
 /** 注册所有 Tauri IPC 适配层到 window 对象 */
 export function registerAllTauriAPIs(): void {
@@ -24,7 +25,6 @@ export function registerAllTauriAPIs(): void {
     registerMqttAPI()
     registerMonitorAPI()
     registerTcpAPI()
-    registerWorkspaceAPI()
     registerSessionAPI()
     registerAppAPI()
     registerShellAPI()
@@ -34,4 +34,6 @@ export function registerAllTauriAPIs(): void {
     registerThemeAPI()
     registerEyedropperAPI()
     registerCrashReportAPI()
+    registerProfileAPI()
+    registerGlobalSettingsAPI()
 }
