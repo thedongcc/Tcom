@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 存储架构重构
 - 监视区选项菜单重构
 - 重构主题系统
+- 重构设置页面
 
 ### Fixed
 - 修复工作区加载问题

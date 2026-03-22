@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* 设置模态窗口进场动画 */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modalIn {
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @font-face {
   font-family: 'AppCoreFont';
   /* Vite 会自动处理此路径，打包时生成正确的 hash 文件名 */
@@ -1496,6 +1512,13 @@ html[data-bg-image="true"] {
   --sys-bg-elevated: rgba(30, 30, 30, 0.5);
   /* Overlay 层绝不透明！弹窗/菜单文字清晰 */
   /* --sys-bg-overlay 保持原值 rgba(30, 30, 30, 0.85) 不变 */
+
+  /* 串口面板组件级背景 → 半透明化以露出底图 */
+  --st-sendarea-bg: rgba(30, 30, 30, 0.3);
+  --st-editor-tabs-bg: rgba(30, 30, 30, 0.4);
+  --st-tab-active-bg: rgba(30, 30, 30, 0.5);
+  --st-tab-inactive-bg: transparent;
+  --st-toolbar-bg: rgba(30, 30, 30, 0.3);
 
   /* 边框半透明化 */
   --border-color: rgba(255, 255, 255, 0.12);

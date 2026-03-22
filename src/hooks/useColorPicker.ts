@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import { ThemeDefinition, applyTheme } from '../themes';
 import { ThemeConfig } from '../types/theme';
+import { applyBgImageOverrides } from './useThemeEffects';
 
 interface UseColorPickerOptions {
     availableThemes: ThemeDefinition[];
@@ -26,7 +27,10 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
             if (Object.keys(edits).length === 0) {
                 if (availableThemes.length > 0) {
                     let activeDef = availableThemes.find(t => t.id === config.theme) || availableThemes[0];
-                    if (activeDef) applyTheme(activeDef);
+                    if (activeDef) {
+                        applyTheme(activeDef);
+                        applyBgImageOverrides(config);
+                    }
                 }
             } else {
                 Object.entries(edits).forEach(([key, val]) => {
@@ -39,7 +43,10 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
         const unEditorClosed = api.onEditorClosed?.(() => {
             if (availableThemes.length > 0) {
                 const activeDef = availableThemes.find(t => t.id === config.theme) || availableThemes[0];
-                if (activeDef) applyTheme(activeDef);
+                if (activeDef) {
+                    applyTheme(activeDef);
+                    applyBgImageOverrides(config);
+                }
             }
         });
 

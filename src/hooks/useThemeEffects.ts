@@ -24,6 +24,48 @@ const BG_LAYOUT_VARS = [
     '--titlebar-background', '--activitybar-background',
 ];
 
+/**
+ * 将背景图透明化覆盖应用到 DOM。
+ * 提取为独立函数，供 useThemeEffects 和 useColorPicker 共同复用。
+ * 当 applyTheme 清除了所有 inline style 后，需要重新调用此函数恢复背景图效果。
+ */
+export function applyBgImageOverrides(config: ThemeConfig): void {
+    const root = document.documentElement;
+    const { rxBackground, bgSize, bgPosition, bgOpacity } = config.images;
+
+    if (rxBackground) {
+        const isUrl = /^https?:\/\//.test(rxBackground);
+        const bgUrl = isUrl ? rxBackground : convertFileSrc(rxBackground);
+
+        root.style.setProperty('--bg-image', `url("${bgUrl}")`);
+        root.style.setProperty('--bg-size', bgSize || 'cover');
+        root.style.setProperty('--bg-position', bgPosition || 'center');
+        root.style.setProperty('--bg-opacity', String((bgOpacity ?? 100) / 100));
+        root.setAttribute('data-bg-image', 'true');
+
+        // 覆盖语义变量
+        root.style.setProperty('--sys-bg-base', 'transparent');
+        root.style.setProperty('--sys-bg-surface', 'rgba(30, 30, 30, 0.3)');
+        root.style.setProperty('--sys-bg-elevated', 'rgba(30, 30, 30, 0.5)');
+
+        // 边框半透明化
+        root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.12)');
+        root.style.setProperty('--widget-border-color', 'rgba(255, 255, 255, 0.08)');
+
+        // 串口面板组件级背景
+        root.style.setProperty('--st-monitor-rx-bg', 'transparent');
+        root.style.setProperty('--st-sendarea-bg', 'rgba(30, 30, 30, 0.3)');
+        root.style.setProperty('--st-editor-tabs-bg', 'rgba(30, 30, 30, 0.4)');
+        root.style.setProperty('--st-tab-active-bg', 'rgba(30, 30, 30, 0.5)');
+        root.style.setProperty('--st-tab-inactive-bg', 'transparent');
+        root.style.setProperty('--st-toolbar-bg', 'rgba(30, 30, 30, 0.3)');
+        root.style.setProperty('--st-btn-secondary-bg', 'rgba(30, 30, 30, 0.4)');
+
+        // 移除布局级背景 inline → 回退到 CSS 级联
+        BG_LAYOUT_VARS.forEach(v => root.style.removeProperty(v));
+    }
+}
+
 interface UseThemeEffectsParams {
     config: ThemeConfig;
     availableThemes: ThemeDefinition[];
@@ -32,7 +74,6 @@ interface UseThemeEffectsParams {
 export function useThemeEffects({ config, availableThemes }: UseThemeEffectsParams): void {
     useEffect(() => {
         const root = document.documentElement;
-        const { rxBackground, bgSize, bgPosition, bgOpacity } = config.images;
 
         // 1. 应用主题（清除旧 inline 变量并注入新主题的 ~50 个核心变量）
         const theme = availableThemes.find(t => t.id === config.theme);
@@ -55,27 +96,8 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
         root.style.setProperty('--st-line-height', `${lineHeight}`);
 
         // 3. 处理背景图
-        if (rxBackground) {
-            const isUrl = /^https?:\/\//.test(rxBackground);
-            const bgUrl = isUrl ? rxBackground : convertFileSrc(rxBackground);
-
-            root.style.setProperty('--bg-image', `url("${bgUrl}")`);
-            root.style.setProperty('--bg-size', bgSize || 'cover');
-            root.style.setProperty('--bg-position', bgPosition || 'center');
-            root.style.setProperty('--bg-opacity', String((bgOpacity ?? 100) / 100));
-            root.setAttribute('data-bg-image', 'true');
-
-            // 覆盖 3 个语义变量 → 所有 CSS var() 级联组件自动穿透
-            root.style.setProperty('--sys-bg-base', 'transparent');
-            root.style.setProperty('--sys-bg-surface', 'rgba(30, 30, 30, 0.3)');
-            root.style.setProperty('--sys-bg-elevated', 'rgba(30, 30, 30, 0.5)');
-
-            // 边框半透明化
-            root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.12)');
-            root.style.setProperty('--widget-border-color', 'rgba(255, 255, 255, 0.08)');
-
-            // 移除保留的布局背景 inline → 回退到 CSS var(--sys-bg-*) 级联
-            BG_LAYOUT_VARS.forEach(v => root.style.removeProperty(v));
+        if (config.images.rxBackground) {
+            applyBgImageOverrides(config);
         } else {
             root.style.removeProperty('--bg-image');
             root.style.removeProperty('--bg-size');
@@ -83,10 +105,17 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
             root.style.removeProperty('--bg-opacity');
             root.removeAttribute('data-bg-image');
 
-            // 清理语义覆盖
             root.style.removeProperty('--sys-bg-base');
             root.style.removeProperty('--sys-bg-surface');
             root.style.removeProperty('--sys-bg-elevated');
+
+            root.style.removeProperty('--st-monitor-rx-bg');
+            root.style.removeProperty('--st-sendarea-bg');
+            root.style.removeProperty('--st-editor-tabs-bg');
+            root.style.removeProperty('--st-tab-active-bg');
+            root.style.removeProperty('--st-tab-inactive-bg');
+            root.style.removeProperty('--st-toolbar-bg');
+            root.style.removeProperty('--st-btn-secondary-bg');
         }
     }, [config.theme, config.images, config.typography, availableThemes]);
 }

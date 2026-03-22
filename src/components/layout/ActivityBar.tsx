@@ -8,6 +8,7 @@ import { Files, Box, Settings, Monitor } from 'lucide-react';
 import { useFeatureManager } from '../../context/FeatureContextShared';
 import { FEATURE_REGISTRY } from '../../features/registry';
 import { useI18n } from '../../context/I18nContext';
+import { useSettings } from '../../context/SettingsContext';
 import { Tooltip } from '../common/Tooltip';
 
 interface ActivityItemProps {
@@ -42,7 +43,6 @@ const ActivityItem = ({ icon, label, active, onClick, className }: ActivityItemP
 interface ActivityBarProps {
     activeView: string;
     onViewChange: (view: string) => void;
-    onOpenSettings?: () => void;
 }
 
 const DEFAULT_ITEMS = [
@@ -50,9 +50,10 @@ const DEFAULT_ITEMS = [
     { id: 'serial', icon: <Monitor size={24} />, label: 'Serial Monitor' },
 ];
 
-export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: ActivityBarProps) => {
+export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
     const { features } = useFeatureManager();
     const { t } = useI18n();
+    const { openSettings } = useSettings();
 
     // 合并默认项 + 激活的功能模块
     const allKnownItems = useMemo(() => {
@@ -144,9 +145,7 @@ export const ActivityBar = ({ activeView, onViewChange, onOpenSettings }: Activi
                     icon={<Settings size={24} />}
                     label={t('configSidebar.settings')}
                     active={false}
-                    onClick={() => {
-                        if (onOpenSettings) onOpenSettings();
-                    }}
+                    onClick={() => openSettings()}
                 />
             </div>
         </div>

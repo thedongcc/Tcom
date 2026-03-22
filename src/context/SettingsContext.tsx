@@ -10,7 +10,7 @@
  * 子模块：
  * - settingsConfigMigration.ts — 配置合并与旧版本迁移
  */
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { ThemeConfig, DEFAULT_THEME } from '../types/theme';
 import { ThemeDefinition } from '../themes';
 import { useColorPicker } from '../hooks/useColorPicker';
@@ -28,6 +28,10 @@ interface SettingsContextType {
     importConfig: (json: string) => void;
     exportConfig: () => string;
     resetConfig: () => void;
+    /** 设置模态窗口开关 */
+    isSettingsOpen: boolean;
+    openSettings: () => void;
+    closeSettings: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -37,6 +41,23 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+    // ── 设置模态窗口状态 ──
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const openSettings = useCallback(() => setIsSettingsOpen(true), []);
+    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
+
+    // 全局快捷键 Ctrl+, 呼出设置
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+                e.preventDefault();
+                setIsSettingsOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // ── 加载主题 ──
     const loadThemes = async () => {
@@ -170,6 +191,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             importConfig,
             exportConfig,
             resetConfig,
+            isSettingsOpen,
+            openSettings,
+            closeSettings,
         }}>
             {children}
         </SettingsContext.Provider>

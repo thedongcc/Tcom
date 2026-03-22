@@ -47,7 +47,6 @@ export const SettingsEditor = () => {
     // 操作函数和字体列表（委托给 Hook）
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
 
-    // ── 设置区块数据定义 ──
     const settingSections: SettingSection[] = [
         {
             title: t('settings.groups.appearance'),
@@ -104,70 +103,6 @@ export const SettingsEditor = () => {
                                 onChange={(val) => updateConfig({ language: val as 'zh-CN' | 'en-US' })}
                             />
                         </div>
-                    ),
-                },
-            ],
-        },
-        {
-            title: t('settings.groups.layout'),
-            items: [
-                {
-                    label: t('settings.layout.sidebarPosition'),
-                    description: t('settings.layout.sidebarPositionDesc'),
-                    render: () => (
-                        <div className="w-56">
-                            <CustomSelect
-                                items={[
-                                    { label: t('settings.layout.sidebarLeft'), value: 'left' },
-                                    { label: t('settings.layout.sidebarRight'), value: 'right' },
-                                ]}
-                                value={config.ui.sidebarPosition}
-                                onChange={(val) => updateUI({ sidebarPosition: val as 'left' | 'right' })}
-                            />
-                        </div>
-                    ),
-                },
-                {
-                    label: t('settings.layout.showStatusBar'),
-                    description: t('settings.layout.showStatusBarDesc'),
-                    render: () => (
-                        <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
-                    ),
-                },
-            ],
-        },
-        {
-            title: t('settings.groups.typography'),
-            items: [
-                {
-                    label: t('settings.typography.fontFamily'),
-                    description: t('settings.typography.fontFamilyDesc'),
-                    render: () => (
-                        <div className="w-56">
-                            <CustomSelect
-                                items={finalFontList}
-                                value={config.typography.fontFamily}
-                                onChange={(val) => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: val } }))}
-                            />
-                        </div>
-                    ),
-                },
-            ],
-        },
-        {
-            title: t('settings.groups.logFormat'),
-            items: [
-                {
-                    label: t('settings.logFormat.timestampFormat'),
-                    description: t('settings.logFormat.timestampFormatDesc'),
-                    render: () => (
-                        <input
-                            type="text"
-                            placeholder="HH:mm:ss.SSS"
-                            value={config.timestampFormat}
-                            onChange={e => updateConfig({ timestampFormat: e.target.value })}
-                            className={`w-56 ${INPUT_CLS}`}
-                        />
                     ),
                 },
                 {
@@ -297,6 +232,70 @@ export const SettingsEditor = () => {
             ],
         },
         {
+            title: t('settings.groups.layout'),
+            items: [
+                {
+                    label: t('settings.layout.sidebarPosition'),
+                    description: t('settings.layout.sidebarPositionDesc'),
+                    render: () => (
+                        <div className="w-56">
+                            <CustomSelect
+                                items={[
+                                    { label: t('settings.layout.sidebarLeft'), value: 'left' },
+                                    { label: t('settings.layout.sidebarRight'), value: 'right' },
+                                ]}
+                                value={config.ui.sidebarPosition}
+                                onChange={(val) => updateUI({ sidebarPosition: val as 'left' | 'right' })}
+                            />
+                        </div>
+                    ),
+                },
+                {
+                    label: t('settings.layout.showStatusBar'),
+                    description: t('settings.layout.showStatusBarDesc'),
+                    render: () => (
+                        <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.typography'),
+            items: [
+                {
+                    label: t('settings.typography.fontFamily'),
+                    description: t('settings.typography.fontFamilyDesc'),
+                    render: () => (
+                        <div className="w-56">
+                            <CustomSelect
+                                items={finalFontList}
+                                value={config.typography.fontFamily}
+                                onChange={(val) => updateConfig(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: val } }))}
+                            />
+                        </div>
+                    ),
+                },
+            ],
+        },
+        {
+            title: t('settings.groups.logFormat'),
+            items: [
+                {
+                    label: t('settings.logFormat.timestampFormat'),
+                    description: t('settings.logFormat.timestampFormatDesc'),
+                    render: () => (
+                        <input
+                            type="text"
+                            placeholder="HH:mm:ss.SSS"
+                            value={config.timestampFormat}
+                            onChange={e => updateConfig({ timestampFormat: e.target.value })}
+                            className={`w-56 ${INPUT_CLS}`}
+                        />
+                    ),
+                },
+            ],
+        },
+        {
             title: t('settings.groups.keybindings'),
             items: [
                 // 可配置快捷键
@@ -422,10 +421,12 @@ export const SettingsEditor = () => {
         },
     ];
 
-    // 目录数据（普通分组 + 功能模块）
+    // 目录数据：外观 → 布局 → 字体排版 → 功能模块 → 日志格式 → 快捷键 → 隐私 → 数据备份 → Danger Zone
+    const MODULE_INDEX = 3; // 功能模块插在第 3 个位置（字体排版之后）
     const tocItems = [
-        ...settingSections.map((sec, i) => ({ id: sectionId(i), title: sec.title })),
+        ...settingSections.slice(0, MODULE_INDEX).map((sec, i) => ({ id: sectionId(i), title: sec.title })),
         { id: MODULE_SECTION_ID, title: t('settings.groups.modules') },
+        ...settingSections.slice(MODULE_INDEX).map((sec, i) => ({ id: sectionId(MODULE_INDEX + i), title: sec.title })),
     ];
 
     // ── 搜索过滤 ──
@@ -572,7 +573,7 @@ export const SettingsEditor = () => {
             {!searchTerm && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollContainerRef}>
                     <div className="max-w-[720px] mx-auto px-8 pb-20 pt-4">
-                        {filteredSettings.map((sec, i) => (
+                        {filteredSettings.slice(0, MODULE_INDEX).map((sec, i) => (
                             <Group key={`s-${i}`} title={sec.title} id={sectionId(i)}>
                                 {sec.items.map((item, j) => (
                                     <SettingRow key={j} label={item.label} description={item.description}>
@@ -585,6 +586,16 @@ export const SettingsEditor = () => {
                         <div id={MODULE_SECTION_ID}>
                             <ModuleSettings searchTerm={searchTerm} />
                         </div>
+
+                        {filteredSettings.slice(MODULE_INDEX).map((sec, i) => (
+                            <Group key={`s-post-${i}`} title={sec.title} id={sectionId(MODULE_INDEX + i)}>
+                                {sec.items.map((item, j) => (
+                                    <SettingRow key={j} label={item.label} description={item.description}>
+                                        {item.render()}
+                                    </SettingRow>
+                                ))}
+                            </Group>
+                        ))}
                     </div>
                 </div>
             )}

@@ -4,6 +4,7 @@ import { ActivityBar } from './ActivityBar';
 import { SideBar } from './SideBar';
 import { StatusBar } from './StatusBar';
 import { EditorArea } from './EditorArea';
+import { SettingsModal } from '../settings/SettingsModal';
 import { useEditorLayout } from '../../hooks/useEditorLayout';
 import { useSession } from '../../context/SessionContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
@@ -83,19 +84,7 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
         return () => clearTimeout(timer);
     }, [editorLayout.layout, sessionManager.savedSessions.length]);
 
-    const handleOpenSettings = async () => {
-        let settingsSession = sessionManager.sessions.find(s => s.config.type === 'settings');
-        if (!settingsSession) {
-            const newId = await sessionManager.createSession('settings', { name: t('editor.settingsTabName') });
-            if (newId) {
-                editorLayout.openSession(newId);
-                sessionManager.setActiveSessionId(newId);
-            }
-        } else {
-            editorLayout.openSession(settingsSession.id);
-            sessionManager.setActiveSessionId(settingsSession.id);
-        }
-    };
+
 
     return (
         <div className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden">
@@ -104,7 +93,6 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
                 <ActivityBar
                     activeView={activeView}
                     onViewChange={setActiveView}
-                    onOpenSettings={handleOpenSettings}
                 />
                 <SideBar
                     activeView={activeView}
@@ -123,6 +111,7 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
             </div>
             {config.ui.showStatusBar && <StatusBar hasUpdate={hasUpdate} updateVersion={updateVersion} onShowUpdate={checkForUpdates} />}
             {showUpdateDialog && <UpdateDialog onClose={() => setShowUpdateDialog(false)} />}
+            <SettingsModal />
         </div>
     );
 };

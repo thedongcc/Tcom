@@ -26,7 +26,6 @@ const SerialMonitor = React.lazy(() => import('../serial/SerialMonitor').then(m 
 const MqttMonitor = React.lazy(() => import('../mqtt/MqttMonitor').then(m => ({ default: m.MqttMonitor })));
 const MonitorTerminal = React.lazy(() => import('../serial-monitor/MonitorTerminal').then(m => ({ default: m.MonitorTerminal })));
 const GraphEditor = React.lazy(() => import('../graph-editor/GraphEditor').then(m => ({ default: m.GraphEditor })));
-const SettingsEditor = React.lazy(() => import('../settings/SettingsEditor').then(m => ({ default: m.SettingsEditor })));
 
 interface GroupPanelProps {
     node: LeafNode;
@@ -83,7 +82,7 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                                         id={compositeId}
                                         active={isTabActive}
                                         isGroupActive={isActive}
-                                        label={session.config.type === 'settings' ? t('editor.settingsTabName') : (session.config.name || '(Unknown)')}
+                                        label={session.config.name || '(Unknown)'}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             sessionManager.setActiveSessionId(viewId);
@@ -130,9 +129,6 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                         const session = sessions.find((s: any) => s.id === node.activeViewId);
                         if (!session) return <div className="p-4 text-center text-gray-500">{t('editor.sessionNotFound')}</div>;
 
-                        if (session.config.type === 'settings') {
-                            return <div key={session.id} className="absolute inset-0"><SettingsEditor /></div>;
-                        }
                         if (session.config.type === 'graph') {
                             return <div key={session.id} className="absolute inset-0"><GraphEditor sessionId={session.id} /></div>;
                         }
