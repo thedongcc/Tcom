@@ -68,6 +68,10 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
             window.removeEventListener('click', handleClick, true);
             window.removeEventListener('mouseout', handleMouseOut, true);
             window.removeEventListener('blur', removeHighlight, true);
+            window.removeEventListener('keydown', handleKeyDown, true);
+
+            // 移除 inspector 标志，恢复标题栏拖拽
+            document.body.removeAttribute('data-inspector-active');
         }
 
         function handleMouseOver(e: MouseEvent) {
@@ -124,13 +128,32 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
 
         function handleClick(e: MouseEvent) {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopImmediatePropagation();
 
             if (lastTarget && api.componentPicked) {
+                // 向上查找最近的 data-component 祖先并收集沿途的 className 和 style
+                let compKey: string | null = null;
+                let componentEl: HTMLElement = lastTarget;
+                let el: HTMLElement | null = lastTarget;
+                let collectedContext = '';
+                
+                while (el) {
+                    collectedContext += ` className="${el.className}" style="${el.getAttribute('style') || ''}"`;
+                    const comp = el.getAttribute('data-component');
+                    if (comp) {
+                        compKey = comp;
+                        componentEl = el;
+                        break;
+                    }
+                    el = el.parentElement;
+                }
+
                 api.componentPicked({
-                    className: lastTarget.className || '',
-                    outerHTML: lastTarget.outerHTML.substring(0, 500),
-                    tagName: lastTarget.tagName.toLowerCase()
+                    compKey,
+                    className: componentEl.className || '',
+                    // 将沿途收集的所有 class 和 style 与截断的 outerHTML 拼在一起保证正则表达式能吃到
+                    outerHTML: `<mock ${collectedContext}>${componentEl.outerHTML.substring(0, 2000)}</mock>`,
+                    tagName: componentEl.tagName.toLowerCase()
                 });
             }
 
@@ -138,14 +161,28 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
             api.stopInspectorMode?.();
         }
 
+        // ESC 键取消选取
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                stopEverything();
+                api.stopInspectorMode?.();
+            }
+        }
+
         // ── 事件订阅 ──
 
         const unInspectorStart = (api as any).onInspectorStarted?.(() => {
+            // 设置 inspector 标志，让标题栏跳过 startDragging
+            document.body.setAttribute('data-inspector-active', 'true');
+
             document.body.style.cursor = 'crosshair';
             window.addEventListener('mouseover', handleMouseOver, true);
             window.addEventListener('mouseout', handleMouseOut, true);
             window.addEventListener('click', handleClick, true);
             window.addEventListener('blur', removeHighlight, true);
+            window.addEventListener('keydown', handleKeyDown, true);
         });
 
         const unInspectorStop = api.onInspectorStopped?.(() => {

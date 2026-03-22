@@ -150,6 +150,7 @@ pub fn theme_editor_open(app: tauri::AppHandle) -> Result<(), String> {
         .min_inner_size(300.0, 400.0)
         .resizable(true)
         .decorations(true)
+        .always_on_top(true)
         .center()
         .build()
         .map_err(|e| e.to_string())?;

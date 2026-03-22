@@ -44,34 +44,14 @@ export function useSerialDataListener(
                 sessionLog.addLog(session.id, 'ERROR', err)
             );
 
-            // 高精度定时发送 tick（含诊断）
-            let jsTickCount = 0;
-            let jsIntervalSum = 0;
-            let jsLatencySum = 0;
-            let jsLatencyMax = 0;
-            let lastJsTickTime = 0;
-            (window.serialAPI!.onTimedSendTick as any)?.(session.id, (data: any, timestamp: number) => {
-                const jsNow = Date.now();
-                const latency = jsNow - timestamp; // 事件传输延迟（Rust→JS）
-                jsTickCount++;
-                jsLatencySum += latency;
-                if (latency > jsLatencyMax) jsLatencyMax = latency;
-                if (lastJsTickTime > 0) {
-                    jsIntervalSum += (jsNow - lastJsTickTime);
-                }
-                lastJsTickTime = jsNow;
-
-                if (jsTickCount % 20 === 0) {
-                    const avgLatency = Math.round(jsLatencySum / 20);
-                    const avgInterval = Math.round(jsIntervalSum / 19);
-                    console.log(`[TimedSend JS DIAG] tick#${jsTickCount} | avgLatency=${avgLatency}ms maxLatency=${jsLatencyMax}ms | avgJsInterval=${avgInterval}ms`);
-                    jsLatencySum = 0;
-                    jsLatencyMax = 0;
-                    jsIntervalSum = 0;
-                }
-
-                sessionLog.addLog(session.id, 'TX', new Uint8Array(data), 'none', undefined, undefined, timestamp, 'tcom');
-            });
+            // 高精度定时发送 tick 批量接收
+            if (window.serialAPI!.onTimedSendTickBatch) {
+                window.serialAPI!.onTimedSendTickBatch(session.id, (events) => {
+                    events.forEach(e => {
+                        sessionLog.addLog(session.id, 'TX', new Uint8Array(e.data), 'none', undefined, undefined, e.timestamp, 'tcom');
+                    });
+                });
+            }
 
             registeredSessions.current.add(session.id);
         });

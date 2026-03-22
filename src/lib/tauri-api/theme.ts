@@ -71,6 +71,7 @@ export function registerThemeAPI(): void {
                 minHeight: 400,
                 resizable: true,
                 decorations: false,
+                alwaysOnTop: true,
             }
             if (x !== undefined && y !== undefined) {
                 opts.x = x

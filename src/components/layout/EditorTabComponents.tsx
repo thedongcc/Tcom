@@ -32,10 +32,10 @@ export const Tab = ({ label, active, isGroupActive, unsaved, onClose, onClick }:
         <div
             onClick={onClick}
             className={`focus:outline-none outline-none
-        h-full w-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--st-tab-border)] select-none group
+        h-full w-full px-3 min-w-[120px] max-w-[200px] flex items-center justify-between cursor-pointer border-r border-[var(--st-tab-border)] select-none group relative
         ${active
                     ? `bg-[var(--st-tab-active-bg)] ${isGroupActive ? 'text-[var(--st-tab-active-text)] shadow-[inset_0_2px_0_0_var(--accent-color)]' : 'text-[var(--input-placeholder-color)]'}`
-                    : 'bg-[var(--st-tab-inactive-bg)] text-[var(--st-tab-inactive-text)] hover:bg-[var(--st-tab-active-bg)]'
+                    : `bg-[var(--st-tab-inactive-bg)] text-[var(--st-tab-inactive-text)] hover:bg-[var(--st-tab-active-bg)] border-b border-[var(--widget-border-color)]`
                 }
     `}
         >
@@ -90,8 +90,9 @@ export interface GroupHeaderProps {
 export const GroupHeader = ({ group, isActiveGroup, setActiveGroupId, children }: GroupHeaderProps) => {
     return (
         <div
-            className={`relative z-50 flex h-9 bg-[var(--st-editor-tabs-bg)] border-b border-[var(--widget-border-color)] select-none items-center overflow-hidden ${isActiveGroup ? '' : 'opacity-80'}`}
+            className={`relative z-50 flex h-9 bg-[var(--st-editor-tabs-bg)] select-none items-center overflow-x-auto scrollbar-hide ${isActiveGroup ? '' : 'opacity-80'}`}
             onClick={() => setActiveGroupId(group.id)}
+            data-component="editor-tabs"
         >
             {children}
         </div>

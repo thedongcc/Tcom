@@ -8,6 +8,11 @@ import { componentTokenMap } from '../../themes/componentTokenMap';
 // 定义分组及其包含的组件 ID
 export const REGION_GROUPS = [
     {
+        id: 'semantic-sys',
+        label: '✨ 系统级核心语义色 (全局生效)',
+        components: ['sys-colors']
+    },
+    {
         id: 'global-variables',
         label: '基础全局与基座',
         components: ['global-common', 'global-components', 'global-scrollbar', 'st-status-indicators', 'custom-select']

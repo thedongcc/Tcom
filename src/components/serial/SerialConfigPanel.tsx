@@ -150,11 +150,11 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                 {/* 连接/断开按钮 */}
                 <div className="space-y-2 mt-auto pt-2">
                     <button
-                        className={`w-full py-1.5 px-3 text-white text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
-                            ? 'bg-[var(--st-danger-bg)] hover:bg-[var(--st-danger-hover-bg)]'
+                        className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
+                            ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'
                             : (highlight
-                                ? 'bg-[var(--button-background)] ring-2 ring-[var(--focus-border-color)] animate-pulse'
-                                : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed')
+                                ? 'bg-[var(--button-background)] text-[var(--button-foreground)] ring-2 ring-[var(--focus-border-color)] animate-pulse'
+                                : 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed')
                             }`}
                         disabled={!connection.path && !isConnected}
                         onClick={handleToggleConnection}

@@ -112,6 +112,8 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[data-no-drag]')) return;
+    // inspector 模式下不拖拽，让选取事件通过
+    if (document.body.hasAttribute('data-inspector-active')) return;
     e.preventDefault();
     getCurrentWindow().startDragging();
   }, []);
@@ -120,6 +122,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
   const handleDoubleClick = useCallback(async (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[data-no-drag]')) return;
+    if (document.body.hasAttribute('data-inspector-active')) return;
     const maximized = await window.windowAPI?.toggleMaximize();
     setIsMaximized(!!maximized);
   }, []);
@@ -129,7 +132,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
   return (
     <>
       <div
-        className="h-[30px] bg-[var(--titlebar-background)] flex items-center select-none relative z-50"
+        className="h-[30px] bg-[var(--titlebar-background)] flex items-center select-none relative z-50 border-b border-[var(--border-color)]"
         onMouseDown={handleMouseDown}
         onDoubleClick={handleDoubleClick}
         data-component="titlebar"

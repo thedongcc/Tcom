@@ -214,9 +214,9 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         {/* 连接按钮 */}
                         <div className="pt-2">
                             <button
-                                className={`w-full py-1.5 px-3 text-white text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
-                                    ? 'bg-[var(--st-danger-bg)] hover:bg-[var(--st-danger-hover-bg)]'
-                                    : 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed'
+                                className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
+                                    ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'
+                                    : 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)] disabled:opacity-50 disabled:cursor-not-allowed'
                                     }`}
                                 onClick={isConnected ? onDisconnectToken : onConnectToken}
                                 disabled={isConnecting}

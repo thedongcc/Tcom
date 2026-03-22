@@ -6,6 +6,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import { throttledIpcSync } from './ThemeTokenRow';
+import { componentTokenMap } from '../../themes/componentTokenMap';
+
+/** 将 rgb(r, g, b) / rgba(r, g, b, a) 格式转为 #hex，防止颜色选择器崩溃 */
+const rgbToHex = (rgb: string): string => {
+    const match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!match) return rgb; // 已经是 hex 或 var，直接返回
+    const r = parseInt(match[1], 10).toString(16).padStart(2, '0');
+    const g = parseInt(match[2], 10).toString(16).padStart(2, '0');
+    const b = parseInt(match[3], 10).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+};
 
 interface UseThemeEditorStateParams {
     isOpen: boolean;
@@ -126,20 +137,28 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     }, [isOpen, currentThemeDef?.id, allEdits]);
 
     // ── CDP 检查器监听 ──
-    const extractVars = useCallback((html: string) => {
-        const regex = /var\((--[^)]+)\)/g;
+    const extractVars = useCallback((html: string, compKey?: string | null) => {
         const vars = new Set<string>();
+
+        // 1. 从 HTML 字符串中正则提取 var(--xxx)
+        const regex = /var\((--[^),]+)/g;
         let match;
         while ((match = regex.exec(html)) !== null) {
-            vars.add(match[1]);
+            vars.add(match[1].trim());
         }
+
+        // 2. 如果有 data-component key，从 componentTokenMap 中获取该组件全部变量
+        if (compKey && componentTokenMap[compKey]) {
+            componentTokenMap[compKey].tokens.forEach(t => vars.add(t.var));
+        }
+
         return Array.from(vars);
     }, []);
 
     useEffect(() => {
         const unsub = window.themeAPI?.onComponentPicked?.((data) => {
             setCdpDebugData(data);
-            setLastPickedVars(extractVars(data.outerHTML));
+            setLastPickedVars(extractVars(data.outerHTML, data.compKey));
             setTimeout(() => setLastPickedVars([]), 2000);
         });
         return () => { unsub?.(); };
@@ -178,7 +197,10 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         if (currentThemeDef?.colors?.[varName]) return currentThemeDef.colors[varName];
         if (typeof window !== 'undefined') {
             const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            if (val && val !== 'transparent' && val !== 'rgba(0, 0, 0, 0)') return val;
+            if (val && val !== 'transparent' && val !== 'rgba(0, 0, 0, 0)') {
+                // 必须转换：getComputedStyle 返回 rgb() 格式，颜色选择器需要 #hex
+                return rgbToHex(val);
+            }
         }
         return '#808080';
     }, [edits, currentThemeDef]);

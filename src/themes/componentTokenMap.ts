@@ -12,6 +12,48 @@ export interface ComponentThemeMeta {
  */
 export const componentTokenMap: Record<string, ComponentThemeMeta> = {
   // ====================================================
+  // === System Semantic Colors (全局生效) ===
+  // ====================================================
+  'sys-colors': {
+    label: "✨ 系统级核心语义色",
+    tokens: [
+      // 背景语义
+      { var: "--sys-bg-base", label: "基础底色（最暗，内容区/编辑器）" },
+      { var: "--sys-bg-surface", label: "表面底色（侧栏/面板/状态栏）" },
+      { var: "--sys-bg-elevated", label: "抬升底色（标题栏/活动栏）" },
+      { var: "--sys-bg-overlay", label: "悬浮层底色（弹窗/菜单/对话框）" },
+      { var: "--sys-bg-hover", label: "全局悬浮态背景" },
+      { var: "--sys-bg-active", label: "全局激活态背景" },
+      // 文本语义
+      { var: "--sys-text-primary", label: "主要文本色" },
+      { var: "--sys-text-secondary", label: "次要文本色" },
+      { var: "--sys-text-muted", label: "弱化文本色" },
+      { var: "--sys-text-inverse", label: "反色文本（用于亮色按钮上）" },
+      // 边框语义
+      { var: "--sys-border-base", label: "全局基础边框色" },
+      { var: "--sys-border-divider", label: "全局分隔线色" },
+      // 品牌色
+      { var: "--sys-color-primary", label: "全局强调色/品牌色" },
+      { var: "--accent-color", label: "强调色（选中/指示器）" },
+      { var: "--focus-border-color", label: "焦点边框色" },
+      // 顶层布局兼容色
+      { var: "--app-background", label: "应用全局背景" },
+      { var: "--app-foreground", label: "应用全局前景" },
+      { var: "--editor-background", label: "编辑器/内容区背景" },
+      { var: "--sidebar-background", label: "侧边栏背景" },
+      { var: "--activitybar-background", label: "活动栏背景" },
+      { var: "--statusbar-background", label: "状态栏背景" },
+      { var: "--titlebar-background", label: "标题栏背景" },
+      { var: "--panel-background", label: "面板背景" },
+      { var: "--widget-background", label: "小部件背景" },
+      // 全局交互色
+      { var: "--border-color", label: "全局边框色" },
+      { var: "--widget-border-color", label: "小部件边框色" },
+      { var: "--hover-background", label: "悬浮背景色" },
+      { var: "--selection-background", label: "选区背景色" },
+    ],
+  },
+  // ====================================================
   // === Layout Components ===
   // ====================================================
   titlebar: {

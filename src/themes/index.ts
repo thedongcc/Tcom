@@ -28,8 +28,8 @@ export function applyTheme(theme: ThemeDefinition): void {
         root.style.setProperty(key, value);
     });
 
-    // 标记当前主题 id，方便调试
-    root.setAttribute('data-theme', theme.id);
+    // 标记当前主题类型（dark/light），供 CSS 选择器匹配
+    root.setAttribute('data-theme', theme.type);
 
     // 清除所有旧的主题 class
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim();

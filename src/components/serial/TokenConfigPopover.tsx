@@ -198,7 +198,7 @@ export const TokenConfigPopover = ({ token, onUpdate, onDelete, onClose, positio
                     {t('common.delete')}
                 </button>
                 <button
-                    className="px-4 py-1.5 text-[11px] rounded-md text-white transition-all flex items-center gap-1 font-semibold shadow-sm cursor-pointer"
+                    className="px-4 py-1.5 text-[11px] rounded-md text-[var(--st-btn-primary-text,white)] transition-all flex items-center gap-1 font-semibold shadow-sm cursor-pointer"
                     style={{ backgroundColor: 'var(--accent-color, var(--button-background))' }}
                     onClick={handleSave}
                     onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}

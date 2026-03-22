@@ -155,7 +155,7 @@ export const MqttPublishArea = React.memo(({
                 />
                 <button
                     className={`w-16 flex flex-col items-center justify-center gap-1 rounded-sm transition-colors ${isConnected
-                        ? (payload.trim() === '' ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--st-mqtt-btn-send-bg)] hover:bg-[var(--button-hover-background)] text-white')
+                        ? (payload.trim() === '' ? 'bg-[var(--input-background)] text-[var(--activitybar-inactive-foreground)] cursor-not-allowed' : 'bg-[var(--st-mqtt-btn-send-bg)] hover:bg-[var(--button-hover-background)] text-[var(--st-btn-primary-text,var(--button-foreground))]')
                         : 'bg-[var(--input-background)] hover:bg-[var(--list-hover-background)] text-[var(--st-monitor-btn-text)] cursor-pointer border border-[var(--border-color)] hover:border-[var(--focus-border-color)]'
                         }`}
                     onClick={handleSend}

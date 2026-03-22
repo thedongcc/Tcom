@@ -64,7 +64,7 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
                         onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
                     />
                     <button
-                        className="w-full py-1.5 bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-white text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
+                        className="w-full py-1.5 bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)] text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
                         onClick={handleAddTopic}
                     >
                         <Plus size={14} />
