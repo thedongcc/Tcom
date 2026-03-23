@@ -70,11 +70,11 @@ export const MqttPublishArea = React.memo(({
     return (
         <div className="border-t border-[var(--st-widget-border)] bg-[var(--st-sendarea-bg)] p-2 flex flex-col gap-2 shrink-0 select-none">
             {/* 第一行：格式下拉 + Topic 选择 + QoS + Retain */}
-            <div className="flex items-center gap-2 h-[26px]">
+            <div className="flex items-center gap-2 h-6">
                 {/* 格式选择下拉 */}
                 <div className="shrink-0">
                     <CustomSelect
-                        className="!w-[80px] [&_button]:!h-[26px] [&_div.h-7]:!h-[26px] [&_span.text-ellipsis]:!text-[11px]"
+                        className="!w-[80px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.text-ellipsis]:!text-[11px]"
                         items={[
                             { label: 'Text', value: 'text' },
                             { label: 'JSON', value: 'json' },
@@ -125,7 +125,7 @@ export const MqttPublishArea = React.memo(({
                 </div>
                 <div className="shrink-0">
                     <CustomSelect
-                        className="!w-[68px] [&_button]:!h-[26px] [&_div.h-7]:!h-[26px] [&_span.text-ellipsis]:!text-[11px]"
+                        className="!w-[68px] [&_button]:!h-6 [&_div.h-7]:!h-6 [&_span.text-ellipsis]:!text-[11px]"
                         items={[
                             { label: 'QoS 0', value: '0' },
                             { label: 'QoS 1', value: '1' },
@@ -146,9 +146,9 @@ export const MqttPublishArea = React.memo(({
                 </label>
             </div>
             {/* 第二行：输入框 + 发送按钮 */}
-            <div className="flex gap-2 items-stretch">
+            <div className="flex gap-2 h-[96px]">
                 <textarea
-                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--input-border-color)] text-[var(--input-foreground)] p-2 outline-none resize-none focus:border-[var(--focus-border-color)] rounded h-[80px] select-text"
+                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] text-[var(--input-foreground)] p-2 outline-none resize-none overflow-y-auto focus:border-[var(--st-input-focus-border)] rounded-sm h-full select-text"
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontStyle }}
                     value={payload}
                     onChange={e => { setPayload(e.target.value); saveUIState({ publishPayload: e.target.value }); }}

@@ -121,8 +121,8 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                 )}
             </GroupHeader>
 
-            {/* 内容区域 */}
-            <div className="flex-1 relative bg-[var(--app-background)]">
+            {/* 内容区域：移除背景色，避免妨碍图片底图的完全透视 */}
+            <div className="flex-1 relative">
                 <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center text-[var(--input-placeholder-color)] text-sm opacity-60">Loading...</div>}>
                 {node.activeViewId ? (
                     (() => {

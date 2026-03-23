@@ -102,11 +102,11 @@ div[data-direction="vertical"]:hover {
   --st-settings-danger-bg: #ef4444;
   --st-settings-text: var(--sys-text-primary);
   --st-settings-title-text: var(--sys-text-primary);
-  --st-toolbar-bg: #1e2227;
+  --st-toolbar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-widget-border: var(--sys-border-divider);
 
   /* === Phase 2: 组件级变量默认值（从 JSON 迁移到 CSS） === */
-  --extensions-sidebar-bg: #1e2227;
+  --extensions-sidebar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --extensions-sidebar-text: #c8ccd4;
   --list-active-foreground: #cccccc;
   --logsearch-btn-match-case-active-bg: #007acc;
@@ -131,7 +131,7 @@ div[data-direction="vertical"]:hover {
   --st-contextmenu-text-hover: #ffffff;
   --st-dropdown-bg: #252526;
   --st-error-text: #f48771;
-  --st-graph-canvas-bg: #181b1f;
+  --st-graph-canvas-bg: color-mix(in srgb, #181b1f calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-divider: #2d3139;
   --st-graph-icon-bus: #dcdcaa;
   --st-graph-icon-pair: #c586c0;
@@ -141,11 +141,11 @@ div[data-direction="vertical"]:hover {
   --st-graph-port-border: #666666;
   --st-graph-port-hover-bg: #555555;
   --st-graph-port-hover-border: #ffffff;
-  --st-graph-subnode-bg: #111111;
+  --st-graph-subnode-bg: color-mix(in srgb, #111111 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-subnode-border: #333333;
-  --st-graph-toolbar-bg: #1e2227;
+  --st-graph-toolbar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-toolbar-border: #2d3139;
-  --st-input-bg: #181b1f;
+  --st-input-bg: var(--input-background);
   --st-input-border: #2d3139;
   --st-input-btn-mode-hex-active-bg: #0e639c;
   --st-input-btn-mode-txt-active-bg: #0e639c;
@@ -168,7 +168,7 @@ div[data-direction="vertical"]:hover {
   --st-monitor-empty-text: #666666;
   --st-monitor-log-rx-label-bg: #6a995533;
   --st-monitor-log-tx-label-bg: #d1696933;
-  --st-monitor-rx-bg: #181b1f;
+  --st-monitor-rx-bg: var(--editor-background);
   --st-monitor-rx-label-text: #AAAAAA;
   --st-monitor-status-offline: #ef4444;
   --st-monitor-status-online: #22c55e;
@@ -206,7 +206,7 @@ div[data-direction="vertical"]:hover {
   --st-mqtt-btn-view-bg: transparent;
   --st-mqtt-btn-view-hover-bg: #3c3c3c;
   --st-mqtt-btn-view-text: #cccccc;
-  --st-mqtt-filter-group-bg: #1e1e1e;
+  --st-mqtt-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-mqtt-filter-group-border: #454545;
   --st-mqtt-filter-group-divider: #454545;
   --st-mqtt-options-hover-bg: #4a4a4a;
@@ -214,7 +214,7 @@ div[data-direction="vertical"]:hover {
   --st-mqtt-topic-default-rx-color: #4ec9b0;
   --st-mqtt-topic-default-tx-color: #007acc;
   --st-mqtt-topic-selected-text: #4ec9b0;
-  --st-mqtt-view-group-bg: #1e1e1e;
+  --st-mqtt-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-mqtt-view-group-border: #454545;
   --st-panel-action-hover: #cccccc;
   --st-panel-muted-text: #969696;
@@ -252,12 +252,12 @@ div[data-direction="vertical"]:hover {
   --st-serial-btn-view-bg: transparent;
   --st-serial-btn-view-hover-bg: #3c3c3c;
   --st-serial-btn-view-text: #cccccc;
-  --st-serial-filter-group-bg: #1e1e1e;
+  --st-serial-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-serial-filter-group-border: #454545;
   --st-serial-filter-group-divider: #454545;
   --st-serial-options-hover-bg: #4a4a4a;
   --st-serial-toolbar-divider: #454545;
-  --st-serial-view-group-bg: #1e1e1e;
+  --st-serial-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-serial-view-group-border: #454545;
   --st-session-serial-text: #e8b575;
   --st-settings-btn-cancel-hover: #3c3c3c;
@@ -267,14 +267,14 @@ div[data-direction="vertical"]:hover {
   --st-settings-danger-hover: #c93f24;
   --st-settings-danger-text: #ffffff;
   --st-settings-danger-title: #f48771;
-  --st-settings-footer-bg: #1e1e1e;
+  --st-settings-footer-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-settings-footer-border: #3c3c3c;
   --st-settings-text-hover: #ffffff;
   --st-switch-text-hover: #ffffff;
-  --st-tab-active-bg: #1e2227;
+  --st-tab-active-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tab-active-text: #e0e4ec;
   --st-tab-border: #353b45;
-  --st-tab-inactive-bg: #15181c;
+  --st-tab-inactive-bg: color-mix(in srgb, #15181c calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tab-inactive-text: #6b7280;
   --st-ter-btn-autoscroll-active-text: #ffffff;
   --st-ter-btn-autoscroll-bg: transparent;
@@ -300,13 +300,13 @@ div[data-direction="vertical"]:hover {
   --st-ter-btn-view-bg: transparent;
   --st-ter-btn-view-hover-bg: #3c3c3c;
   --st-ter-btn-view-text: #cccccc;
-  --st-ter-filter-group-bg: #1e1e1e;
+  --st-ter-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-ter-filter-group-border: #454545;
   --st-ter-filter-group-divider: #454545;
   --st-ter-toolbar-divider: #454545;
-  --st-ter-view-group-bg: #1e1e1e;
+  --st-ter-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-ter-view-group-border: #454545;
-  --st-terminal-bg: #1e1e1e;
+  --st-terminal-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-timestamp: #569cd6;
   --st-toast-icon-hover: #ffffff;
   --st-toast-text: #cccccc;
@@ -333,7 +333,7 @@ div[data-direction="vertical"]:hover {
 /* === Phase 3: Light 主题组件变量覆盖（真实值） === */
 html[data-theme="light"] {
   --activitybar-active-border: #007acc;
-  --command-sidebar-bg: #f0f2f5;
+  --command-sidebar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --command-sidebar-border: #e4e4e4;
   --command-sidebar-text: #333333;
   --context-menu-bg: #ffffff;
@@ -341,9 +341,9 @@ html[data-theme="light"] {
   --context-menu-hover-bg: #add6ff;
   --context-menu-item-hover: #add6ff;
   --context-menu-text: #333333;
-  --editor-area-bg: #ffffff;
-  --editor-area-tabs-bg: #ffffff;
-  --extensions-sidebar-bg: #f0f2f5;
+  --editor-area-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --editor-area-tabs-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --extensions-sidebar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --extensions-sidebar-text: #616161;
   --input-focus-border-color: #007acc;
   --list-active-foreground: #ffffff;
@@ -355,33 +355,33 @@ html[data-theme="light"] {
   --monitor-options-hover-bg: #d4d4d4;
   --monitor-rx-label-bg: #22c55e4D;
   --monitor-rx-label-border: #22c55e66;
-  --monitor-terminal-bg: #ffffff;
-  --monitor-terminal-toolbar-bg: #f0f2f5;
+  --monitor-terminal-bg: var(--editor-background);
+  --monitor-terminal-toolbar-bg: var(--editor-background);
   --monitor-terminal-toolbar-border: #e0e0e0;
   --monitor-terminal-toolbar-text: #616161;
   --monitor-tx-label-bg: #007ACC4D;
   --monitor-tx-label-border: #007ACC66;
-  --mqtt-config-bg: #fafbfc;
-  --mqtt-config-input-bg: #ffffff;
+  --mqtt-config-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --mqtt-config-input-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --mqtt-config-input-text: #333333;
   --mqtt-config-text: #333333;
   --new-session-dialog-bg: #fafbfc;
   --new-session-dialog-border: #e4e4e4;
   --new-session-dialog-text: #333333;
   --scrollbar-shadow-color: rgba(0, 0, 0, 0.1);
-  --serial-config-bg: #fafbfc;
+  --serial-config-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --serial-config-label: #616161;
   --serial-config-text: #333333;
   --session-item-active-bg: #e4e6f1;
   --session-item-active-border: #007acc;
   --session-item-foreground: #333333;
   --session-item-hover-bg: #e8e8e8;
-  --session-list-sidebar-bg: #f0f2f5;
+  --session-list-sidebar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --session-list-sidebar-border: #e4e4e4;
-  --session-list-sidebar-header-bg: #f0f2f5;
+  --session-list-sidebar-header-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --session-list-sidebar-muted: #a3a3a3;
   --session-list-sidebar-text: #333333;
-  --settings-editor-bg: #ffffff;
+  --settings-editor-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-accent: #007acc;
   --st-activitybar-icon-active: #000000;
   --st-activitybar-icon-hover: #333333;
@@ -393,7 +393,7 @@ html[data-theme="light"] {
   --st-btn-switch-active-bg: #007acc;
   --st-command-drop-indicator: #007acc;
   --st-command-empty-text: #858585;
-  --st-config-item-bg: #ffffff;
+  --st-config-item-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-config-muted-text: #969696;
   --st-config-success-bg: #4ec9b0;
   --st-config-success-text: #4ec9b0;
@@ -405,9 +405,9 @@ html[data-theme="light"] {
   --st-dialog-icon-hover: #000000;
   --st-dialog-text: #333333;
   --st-dropdown-bg: #f0f2f5;
-  --st-editor-tabs-bg: #f5f7fa;
+  --st-editor-tabs-bg: color-mix(in srgb, #f5f7fa calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-error-text: #cd3131;
-  --st-graph-canvas-bg: #ffffff;
+  --st-graph-canvas-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-divider: #cecece;
   --st-graph-icon-bus: #b87c2b;
   --st-graph-icon-pair: #a31515;
@@ -417,11 +417,11 @@ html[data-theme="light"] {
   --st-graph-port-border: #999999;
   --st-graph-port-hover-bg: #e4e4e4;
   --st-graph-port-hover-border: #000000;
-  --st-graph-subnode-bg: #f0f0f0;
+  --st-graph-subnode-bg: color-mix(in srgb, #f0f0f0 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-subnode-border: #cecece;
-  --st-graph-toolbar-bg: #f0f2f5;
+  --st-graph-toolbar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-toolbar-border: #dce1e8;
-  --st-input-bg: #ffffff;
+  --st-input-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-input-border: #cecece;
   --st-input-btn-mode-hex-active-bg: #007acc;
   --st-input-btn-mode-txt-active-bg: #007acc;
@@ -432,7 +432,7 @@ html[data-theme="light"] {
   --st-input-text: #333333;
   --st-input-timer-unit-text: #666666;
   --st-list-item-bg: transparent;
-  --st-logsearch-bg: #f0f2f5;
+  --st-logsearch-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-logsearch-border: #e4e4e4;
   --st-logsearch-match-highlight: rgba(167, 139, 250, 0.3);
   --st-logsearch-text: #333333;
@@ -449,10 +449,10 @@ html[data-theme="light"] {
   --st-monitor-config-label: #333333;
   --st-monitor-config-text: #333333;
   --st-monitor-empty-text: #666666;
-  --st-monitor-log-bg: #ffffff;
+  --st-monitor-log-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-monitor-log-rx-label-bg: #228B2233;
   --st-monitor-log-tx-label-bg: #cd313133;
-  --st-monitor-rx-bg: #fafbfc;
+  --st-monitor-rx-bg: var(--editor-background);
   --st-monitor-rx-label-text: #777777;
   --st-monitor-status-offline: #ef4444;
   --st-monitor-status-online: #22c55e;
@@ -492,17 +492,17 @@ html[data-theme="light"] {
   --st-mqtt-btn-view-bg: transparent;
   --st-mqtt-btn-view-hover-bg: #e8e8e8;
   --st-mqtt-btn-view-text: #333333;
-  --st-mqtt-filter-group-bg: #fafbfc;
+  --st-mqtt-filter-group-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-mqtt-filter-group-border: #e4e4e4;
   --st-mqtt-filter-group-divider: #e4e4e4;
-  --st-mqtt-monitor-bg: #fafbfc;
+  --st-mqtt-monitor-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-mqtt-options-hover-bg: #d4d4d4;
   --st-mqtt-toolbar-border: #e0e0e0;
   --st-mqtt-toolbar-divider: #e4e4e4;
   --st-mqtt-topic-default-rx-color: #008000;
   --st-mqtt-topic-default-tx-color: #007acc;
   --st-mqtt-topic-selected-text: #0062a3;
-  --st-mqtt-view-group-bg: #fafbfc;
+  --st-mqtt-view-group-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-mqtt-view-group-border: #e4e4e4;
   --st-msg-bubble-border: rgba(0, 0, 0, 0.1);
   --st-panel-action-hover: #333333;
@@ -511,15 +511,15 @@ html[data-theme="light"] {
   --st-popover-bg: #f0f2f5;
   --st-popover-border: #cecece;
   --st-search-text: #333333;
-  --st-select-bg: #ffffff;
+  --st-select-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-select-border: #cecece;
   --st-select-hover: #e8e8e8;
   --st-select-item-text: #333333;
   --st-select-selected: #3D90C7;
   --st-select-text: #333333;
-  --st-sendarea-bg: #f0f2f5;
+  --st-sendarea-bg: var(--widget-background);
   --st-sendarea-toolbar-active: #2563eb;
-  --st-sendarea-toolbar-bg: #f0f2f5;
+  --st-sendarea-toolbar-bg: var(--widget-background);
   --st-sendarea-toolbar-border: #dce1e8;
   --st-serial-btn-autoscroll-active-bg: #007acc;
   --st-serial-btn-autoscroll-active-text: #ffffff;
@@ -551,12 +551,12 @@ html[data-theme="light"] {
   --st-serial-btn-view-bg: transparent;
   --st-serial-btn-view-hover-bg: #e8e8e8;
   --st-serial-btn-view-text: #333333;
-  --st-serial-filter-group-bg: #fafbfc;
+  --st-serial-filter-group-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-serial-filter-group-border: #e4e4e4;
   --st-serial-filter-group-divider: #e4e4e4;
   --st-serial-options-hover-bg: #d4d4d4;
   --st-serial-toolbar-divider: #e4e4e4;
-  --st-serial-view-group-bg: #fafbfc;
+  --st-serial-view-group-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-serial-view-group-border: #e4e4e4;
   --st-session-serial-text: #b87c2b;
   --st-settings-btn-cancel-hover: #e4e4e4;
@@ -567,14 +567,14 @@ html[data-theme="light"] {
   --st-settings-danger-hover: #b71c1c;
   --st-settings-danger-text: #ffffff;
   --st-settings-danger-title: #d32f2f;
-  --st-settings-footer-bg: #e4e4e4;
+  --st-settings-footer-bg: color-mix(in srgb, #e4e4e4 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-settings-footer-border: #cecece;
   --st-settings-text: #333333;
   --st-settings-text-hover: #000000;
   --st-settings-title-text: #333333;
   --st-sidebar-action-hover: #333333;
   --st-sidebar-muted-text: #969696;
-  --st-sidebar-panel-bg: #f0f2f5;
+  --st-sidebar-panel-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-sidebar-text: #333333;
   --st-sidebar-title-text: #333333;
   --st-statusbar-btn-bg: transparent;
@@ -584,10 +584,10 @@ html[data-theme="light"] {
   --st-statusbar-success-text: #16a34a;
   --st-statusbar-text: #333333;
   --st-switch-text-hover: #000000;
-  --st-tab-active-bg: #f0f2f5;
+  --st-tab-active-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tab-active-text: #1e293b;
   --st-tab-border: #d0d7e2;
-  --st-tab-inactive-bg: #f5f7fa;
+  --st-tab-inactive-bg: color-mix(in srgb, #f5f7fa calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tab-inactive-text: #94a3b8;
   --st-ter-btn-autoscroll-active-text: #ffffff;
   --st-ter-btn-autoscroll-bg: transparent;
@@ -613,13 +613,13 @@ html[data-theme="light"] {
   --st-ter-btn-view-bg: transparent;
   --st-ter-btn-view-hover-bg: #e8e8e8;
   --st-ter-btn-view-text: #333333;
-  --st-ter-filter-group-bg: #ffffff;
+  --st-ter-filter-group-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-ter-filter-group-border: #e4e4e4;
   --st-ter-filter-group-divider: #e4e4e4;
   --st-ter-toolbar-divider: #e4e4e4;
-  --st-ter-view-group-bg: #ffffff;
+  --st-ter-view-group-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-ter-view-group-border: #e4e4e4;
-  --st-terminal-bg: #ffffff;
+  --st-terminal-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-timestamp: #0000ff;
   --st-titlebar-icon: #333333;
   --st-titlebar-icon-hover: #000000;
@@ -635,7 +635,7 @@ html[data-theme="light"] {
   --st-token-flag: #800080;
   --st-token-random: #b87c2b;
   --st-token-timestamp: #007acc;
-  --st-toolbar-bg: #f0f2f5;
+  --st-toolbar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tooltip-bg: #ffffff;
   --st-tooltip-border: #d0d7e2;
   --st-tooltip-text: #1e293b;
@@ -646,7 +646,7 @@ html[data-theme="light"] {
   --st-update-text: #333333;
   --st-widget-border: #e4e4e4;
   --switch-active-bg: #007acc;
-  --theme-editor-bg: #f3f4f6;
+  --theme-editor-bg: color-mix(in srgb, #f3f4f6 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --theme-editor-border: rgba(0, 0, 0, 0.08);
   --theme-editor-btn-bg: rgba(0, 0, 0, 0.04);
   --theme-editor-btn-hover: rgba(0, 0, 0, 0.08);
@@ -669,9 +669,9 @@ html[data-theme="light"] {
 
 /* === Phase 4: Mono 主题极简冷淡（高对比脱色） === */
 body.theme-mono {
-  --st-sendarea-bg: #1e1e1e;
-  --st-editor-tabs-bg: #020202;
-  --st-toolbar-bg: #1e1e1e;
+  --st-sendarea-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-editor-tabs-bg: color-mix(in srgb, #020202 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-toolbar-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-tab-active-bg: #1e1e1e;
   --st-accent: #ffffff;
   --st-btn-primary-bg: #e5e5e5;
@@ -863,10 +863,7 @@ body.theme-mono {
   --st-mqtt-topic-selected-text: #ffffff;
 }
 
-/* === Phase 5: Light + 背景图毛玻璃 === */
-html[data-theme="light"][data-bg-image="true"] {
-  --sys-bg-overlay: rgba(245, 245, 245, 0.85);
-}
+/* Light+bg-image 特化块已移除 — 编程式批量覆盖引擎自动适配所有主题 */
 
 
 
@@ -888,7 +885,7 @@ html[data-theme="light"][data-bg-image="true"] {
   --input-border-color: var(--sys-bg-elevated);
   --input-placeholder-color: #a6a6a6;
   --hover-background: var(--sys-bg-hover);
-  --selection-background: #094771;
+  --selection-background: color-mix(in srgb, #094771 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --accent-color: var(--sys-color-primary);
   --focus-border-color: var(--sys-color-primary);
   --list-hover-background: var(--sys-bg-hover);
@@ -1067,7 +1064,7 @@ html[data-theme="light"][data-bg-image="true"] {
   --st-mqtt-toolbar-border: var(--widget-border-color);
 
   /* Theme Editor - Dark (Default) */
-  --theme-editor-bg: #1e1e1e;
+  --theme-editor-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --theme-editor-border: rgba(255, 255, 255, 0.08);
   --theme-editor-card-bg: rgba(255, 255, 255, 0.02);
   --theme-editor-card-border: rgba(255, 255, 255, 0.06);
@@ -1130,8 +1127,8 @@ html[data-theme="light"][data-bg-image="true"] {
   --mqtt-config-success-bg: var(--st-config-success-bg);
 
   /* 虚拟串口终端 — Chrome 沉浸模式：工具栏与内容区同色 */
-  --monitor-terminal-bg: var(--app-background);
-  --monitor-terminal-toolbar-bg: var(--app-background);
+  --monitor-terminal-bg: var(--editor-background);
+  --monitor-terminal-toolbar-bg: var(--editor-background);
   --monitor-terminal-toolbar-border: var(--st-widget-border);
   --monitor-terminal-toolbar-text: var(--st-monitor-toolbar-foreground);
 
@@ -1498,45 +1495,89 @@ div[tabindex]:focus {
   border-width: 2px !important;
 }
 
-/* ===== 全局背景图片模式（语义化级联穿透 + 毛玻璃） ===== */
-/* 「稀疏覆盖」原理：仅覆盖 3 个 --sys-* 语义变量，
-   所有通过 var(--sys-bg-base) / var(--sys-bg-surface) / var(--sys-bg-elevated)
-   映射的几十个组件变量会自动变透明，无需维护白名单。
-   --sys-bg-overlay 不参与透明，保证弹窗/菜单可读。*/
-html[data-bg-image="true"] {
-  /* Base 层全透明 → 露出底图 */
-  --sys-bg-base: transparent;
-  /* Surface 层轻微遮罩 → 侧边栏/工具栏可读性 */
-  --sys-bg-surface: rgba(30, 30, 30, 0.3);
-  /* Elevated 层稍强遮罩 → 标题栏可读性 */
-  --sys-bg-elevated: rgba(30, 30, 30, 0.5);
-  /* Overlay 层绝不透明！弹窗/菜单文字清晰 */
-  /* --sys-bg-overlay 保持原值 rgba(30, 30, 30, 0.85) 不变 */
+/* ===== Pic 主题：动态环境光毛玻璃 (Fluent Glass) ===== */
+/* Pic 主题的面板色在 JSON 中已定义为 rgba() 半透明值，
+   此处添加 backdrop-filter 实现环境光反射效果。
+   blur(24px) 让下层图片色彩自然融入面板，
+   saturate(180%) 提亮底图色彩，让天空更蓝、草地更绿。 */
 
-  /* 串口面板组件级背景 → 半透明化以露出底图 */
-  --st-sendarea-bg: rgba(30, 30, 30, 0.3);
-  --st-editor-tabs-bg: rgba(30, 30, 30, 0.4);
-  --st-tab-active-bg: rgba(30, 30, 30, 0.5);
-  --st-tab-inactive-bg: transparent;
-  --st-toolbar-bg: rgba(30, 30, 30, 0.3);
-
-  /* 边框半透明化 */
-  --border-color: rgba(255, 255, 255, 0.12);
-  --widget-border-color: rgba(255, 255, 255, 0.08);
+/* 弹出层毛玻璃 — 原生级混合毛玻璃 */
+/* 采用标准 backdrop-filter，允许底层的所有 DOM（包含被遮盖的按钮等）参与高斯模糊运算，这不仅是唯一安全的跨设备渲染方案，也是最符合实际物理玻璃遮盖感的原生逻辑 */
+html[data-theme="pic"][data-bg-image="true"] [data-component="dropdown"] {
+  background-color: var(--dropdown-background) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
-/* 弹出层毛玻璃效果 — Apple 级视觉质感 */
-html[data-bg-image="true"] [data-component="context-menu"],
-html[data-bg-image="true"] [data-component="dropdown"],
-html[data-bg-image="true"] [data-component="dialog"] {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* 注：由于选项菜单（context-menu）不再需要独立强加毛玻璃，因此让其顺应原生的 var(--context-menu-bg) 即可。 */
 
 /* Toast 毛玻璃 */
-html[data-bg-image="true"] .toast-container>div {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+html[data-theme="pic"][data-bg-image="true"] .toast-container>div {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* 设置窗口毛玻璃 */
+html[data-theme="pic"][data-bg-image="true"] .settings-modal-panel {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* 设置窗口遮罩在 pic 主题下更通透 */
+html[data-theme="pic"][data-bg-image="true"] .settings-backdrop {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* ==========================================
+   ✨ 设置面板透视模式 (Ghost Peek Mode)
+   拖动背景图滑块时，面板完全隐身，仅显示被拖动的滑块行
+========================================== */
+.settings-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease, background-color 0.25s ease;
+}
+.settings-modal-panel {
+  transition: visibility 0s, opacity 0.25s ease;
+}
+
+/* 触发透视：遮罩完全透明 (使用超高特异性压制 pic 主题) */
+html body.settings-peek-mode .settings-backdrop,
+html[data-theme][data-bg-image] body.settings-peek-mode .settings-backdrop {
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
+  background-color: transparent !important;
+  pointer-events: none !important;
+}
+
+/* 触发透视：面板完全不可见（visibility 允许子级覆盖） */
+body.settings-peek-mode .settings-modal-panel {
+  visibility: hidden !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 被拖动的滑块行：重新可见 + 强对比度悬浮效果 */
+body.settings-peek-mode .peek-active-slider {
+  visibility: visible !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  transform: scale(1.05) !important;
+  z-index: 99999 !important;
+}
+
+body.settings-peek-mode .peek-active-slider span {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
 }

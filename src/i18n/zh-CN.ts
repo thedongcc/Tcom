@@ -173,7 +173,9 @@ export const zhCN = {
             bgPositionTopRight: '右上',
             bgPositionBottomLeft: '左下',
             bgPositionBottomRight: '右下',
-            bgOpacity: '不透明度',
+            bgOpacity: '图片还原度',
+            bgBlur: '图片模糊度',
+            uiOpacity: 'UI 界面不透明度',
         },
 
         // 功能模块排序

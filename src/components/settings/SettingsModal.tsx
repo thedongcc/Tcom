@@ -33,13 +33,12 @@ export const SettingsModal = () => {
     const modalContent = (
         // 全屏遮罩层
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center animate-modalIn"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center animate-modalIn settings-backdrop"
             onClick={closeSettings}
         >
             {/* 设置面板主体 */}
             <div
-                className="relative w-[85vw] max-w-[1000px] h-[80vh] min-h-[500px] flex flex-col rounded-xl overflow-hidden border border-[var(--widget-border-color)]"
+                className="relative w-[85vw] max-w-[1000px] h-[80vh] min-h-[500px] flex flex-col rounded-xl overflow-hidden border border-[var(--widget-border-color)] settings-modal-panel"
                 style={{
                     backgroundColor: 'var(--titlebar-background)',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',

@@ -9,13 +9,14 @@
  * - useSettingsActions.ts — 导入导出/重置等操作逻辑
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore, Eye } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { confirm } from '../../services/confirmManager';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
 import { useSettingsActions } from './useSettingsActions';
+import { isGlassTheme } from '../../hooks/useThemeEffects';
 import { FactoryResetDialog } from './SettingsComponents';
 import { KeybindingInput } from '../common/KeybindingInput';
 import { DEFAULT_KEYBINDINGS, formatKeybinding, type KeybindingAction } from '../../utils/keybindings';
@@ -27,6 +28,46 @@ import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashRepo
 // ── 生成分组 ID ──
 const sectionId = (index: number) => `settings-section-${index}`;
 const MODULE_SECTION_ID = 'settings-section-modules';
+
+// ─── 独立高性能滑块组件 (绕开 Context 重绘实现 60fps 实时预览) ───────────────────
+const LiveSlider = ({ value, min, max, unit, label, onChange, liveUpdate }: {
+    value: number; min: number; max: number; unit: string; label: string;
+    onChange: (val: number) => void;
+    liveUpdate: (val: number) => void;
+}) => {
+    const [local, setLocal] = useState(value);
+    useEffect(() => setLocal(value), [value]);
+
+    const startPeek = (e: React.PointerEvent) => {
+        document.body.classList.add('settings-peek-mode');
+        const row = (e.target as HTMLElement).closest('[data-peek-row]');
+        if (row) row.classList.add('peek-active-slider');
+    };
+
+    return (
+        <div className="flex items-center justify-between mt-1" data-peek-row>
+            <span className="text-[11px] text-[var(--input-placeholder-color)]">{label}</span>
+            <div className="flex items-center gap-2 w-48">
+                <input
+                    type="range"
+                    min={min} max={max}
+                    value={local}
+                    onChange={e => {
+                        const val = Number(e.target.value);
+                        setLocal(val);
+                        liveUpdate(val);
+                    }}
+                    onPointerUp={() => onChange(local)}
+                    onPointerDown={startPeek}
+                    className="flex-1 accent-[var(--focus-border-color)] h-1 cursor-grab active:cursor-grabbing"
+                />
+                <span className="text-[11px] text-[var(--input-placeholder-color)] w-12 shrink-0 text-right font-mono">
+                    {local}{unit}
+                </span>
+            </div>
+        </div>
+    );
+};
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {
@@ -41,12 +82,41 @@ export const SettingsEditor = () => {
     // Factory Reset State
     const [showFactoryReset, setShowFactoryReset] = useState(false);
     const [resetInput, setResetInput] = useState('');
-    const [showBgSettings, setShowBgSettings] = useState(false);
+    const [showBgSettings, setShowBgSettings] = useState(!!config.images.rxBackground);
     const [crashReportOn, setCrashReportOn] = useState(isCrashReportEnabled);
 
     // 操作函数和字体列表（委托给 Hook）
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
 
+    // ── Ghost Peek Mode
+    useEffect(() => {
+        const stopPeek = () => {
+            document.body.classList.remove('settings-peek-mode');
+            document.querySelectorAll('.peek-active-slider').forEach(el => el.classList.remove('peek-active-slider'));
+        };
+        document.addEventListener('pointerup', stopPeek);
+        document.addEventListener('pointercancel', stopPeek);
+        return () => {
+            document.removeEventListener('pointerup', stopPeek);
+            document.removeEventListener('pointercancel', stopPeek);
+            stopPeek();
+        };
+    }, []);
+
+    const JITAlphaUpdate = useCallback((val: number) => {
+        const theme = availableThemes.find(t => t.id === config.theme);
+        if (!theme) return;
+        const scale = val / 100;
+        const root = document.documentElement;
+        Object.entries(theme.colors).forEach(([key, colorValue]) => {
+            if (typeof colorValue === 'string' && colorValue.startsWith('rgba(')) {
+                const match = colorValue.match(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([0-9.]+)\)/);
+                if (match) {
+                    root.style.setProperty(key, `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${(parseFloat(match[4]) * scale).toFixed(3)})`);
+                }
+            }
+        });
+    }, [availableThemes, config.theme]);
     const settingSections: SettingSection[] = [
         {
             title: t('settings.groups.appearance'),
@@ -56,7 +126,7 @@ export const SettingsEditor = () => {
                     description: t('settings.appearance.colorSchemeDesc'),
                     render: () => (
                         <div
-                            className="flex items-center gap-1 w-56"
+                            className="flex items-center gap-1 w-64"
                             onClickCapture={() => { loadThemes(); }}
                         >
                             <div className="flex-1 min-w-0">
@@ -93,7 +163,7 @@ export const SettingsEditor = () => {
                     label: t('settings.appearance.language'),
                     description: t('settings.appearance.languageDesc'),
                     render: () => (
-                        <div className="w-56">
+                        <div className="w-64">
                             <CustomSelect
                                 items={[
                                     { label: t('settings.appearance.languages.zh-CN'), value: 'zh-CN' },
@@ -105,24 +175,93 @@ export const SettingsEditor = () => {
                         </div>
                     ),
                 },
-                {
+                ...(isGlassTheme(config.theme) ? [{
                     label: t('settings.logFormat.bgImage'),
                     description: t('settings.logFormat.bgImageDesc'),
+                    alignTop: true,
+                    expandedContent: showBgSettings && config.images.rxBackground ? (
+                        <div className="flex flex-col gap-3 pt-3 mt-1 border-t border-[var(--border-color)]">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgSize')}</span>
+                                <div className="w-64">
+                                    <CustomSelect
+                                        items={[
+                                            { label: t('settings.logFormat.bgSizeCover'), value: 'cover' },
+                                            { label: t('settings.logFormat.bgSizeContain'), value: 'contain' },
+                                            { label: t('settings.logFormat.bgSizeAuto'), value: 'auto' },
+                                            { label: t('settings.logFormat.bgSizeStretch'), value: '100% 100%' },
+                                        ]}
+                                        value={config.images.bgSize || 'cover'}
+                                        onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgSize: val as ThemeImages['bgSize'] } }))}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgPosition')}</span>
+                                <div className="w-64">
+                                    <CustomSelect
+                                        items={[
+                                            { label: t('settings.logFormat.bgPositionCenter'), value: 'center' },
+                                            { label: t('settings.logFormat.bgPositionTop'), value: 'top' },
+                                            { label: t('settings.logFormat.bgPositionBottom'), value: 'bottom' },
+                                            { label: t('settings.logFormat.bgPositionLeft'), value: 'left' },
+                                            { label: t('settings.logFormat.bgPositionRight'), value: 'right' },
+                                            { label: t('settings.logFormat.bgPositionTopLeft'), value: 'top left' },
+                                            { label: t('settings.logFormat.bgPositionTopRight'), value: 'top right' },
+                                            { label: t('settings.logFormat.bgPositionBottomLeft'), value: 'bottom left' },
+                                            { label: t('settings.logFormat.bgPositionBottomRight'), value: 'bottom right' },
+                                        ]}
+                                        value={config.images.bgPosition || 'center'}
+                                        onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgPosition: val as ThemeImages['bgPosition'] } }))}
+                                    />
+                                </div>
+                            </div>
+                            <LiveSlider
+                                label={t('settings.logFormat.bgOpacity')}
+                                value={config.images.bgOpacity ?? 100}
+                                min={0} max={100} unit="%"
+                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgOpacity: val } }))}
+                                liveUpdate={val => document.documentElement.style.setProperty('--bg-opacity', (val / 100).toString())}
+                            />
+                            <LiveSlider
+                                label={t('settings.logFormat.bgBlur') === 'settings.logFormat.bgBlur' ? '图片模糊度 (Blur)' : t('settings.logFormat.bgBlur')}
+                                value={config.images.bgBlur ?? 0}
+                                min={0} max={20} unit="px"
+                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgBlur: val } }))}
+                                liveUpdate={val => {
+                                    document.documentElement.style.setProperty('--glass-filter', val > 0 ? `blur(${val}px)` : 'none');
+                                    document.documentElement.style.setProperty('--bg-inset', val > 0 ? `-${val * 2}px` : '0px');
+                                }}
+                            />
+                            <LiveSlider
+                                label="UI 面板不透明度"
+                                value={config.images.uiOpacity ?? 100}
+                                min={0} max={100} unit="%"
+                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, uiOpacity: val } }))}
+                                liveUpdate={JITAlphaUpdate}
+                            />
+                        </div>
+                    ) : undefined,
                     render: () => {
                         const displayValue = config.images.rxBackground || '';
                         return (
-                        <div className="flex flex-col gap-2">
-                            <div className="flex gap-1.5 items-center w-56">
-                                <input
-                                    type="text"
-                                    placeholder={t('settings.logFormat.bgImagePlaceholder')}
-                                    value={displayValue}
-                                    onChange={e => {
-                                        const val = e.target.value.trim();
-                                        updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: val } }));
-                                    }}
-                                    className={`flex-1 min-w-0 ${INPUT_CLS}`}
-                                />
+                        <div className="flex flex-col gap-2 w-64">
+                            {/* 第一行：独立撑满的图片路径输入框 */}
+                            <input
+                                type="text"
+                                placeholder={t('settings.logFormat.bgImagePlaceholder')}
+                                value={displayValue}
+                                title={displayValue} // 悬浮显示完整长路径
+                                onChange={e => {
+                                    const val = e.target.value.trim();
+                                    updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: val } }));
+                                }}
+                                className={`w-full text-xs font-mono !px-2.5 !py-1.5 ${INPUT_CLS}`}
+                            />
+
+                            {/* 第二行：操作按钮打散对齐 */}
+                            <div className="flex items-center justify-between">
+                                {/* 左侧：主操作框 — 浏览图片 */}
                                 <Tooltip content={t('settings.logFormat.bgImageBrowse')} position="top">
                                     <button
                                         onClick={async () => {
@@ -138,97 +277,53 @@ export const SettingsEditor = () => {
                                                 updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: filePath } }));
                                             }
                                         }}
-                                        className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--button-foreground)] rounded border border-[var(--border-color)] transition-colors cursor-pointer"
                                     >
-                                        <FolderOpen size={16} />
+                                        <FolderOpen size={14} />
+                                        <span>浏览图片</span>
                                     </button>
                                 </Tooltip>
+
+                                {/* 右侧：次级辅助操作组 */}
                                 {config.images.rxBackground && (
-                                    <Tooltip content={t('settings.logFormat.bgImageClear')} position="top">
-                                        <button
-                                            onClick={() => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: '' } }))}
-                                            className="p-1 text-[var(--input-placeholder-color)] hover:text-[var(--st-status-error)] hover:bg-[var(--list-hover-background)] rounded transition-colors cursor-pointer flex-shrink-0"
-                                        >
-                                            <RotateCcw size={14} />
-                                        </button>
-                                    </Tooltip>
-                                )}
-                                {config.images.rxBackground && (
-                                    <Tooltip content={t('settings.logFormat.bgImageSettings')} position="top">
-                                        <button
-                                            onClick={() => setShowBgSettings(v => !v)}
-                                            className={`p-1 rounded transition-colors cursor-pointer flex-shrink-0 ${
-                                                showBgSettings
-                                                    ? 'text-[var(--focus-border-color)] bg-[var(--list-active-background)]'
-                                                    : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
-                                            }`}
-                                        >
-                                            <Settings size={14} />
-                                        </button>
-                                    </Tooltip>
+                                    <div className="flex items-center gap-1">
+                                        <Tooltip content={t('settings.logFormat.bgImageClear')} position="top">
+                                            <button
+                                                onClick={() => updateConfig(prev => ({ ...prev, images: { ...prev.images, rxBackground: '' } }))}
+                                                className="p-1.5 text-[var(--input-placeholder-color)] hover:text-[#e81123] hover:bg-[#e8112320] rounded transition-colors cursor-pointer"
+                                            >
+                                                <RotateCcw size={14} />
+                                            </button>
+                                        </Tooltip>
+
+                                        <Tooltip content={t('settings.logFormat.bgImageSettings')} position="top">
+                                            <button
+                                                onClick={() => setShowBgSettings(v => !v)}
+                                                className={`p-1.5 rounded transition-colors cursor-pointer ${
+                                                    showBgSettings
+                                                        ? 'text-[var(--focus-border-color)] bg-[var(--list-active-background)]'
+                                                        : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
+                                                }`}
+                                            >
+                                                <Settings size={14} />
+                                            </button>
+                                        </Tooltip>
+
+                                        <Tooltip content={t('settings.logFormat.bgImagePeek') === 'settings.logFormat.bgImagePeek' ? '按住预览背景效果' : t('settings.logFormat.bgImagePeek')} position="top">
+                                            <button
+                                                onPointerDown={() => document.body.classList.add('settings-peek-mode')}
+                                                className="p-1.5 rounded transition-colors cursor-grab active:cursor-grabbing text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                        </Tooltip>
+                                    </div>
                                 )}
                             </div>
-                            {/* 展开的高级设置 */}
-                            {showBgSettings && config.images.rxBackground && (
-                                <div className="flex flex-col gap-2 pl-1 pt-1 border-t border-[var(--border-color)]">
-                                    {/* 填充模式 */}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgSize')}</span>
-                                        <div className="w-32">
-                                            <CustomSelect
-                                                items={[
-                                                    { label: t('settings.logFormat.bgSizeCover'), value: 'cover' },
-                                                    { label: t('settings.logFormat.bgSizeContain'), value: 'contain' },
-                                                    { label: t('settings.logFormat.bgSizeAuto'), value: 'auto' },
-                                                    { label: t('settings.logFormat.bgSizeStretch'), value: '100% 100%' },
-                                                ]}
-                                                value={config.images.bgSize || 'cover'}
-                                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgSize: val as ThemeImages['bgSize'] } }))}
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* 对齐方向 */}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgPosition')}</span>
-                                        <div className="w-32">
-                                            <CustomSelect
-                                                items={[
-                                                    { label: t('settings.logFormat.bgPositionCenter'), value: 'center' },
-                                                    { label: t('settings.logFormat.bgPositionTop'), value: 'top' },
-                                                    { label: t('settings.logFormat.bgPositionBottom'), value: 'bottom' },
-                                                    { label: t('settings.logFormat.bgPositionLeft'), value: 'left' },
-                                                    { label: t('settings.logFormat.bgPositionRight'), value: 'right' },
-                                                    { label: t('settings.logFormat.bgPositionTopLeft'), value: 'top left' },
-                                                    { label: t('settings.logFormat.bgPositionTopRight'), value: 'top right' },
-                                                    { label: t('settings.logFormat.bgPositionBottomLeft'), value: 'bottom left' },
-                                                    { label: t('settings.logFormat.bgPositionBottomRight'), value: 'bottom right' },
-                                                ]}
-                                                value={config.images.bgPosition || 'center'}
-                                                onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgPosition: val as ThemeImages['bgPosition'] } }))}
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* 不透明度 */}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] text-[var(--input-placeholder-color)]">{t('settings.logFormat.bgOpacity')}</span>
-                                        <div className="flex items-center gap-2 w-32">
-                                            <input
-                                                type="range"
-                                                min={0}
-                                                max={100}
-                                                value={config.images.bgOpacity ?? 100}
-                                                onChange={e => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgOpacity: Number(e.target.value) } }))}
-                                                className="flex-1 accent-[var(--focus-border-color)] h-1 cursor-pointer"
-                                            />
-                                            <span className="text-[11px] text-[var(--input-placeholder-color)] w-8 text-right">{config.images.bgOpacity ?? 100}%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                         );
                     },
-                },
+                }] : []),
             ],
         },
         {
@@ -238,7 +333,7 @@ export const SettingsEditor = () => {
                     label: t('settings.layout.sidebarPosition'),
                     description: t('settings.layout.sidebarPositionDesc'),
                     render: () => (
-                        <div className="w-56">
+                        <div className="w-64">
                             <CustomSelect
                                 items={[
                                     { label: t('settings.layout.sidebarLeft'), value: 'left' },
@@ -266,7 +361,7 @@ export const SettingsEditor = () => {
                     label: t('settings.typography.fontFamily'),
                     description: t('settings.typography.fontFamilyDesc'),
                     render: () => (
-                        <div className="w-56">
+                        <div className="w-64">
                             <CustomSelect
                                 items={finalFontList}
                                 value={config.typography.fontFamily}
@@ -289,7 +384,7 @@ export const SettingsEditor = () => {
                             placeholder="HH:mm:ss.SSS"
                             value={config.timestampFormat}
                             onChange={e => updateConfig({ timestampFormat: e.target.value })}
-                            className={`w-56 ${INPUT_CLS}`}
+                            className={`w-64 ${INPUT_CLS}`}
                         />
                     ),
                 },
@@ -475,7 +570,7 @@ export const SettingsEditor = () => {
     }, [tocItems, searchTerm]);
 
     return (
-        <div className="flex h-full bg-[var(--editor-background)]" data-component="settings-editor">
+        <div className="flex h-full w-full bg-[var(--editor-background)]" data-component="settings-editor">
             {/* 左侧导航面板 */}
             {!searchTerm && (
                 <nav className="w-[210px] shrink-0 overflow-y-auto custom-scrollbar bg-[var(--editor-background)] border-r border-[var(--border-color)] flex flex-col py-3 pl-4">
@@ -555,7 +650,13 @@ export const SettingsEditor = () => {
                             {filteredSettings.map((sec, i) => (
                                 <Group key={`s-${i}`} title={sec.title} id={sectionId(i)}>
                                     {sec.items.map((item, j) => (
-                                        <SettingRow key={j} label={item.label} description={item.description}>
+                                        <SettingRow
+                                            key={j}
+                                            label={item.label}
+                                            description={item.description}
+                                            alignTop={item.alignTop}
+                                            expandedContent={item.expandedContent}
+                                        >
                                             {item.render()}
                                         </SettingRow>
                                     ))}
@@ -572,11 +673,17 @@ export const SettingsEditor = () => {
             {/* 右侧设置内容（非搜索模式） */}
             {!searchTerm && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollContainerRef}>
-                    <div className="max-w-[720px] mx-auto px-8 pb-20 pt-4">
+                    <div className="px-8 pb-20 pt-4">
                         {filteredSettings.slice(0, MODULE_INDEX).map((sec, i) => (
                             <Group key={`s-${i}`} title={sec.title} id={sectionId(i)}>
                                 {sec.items.map((item, j) => (
-                                    <SettingRow key={j} label={item.label} description={item.description}>
+                                    <SettingRow
+                                        key={j}
+                                        label={item.label}
+                                        description={item.description}
+                                        alignTop={(item as any).alignTop}
+                                        expandedContent={(item as any).expandedContent}
+                                    >
                                         {item.render()}
                                     </SettingRow>
                                 ))}
@@ -590,7 +697,13 @@ export const SettingsEditor = () => {
                         {filteredSettings.slice(MODULE_INDEX).map((sec, i) => (
                             <Group key={`s-post-${i}`} title={sec.title} id={sectionId(MODULE_INDEX + i)}>
                                 {sec.items.map((item, j) => (
-                                    <SettingRow key={j} label={item.label} description={item.description}>
+                                    <SettingRow
+                                        key={j}
+                                        label={item.label}
+                                        description={item.description}
+                                        alignTop={(item as any).alignTop}
+                                        expandedContent={(item as any).expandedContent}
+                                    >
                                         {item.render()}
                                     </SettingRow>
                                 ))}

@@ -81,9 +81,9 @@ export function SerialMonitorToolbar({
     };
 
     return (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[var(--st-toolbar-bg)] shrink-0">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
             {/* 连接状态 + 端口信息 */}
-            <div className="text-sm font-medium text-[var(--sys-text-secondary)] flex items-center gap-2">
+            <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                 {isConnected ? (
                     <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} />
                 ) : (

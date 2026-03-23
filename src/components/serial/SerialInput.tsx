@@ -40,6 +40,8 @@ interface SerialInputProps {
     onStateChange?: (state: { content: string, html: string, tokens: Record<string, any>, mode: 'text' | 'hex', lineEnding: string, timerInterval: number }) => void;
     /** Hide toolbar, timer, and send button (e.g. for Command Editor) */
     hideExtras?: boolean;
+    /** Hide top border (e.g. when nested inside Monitor with target selector) */
+    hideBorderTop?: boolean;
     /** 原生高精度定时器启动接口 */
     onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
     /** 原生高精度定时器停止接口 */
@@ -51,7 +53,7 @@ export const SerialInput = ({
     initialContent = '', initialHTML = '',
     initialMode = 'hex', initialLineEnding = '', initialTimerInterval = 1000,
     isConnected = false, fontSize = 15, fontFamily = 'AppCoreFont',
-    onConnectRequest, onStateChange, hideExtras = false,
+    onConnectRequest, onStateChange, hideExtras = false, hideBorderTop = false,
     onTimedSendStart, onTimedSendStop
 }: SerialInputProps) => {
     const { t } = useI18n();
@@ -177,7 +179,7 @@ export const SerialInput = ({
 
     return (
         <div
-            className={`${hideExtras ? '' : 'border-t border-[var(--st-widget-border)]'} bg-[var(--st-sendarea-bg)] p-2 flex flex-col gap-2 shrink-0 select-none`}
+            className={`${hideExtras || hideBorderTop ? '' : 'border-t border-[var(--st-widget-border)]'} bg-[var(--st-sendarea-bg)] p-2 flex flex-col gap-2 shrink-0 select-none`}
             data-component="serial-input"
         >
             {/* 工具栏 */}
@@ -192,9 +194,9 @@ export const SerialInput = ({
             />
 
             {/* 输入区域 */}
-            <div className="flex gap-2 min-h-[80px]">
+            <div className="flex gap-2 h-[96px]">
                 <div
-                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] rounded-sm focus-within:border-[var(--st-input-focus-border)] cursor-text flex flex-col bg-cover bg-center"
+                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] rounded-sm focus-within:border-[var(--st-input-focus-border)] cursor-text flex flex-col overflow-y-auto bg-cover bg-center"
                     onClick={() => editor?.commands.focus()}
                     style={{ backgroundImage: 'var(--st-input-bg-img)' }}
                 >

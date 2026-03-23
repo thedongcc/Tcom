@@ -104,7 +104,7 @@ export const EditorArea = ({ editorLayout, onShowSettings }: EditorAreaProps) =>
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex-1 flex flex-col bg-[var(--editor-area-bg)] overflow-hidden" data-component="editor-area">
+            <div className="flex-1 flex flex-col overflow-hidden" data-component="editor-area">
                 {layout ? (
                     <LayoutRenderer
                         node={layout}

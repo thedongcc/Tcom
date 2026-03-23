@@ -12,6 +12,7 @@ import React, { Suspense, useEffect, useRef } from 'react'
 import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
+import { isGlassTheme } from './hooks/useThemeEffects'
 import { I18nProvider, useI18n } from './context/I18nContext'
 import { ToastContainer } from './context/ToastContext'
 import { CommandProvider } from './context/CommandContext'
@@ -183,8 +184,9 @@ function AppContent() {
         };
     }, []);
 
-    // 背景图片 URL 计算
+    // 背景图片 URL 计算（仅 Glass/Pic 主题显示）
     const bgImageUrl = (() => {
+        if (!isGlassTheme(config.theme)) return null;
         const { rxBackground } = config.images;
         if (!rxBackground) return null;
         const isUrl = /^https?:\/\//.test(rxBackground);
@@ -199,13 +201,14 @@ function AppContent() {
                     <div
                         style={{
                             position: 'fixed',
-                            inset: 0,
-                            zIndex: 0,
+                            inset: 'var(--bg-inset, 0px)',
+                            zIndex: -1,
                             backgroundImage: `url("${bgImageUrl}")`,
                             backgroundSize: config.images.bgSize || 'cover',
                             backgroundPosition: config.images.bgPosition || 'center',
                             backgroundRepeat: 'no-repeat',
-                            opacity: (config.images.bgOpacity ?? 100) / 100,
+                            opacity: 'var(--bg-opacity, 1)',
+                            filter: 'var(--glass-filter, none)',
                             pointerEvents: 'none',
                         }}
                     />

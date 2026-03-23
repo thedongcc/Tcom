@@ -10,6 +10,8 @@ import { Check } from 'lucide-react';
 export interface SettingItem {
     label: string;
     description?: string;
+    alignTop?: boolean;
+    expandedContent?: React.ReactNode;
     render: () => React.ReactNode;
 }
 
@@ -35,19 +37,30 @@ export const SettingRow = ({
     label,
     description,
     children,
+    expandedContent,
+    alignTop = false,
 }: {
     label: string;
-    description?: string;
+    description?: React.ReactNode;
     children: React.ReactNode;
+    expandedContent?: React.ReactNode;
+    alignTop?: boolean;
 }) => (
-    <div className="flex items-center justify-between gap-4 px-4 py-3.5 border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--list-hover-background)] transition-colors">
-        <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-[13px] text-[var(--st-settings-text)] font-semibold">{label}</label>
-            {description && (
-                <p className="text-[12px] text-[var(--input-placeholder-color)] mt-0.5 leading-relaxed">{description}</p>
-            )}
+    <div className="flex flex-col border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--list-hover-background)] transition-colors">
+        <div className={`flex ${alignTop ? 'items-start pt-3.5 pb-3.5' : 'items-center py-3.5'} justify-between gap-4 px-4`}>
+            <div className="flex flex-col flex-1 min-w-0">
+                <label className={`text-[13px] text-[var(--st-settings-text)] font-semibold ${alignTop ? 'mt-[5px]' : ''}`}>{label}</label>
+                {description && (
+                    <div className="text-[12px] text-[var(--input-placeholder-color)] mt-0.5 leading-relaxed">{description}</div>
+                )}
+            </div>
+            <div className={`flex-shrink-0 flex justify-end ${alignTop ? '' : 'items-center'} min-w-[200px]`}>{children}</div>
         </div>
-        <div className="flex-shrink-0">{children}</div>
+        {expandedContent && (
+            <div className="px-4 pb-4 pt-1 animate-fade-in">
+                {expandedContent}
+            </div>
+        )}
     </div>
 );
 

@@ -9,6 +9,10 @@ export interface ThemeImages {
     bgSize?: 'cover' | 'contain' | 'auto' | '100% 100%'; // 填充模式
     bgPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right'; // 对齐方向
     bgOpacity?: number; // 不透明度 0-100，默认 100
+
+    // 参数化毛玻璃引擎核心配置
+    bgBlur?: number;    // 毛玻璃模糊度 0-50px
+    uiOpacity?: number; // UI 面板整体不透明度 0-100%
 }
 
 export interface ThemeTypography {

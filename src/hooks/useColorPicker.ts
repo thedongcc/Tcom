@@ -3,10 +3,10 @@
  * 元素拾取器 / 颜色选取逻辑。
  * 从 SettingsContext.tsx 中拆分出来，管理 DOM 事件（mouseover/click/mouseout）和高亮覆盖层。
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ThemeDefinition, applyTheme } from '../themes';
 import { ThemeConfig } from '../types/theme';
-import { applyBgImageOverrides } from './useThemeEffects';
+import { applyBgImageOverrides, isGlassTheme } from './useThemeEffects';
 
 interface UseColorPickerOptions {
     availableThemes: ThemeDefinition[];
@@ -18,6 +18,12 @@ interface UseColorPickerOptions {
  * 订阅主题 API 的 IPC 消息，处理元素拾取和颜色预览。
  */
 export function useColorPicker({ availableThemes, config }: UseColorPickerOptions) {
+    // 使用 ref 保持最新值，防止回调闭包捕获旧 config/availableThemes
+    const configRef = useRef(config);
+    configRef.current = config;
+    const themesRef = useRef(availableThemes);
+    themesRef.current = availableThemes;
+
     useEffect(() => {
         const api = (window as any).themeAPI;
         if (!api) return;
@@ -25,11 +31,15 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
         // 1. 监听颜色预览同步
         const unApplyPreview = api.onApplyPreview?.((edits: Record<string, string>) => {
             if (Object.keys(edits).length === 0) {
-                if (availableThemes.length > 0) {
-                    let activeDef = availableThemes.find(t => t.id === config.theme) || availableThemes[0];
+                const currentConfig = configRef.current;
+                const currentThemes = themesRef.current;
+                if (currentThemes.length > 0) {
+                    let activeDef = currentThemes.find(t => t.id === currentConfig.theme) || currentThemes[0];
                     if (activeDef) {
                         applyTheme(activeDef);
-                        applyBgImageOverrides(config);
+                        if (isGlassTheme(currentConfig.theme) && currentConfig.images.rxBackground) {
+                            applyBgImageOverrides(currentConfig, activeDef);
+                        }
                     }
                 }
             } else {
@@ -41,11 +51,15 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
 
         // 2. 监听编辑器关闭
         const unEditorClosed = api.onEditorClosed?.(() => {
-            if (availableThemes.length > 0) {
-                const activeDef = availableThemes.find(t => t.id === config.theme) || availableThemes[0];
+            const currentConfig = configRef.current;
+            const currentThemes = themesRef.current;
+            if (currentThemes.length > 0) {
+                const activeDef = currentThemes.find(t => t.id === currentConfig.theme) || currentThemes[0];
                 if (activeDef) {
                     applyTheme(activeDef);
-                    applyBgImageOverrides(config);
+                    if (isGlassTheme(currentConfig.theme) && currentConfig.images.rxBackground) {
+                        applyBgImageOverrides(currentConfig, activeDef);
+                    }
                 }
             }
         });

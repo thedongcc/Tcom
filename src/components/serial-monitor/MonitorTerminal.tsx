@@ -265,8 +265,8 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 </div>
             </div>
 
-            <div className="bg-[var(--app-background)] border-t border-[var(--border-color)]">
-                <div className="flex items-center bg-[var(--widget-background)]/30 px-3 py-1 border-y border-white/5 gap-2">
+            <div className="shrink-0">
+                <div className="flex items-center px-3 py-1 border-t border-[var(--st-widget-border)] bg-[var(--st-sendarea-bg)] gap-2">
                     <button onClick={() => onSendTarget('virtual')} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'virtual' ? 'bg-[var(--st-monitor-btn-target-virtual-active-bg)] text-[var(--button-foreground)] shadow-md' : 'bg-[var(--button-secondary-background)] text-gray-400 hover:text-gray-200 hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.virtual')}: {(config as MonitorSessionConfig).virtualSerialPort}</button>
                     <button onClick={() => onSendTarget('physical')} className={`flex-1 py-1 text-[11px] font-bold rounded transition-all ${sendTarget === 'physical' ? 'bg-[var(--st-monitor-btn-target-physical-active-bg)] text-[var(--st-monitor-btn-target-physical-active-text,white)] shadow-md' : 'bg-[var(--button-secondary-background)] text-[var(--st-monitor-btn-text)] hover:text-[var(--st-monitor-btn-target-physical-active-text,white)] hover:bg-[var(--button-secondary-hover-background)]'}`}>{t('monitor.physical')}: {(config as MonitorSessionConfig).connection?.path || t('monitor.unconnected')}</button>
                 </div>

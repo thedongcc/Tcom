@@ -37,34 +37,19 @@ fn ensure_theme_files(dir: &std::path::Path) -> Result<(), String> {
     static DEFAULT_DARK: &str = include_str!("../../default-dark.json");
     static DEFAULT_LIGHT: &str = include_str!("../../default-light.json");
     static DEFAULT_MONO: &str = include_str!("../../default-mono.json");
+    static DEFAULT_PIC: &str = include_str!("../../default-pic.json");
 
     let defaults = [
         ("dark.json", DEFAULT_DARK),
         ("light.json", DEFAULT_LIGHT),
         ("mono.json", DEFAULT_MONO),
+        ("pic.json", DEFAULT_PIC),
     ];
 
     for (filename, content) in defaults {
         let path = dir.join(filename);
-        let should_write = if path.exists() {
-            // 如果已有文件但 colors 为空，强制覆盖为完整配色
-            match fs::read_to_string(&path) {
-                Ok(existing) => {
-                    match serde_json::from_str::<Value>(&existing) {
-                        Ok(val) => val.get("colors")
-                            .and_then(|c| c.as_object())
-                            .map_or(true, |obj| obj.is_empty()),
-                        Err(_) => true,
-                    }
-                }
-                Err(_) => true,
-            }
-        } else {
-            true
-        };
-        if should_write {
-            fs::write(&path, content).map_err(|e| e.to_string())?;
-        }
+        // 强制覆盖内置主题（尤其是 pic.json），以确保新增的透明度变量能应用到用户本地配置
+        fs::write(&path, content).map_err(|e| e.to_string())?;
     }
 
     Ok(())

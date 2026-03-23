@@ -175,7 +175,9 @@ export const enUS = {
             bgPositionTopRight: 'Top Right',
             bgPositionBottomLeft: 'Bottom Left',
             bgPositionBottomRight: 'Bottom Right',
-            bgOpacity: 'Opacity',
+            bgOpacity: 'Image Visibility',
+            bgBlur: 'Image Blur',
+            uiOpacity: 'UI Panel Opacity',
         },
 
         // Feature modules

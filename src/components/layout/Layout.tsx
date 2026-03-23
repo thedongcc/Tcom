@@ -11,6 +11,7 @@ import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
+import { isGlassTheme } from '../../hooks/useThemeEffects';
 import { SessionConfig } from '../../types/session';
 
 interface LayoutProps {
@@ -87,7 +88,10 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
 
 
     return (
-        <div className="flex flex-col h-screen w-full bg-[var(--app-background)] text-[var(--app-foreground)] overflow-hidden">
+        <div 
+            className="flex flex-col h-screen w-full text-[var(--app-foreground)] overflow-hidden"
+            style={{ backgroundColor: isGlassTheme(config.theme) ? 'transparent' : 'var(--app-background)' }}
+        >
             <TitleBar />
             <div className={`flex-1 flex overflow-hidden ${sidebarAtRight ? 'flex-row-reverse' : 'flex-row'}`}>
                 <ActivityBar

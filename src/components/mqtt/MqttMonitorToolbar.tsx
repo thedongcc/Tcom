@@ -80,9 +80,9 @@ export const MqttMonitorToolbar = React.memo(({
         <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
             <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                 {isConnected ? (
-                    <div className="w-2 h-2 rounded-full bg-[var(--st-status-success)] shadow-[0_0_8px_var(--st-status-success)] animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} />
                 ) : (
-                    <div className="w-2 h-2 rounded-full bg-[var(--st-status-error)]" />
+                    <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />
                 )}
                 {host}:{port}
             </div>
