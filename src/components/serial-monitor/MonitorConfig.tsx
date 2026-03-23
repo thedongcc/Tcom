@@ -55,10 +55,6 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
 
     return (
         <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
-            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--sidebar-background)] text-[11px] font-bold text-[var(--app-foreground)] uppercase tracking-wide">
-                <span>{t('monitor.settings')}</span>
-            </div>
-
             <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto">
                 {/* 未开启虚拟串口功能时显示提示 */}
                 {(!monitorEnabled || !isAdmin) && (

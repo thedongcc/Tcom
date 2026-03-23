@@ -213,6 +213,8 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 onEncoding={onEncoding}
                 onFontFamily={onFontFamily}
                 onFontSize={onFontSize}
+                onDisconnect={() => sessionManager.disconnectSession(session.id)}
+                onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
             />
 
             {isConnected && !partnerConnected && (

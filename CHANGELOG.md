@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.3] - 2026-03-22
+## [0.0.3] - 2026-03-23
 ### Added
 - 下拉列表组件增加自动滚动定位功能并优化了悬浮交互高亮效果
 - 新增串口监视区显示命令名称功能,如果发送的是命令菜单中的命令,则会在发送的命令右侧显示命令名称
@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 监视区选项菜单重构
 - 重构主题系统
 - 重构设置页面
+- 工具栏后面增加连接和断开按钮
 
 ### Fixed
 - 修复工作区加载问题
@@ -53,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化splash窗口,取消窗口阴影,增加底部文字不透明度
 - 优化主题颜色编辑器元素拾取框
 - 解决监控区数据卡顿问题
+- 优化状态栏设置
 
 ### Removed
 - 取消侧边栏右键配置显示隐藏功能

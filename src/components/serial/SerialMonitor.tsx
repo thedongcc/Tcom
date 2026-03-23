@@ -25,6 +25,7 @@ import { useSerialMonitorActions } from './useSerialMonitorActions';
 import { useSerialMonitorState } from './useSerialMonitorState';
 import { SerialMonitorToolbar } from './SerialMonitorToolbar';
 import { useSerialMonitorSearch } from './useSerialMonitorSearch';
+import { useSession } from '../../context/SessionContext';
 
 interface SerialMonitorProps {
     session: SessionState;
@@ -38,6 +39,7 @@ interface SerialMonitorProps {
 
 export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig, onInputStateChange, onClearLogs, onConnectRequest }: SerialMonitorProps) => {
     const { config: themeConfig } = useSettings();
+    const { disconnectSession } = useSession();
     const { logs, isConnected, config } = session;
 
     // ── 显示状态管理（委托给 Hook） ──
@@ -160,6 +162,8 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 txBytes={txBytes} rxBytes={rxBytes}
                 crcEnabled={crcEnabled} toggleCRC={toggleCRC} rxCRC={rxCRC} updateRxCRC={updateRxCRC}
                 onClearLogs={doClearLogs} onSaveLogs={handleSaveLogs} hasLogs={logs.length > 0} scrollRef={scrollRef}
+                onDisconnect={() => disconnectSession(session.id)}
+                onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
             />
 
             <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>

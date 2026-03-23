@@ -27,7 +27,7 @@ export const WorkspaceHeader = ({
     t,
 }: WorkspaceHeaderProps) => {
     return (
-        <div className="px-3 h-9 flex items-center border-b border-[var(--session-list-sidebar-border)] bg-[var(--session-list-sidebar-header-bg)]">
+        <div className="px-3 h-[42px] flex items-center border-b border-[var(--session-list-sidebar-border)] shrink-0">
             <div className="flex items-center justify-between w-full">
                 <Tooltip content={workspaceFolderName || 'default'} position="bottom" wrapperClassName="min-w-0 flex-1 flex">
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-80 min-w-0 flex-1 cursor-default">

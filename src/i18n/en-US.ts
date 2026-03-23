@@ -119,6 +119,12 @@ export const enUS = {
             sidebarRight: 'Right',
             showStatusBar: 'Show Status Bar',
             showStatusBarDesc: 'Show or hide the status bar at the bottom',
+            statusBarItems: 'Configure visible items',
+            statusBarVersion: 'Version',
+            statusBarCpu: 'CPU Usage',
+            statusBarMem: 'Memory Usage',
+            statusBarUpdate: 'Check Update',
+            statusBarGithub: 'GitHub Link',
         },
 
         // Serial log colors
@@ -320,6 +326,8 @@ export const enUS = {
 
     // Monitor (MQTT & Serial Monitor Shared)
     monitor: {
+        connect: 'Connect',
+        disconnect: 'Disconnect',
         options: 'Options',
         logSettings: 'Log Settings',
         display: 'Display',
@@ -497,7 +505,7 @@ export const enUS = {
         updateFailed: 'Update failed',
         checkFailed: 'Check failed',
         cpuUsage: 'App CPU Usage: {val}%',
-        memUsage: 'App Memory (RSS): {val} MB',
+        memUsage: 'App Memory: {val} MB',
         clickToUpdate: 'Click to view update',
         openGithub: 'Open project on GitHub',
     },

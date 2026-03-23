@@ -1,6 +1,7 @@
-﻿import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Cpu, MemoryStick, RefreshCw, Github, ArrowDownCircle } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
+import { useSettings } from '../../context/SettingsContext';
 import { Tooltip } from '../common/Tooltip';
 
 interface StatusBarProps {
@@ -19,6 +20,8 @@ export const StatusBar = ({ hasUpdate = false, updateVersion, onShowUpdate }: St
     // 临时状态文本（checking / up-to-date / error 等短暂提示）
     const [transientStatus, setTransientStatus] = useState<string | null>(null);
     const { t } = useI18n();
+    const { config } = useSettings();
+    const { statusBarVersion = true, statusBarCpu = true, statusBarMem = true, statusBarUpdate = true, statusBarGithub = true } = config.ui;
 
     // 获取当前版本号
     useEffect(() => {
@@ -109,55 +112,78 @@ export const StatusBar = ({ hasUpdate = false, updateVersion, onShowUpdate }: St
             className="h-[22px] bg-[var(--statusbar-background)] flex items-center justify-between px-2 text-[11px] text-[var(--st-statusbar-text)] select-none cursor-default shrink-0 border-t border-[var(--border-color)]"
             data-component="statusbar"
         >
-            {/* 左侧 */}
+            {/* 左侧 — 按用户配置的顺序渲染 */}
             <div className="flex items-center gap-3">
-                {/* 版本号 */}
-                <div className="flex items-center gap-1 px-1 rounded-sm opacity-70">
-                    <span>v{version || '...'}</span>
-                </div>
+                {(() => {
+                    const order = Array.isArray(config.ui.statusBarOrder) && config.ui.statusBarOrder.length > 0
+                        ? config.ui.statusBarOrder
+                        : ['version', 'cpu', 'mem', 'update', 'github'];
 
-                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
+                    const toggleMap: Record<string, boolean> = {
+                        version: statusBarVersion,
+                        cpu: statusBarCpu,
+                        mem: statusBarMem,
+                        update: statusBarUpdate,
+                        github: statusBarGithub,
+                    };
 
-                {/* CPU */}
-                <Tooltip content={t('statusBar.cpuUsage').replace('{val}', String(cpu))} position="top" wrapperClassName="h-full flex items-center">
-                    <div className="flex items-center gap-1 px-1 rounded-sm">
-                        <Cpu size={11} className="opacity-60" />
-                        <span className={cpu > 30 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{cpu}%</span>
-                    </div>
-                </Tooltip>
+                    const renderMap: Record<string, () => React.ReactNode> = {
+                        version: () => (
+                            <div className="flex items-center gap-1 px-1 rounded-sm opacity-70">
+                                <span>v{version || '...'}</span>
+                            </div>
+                        ),
+                        cpu: () => (
+                            <Tooltip content={t('statusBar.cpuUsage').replace('{val}', String(cpu))} position="top" wrapperClassName="h-full flex items-center">
+                                <div className="flex items-center gap-1 px-1 rounded-sm">
+                                    <Cpu size={11} className="opacity-60" />
+                                    <span className={cpu > 30 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{cpu}%</span>
+                                </div>
+                            </Tooltip>
+                        ),
+                        mem: () => (
+                            <Tooltip content={t('statusBar.memUsage').replace('{val}', String(memUsed))} position="top" wrapperClassName="h-full flex items-center">
+                                <div className="flex items-center gap-1 px-1 rounded-sm">
+                                    <MemoryStick size={11} className="opacity-60" />
+                                    <span className={memUsed > 500 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{memUsed} MB</span>
+                                </div>
+                            </Tooltip>
+                        ),
+                        update: () => (
+                            <Tooltip content={hasUpdate ? t('statusBar.clickToUpdate') : t('statusBar.checkUpdate')} position="top" wrapperClassName="h-full flex items-center">
+                                <div
+                                    className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
+                                    onClick={handleClick}
+                                >
+                                    {renderUpdateSection()}
+                                </div>
+                            </Tooltip>
+                        ),
+                        github: () => (
+                            <Tooltip content={t('statusBar.openGithub')} position="top" wrapperClassName="h-full flex items-center">
+                                <div
+                                    className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
+                                    onClick={() => window.shellAPI?.openExternal('https://github.com/thedongcc/Tcom')}
+                                >
+                                    <Github size={11} className="opacity-60" />
+                                    <span className="opacity-80">GitHub</span>
+                                </div>
+                            </Tooltip>
+                        ),
+                    };
 
-                {/* 内存 */}
-                <Tooltip content={t('statusBar.memUsage').replace('{val}', String(memUsed))} position="top" wrapperClassName="h-full flex items-center">
-                    <div className="flex items-center gap-1 px-1 rounded-sm">
-                        <MemoryStick size={11} className="opacity-60" />
-                        <span className={memUsed > 500 ? 'text-[var(--st-status-danger-text)]' : 'opacity-80'}>{memUsed} MB</span>
-                    </div>
-                </Tooltip>
+                    // 过滤出可见项
+                    const visibleItems = order.filter((id: string) => toggleMap[id] && renderMap[id]);
 
-                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
-
-                {/* 检查更新 */}
-                <Tooltip content={hasUpdate ? t('statusBar.clickToUpdate') : t('statusBar.checkUpdate')} position="top" wrapperClassName="h-full flex items-center">
-                    <div
-                        className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
-                        onClick={handleClick}
-                    >
-                        {renderUpdateSection()}
-                    </div>
-                </Tooltip>
-
-                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
-
-                {/* GitHub */}
-                <Tooltip content={t('statusBar.openGithub')} position="top" wrapperClassName="h-full flex items-center">
-                    <div
-                        className="flex items-center gap-1 px-1 rounded-sm bg-[var(--st-statusbar-btn-bg)] hover:bg-[var(--st-statusbar-btn-hover)] cursor-pointer transition-colors"
-                        onClick={() => window.shellAPI?.openExternal('https://github.com/thedongcc/Tcom')}
-                    >
-                        <Github size={11} className="opacity-60" />
-                        <span className="opacity-80">GitHub</span>
-                    </div>
-                </Tooltip>
+                    return visibleItems.map((id: string, idx: number) => (
+                        <React.Fragment key={id}>
+                            {idx > 0 && (
+                                <div className="w-[1px] h-3 bg-[var(--st-statusbar-divider)] opacity-15" />
+                            )}
+                            {renderMap[id]()}
+                        </React.Fragment>
+                    ));
+                })()}
             </div>
 
             {/* 右侧 */}

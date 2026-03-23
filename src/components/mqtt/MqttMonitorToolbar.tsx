@@ -4,7 +4,7 @@
  * 选项菜单使用通用 MonitorOptionsPanel，隐藏 CRC 和接收分包（MQTT 不需要）。
  */
 import React from 'react';
-import { Trash2, ArrowDownToLine, Menu } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, Unplug, Plug } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { LogEntry } from '../../types/session';
@@ -54,6 +54,8 @@ interface MqttMonitorToolbarProps {
     uiState: Record<string, any>;
     onClearLogs?: () => void;
     handleSaveLogs: () => void;
+    onDisconnect?: () => void;
+    onConnect?: () => void;
 }
 
 export const MqttMonitorToolbar = React.memo(({
@@ -73,11 +75,13 @@ export const MqttMonitorToolbar = React.memo(({
     availableFonts,
     autoScroll, setAutoScroll,
     saveUIState, uiState, onClearLogs, handleSaveLogs,
+    onDisconnect,
+    onConnect,
 }: MqttMonitorToolbarProps) => {
     const { t } = useI18n();
 
     return (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
+        <div className="flex items-center justify-between px-4 h-[42px] border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
             <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                 {isConnected ? (
                     <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} />
@@ -85,6 +89,31 @@ export const MqttMonitorToolbar = React.memo(({
                     <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />
                 )}
                 {host}:{port}
+
+                {/* 连接/断开按钮 */}
+                {isConnected ? (
+                    onDisconnect && (
+                        <Tooltip content={t('mqtt.disconnect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)] transition-colors cursor-pointer"
+                                onClick={onDisconnect}
+                            >
+                                <Unplug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                ) : (
+                    onConnect && (
+                        <Tooltip content={t('mqtt.connect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-success)] hover:bg-[var(--st-status-success-bg,rgba(0,200,0,0.1))] transition-colors cursor-pointer"
+                                onClick={onConnect}
+                            >
+                                <Plug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                )}
             </div>
 
             <div className="flex items-center gap-4">

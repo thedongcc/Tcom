@@ -24,6 +24,12 @@ export interface ThemeTypography {
 export interface UIConfig {
     sidebarPosition: 'left' | 'right';
     showStatusBar: boolean;
+    statusBarVersion: boolean;
+    statusBarCpu: boolean;
+    statusBarMem: boolean;
+    statusBarUpdate: boolean;
+    statusBarGithub: boolean;
+    statusBarOrder: string[];
     activityBarVisible: boolean;
     sideBarVisible: boolean;
     activeActivityItem: string;
@@ -55,6 +61,12 @@ export const DEFAULT_THEME: ThemeConfig = {
     ui: {
         sidebarPosition: 'left',
         showStatusBar: true,
+        statusBarVersion: true,
+        statusBarCpu: true,
+        statusBarMem: true,
+        statusBarUpdate: true,
+        statusBarGithub: true,
+        statusBarOrder: ['version', 'cpu', 'mem', 'update', 'github'],
         activityBarVisible: true,
         sideBarVisible: true,
         activeActivityItem: 'explorer'

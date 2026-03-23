@@ -11,16 +11,26 @@ pub fn get_version(app: &tauri::AppHandle) -> Result<String, String> {
     Ok(version)
 }
 
-/// 获取应用统计信息（内存占用）
+/// 获取应用统计信息（CPU 占用率 + 内存占用 + GPU 显存）
 pub fn get_stats() -> Result<Value, String> {
     #[cfg(target_os = "windows")]
     {
-        // 直接调用 Win32 API，避免每次 spawn PowerShell 进程（导致 3 秒周期性卡顿）
         use std::mem;
+        use std::sync::Mutex;
 
+        // 用于保存上次 CPU 采样数据
+        struct CpuSample {
+            kernel_time: u64,
+            user_time: u64,
+            wall_time: u64,
+        }
+
+        static LAST_SAMPLE: Mutex<Option<CpuSample>> = Mutex::new(None);
+
+        // 扩展版内存计数器（包含 PrivateUsage）
         #[repr(C)]
         #[allow(non_snake_case)]
-        struct PROCESS_MEMORY_COUNTERS {
+        struct PROCESS_MEMORY_COUNTERS_EX {
             cb: u32,
             PageFaultCount: u32,
             PeakWorkingSetSize: usize,
@@ -31,36 +41,111 @@ pub fn get_stats() -> Result<Value, String> {
             QuotaNonPagedPoolUsage: usize,
             PagefileUsage: usize,
             PeakPagefileUsage: usize,
+            PrivateUsage: usize,
+        }
+
+        #[repr(C)]
+        #[derive(Default)]
+        #[allow(non_snake_case)]
+        struct FILETIME {
+            dwLowDateTime: u32,
+            dwHighDateTime: u32,
         }
 
         extern "system" {
             fn GetCurrentProcess() -> isize;
             fn K32GetProcessMemoryInfo(
                 process: isize,
-                ppsmemCounters: *mut PROCESS_MEMORY_COUNTERS,
+                ppsmemCounters: *mut PROCESS_MEMORY_COUNTERS_EX,
                 cb: u32,
             ) -> i32;
+            fn GetProcessTimes(
+                hProcess: isize,
+                lpCreationTime: *mut FILETIME,
+                lpExitTime: *mut FILETIME,
+                lpKernelTime: *mut FILETIME,
+                lpUserTime: *mut FILETIME,
+            ) -> i32;
+            fn GetSystemTimeAsFileTime(lpSystemTimeAsFileTime: *mut FILETIME);
         }
 
-        let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { mem::zeroed() };
-        pmc.cb = mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+        // 将 FILETIME 转换为 u64（100 纳秒单位）
+        fn filetime_to_u64(ft: &FILETIME) -> u64 {
+            ((ft.dwHighDateTime as u64) << 32) | (ft.dwLowDateTime as u64)
+        }
+
+        // --- 获取内存（专用工作集，与任务管理器一致） ---
+        let mut pmc: PROCESS_MEMORY_COUNTERS_EX = unsafe { mem::zeroed() };
+        pmc.cb = mem::size_of::<PROCESS_MEMORY_COUNTERS_EX>() as u32;
 
         let mem_used = unsafe {
             let process = GetCurrentProcess();
             if K32GetProcessMemoryInfo(process, &mut pmc, pmc.cb) != 0 {
-                (pmc.WorkingSetSize as f64 / 1024.0 / 1024.0).round() as u64
+                // PrivateUsage = 任务管理器的"内存(专用工作集)"
+                (pmc.PrivateUsage as f64 / 1024.0 / 1024.0).round() as u64
             } else {
                 0
             }
         };
 
-        Ok(serde_json::json!({ "memUsed": mem_used }))
+        // --- 获取 CPU ---
+        let cpu_percent = unsafe {
+            let process = GetCurrentProcess();
+            let mut creation = FILETIME::default();
+            let mut exit = FILETIME::default();
+            let mut kernel = FILETIME::default();
+            let mut user = FILETIME::default();
+            let mut now_ft = FILETIME::default();
+
+            if GetProcessTimes(process, &mut creation, &mut exit, &mut kernel, &mut user) != 0 {
+                GetSystemTimeAsFileTime(&mut now_ft);
+
+                let current_kernel = filetime_to_u64(&kernel);
+                let current_user = filetime_to_u64(&user);
+                let current_wall = filetime_to_u64(&now_ft);
+
+                let mut guard = LAST_SAMPLE.lock().unwrap();
+                let cpu = if let Some(prev) = guard.as_ref() {
+                    let cpu_delta = (current_kernel + current_user)
+                        .saturating_sub(prev.kernel_time + prev.user_time);
+                    let wall_delta = current_wall.saturating_sub(prev.wall_time);
+                    if wall_delta > 0 {
+                        // 除以逻辑 CPU 核心数，得到占用百分比
+                        let num_cpus = std::thread::available_parallelism()
+                            .map(|n| n.get() as f64)
+                            .unwrap_or(1.0);
+                        let pct = (cpu_delta as f64 / wall_delta as f64 / num_cpus * 100.0).round();
+                        pct.min(100.0) as u64
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                };
+
+                *guard = Some(CpuSample {
+                    kernel_time: current_kernel,
+                    user_time: current_user,
+                    wall_time: current_wall,
+                });
+
+                cpu
+            } else {
+                0
+            }
+        };
+
+        Ok(serde_json::json!({
+            "cpu": cpu_percent,
+            "memUsed": mem_used
+        }))
     }
     #[cfg(not(target_os = "windows"))]
     {
-        Ok(serde_json::json!({ "memUsed": 0 }))
+        Ok(serde_json::json!({ "cpu": 0, "memUsed": 0 }))
     }
 }
+
 
 /// 检测当前是否以管理员权限运行
 pub fn is_admin() -> Result<bool, String> {

@@ -4,7 +4,7 @@
  * 选项菜单使用通用 MonitorOptionsPanel 组件。
  */
 import React, { useRef } from 'react';
-import { Trash2, ArrowDownToLine, Menu } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, Unplug, Plug } from 'lucide-react';
 import { MonitorSessionConfig } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -59,6 +59,8 @@ interface MonitorToolbarProps {
     onEncoding: (v: string) => void;
     onFontFamily: (v: string) => void;
     onFontSize: (v: number) => void;
+    onDisconnect?: () => void;
+    onConnect?: () => void;
 }
 
 export const MonitorToolbar = React.memo(({
@@ -71,7 +73,9 @@ export const MonitorToolbar = React.memo(({
     onFilterChange, onViewModeChange, onAutoScrollToggle, onToggleOptionsMenu,
     onClearLogs, onSaveLogs, hasLogs,
     onShowTimestamp, onShowPacketType, onShowControlChars, onShowDataLength, onMergeRepeats, onFlashNewMessage,
-    onEncoding, onFontFamily, onFontSize
+    onEncoding, onFontFamily, onFontSize,
+    onDisconnect,
+    onConnect,
 }: MonitorToolbarProps) => {
     const { t } = useI18n();
     const optionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -84,6 +88,31 @@ export const MonitorToolbar = React.memo(({
                 <span className="text-blue-400 font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
                 <span className="text-gray-600 px-1">⟷</span>
                 <span className="text-emerald-400 font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
+
+                {/* 连接/断开按钮 */}
+                {isConnected ? (
+                    onDisconnect && (
+                        <Tooltip content={t('monitor.disconnect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)] transition-colors cursor-pointer"
+                                onClick={onDisconnect}
+                            >
+                                <Unplug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                ) : (
+                    onConnect && (
+                        <Tooltip content={t('monitor.connect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-success)] hover:bg-[var(--st-status-success-bg,rgba(0,200,0,0.1))] transition-colors cursor-pointer"
+                                onClick={onConnect}
+                            >
+                                <Plug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                )}
             </div>
 
             <div className="flex items-center gap-4">

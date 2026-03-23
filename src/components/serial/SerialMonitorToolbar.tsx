@@ -4,7 +4,7 @@
  * 从 SerialMonitor.tsx 中拆分出来，包含连接状态指示器、TX/RX 过滤器、
  * 视图模式切换、选项菜单入口和操作按钮。
  */
-import { Trash2, ArrowDownToLine } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Unplug, Plug } from 'lucide-react';
 import { SessionConfig } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -36,6 +36,10 @@ interface SerialMonitorToolbarProps {
     hasLogs: boolean;
     /** 滚动容器引用（用于自动滚动切换） */
     scrollRef: React.RefObject<HTMLDivElement | null>;
+    /** 断开连接 */
+    onDisconnect?: () => void;
+    /** 连接 */
+    onConnect?: () => void;
 }
 
 export function SerialMonitorToolbar({
@@ -52,6 +56,8 @@ export function SerialMonitorToolbar({
     onSaveLogs,
     hasLogs,
     scrollRef,
+    onDisconnect,
+    onConnect,
 }: SerialMonitorToolbarProps) {
     const { t } = useI18n();
     const {
@@ -81,7 +87,7 @@ export function SerialMonitorToolbar({
     };
 
     return (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
+        <div className="flex items-center justify-between px-4 h-[42px] border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
             {/* 连接状态 + 端口信息 */}
             <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                 {isConnected ? (
@@ -94,6 +100,31 @@ export function SerialMonitorToolbar({
                     `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${(config.connection.parity ?? 'none') === 'none' ? 'N' : (config.connection.parity ?? 'none').toUpperCase()}${config.connection.stopBits}`
                     : config.type === 'mqtt' ?
                         `${config.host}:${config.port} ` : 'Connected'}
+
+                {/* 连接/断开按钮 */}
+                {isConnected ? (
+                    onDisconnect && (
+                        <Tooltip content={t('serial.disconnect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)] transition-colors cursor-pointer"
+                                onClick={onDisconnect}
+                            >
+                                <Unplug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                ) : (
+                    onConnect && (
+                        <Tooltip content={t('serial.connect')} position="bottom">
+                            <button
+                                className="ml-1 p-1 rounded-[3px] text-[var(--st-status-success)] hover:bg-[var(--st-status-success-bg,rgba(0,200,0,0.1))] transition-colors cursor-pointer"
+                                onClick={onConnect}
+                            >
+                                <Plug size={13} />
+                            </button>
+                        </Tooltip>
+                    )
+                )}
             </div>
 
             <div className="flex items-center gap-4">

@@ -119,6 +119,12 @@ export const zhCN = {
             sidebarRight: '右侧',
             showStatusBar: '显示状态栏',
             showStatusBarDesc: '是否在底部显示状态栏',
+            statusBarItems: '配置显示项目',
+            statusBarVersion: '版本号',
+            statusBarCpu: 'CPU 占用率',
+            statusBarMem: '内存占用',
+            statusBarUpdate: '检查更新',
+            statusBarGithub: 'GitHub 链接',
         },
 
         // 串口日志颜色
@@ -318,6 +324,8 @@ export const zhCN = {
 
     // 监控器 (MQTT & Serial Monitor 共享)
     monitor: {
+        connect: '连接',
+        disconnect: '断开',
         options: '选项',
         logSettings: '日志设置',
         display: '显示控制',
@@ -497,7 +505,7 @@ export const zhCN = {
         updateFailed: '更新失败',
         checkFailed: '检查失败',
         cpuUsage: 'CPU 占用率: {val}%',
-        memUsage: '内存占用 (RSS): {val} MB',
+        memUsage: '内存占用: {val} MB',
         clickToUpdate: '点击查看更新',
         openGithub: '在 GitHub 上查看项目',
     },

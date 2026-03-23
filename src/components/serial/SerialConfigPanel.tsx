@@ -59,15 +59,6 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
             className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]"
             data-component="serial-config"
         >
-            <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--serial-config-bg)] text-[11px] font-bold text-[var(--serial-config-text)] uppercase tracking-wide flex items-center">
-                <span>{t('configSidebar.settings')}</span>
-                {session.unsaved && (
-                    <Tooltip content={t('configSidebar.unsavedChanges')} position="bottom" wrapperClassName="flex items-center">
-                        <span className="ml-2 w-2 h-2 rounded-full bg-white opacity-50 inline-block"></span>
-                    </Tooltip>
-                )}
-            </div>
-
             <div className="px-4 py-2 flex flex-col gap-3">
                 {/* 端口选择 */}
                 <div className="flex flex-col gap-1">

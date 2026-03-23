@@ -23,6 +23,7 @@ import { DEFAULT_KEYBINDINGS, formatKeybinding, type KeybindingAction } from '..
 import type { ThemeImages } from '../../types/theme';
 import { Group, SettingRow, Checkbox, INPUT_CLS, type SettingSection } from './SettingsShared';
 import { ModuleSettings } from './ModuleSettings';
+import { StatusBarSettingsInline } from './StatusBarSettings';
 import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashReporter';
 
 // ── 生成分组 ID ──
@@ -348,6 +349,7 @@ export const SettingsEditor = () => {
                 {
                     label: t('settings.layout.showStatusBar'),
                     description: t('settings.layout.showStatusBarDesc'),
+                    expandedContent: config.ui.showStatusBar ? <StatusBarSettingsInline /> : undefined,
                     render: () => (
                         <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
                     ),

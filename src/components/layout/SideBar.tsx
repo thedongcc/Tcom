@@ -100,7 +100,7 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
             data-component="sidebar"
         >
             {/* 统一标题栏（所有视图都显示） */}
-            <div className="h-[35px] px-4 flex items-center text-[11px] font-bold text-[var(--st-sidebar-title-text)] tracking-wide uppercase shrink-0">
+            <div className="h-9 px-4 flex items-center text-[11px] font-bold text-[var(--st-sidebar-title-text)] tracking-wide uppercase shrink-0">
                 <span className="truncate">{getTitle()}</span>
             </div>
 

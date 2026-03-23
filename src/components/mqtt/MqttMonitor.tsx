@@ -20,6 +20,7 @@ import { MqttMonitorToolbar } from './MqttMonitorToolbar';
 import { MqttPublishArea } from './MqttPublishArea';
 import { matchesKeybinding, DEFAULT_KEYBINDINGS } from '../../utils/keybindings';
 import { useSettings } from '../../context/SettingsContext';
+import { useSession } from '../../context/SessionContext';
 
 interface MqttMonitorProps {
     session: {
@@ -40,6 +41,7 @@ const scrollPositions = new Map<string, number>();
 
 export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig, onClearLogs, onConnectRequest }: MqttMonitorProps) => {
     const { logs, isConnected, config } = session;
+    const { disconnectSession } = useSession();
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // ── 状态管理 ──
@@ -254,6 +256,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 uiState={uiState}
                 onClearLogs={onClearLogs}
                 handleSaveLogs={handleSaveLogs}
+                onDisconnect={() => disconnectSession(session.id)}
+                onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
             />
 
             {/* 日志区域 */}
