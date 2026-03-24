@@ -6,14 +6,15 @@
  * - useThemeEditorState.ts — 状态管理、Inspector、颜色变更回调
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { X, ChevronDown, Palette, Save, RotateCcw, Search, Crosshair, MapPin } from 'lucide-react';
+import { X, ChevronDown, Palette, Save, RotateCcw, Search, Crosshair } from 'lucide-react';
 import { componentTokenMap } from '../../themes/componentTokenMap';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
-import { ColorPickerTrigger } from './ColorPickerShared';
 import { REGION_GROUPS } from './themeColorGroups';
 import { TokenRow } from './ThemeTokenRow';
 import { useThemeEditorState } from './useThemeEditorState';
+import { CdpDebugPanel } from './CdpDebugPanel';
+import { PendingEditsPanel } from './PendingEditsPanel';
 
 interface Props {
     isOpen: boolean;
@@ -98,14 +99,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
         }
     }, [lowerSearch, filteredGroups]);
 
-    // 全局查找变量 Label
-    const findTokenLabel = (varName: string) => {
-        for (const meta of Object.values(componentTokenMap)) {
-            const token = meta.tokens.find(t => t.var === varName);
-            if (token) return token.label;
-        }
-        return varName;
-    };
+
 
     // CDP 诊断面板监听滚动
     useEffect(() => {
@@ -199,139 +193,25 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                     >
                         {/* CDP 诊断面板 */}
                         {cdpDebugData && (
-                            <div className="mb-2 flex flex-col gap-1.5 shrink-0">
-                                <div className="p-2.5 rounded-lg text-[11px] flex flex-col gap-2 relative shrink-0 border" style={{ backgroundColor: 'var(--theme-editor-inspect-bg)', borderColor: 'var(--theme-editor-inspect-border)' }}>
-                                    <Tooltip content={t('themeEditor.closeInspect')} position="bottom" offset={4}>
-                                        <button onClick={() => setCdpDebugData(null)} className="absolute right-2 top-2 transition-colors hover:opacity-100 opacity-60" style={{ color: 'var(--theme-editor-inspect-text)' }}>
-                                            <X size={13} />
-                                        </button>
-                                    </Tooltip>
-                                    <div className="font-medium pb-1 flex items-center gap-1.5 border-b" style={{ color: 'var(--theme-editor-inspect-text)', borderColor: 'var(--theme-editor-inspect-border)' }}>
-                                        <Crosshair size={12} />
-                                        {t('themeEditor.pickedOuterHTML')}
-                                    </div>
-                                    <pre className="p-1.5 rounded text-[10px] overflow-x-auto whitespace-pre-wrap break-all select-all font-mono max-h-28 overflow-y-auto" style={{ backgroundColor: 'var(--theme-editor-input-bg)', color: 'var(--app-foreground)', opacity: 0.8 }}>
-                                        {cdpDebugData.outerHTML || t('themeEditor.noInfo')}
-                                    </pre>
-                                </div>
-
-                                <div className="p-2.5 rounded-lg shrink-0 border" style={{ backgroundColor: 'var(--theme-editor-match-bg)', borderColor: 'var(--theme-editor-match-border)' }}>
-                                    <div className="font-medium pb-1 mb-2 flex items-center gap-1.5 text-[11px] border-b" style={{ color: 'var(--theme-editor-match-text)', borderColor: 'var(--theme-editor-match-border)' }}>
-                                        <MapPin size={12} />
-                                        {t('themeEditor.matchedVars')}
-                                    </div>
-                                    {extractVars(cdpDebugData.outerHTML).length > 0 ? (
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            {extractVars(cdpDebugData.outerHTML).map(v => (
-                                                <div key={`matched-${v}`}>
-                                                    <TokenRow varName={v} label={findTokenLabel(v)} value={getColorValue(v)} isCopied={copiedVar === v} idPrefix="matched-" onColorChange={handleColorChange} onCopy={handleCopy} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-3 text-[10px] italic opacity-60" style={{ color: 'var(--theme-editor-match-text)' }}>
-                                            {t('themeEditor.noVarsFound')}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            <CdpDebugPanel
+                                data={cdpDebugData}
+                                copiedVar={copiedVar}
+                                onClose={() => setCdpDebugData(null)}
+                                getColorValue={getColorValue}
+                                handleColorChange={handleColorChange}
+                                handleCopy={handleCopy}
+                                extractVars={extractVars}
+                            />
                         )}
 
                         {/* 待保存修改区域 */}
-                        {Object.keys(edits).length > 0 && (
-                            <div className="p-2.5 rounded-lg shrink-0 border mb-1" style={{ backgroundColor: 'var(--theme-editor-card-bg)', borderColor: 'var(--accent-color, #007acc)', borderWidth: '1px' }}>
-                                <div className="font-medium pb-1 mb-2 flex items-center justify-between text-[11px] border-b" style={{ color: 'var(--accent-color)', borderColor: 'var(--theme-editor-card-border)' }}>
-                                    <div className="flex items-center gap-1.5">
-                                        <Palette size={12} />
-                                        <span>待保存修改 ({Object.keys(edits).length})</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    {Object.entries(edits).map(([varName, newVal]) => {
-                                        const origVal = currentThemeDef?.colors?.[varName]
-                                            || (() => {
-                                                if (typeof window !== 'undefined') {
-                                                    const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-                                                    if (raw && raw !== 'transparent') {
-                                                        const m = raw.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                                                        if (m) return `#${parseInt(m[1]).toString(16).padStart(2,'0')}${parseInt(m[2]).toString(16).padStart(2,'0')}${parseInt(m[3]).toString(16).padStart(2,'0')}`;
-                                                        return raw;
-                                                    }
-                                                }
-                                                return '#808080';
-                                            })();
-                                        const label = findTokenLabel(varName);
-                                        const copyText = (text: string) => {
-                                            navigator.clipboard.writeText(text);
-                                            handleCopy(text);
-                                        };
-                                        return (
-                                            <div key={`pending-${varName}`}
-                                                className="flex items-center gap-2.5 p-1.5 rounded-lg transition-all shadow-sm border"
-                                                style={{ minHeight: '32px', backgroundColor: 'var(--theme-editor-card-bg)', borderColor: 'var(--theme-editor-card-border)', borderWidth: '1px' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-editor-card-hover)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-editor-card-bg)'}
-                                            >
-                                                {/* 原始色块 */}
-                                                <Tooltip content={`原始: ${origVal}`} position="top" offset={4}>
-                                                    <div
-                                                        className="shrink-0 cursor-pointer"
-                                                        style={{ width: 28, height: 20, borderRadius: 4, border: '1px solid var(--border-color)', padding: 2, background: 'rgba(0,0,0,0.2)' }}
-                                                        onClick={() => copyText(origVal)}
-                                                    >
-                                                        <div style={{ width: '100%', height: '100%', borderRadius: 2, backgroundColor: origVal }} />
-                                                    </div>
-                                                </Tooltip>
-
-                                                <span className="opacity-30 text-[10px] shrink-0">→</span>
-
-                                                {/* 新色块（使用 ColorPickerTrigger） */}
-                                                <div className="relative shrink-0 flex items-center">
-                                                    <ColorPickerTrigger
-                                                        value={newVal}
-                                                        onChange={(val) => handleColorChange(varName, val)}
-                                                    />
-                                                    <div
-                                                        className="absolute inset-0 rounded pointer-events-none ring-1 ring-inset"
-                                                        style={{ boxShadow: 'inset 0 1px 1px var(--theme-editor-card-border)', borderColor: 'var(--theme-editor-card-border)' }}
-                                                    />
-                                                </div>
-
-                                                {/* 名称 + 变量代码 + 色值 */}
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <span className="text-[10px] font-semibold leading-tight opacity-90 truncate" style={{ color: 'var(--app-foreground)' }}>
-                                                        {label}
-                                                    </span>
-                                                    <div className="flex items-center gap-1.5 mt-[1px]">
-                                                        <Tooltip content={copiedVar === varName ? '✓ 已复制' : '点击复制变量名'} position="right" delay={150}>
-                                                            <span
-                                                                className="text-[9px] font-mono opacity-50 truncate cursor-pointer hover:underline hover:opacity-100"
-                                                                style={{ color: 'var(--app-foreground)' }}
-                                                                onClick={(e) => { e.stopPropagation(); copyText(varName); }}
-                                                            >{varName}</span>
-                                                        </Tooltip>
-                                                        <span className="text-[9px] opacity-30">|</span>
-                                                        <Tooltip content={copiedVar === origVal ? '✓ 已复制' : '点击复制原色值'} position="right" delay={150}>
-                                                            <span
-                                                                className="text-[9px] font-mono opacity-40 cursor-pointer hover:opacity-100 hover:text-[var(--accent-color)] transition-all"
-                                                                onClick={(e) => { e.stopPropagation(); copyText(origVal); }}
-                                                            >{origVal}</span>
-                                                        </Tooltip>
-                                                        <span className="text-[9px] opacity-30">→</span>
-                                                        <Tooltip content={copiedVar === newVal ? '✓ 已复制' : '点击复制新色值'} position="right" delay={150}>
-                                                            <span
-                                                                className="text-[9px] font-mono font-bold opacity-80 cursor-pointer hover:opacity-100 hover:text-[var(--accent-color)] transition-all"
-                                                                onClick={(e) => { e.stopPropagation(); copyText(newVal); }}
-                                                            >{newVal}</span>
-                                                        </Tooltip>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
+                        <PendingEditsPanel
+                            edits={edits}
+                            currentThemeDef={currentThemeDef}
+                            copiedVar={copiedVar}
+                            handleColorChange={handleColorChange}
+                            handleCopy={handleCopy}
+                        />
 
 
                         {/* 颜色组列表 */}

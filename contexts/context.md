@@ -37,16 +37,37 @@
 src-tauri/src/
 ├── main.rs                    # 入口 — 调用 lib::run()
 ├── lib.rs                     # Bootstrap — 插件注册 + Command 注册 + State 管理
+├── snap_layout.rs             # Windows 11 Snap Layout 支持
 └── commands/                  # Command Layer — 参数解析 + 业务逻辑
     ├── mod.rs                 # 模块导出
-    ├── serial.rs              # 串口扫描/连接/读写/定时发送（SerialState）
+    ├── serial/                # 串口管理（SerialState）
+    │   ├── mod.rs             # Command 门面层
+    │   ├── state.rs           # 核心状态和数据结构
+    │   ├── scanner.rs         # 硬件扫描 + Windows 注册表
+    │   ├── connection.rs      # 打开/关闭/读取线程
+    │   ├── io.rs              # 数据写入
+    │   └── timer.rs           # 定时发送（高精度）
     ├── mqtt.rs                # MQTT 客户端（MqttState + rumqttc）
-    ├── monitor.rs             # 虚拟串口监控双向桥接（MonitorState）
+    ├── monitor/               # 虚拟串口监控（MonitorState）
+    │   ├── mod.rs             # Command 门面层
+    │   ├── state.rs           # 会话结构体 + 事件类型 + 状态常量
+    │   ├── bridge.rs          # 双向数据桥接（四线程读写 + 轮询检测）
+    │   └── timer.rs           # 高精度自旋定时器
     ├── tcp.rs                 # TCP 服务器（TcpState）
-    ├── workspace.rs           # 工作区/会话 CRUD + 路径安全
+    ├── profile.rs             # Profile（配置档案）CRUD + Session/命令/自动回复
+    ├── backup.rs              # Profile/全量备份导出导入（ZIP）
     ├── theme.rs               # 主题管理 + 编辑器状态 + 取色器
-    ├── app.rs                 # 版本/统计/字体/com0com
-    └── shell.rs               # 外部链接 + 文件对话框
+    ├── app/                   # 应用级功能
+    │   ├── mod.rs             # Command 门面层
+    │   ├── info.rs            # 版本/统计/管理员检测/工厂重置
+    │   ├── fonts.rs           # 系统字体列表
+    │   └── com0com.rs         # com0com 驱动管理
+    ├── shell.rs               # 外部链接 + 文件对话框
+    ├── window.rs              # 窗口管理（置顶控制 + 背景色）
+    ├── updater.rs             # 应用更新（占位）
+    ├── crash_report.rs        # 崩溃上报（飞书 Webhook）
+    ├── global_settings.rs     # 全局设置 + 应用状态持久化
+    └── fs_utils.rs            # 文件系统工具函数
 ```
 
 **铁律**：
@@ -65,7 +86,6 @@ src/lib/tauri-api/
 ├── mqtt.ts                    # mqttAPI
 ├── monitor.ts                 # monitorAPI
 ├── tcp.ts                     # tcpAPI
-├── workspace.ts               # workspaceAPI
 ├── session.ts                 # sessionAPI
 ├── com0com.ts                 # com0comAPI
 ├── theme.ts                   # themeAPI
@@ -73,7 +93,10 @@ src/lib/tauri-api/
 ├── app.ts                     # appAPI
 ├── update.ts                  # updateAPI
 ├── shell.ts                   # shellAPI
-└── windowApi.ts               # windowAPI
+├── windowApi.ts               # windowAPI
+├── profile.ts                 # profileAPI
+├── crashReport.ts             # crashReportAPI
+└── globalSettings.ts          # globalSettingsAPI
 ```
 
 **铁律**：
@@ -97,6 +120,7 @@ src/components/<feature>/
   - **基础 UI 组件**（Common UI，如 Button/Tooltip/Switch）：**≤ 150 行**
   - **核心业务组件**（Smart Components，如 MonitorTerminal/SerialMonitor）：**≤ 250 行**（超出必须拆分子组件或提取 Hook）
   - **配置面板 / 长表单**（Settings/Forms，如 SettingsEditor）：**豁免至 600 - 800 行**（前提：超出的行数必须是无深层逻辑嵌套的纯声明式 JSX 排版）
+  - **工具模块**（`src/lib/` 下的独立工具，如 crashReporter/EventBus）：**≤ 350 行**
 - **核心红线**：无论物理行数多少，函数体认知复杂度（Cognitive Complexity）必须严格 **≤ 20**
 - 复杂 `useCallback`/`useEffect` 逻辑提取为自定义 Hook
 - 重复代码（≥2处相同逻辑）必须提取为工具函数
@@ -351,20 +375,20 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 | Toast 出现/消失 | 300ms | `ease-in-out` |
 | 拖拽反馈 | 即时 | 无缓动 |
 
-### 4.7 国际化（i18n）规范
+### 4.6 国际化（i18n）规范
 
 - **双语强制**：所有面向用户的文本（按钮、标签、提示、错误消息、Toast、Tooltip、Dialog）必须同时在 `zh-CN.ts` 和 `en-US.ts` 中定义
 - 禁止在 TSX 中硬编码中文或英文字符串，必须使用 `t('key')` 引用
 - 新增 i18n key 必须在 **两个语言文件中同步添加**
 
-### 4.8 Tooltip 统一规范
+### 4.7 Tooltip 统一规范
 
 - **强制使用项目 `<Tooltip>` 组件**（`src/components/common/Tooltip.tsx`）
 - ❌ 禁止使用原生 HTML `title=` 属性
 - ✅ 正确：`<Tooltip content={t('xxx')}><button>...</button></Tooltip>`
 - ❌ 禁止：`<button title="xxx">...</button>`
 
-### 4.9 组件颜色独立性规范
+### 4.8 组件颜色独立性规范
 
 每个 UI 组件必须拥有**专属 CSS 变量**，禁止直接使用功能级变量（如 `--widget-background`）。
 
@@ -388,7 +412,7 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - `--{component}-border` — 边框色
 - 按钮/切换类组件额外需要：`--{component}-hover`、`--{component}-active`
 
-### 4.10 反模式（禁止）
+### 4.9 反模式（禁止）
 
 - ❌ 使用 Emoji 作为图标 — 统一使用 Lucide React 图标库
 - ❌ 可点击元素缺少 `cursor: pointer`
@@ -467,6 +491,85 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
   - `setInterval(fn, N)` 中的 `fn` 是否触发 Tauri `invoke`？
   - 该 `invoke` 对应的 Rust Command 是否有 `Command::new` / 文件 I/O / 网络请求？
   - 如有，是否可用缓存、增量查询或原生 API 替代？
+
+### 5.8 全局错误处理规范
+
+**Rust 后端**：
+- 所有 Tauri Command 必须返回 `Result<T, String>`，错误信息面向用户可读
+- `Mutex` 锁获取统一使用 `lock().map_err(lock_err)?` 模式（`lock_err` 函数定义在各模块 state.rs 中）
+- 硬件操作（串口/网络）错误统一用 `map_err(|e| format!("模块: {}", e))?` 转换
+- 禁止在 Command 中使用 `unwrap()` / `expect()` 处理可能失败的操作
+
+**前端错误分层**：
+
+| 层级 | 机制 | 覆盖范围 |
+|------|------|---------|
+| 组件级 | `ErrorBoundary` 包裹 | React 渲染错误，显示 Fallback UI |
+| IPC 级 | `invoke().catch()` | Tauri Command 调用失败 → Toast 提示 |
+| 全局级 | `window.onerror` + `crashReporter` | 未捕获异常 → 崩溃上报 |
+
+**铁律**：
+- `ErrorBoundary` 必须包裹在 `App.tsx` 的 Provider 链中，位于 `I18nProvider` 之后
+- IPC 适配层中所有 `invoke` 调用必须有 `.catch` 错误处理，禁止静默吞错
+- 崩溃上报（`crashReporter.ts`）仅在用户授权（`enableCrashReport`）后启用
+
+### 5.9 测试策略与基准
+
+**测试框架**：
+- 前端：Vitest（`vitest.config.ts`）
+- Rust：`cargo test`（标准 Rust 测试）
+
+**覆盖范围**：
+
+| 层级 | 必须测试 | 可选测试 |
+|------|---------|---------|
+| 工具函数 | `src/utils/` 中的纯函数（格式化、CRC、命名、Token 遍历等） | — |
+| 数据转换 | Hex/ASCII/Unicode 编解码、字节格式化 | 复杂嵌套场景 |
+| 类型守卫 | 所有 `is*` 类型守卫函数 | — |
+| Rust Command | 参数校验逻辑、错误路径 | 硬件交互（需 mock） |
+
+**铁律**：
+- `src/utils/` 中新增的纯函数必须附带 `__tests__/` 中的测试文件
+- 测试文件命名：`<module>.test.ts`
+- 运行命令：`npm run test`（Vitest）/ `cd src-tauri && cargo test`（Rust）
+
+### 5.10 CSS 文件组织策略
+
+`index.css` 为 `@import` 聚合入口（~19 行），所有样式拆分至 `src/styles/` 下：
+
+```
+src/styles/
+├── variables.css      # Dark 默认 CSS 变量 + 组件级语义映射（~557 行）
+├── themes.css         # Light/Mono 主题覆盖（~527 行）
+├── vendors.css        # 字体声明 + 第三方库覆盖（~115 行）
+├── reset.css          # body/滚动条/焦点/表单重置（~110 行）
+├── animations.css     # 动画关键帧 + 工具类（~120 行）
+└── glass.css          # Pic 毛玻璃 + Ghost Peek 模式（~90 行）
+```
+
+**拆分原则**：
+- 每个 CSS 文件 ≤ 400 行（**纯声明式文件豁免**：仅含 CSS 变量声明、无嵌套逻辑的文件可至 600 行）
+- 组件专属 CSS 变量定义在 `variables.css`（Dark 默认值）和 `themes.css`（Light/Mono 覆盖）中
+- 在 `index.css` 中通过 `@import` 聚合
+
+**铁律**：
+- 新增全局 CSS 变量时，同步在 `variables.css`（默认值）和 `themes.css`（主题覆盖）中添加
+- 禁止在 TSX 中使用内联 `style={}` 硬编码颜色值（CSS 变量引用 `var(--xxx)` 除外）
+
+### 5.11 API 版本与废弃管理
+
+**Tauri Command 变更流程**：
+
+| 操作 | 要求 |
+|------|------|
+| **新增 Command** | 在 `lib.rs` 的 `generate_handler![]` 中注册 + 同步前端 IPC 适配层 + 更新本规范 §2.2/§2.3 |
+| **修改签名** | 前后端同步修改 + 确保现有调用点全部更新 |
+| **废弃 Command** | 先标记 `#[deprecated]` 并保留一个版本周期，再在下一版本中移除 |
+| **删除模块** | 同步更新 `mod.rs`、`lib.rs`、IPC 适配层、本规范文档 |
+
+**铁律**：
+- 任何 Command 新增/删除/重命名，必须在**同一次提交**中同步更新 `context.md` 的 §2.2 和 §2.3
+- 前端 IPC 适配层文件数量必须与后端 Command 模块一一对应
 
 ---
 

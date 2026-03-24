@@ -1,0 +1,107 @@
+/**
+ * vendors.css
+ * 第三方库样式覆盖 — 字体声明、react-colorful、react-resizable-panels。
+ */
+
+/* ─── 字体声明 ─── */
+@font-face {
+  font-family: 'AppCoreFont';
+  /* Vite 会自动处理此路径，打包时生成正确的 hash 文件名 */
+  src: url('../assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AppCoreFont';
+  src: url('../assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AppCoreFont';
+  src: url('../assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── react-resizable-panels 光标覆盖（高特异性） ─── */
+div[data-direction="horizontal"][data-direction="horizontal"] {
+  cursor: col-resize !important;
+}
+
+div[data-direction="vertical"][data-direction="vertical"] {
+  cursor: row-resize !important;
+}
+
+div[data-direction="horizontal"]:hover,
+div[data-direction="vertical"]:hover {
+  cursor: inherit !important;
+}
+
+/* ─── VS Code 风格 react-colorful 覆盖 ─── */
+.vscode-color-picker {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.vscode-color-picker .react-colorful__saturation {
+  border-radius: 4px 4px 0 0 !important;
+  height: 150px !important;
+  border-bottom: 1px solid #111;
+}
+
+.vscode-color-picker .react-colorful__hue,
+.vscode-color-picker .react-colorful__alpha {
+  width: calc(100% - 66px) !important;
+  height: 12px !important;
+  border-radius: 2px !important;
+  margin-left: 56px !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+.vscode-color-picker .react-colorful__alpha {
+  margin-top: 0 !important;
+}
+
+.vscode-color-picker .react-colorful__pointer {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* ─── 属性检查器颜色选择器 react-colorful 紧凑样式 ─── */
+.inspector-colorful-wrap .react-colorful {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+.inspector-colorful-wrap .react-colorful__saturation {
+  height: 140px !important;
+  border-radius: 0 !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+}
+
+.inspector-colorful-wrap .react-colorful__hue {
+  height: 10px !important;
+  border-radius: 5px !important;
+  margin: 8px 10px 0 10px !important;
+}
+
+.inspector-colorful-wrap .react-colorful__alpha {
+  height: 10px !important;
+  border-radius: 5px !important;
+  margin: 6px 10px 8px 10px !important;
+}
+
+.inspector-colorful-wrap .react-colorful__pointer {
+  width: 14px !important;
+  height: 14px !important;
+  border-width: 2px !important;
+}

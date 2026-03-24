@@ -1,0 +1,115 @@
+/**
+ * animations.css
+ * 全局动画关键帧与动画工具类。
+ */
+
+/* 设置模态窗口进场动画 */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modalIn {
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 指令项金色闪烁 */
+@keyframes flash-gold {
+  0% {
+    background-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    transform: scale(1.05);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.animate-flash-gold {
+  animation: flash-gold 0.3s ease-out forwards;
+}
+
+/* 新日志条目闪烁 */
+@keyframes flash-new {
+  0% {
+    background-color: var(--flash-color, rgba(0, 122, 204, 0.15));
+  }
+
+  100% {
+    background-color: var(--final-bg, transparent);
+  }
+}
+
+.animate-flash-new {
+  animation: flash-new 1s ease-out;
+}
+
+/* MQTT 消息滑入动画 */
+@keyframes mqtt-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+    background-color: var(--flash-color, rgba(0, 122, 204, 0.15));
+    border-color: var(--flash-border, rgba(0, 122, 204, 0.6));
+    box-shadow: 0 0 8px var(--flash-color, rgba(0, 122, 204, 0.2));
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+
+
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+    background-color: var(--final-bg, transparent);
+    border-color: var(--final-border, #3c3c3c);
+    box-shadow: none;
+  }
+}
+
+.animate-mqtt-slide-in {
+  animation: mqtt-slide-in 0.5s ease-out;
+}
+
+/* 轻量级 DOM 缩放淡入 */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.15s ease-out forwards;
+}
+
+/* 上滑淡入 */
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.15s ease-out forwards;
+}

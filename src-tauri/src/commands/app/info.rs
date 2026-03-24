@@ -104,7 +104,7 @@ pub fn get_stats() -> Result<Value, String> {
                 let current_user = filetime_to_u64(&user);
                 let current_wall = filetime_to_u64(&now_ft);
 
-                let mut guard = LAST_SAMPLE.lock().unwrap();
+                let mut guard = LAST_SAMPLE.lock().map_err(|e| format!("CPU sample lock: {}", e))?;
                 let cpu = if let Some(prev) = guard.as_ref() {
                     let cpu_delta = (current_kernel + current_user)
                         .saturating_sub(prev.kernel_time + prev.user_time);

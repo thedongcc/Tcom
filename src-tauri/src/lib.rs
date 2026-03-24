@@ -4,16 +4,20 @@
  * ⚠️ 铁律：本文件禁止编写任何业务逻辑，仅做 Plugin/State/Command 注册。
  *
  * 子模块（全部真实实现）：
- * - commands/serial.rs — 串口扫描/连接/读写/定时发送
- * - commands/mqtt.rs — MQTT 客户端
- * - commands/monitor.rs — 虚拟串口监控（双向桥接）
- * - commands/tcp.rs — TCP 服务器
+ * - commands/serial/   — 串口扫描/连接/读写/定时发送（目录化）
+ * - commands/mqtt.rs   — MQTT 客户端
+ * - commands/monitor/  — 虚拟串口监控（双向桥接，目录化）
+ * - commands/tcp.rs    — TCP 服务器
  * - commands/profile.rs — Profile（配置档案）CRUD + Session/命令/自动回复
- * - commands/theme.rs — 主题管理 + 编辑器状态
- * - commands/app.rs — 应用级功能 + com0com
- * - commands/shell.rs — 外部链接 + 文件对话框
+ * - commands/backup.rs — Profile/全量备份导出导入
+ * - commands/theme.rs  — 主题管理 + 编辑器状态
+ * - commands/app/      — 应用级功能 + com0com（目录化）
+ * - commands/shell.rs  — 外部链接 + 文件对话框
  * - commands/window.rs — 窗口管理（置顶控制）
  * - commands/updater.rs — 应用更新（占位）
+ * - commands/crash_report.rs — 崩溃上报
+ * - commands/global_settings.rs — 全局设置持久化
+ * - commands/fs_utils.rs — 文件系统工具
  */
 
 mod commands;

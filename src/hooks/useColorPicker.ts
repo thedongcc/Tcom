@@ -37,8 +37,30 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
                     let activeDef = currentThemes.find(t => t.id === currentConfig.theme) || currentThemes[0];
                     if (activeDef) {
                         applyTheme(activeDef);
+
+                        // 重新注入排版变量（被 applyTheme 清除了）
+                        const root = document.documentElement;
+                        const { fontFamily, fontSize, lineHeight } = currentConfig.typography;
+                        root.style.setProperty('--st-font-family', fontFamily);
+                        root.style.setProperty('--st-font-size', `${fontSize}px`);
+                        root.style.setProperty('--st-line-height', `${lineHeight}`);
+
                         if (isGlassTheme(currentConfig.theme) && currentConfig.images.rxBackground) {
                             applyBgImageOverrides(currentConfig, activeDef);
+                        }
+
+                        // JIT Alpha 透明度缩放引擎恢复（Glass 主题 UI 不透明度）
+                        if (isGlassTheme(currentConfig.theme) && activeDef) {
+                            const uiOpacityScale = (currentConfig.images.uiOpacity ?? 100) / 100;
+                            Object.entries(activeDef.colors).forEach(([key, value]) => {
+                                if (typeof value === 'string' && value.startsWith('rgba(')) {
+                                    const match = value.match(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([0-9.]+)\)/);
+                                    if (match) {
+                                        const alpha = parseFloat(match[4]) * uiOpacityScale;
+                                        root.style.setProperty(key, `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha.toFixed(3)})`);
+                                    }
+                                }
+                            });
                         }
                     }
                 }
@@ -57,8 +79,30 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
                 const activeDef = currentThemes.find(t => t.id === currentConfig.theme) || currentThemes[0];
                 if (activeDef) {
                     applyTheme(activeDef);
+
+                    // 重新注入排版变量（被 applyTheme 清除了）
+                    const root = document.documentElement;
+                    const { fontFamily, fontSize, lineHeight } = currentConfig.typography;
+                    root.style.setProperty('--st-font-family', fontFamily);
+                    root.style.setProperty('--st-font-size', `${fontSize}px`);
+                    root.style.setProperty('--st-line-height', `${lineHeight}`);
+
                     if (isGlassTheme(currentConfig.theme) && currentConfig.images.rxBackground) {
                         applyBgImageOverrides(currentConfig, activeDef);
+                    }
+
+                    // JIT Alpha 透明度缩放引擎恢复
+                    if (isGlassTheme(currentConfig.theme) && activeDef) {
+                        const uiOpacityScale = (currentConfig.images.uiOpacity ?? 100) / 100;
+                        Object.entries(activeDef.colors).forEach(([key, value]) => {
+                            if (typeof value === 'string' && value.startsWith('rgba(')) {
+                                const match = value.match(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([0-9.]+)\)/);
+                                if (match) {
+                                    const alpha = parseFloat(match[4]) * uiOpacityScale;
+                                    root.style.setProperty(key, `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha.toFixed(3)})`);
+                                }
+                            }
+                        });
                     }
                 }
             }

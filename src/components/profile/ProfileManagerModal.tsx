@@ -6,6 +6,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, User, Plus, Pencil, Trash2, Download, Upload, Check, Loader2, Copy } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { confirm } from '../../services/confirmManager';
+import { Tooltip } from '../common/Tooltip';
+import { useI18n } from '../../context/I18nContext';
 
 interface ProfileManagerModalProps {
     onClose: () => void;
@@ -16,6 +18,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
         activeProfile, profiles, refreshProfiles,
         createProfile, deleteProfile, renameProfile, switchProfile, duplicateProfile,
     } = useProfile();
+    const { t } = useI18n();
 
     const [newName, setNewName] = useState('');
     const [showNewInput, setShowNewInput] = useState(false);
@@ -56,7 +59,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
 
         // 检查重名
         if (profiles.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
-            setError(`"${trimmed}" 已存在`);
+            setError(t('profile.nameExists').replace('{name}', trimmed));
             return;
         }
 
@@ -68,7 +71,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
             setShowNewInput(false);
             setError('');
         } else {
-            setError('创建失败');
+            setError(t('profile.createFailed'));
         }
     }, [newName, profiles, createProfile]);
 
@@ -81,7 +84,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
         }
 
         if (profiles.some(p => p.name.toLowerCase() === trimmed.toLowerCase() && p.name !== oldName)) {
-            setError(`"${trimmed}" 已存在`);
+            setError(t('profile.nameExists').replace('{name}', trimmed));
             return;
         }
 
@@ -93,27 +96,27 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
             setEditValue('');
             setError('');
         } else {
-            setError('重命名失败');
+            setError(t('profile.renameFailed'));
         }
     }, [editValue, profiles, renameProfile]);
 
     // 复制 Profile
     const handleDuplicate = useCallback(async (name: string) => {
         // 自动生成 "副本" 名称
-        let newName = `${name} 副本`;
+        let dupName = `${name} ${t('profile.duplicate')}`;
         let count = 2;
-        while (profiles.some(p => p.name.toLowerCase() === newName.toLowerCase())) {
-            newName = `${name} 副本 ${count}`;
+        while (profiles.some(p => p.name.toLowerCase() === dupName.toLowerCase())) {
+            dupName = `${name} ${t('profile.duplicate')} ${count}`;
             count++;
         }
 
         setLoading(`duplicate-${name}`);
-        const ok = await duplicateProfile(name, newName);
+        const ok = await duplicateProfile(name, dupName);
         setLoading(null);
         if (ok) {
             setError('');
         } else {
-            setError('复制失败');
+            setError(t('profile.duplicateFailed'));
         }
     }, [profiles, duplicateProfile]);
 
@@ -122,9 +125,9 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
         if (name === activeProfile) return; // 禁止删除活跃 Profile
 
         const confirmed = await confirm({
-            title: '删除配置档案',
-            message: `确定要删除配置档案 "${name}" 吗？\n\n此操作不可撤销，该档案下的所有会话、命令和自动回复规则都会被永久删除。`,
-            confirmText: '删除',
+            title: t('profile.deleteTitle'),
+            message: t('profile.deleteMessage').replace('{name}', name),
+            confirmText: t('profile.deleteConfirm'),
             type: 'danger',
         });
         if (!confirmed) return;
@@ -144,7 +147,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
             }
         } catch (e) {
             console.error('导出失败:', e);
-            setError('导出失败');
+            setError(t('profile.exportFailed'));
         }
         setLoading(null);
     }, []);
@@ -160,7 +163,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
             }
         } catch (e) {
             console.error('导入失败:', e);
-            setError('导入失败');
+            setError(t('profile.importFailed'));
         }
         setLoading(null);
     }, [refreshProfiles]);
@@ -178,19 +181,20 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                 {/* 头部 */}
                 <div className="flex items-center justify-between p-2.5 border-b border-[var(--st-dialog-border)] bg-[var(--st-dialog-header-bg)]">
                     <span className="text-[11px] font-bold text-[var(--st-dialog-text)] uppercase tracking-wider">
-                        管理配置档案
+                        {t('profile.manageTitle')}
                     </span>
                     <div className="flex items-center gap-1">
                         {/* 导入按钮 */}
-                        <button
-                            onClick={handleImport}
-                            disabled={loading === 'import'}
-                            className="flex items-center gap-1 px-2 py-1 text-[11px] text-[var(--st-dialog-text)] hover:bg-[var(--st-dialog-header-bg)] rounded-sm transition-colors disabled:opacity-50"
-                            title="从 ZIP 文件导入配置档案"
-                        >
-                            {loading === 'import' ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                            <span>导入</span>
-                        </button>
+                        <Tooltip content={t('profile.importZip')} position="bottom" offset={4}>
+                            <button
+                                onClick={handleImport}
+                                disabled={loading === 'import'}
+                                className="flex items-center gap-1 px-2 py-1 text-[11px] text-[var(--st-dialog-text)] hover:bg-[var(--st-dialog-header-bg)] rounded-sm transition-colors disabled:opacity-50"
+                            >
+                                {loading === 'import' ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                <span>{t('profile.import')}</span>
+                            </button>
+                        </Tooltip>
                         <button onClick={onClose} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-icon-hover)] transition-colors p-1">
                             <X size={14} />
                         </button>
@@ -250,7 +254,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                                         </span>
                                         {profile.name === activeProfile && (
                                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--st-status-info)]/20 text-[var(--st-status-info)] font-medium shrink-0">
-                                                当前
+                                                {t('profile.current')}
                                             </span>
                                         )}
                                     </div>
@@ -258,41 +262,45 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                                     {/* 操作按钮 */}
                                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                         {/* 重命名 */}
-                                        <button
-                                            onClick={() => { setEditingName(profile.name); setEditValue(profile.name); setError(''); }}
-                                            className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
-                                            title="重命名"
-                                        >
-                                            <Pencil size={12} />
-                                        </button>
+                                        <Tooltip content={t('profile.rename')} position="top" offset={4}>
+                                            <button
+                                                onClick={() => { setEditingName(profile.name); setEditValue(profile.name); setError(''); }}
+                                                className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
+                                            >
+                                                <Pencil size={12} />
+                                            </button>
+                                        </Tooltip>
                                         {/* 复制 */}
-                                        <button
-                                            onClick={() => handleDuplicate(profile.name)}
-                                            disabled={loading === `duplicate-${profile.name}`}
-                                            className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
-                                            title="复制为新配置档案"
-                                        >
-                                            {loading === `duplicate-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} />}
-                                        </button>
+                                        <Tooltip content={t('profile.duplicateAsNew')} position="top" offset={4}>
+                                            <button
+                                                onClick={() => handleDuplicate(profile.name)}
+                                                disabled={loading === `duplicate-${profile.name}`}
+                                                className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
+                                            >
+                                                {loading === `duplicate-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} />}
+                                            </button>
+                                        </Tooltip>
                                         {/* 导出 */}
-                                        <button
-                                            onClick={() => handleExport(profile.name)}
-                                            disabled={loading === `export-${profile.name}`}
-                                            className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
-                                            title="导出为 ZIP"
-                                        >
-                                            {loading === `export-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-                                        </button>
+                                        <Tooltip content={t('profile.exportZip')} position="top" offset={4}>
+                                            <button
+                                                onClick={() => handleExport(profile.name)}
+                                                disabled={loading === `export-${profile.name}`}
+                                                className="p-1 hover:bg-[var(--list-hover-background)] rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-dialog-text)]"
+                                            >
+                                                {loading === `export-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                                            </button>
+                                        </Tooltip>
                                         {/* 删除（非活跃时才显示） */}
                                         {profile.name !== activeProfile && (
-                                            <button
-                                                onClick={() => handleDelete(profile.name)}
-                                                disabled={loading === `delete-${profile.name}`}
-                                                className="p-1 hover:bg-[var(--st-settings-danger-bg)]/20 rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-settings-danger-bg)]"
-                                                title="删除"
-                                            >
-                                                {loading === `delete-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                                            </button>
+                                            <Tooltip content={t('profile.delete')} position="top" offset={4}>
+                                                <button
+                                                    onClick={() => handleDelete(profile.name)}
+                                                    disabled={loading === `delete-${profile.name}`}
+                                                    className="p-1 hover:bg-[var(--st-settings-danger-bg)]/20 rounded-sm text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-settings-danger-bg)]"
+                                                >
+                                                    {loading === `delete-${profile.name}` ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                                </button>
+                                            </Tooltip>
                                         )}
                                     </div>
                                 </>
@@ -313,7 +321,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                                     if (e.key === 'Enter') handleCreate();
                                     if (e.key === 'Escape') { setShowNewInput(false); setNewName(''); setError(''); }
                                 }}
-                                placeholder="输入名称..."
+                                placeholder={t('profile.namePlaceholder')}
                                 className="flex-1 bg-[var(--input-bg)] text-[var(--input-fg)] border border-[var(--input-border)] rounded-sm px-2 py-1 text-[12px] outline-none focus:border-[var(--st-status-info)]"
                             />
                             <button
@@ -321,13 +329,13 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                                 disabled={loading === 'create' || !newName.trim()}
                                 className="px-3 py-1 bg-[var(--st-status-info)] hover:bg-[#1177bb] text-white rounded-sm text-[11px] transition-colors disabled:opacity-50"
                             >
-                                {loading === 'create' ? <Loader2 size={12} className="animate-spin" /> : '创建'}
+                                {loading === 'create' ? <Loader2 size={12} className="animate-spin" /> : t('profile.create')}
                             </button>
                             <button
                                 onClick={() => { setShowNewInput(false); setNewName(''); setError(''); }}
                                 className="px-2 py-1 text-[var(--st-dialog-text)] hover:bg-[var(--st-dialog-header-bg)] rounded-sm text-[11px]"
                             >
-                                取消
+                                {t('profile.cancel')}
                             </button>
                         </div>
                     ) : (
@@ -336,7 +344,7 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ onClos
                             className="flex items-center gap-1.5 text-[12px] text-[var(--st-status-info)] hover:text-[#1177bb] transition-colors cursor-pointer"
                         >
                             <Plus size={14} />
-                            <span>新建配置档案</span>
+                            <span>{t('profile.newProfile')}</span>
                         </button>
                     )}
                 </div>

@@ -1,0 +1,89 @@
+/**
+ * glass.css
+ * Pic 主题毛玻璃效果 + 设置面板透视模式（Ghost Peek Mode）。
+ */
+
+/* ===== Pic 主题：动态环境光毛玻璃 (Fluent Glass) ===== */
+/* Pic 主题的面板色在 JSON 中已定义为 rgba() 半透明值，
+   此处添加 backdrop-filter 实现环境光反射效果。
+   blur(24px) 让下层图片色彩自然融入面板，
+   saturate(180%) 提亮底图色彩，让天空更蓝、草地更绿。 */
+
+/* 弹出层毛玻璃 — 原生级混合毛玻璃 */
+/* 采用标准 backdrop-filter，允许底层的所有 DOM（包含被遮盖的按钮等）参与高斯模糊运算 */
+html[data-theme="pic"][data-bg-image="true"] [data-component="dropdown"] {
+  background-color: var(--dropdown-background) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Toast 毛玻璃 */
+html[data-theme="pic"][data-bg-image="true"] .toast-container>div {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* 设置窗口毛玻璃 */
+html[data-theme="pic"][data-bg-image="true"] .settings-modal-panel {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* 设置窗口遮罩在 pic 主题下更通透 */
+html[data-theme="pic"][data-bg-image="true"] .settings-backdrop {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* ==========================================
+   ✨ 设置面板透视模式 (Ghost Peek Mode)
+   拖动背景图滑块时，面板完全隐身，仅显示被拖动的滑块行
+========================================== */
+.settings-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease, background-color 0.25s ease;
+}
+.settings-modal-panel {
+  transition: visibility 0s, opacity 0.25s ease;
+}
+
+/* 触发透视：遮罩完全透明（使用超高特异性压制 pic 主题） */
+html body.settings-peek-mode .settings-backdrop,
+html[data-theme][data-bg-image] body.settings-peek-mode .settings-backdrop {
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
+  background-color: transparent !important;
+  pointer-events: none !important;
+}
+
+/* 触发透视：面板完全不可见（visibility 允许子级覆盖） */
+body.settings-peek-mode .settings-modal-panel {
+  visibility: hidden !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 被拖动的滑块行：重新可见 + 强对比度悬浮效果 */
+body.settings-peek-mode .peek-active-slider {
+  visibility: visible !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  transform: scale(1.05) !important;
+  z-index: 99999 !important;
+}
+
+body.settings-peek-mode .peek-active-slider span {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+}

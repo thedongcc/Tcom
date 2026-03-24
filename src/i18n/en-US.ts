@@ -212,6 +212,32 @@ export const enUS = {
         noResults: 'No results for "{term}"',
     },
 
+    // Profile management
+    profile: {
+        manageTitle: 'Manage Profiles',
+        importZip: 'Import profile from ZIP file',
+        rename: 'Rename',
+        duplicateAsNew: 'Duplicate as new profile',
+        exportZip: 'Export as ZIP',
+        delete: 'Delete',
+        current: 'Current',
+        nameExists: '"{name}" already exists',
+        createFailed: 'Creation failed',
+        renameFailed: 'Rename failed',
+        duplicateFailed: 'Duplication failed',
+        exportFailed: 'Export failed',
+        importFailed: 'Import failed',
+        deleteTitle: 'Delete Profile',
+        deleteMessage: 'Are you sure you want to delete profile "{name}"?\n\nThis action cannot be undone. All sessions, commands, and auto-reply rules under this profile will be permanently deleted.',
+        deleteConfirm: 'Delete',
+        namePlaceholder: 'Enter name...',
+        create: 'Create',
+        cancel: 'Cancel',
+        newProfile: 'New Profile',
+        import: 'Import',
+        duplicate: 'Copy',
+    },
+
     // Session
     session: {
         newSession: 'New Session',

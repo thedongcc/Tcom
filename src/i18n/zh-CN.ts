@@ -210,6 +210,32 @@ export const zhCN = {
         noResults: '未找到与"{term}"相关的设置项',
     },
 
+    // 配置档案管理
+    profile: {
+        manageTitle: '管理配置档案',
+        importZip: '从 ZIP 文件导入配置档案',
+        rename: '重命名',
+        duplicateAsNew: '复制为新配置档案',
+        exportZip: '导出为 ZIP',
+        delete: '删除',
+        current: '当前',
+        nameExists: '"{name}" 已存在',
+        createFailed: '创建失败',
+        renameFailed: '重命名失败',
+        duplicateFailed: '复制失败',
+        exportFailed: '导出失败',
+        importFailed: '导入失败',
+        deleteTitle: '删除配置档案',
+        deleteMessage: '确定要删除配置档案 "{name}" 吗？\n\n此操作不可撤销，该档案下的所有会话、命令和自动回复规则都会被永久删除。',
+        deleteConfirm: '删除',
+        namePlaceholder: '输入名称...',
+        create: '创建',
+        cancel: '取消',
+        newProfile: '新建配置档案',
+        import: '导入',
+        duplicate: '副本',
+    },
+
     // 会话
     session: {
         newSession: '新建会话',

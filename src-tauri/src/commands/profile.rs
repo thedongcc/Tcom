@@ -95,7 +95,7 @@ pub fn profile_create(app: tauri::AppHandle, name: String) -> Result<Value, Stri
     });
     atomic_write_str(
         &dir.join("profile.json"),
-        &serde_json::to_string_pretty(&meta).unwrap(),
+        &serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?,
     )?;
 
     Ok(serde_json::json!({ "success": true, "profile": meta }))
@@ -133,7 +133,7 @@ pub fn profile_rename(app: tauri::AppHandle, old_name: String, new_name: String)
         if let Ok(content) = fs::read_to_string(&meta_file) {
             if let Ok(mut meta) = serde_json::from_str::<Value>(&content) {
                 meta["name"] = Value::String(new_name.trim().to_string());
-                let _ = atomic_write_str(&meta_file, &serde_json::to_string_pretty(&meta).unwrap());
+                let _ = atomic_write_str(&meta_file, &serde_json::to_string_pretty(&meta).unwrap_or_default());
             }
         }
     }
@@ -179,7 +179,7 @@ pub fn profile_duplicate(app: tauri::AppHandle, old_name: String, new_name: Stri
             if let Ok(mut meta) = serde_json::from_str::<Value>(&content) {
                 meta["name"] = Value::String(new_name.trim().to_string());
                 meta["createdAt"] = Value::String(chrono_now_iso());
-                let _ = atomic_write_str(&meta_file, &serde_json::to_string_pretty(&meta).unwrap());
+                let _ = atomic_write_str(&meta_file, &serde_json::to_string_pretty(&meta).unwrap_or_default());
             }
         }
     }

@@ -174,7 +174,7 @@ pub fn backup_import_profile(app: tauri::AppHandle) -> Result<Value, String> {
                 meta["name"] = Value::String(target_name.clone());
                 let _ = fs::write(
                     &meta_file,
-                    serde_json::to_string_pretty(&meta).unwrap(),
+                    serde_json::to_string_pretty(&meta).unwrap_or_default(),
                 );
             }
         }
@@ -248,7 +248,7 @@ pub fn backup_import_all(app: tauri::AppHandle) -> Result<Value, String> {
 
     let file = fs::File::open(&zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
-    let app_data = app.path().app_data_dir().unwrap();
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;

@@ -1,0 +1,619 @@
+/**
+ * variables.css
+ * 全局 CSS 变量定义 — Dark 主题默认值 + 组件级语义映射。
+ * Light/Mono 主题覆盖在 themes.css 中。
+ */
+
+/* 
+  Fallback / IDE Placeholder for dynamically injected CSS variables 
+  These are normally injected by ThemeManager.ts, we define defaults here 
+  to quiet IDE warnings and provide a safe baseline before JS loads.
+*/
+:root {
+  --sys-bg-base: #181b1f;
+  --sys-bg-surface: #1e2227;
+  --sys-bg-elevated: #282c34;
+  --sys-bg-overlay: rgba(24, 27, 31, 0.9);
+  --sys-bg-hover: rgba(255, 255, 255, 0.08);
+  --sys-bg-active: rgba(255, 255, 255, 0.12);
+
+  --sys-text-primary: #c8ccd4;
+  --sys-text-secondary: #8b929e;
+  --sys-text-muted: #5c6370;
+  --sys-text-inverse: #ffffff;
+
+  --sys-border-base: #2d3139;
+  --sys-border-divider: #353b45;
+
+  --sys-color-primary: #4facfe;
+  --sys-color-primary-dark: #2563eb;
+
+  /* IDE warnings missing */
+  --context-menu-hover-bg: #094771;
+  --final-bg: transparent;
+  --final-border: transparent;
+  --flash-border: transparent;
+  --flash-color: transparent;
+
+  --st-command-drop-indicator: #007acc;
+  --st-command-empty-text: var(--sys-text-muted);
+  --st-config-item-bg: rgba(0, 0, 0, 0.2);
+  --st-config-success-bg: rgba(0, 128, 0, 0.2);
+  --st-editor-tabs-bg: var(--st-tab-inactive-bg, #1e2227);
+  --st-extension-active-text: var(--sys-color-primary);
+  --st-extension-user-text: #4ade80;
+  --st-extension-warning-text: #facc15;
+  --st-monitor-config-label: var(--sys-text-secondary);
+  --st-monitor-config-text: var(--sys-text-primary);
+  --st-panel-header-text: var(--sys-text-primary);
+  --st-settings-danger-bg: #ef4444;
+  --st-settings-text: var(--sys-text-primary);
+  --st-settings-title-text: var(--sys-text-primary);
+  --st-toolbar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-widget-border: var(--sys-border-divider);
+
+  /* === Phase 2: 组件级变量默认值（从 JSON 迁移到 CSS） === */
+  --extensions-sidebar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --extensions-sidebar-text: #c8ccd4;
+  --list-active-foreground: #cccccc;
+  --logsearch-btn-match-case-active-bg: #007acc;
+  --logsearch-btn-regex-active-bg: #007acc;
+  --logsearch-nav-active-bg: #007fd4;
+  --monitor-bubble-rx-border: #6a9955;
+  --monitor-bubble-tx-border: #d16969;
+  --monitor-options-hover-bg: #4a4a4a;
+  --monitor-rx-label-bg: #6A99554D;
+  --monitor-rx-label-border: #6a995566;
+  --monitor-tx-label-bg: #0E639C4D;
+  --monitor-tx-label-border: #0E639C66;
+  --st-accent: #4facfe;
+  --st-btn-primary-bg: #2563eb;
+  --st-btn-primary-hover: #3b82f6;
+  --st-btn-secondary-bg: #303640;
+  --st-btn-send-bg: #2563eb;
+  --st-btn-switch-active-bg: #007acc;
+  --st-config-muted-text: #969696;
+  --st-config-success-text: #4ec9b0;
+  --st-config-title-text: #666666;
+  --st-contextmenu-text-hover: #ffffff;
+  --st-dropdown-bg: #252526;
+  --st-error-text: #f48771;
+  --st-graph-canvas-bg: color-mix(in srgb, #181b1f calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-graph-divider: #2d3139;
+  --st-graph-icon-bus: #dcdcaa;
+  --st-graph-icon-pair: #c586c0;
+  --st-graph-icon-physical: #ce9178;
+  --st-graph-icon-virtual: #4ec9b0;
+  --st-graph-node-title: #e0e0e0;
+  --st-graph-port-border: #666666;
+  --st-graph-port-hover-bg: #555555;
+  --st-graph-port-hover-border: #ffffff;
+  --st-graph-subnode-bg: color-mix(in srgb, #111111 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-graph-subnode-border: #333333;
+  --st-graph-toolbar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-graph-toolbar-border: #2d3139;
+  --st-input-bg: var(--input-background);
+  --st-input-border: #2d3139;
+  --st-input-btn-mode-hex-active-bg: #0e639c;
+  --st-input-btn-mode-txt-active-bg: #0e639c;
+  --st-input-btn-send-bg: #0e639c;
+  --st-input-btn-text: #cccccc;
+  --st-input-btn-timer-active-bg: #0e639c;
+  --st-input-focus-border: #007acc;
+  --st-input-text: #d4d4d4;
+  --st-input-timer-unit-text: #666666;
+  --st-menu-bg: #1e2227;
+  --st-monitor-btn-autoscroll-active-bg: #0e639c;
+  --st-monitor-btn-export-bg: #0e639c;
+  --st-monitor-btn-filter-rx-active-bg: #22c55e;
+  --st-monitor-btn-filter-tx-active-bg: #d16969;
+  --st-monitor-btn-target-physical-active-bg: #22c55e;
+  --st-monitor-btn-target-virtual-active-bg: #0e639c;
+  --st-monitor-btn-text: #cccccc;
+  --st-monitor-btn-view-hex-active-bg: #0e639c;
+  --st-monitor-btn-view-txt-active-bg: #0e639c;
+  --st-monitor-empty-text: #666666;
+  --st-monitor-log-rx-label-bg: #6a995533;
+  --st-monitor-log-tx-label-bg: #d1696933;
+  --st-monitor-rx-bg: var(--editor-background);
+  --st-monitor-rx-label-text: #AAAAAA;
+  --st-monitor-status-offline: #ef4444;
+  --st-monitor-status-online: #22c55e;
+  --st-monitor-tab-active-text: #ffffff;
+  --st-monitor-tab-inactive-text: #cccccc;
+  --st-monitor-timestamp: #999999;
+  --st-monitor-tx-label-text: #AAAAAA;
+  --st-monitor-virtual-label-text: #cccccc;
+  --st-mqtt-btn-autoscroll-active-bg: #0e639c;
+  --st-mqtt-btn-autoscroll-active-text: #ffffff;
+  --st-mqtt-btn-autoscroll-bg: transparent;
+  --st-mqtt-btn-autoscroll-border: transparent;
+  --st-mqtt-btn-autoscroll-hover-bg: #3c3c3c;
+  --st-mqtt-btn-autoscroll-icon: #cccccc;
+  --st-mqtt-btn-clear-bg: transparent;
+  --st-mqtt-btn-clear-border: transparent;
+  --st-mqtt-btn-clear-hover-bg: #3c3c3c;
+  --st-mqtt-btn-clear-icon: #cccccc;
+  --st-mqtt-btn-filter-rx-active-bg: #22c55e;
+  --st-mqtt-btn-filter-rx-active-text: #ffffff;
+  --st-mqtt-btn-filter-rx-bg: transparent;
+  --st-mqtt-btn-filter-rx-hover-bg: #3c3c3c;
+  --st-mqtt-btn-filter-rx-text: #cccccc;
+  --st-mqtt-btn-filter-tx-active-bg: #d16969;
+  --st-mqtt-btn-filter-tx-active-text: #ffffff;
+  --st-mqtt-btn-filter-tx-bg: transparent;
+  --st-mqtt-btn-filter-tx-hover-bg: #3c3c3c;
+  --st-mqtt-btn-filter-tx-text: #cccccc;
+  --st-mqtt-btn-options-bg: transparent;
+  --st-mqtt-btn-options-border: transparent;
+  --st-mqtt-btn-options-text: #cccccc;
+  --st-mqtt-btn-send-bg: #0e639c;
+  --st-mqtt-btn-view-active-bg: #0e639c;
+  --st-mqtt-btn-view-active-text: #ffffff;
+  --st-mqtt-btn-view-bg: transparent;
+  --st-mqtt-btn-view-hover-bg: #3c3c3c;
+  --st-mqtt-btn-view-text: #cccccc;
+  --st-mqtt-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-mqtt-filter-group-border: #454545;
+  --st-mqtt-filter-group-divider: #454545;
+  --st-mqtt-options-hover-bg: #4a4a4a;
+  --st-mqtt-toolbar-divider: #454545;
+  --st-mqtt-topic-default-rx-color: #4ec9b0;
+  --st-mqtt-topic-default-tx-color: #007acc;
+  --st-mqtt-topic-selected-text: #4ec9b0;
+  --st-mqtt-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-mqtt-view-group-border: #454545;
+  --st-panel-action-hover: #cccccc;
+  --st-panel-muted-text: #969696;
+  --st-popover-bg: #252526;
+  --st-popover-border: #3c3c3c;
+  --st-search-text: #cccccc;
+  --st-select-item-text: #cccccc;
+  --st-serial-btn-autoscroll-active-bg: #0e639c;
+  --st-serial-btn-autoscroll-active-text: #ffffff;
+  --st-serial-btn-autoscroll-bg: transparent;
+  --st-serial-btn-autoscroll-border: transparent;
+  --st-serial-btn-autoscroll-hover-bg: #3c3c3c;
+  --st-serial-btn-autoscroll-icon: #cccccc;
+  --st-serial-btn-clear-bg: transparent;
+  --st-serial-btn-clear-border: transparent;
+  --st-serial-btn-clear-hover-bg: #3c3c3c;
+  --st-serial-btn-clear-icon: #cccccc;
+  --st-serial-btn-crc-active-bg: #0e639c;
+  --st-serial-btn-filter-rx-active-bg: #6a9955;
+  --st-serial-btn-filter-rx-active-text: #ffffff;
+  --st-serial-btn-filter-rx-bg: transparent;
+  --st-serial-btn-filter-rx-hover-bg: #3c3c3c;
+  --st-serial-btn-filter-rx-text: #cccccc;
+  --st-serial-btn-filter-tx-active-bg: #0e639c;
+  --st-serial-btn-filter-tx-active-text: #ffffff;
+  --st-serial-btn-filter-tx-bg: transparent;
+  --st-serial-btn-filter-tx-hover-bg: #3c3c3c;
+  --st-serial-btn-filter-tx-text: #cccccc;
+  --st-serial-btn-options-bg: transparent;
+  --st-serial-btn-options-border: transparent;
+  --st-serial-btn-options-hover-bg: #094771;
+  --st-serial-btn-options-text: #cccccc;
+  --st-serial-btn-view-active-bg: #0e639c;
+  --st-serial-btn-view-active-text: #ffffff;
+  --st-serial-btn-view-bg: transparent;
+  --st-serial-btn-view-hover-bg: #3c3c3c;
+  --st-serial-btn-view-text: #cccccc;
+  --st-serial-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-serial-filter-group-border: #454545;
+  --st-serial-filter-group-divider: #454545;
+  --st-serial-options-hover-bg: #4a4a4a;
+  --st-serial-toolbar-divider: #454545;
+  --st-serial-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-serial-view-group-border: #454545;
+  --st-session-serial-text: #e8b575;
+  --st-settings-btn-cancel-hover: #3c3c3c;
+  --st-settings-btn-disabled-bg: #3c3c3c;
+  --st-settings-btn-disabled-text: #888888;
+  --st-settings-danger-bg-subtle: rgba(161, 38, 13, 0.2);
+  --st-settings-danger-hover: #c93f24;
+  --st-settings-danger-text: #ffffff;
+  --st-settings-danger-title: #f48771;
+  --st-settings-footer-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-settings-footer-border: #3c3c3c;
+  --st-settings-text-hover: #ffffff;
+  --st-switch-text-hover: #ffffff;
+  --st-tab-active-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-tab-active-text: #e0e4ec;
+  --st-tab-border: #353b45;
+  --st-tab-inactive-bg: color-mix(in srgb, #15181c calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-tab-inactive-text: #6b7280;
+  --st-ter-btn-autoscroll-active-text: #ffffff;
+  --st-ter-btn-autoscroll-bg: transparent;
+  --st-ter-btn-autoscroll-border: transparent;
+  --st-ter-btn-autoscroll-hover-bg: #3c3c3c;
+  --st-ter-btn-autoscroll-icon: #cccccc;
+  --st-ter-btn-clear-bg: transparent;
+  --st-ter-btn-clear-border: transparent;
+  --st-ter-btn-clear-hover-bg: #3c3c3c;
+  --st-ter-btn-clear-icon: #cccccc;
+  --st-ter-btn-filter-rx-active-text: #ffffff;
+  --st-ter-btn-filter-rx-bg: transparent;
+  --st-ter-btn-filter-rx-hover-bg: #3c3c3c;
+  --st-ter-btn-filter-rx-text: #cccccc;
+  --st-ter-btn-filter-tx-active-text: #ffffff;
+  --st-ter-btn-filter-tx-bg: transparent;
+  --st-ter-btn-filter-tx-hover-bg: #3c3c3c;
+  --st-ter-btn-filter-tx-text: #cccccc;
+  --st-ter-btn-options-bg: transparent;
+  --st-ter-btn-options-border: transparent;
+  --st-ter-btn-options-text: #cccccc;
+  --st-ter-btn-view-active-text: #ffffff;
+  --st-ter-btn-view-bg: transparent;
+  --st-ter-btn-view-hover-bg: #3c3c3c;
+  --st-ter-btn-view-text: #cccccc;
+  --st-ter-filter-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-ter-filter-group-border: #454545;
+  --st-ter-filter-group-divider: #454545;
+  --st-ter-toolbar-divider: #454545;
+  --st-ter-view-group-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-ter-view-group-border: #454545;
+  --st-terminal-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --st-timestamp: #569cd6;
+  --st-toast-icon-hover: #ffffff;
+  --st-toast-text: #cccccc;
+  --st-token-arrow: #666666;
+  --st-token-auto-inc: #c586c0;
+  --st-token-crc: #4ec9b0;
+  --st-token-divider: #333333;
+  --st-token-flag: #c586c0;
+  --st-token-random: #ce9178;
+  --st-token-timestamp: #4fc1ff;
+  --st-tooltip-bg: #252526;
+  --st-tooltip-border: #454545;
+  --st-tooltip-text: #cccccc;
+  --st-update-btn-bg: #3c3c3c;
+  --st-update-btn-hover: #4c4c4c;
+  --st-update-btn-text: #ffffff;
+  --st-update-spinner: #007acc;
+  --st-update-text: #cccccc;
+  --switch-active-bg: #007acc;
+  --theme-editor-scrollbar-hover: rgba(255, 255, 255, 0.15);
+  --theme-editor-scrollbar-thumb: rgba(255, 255, 255, 0.1);
+}
+
+/* 主题 CSS 变量由 JS 动态注入到 :root（见 src/themes/index.ts applyTheme）*/
+/* :root 中的 Dark 主题变量作为默认值，防止 JS 加载前页面闪烁 */
+
+:root {
+  /* Dark+ (Default) */
+  --app-background: var(--sys-bg-base);
+  --sidebar-background: var(--sys-bg-surface);
+  --activitybar-background: var(--sys-bg-elevated);
+  /* 侧栏图标栏（层级同标题栏） */
+  --statusbar-background: var(--sys-bg-surface);
+  --statusbar-debugging-background: #cc6633;
+  --titlebar-background: var(--sys-bg-elevated);
+  /* 标题栏用最亮层级 */
+  --panel-background: var(--sys-bg-base);
+  --border-color: var(--sys-border-base);
+  --app-foreground: var(--sys-text-primary);
+  --input-background: var(--sys-bg-elevated);
+  --input-foreground: var(--sys-text-primary);
+  --input-border-color: var(--sys-bg-elevated);
+  --input-placeholder-color: #a6a6a6;
+  --hover-background: var(--sys-bg-hover);
+  --selection-background: color-mix(in srgb, #094771 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --accent-color: var(--sys-color-primary);
+  --focus-border-color: var(--sys-color-primary);
+  --list-hover-background: var(--sys-bg-hover);
+  --list-active-background: var(--sys-bg-active);
+
+  /* Editor - Dark */
+  --editor-background: var(--sys-bg-base);
+
+  /* Checkbox - Dark */
+  --checkbox-background: var(--sys-color-primary);
+  --checkbox-border-color: var(--sys-color-primary);
+  --checkbox-foreground: var(--sys-text-inverse);
+
+  /* Settings - Dark */
+  --settings-header-background: var(--sys-bg-surface);
+  --settings-row-hover-background: var(--sys-bg-hover);
+
+  /* Scrollbar - Dark */
+  --scrollbar-shadow-color: #000000;
+  --scrollbar-slider-color: #79797966;
+  --scrollbar-slider-hover-color: #646464bb;
+  --scrollbar-slider-active-color: #bfbfbf66;
+
+  /* Additional Widgets - Dark */
+  --widget-background: var(--sys-bg-surface);
+  --widget-border-color: var(--sys-border-divider);
+
+  /* Dropdown - Dark（Overlay 层 → 背景图模式下半透明不崩盘） */
+  --dropdown-background: var(--sys-bg-overlay);
+  --dropdown-border-color: var(--sys-border-divider);
+  --dropdown-item-hover-background: #094771;
+  --dropdown-item-selected-foreground: var(--sys-text-inverse);
+
+  /* Buttons & Links - Dark */
+  --button-background: var(--sys-color-primary-dark);
+  --button-foreground: var(--sys-text-inverse);
+  --button-hover-background: #1177bb;
+  --button-secondary-background: var(--sys-bg-elevated);
+  --button-secondary-hover-background: #4a4a4a;
+  --link-foreground: #3794ff;
+
+  --activitybar-inactive-foreground: var(--sys-text-secondary);
+
+  /* Menu - Dark（Overlay 层） */
+  --menu-background: var(--sys-bg-overlay);
+  --menu-foreground: var(--sys-text-primary);
+  --menu-border-color: var(--sys-border-divider);
+
+  --font-mono: 'AppCoreFont', 'Microsoft YaHei', monospace;
+
+  /* 字体排版默认值：防止 JS 注入前首帧字体大小异常 */
+  --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
+  --st-font-size: 15px;
+  --st-line-height: 1.5;
+
+  /* JSON Syntax Highlighting - Default (Dark) */
+  --st-json-key: #9cdcfe;
+  --st-json-string: #ce9178;
+  --st-json-number: #b5cea8;
+  --st-json-boolean: #569cd6;
+  --st-json-punctuation: #ffd700;
+  --st-json-null: #569cd6;
+
+  /* Control Characters Styles */
+  --st-ctrl-char-fg: var(--sys-text-secondary);
+  --st-ctrl-char-bg: rgba(128, 128, 128, 0.1);
+  --st-ctrl-char-border: rgba(128, 128, 128, 0.2);
+
+  /* === Component Tokens (Mapped to Semantic) === */
+
+  /* TitleBar */
+  --st-titlebar-text: var(--app-foreground);
+  --st-titlebar-icon: var(--sys-text-secondary);
+  --st-titlebar-icon-hover: var(--app-foreground);
+
+  /* ActivityBar */
+  --st-activitybar-icon-hover: var(--app-foreground);
+  --st-activitybar-icon-active: var(--sys-text-inverse);
+  --activitybar-active-border: var(--sys-color-primary);
+  --st-activitybar-menu-text: var(--app-foreground);
+
+  /* SideBar */
+  --st-sidebar-title-text: var(--sys-text-secondary);
+  --st-sidebar-text: var(--app-foreground);
+  --st-sidebar-muted-text: var(--sys-text-muted);
+  --st-sidebar-action-hover: var(--sys-bg-hover);
+  --st-sidebar-panel-bg: var(--sidebar-background);
+
+  /* StatusBar */
+  --st-statusbar-text: var(--sys-text-inverse);
+  --st-statusbar-divider: rgba(255, 255, 255, 0.2);
+  --st-statusbar-btn-bg: transparent;
+  --st-statusbar-btn-hover: var(--hover-background);
+  --st-statusbar-success-text: var(--st-status-success);
+  --st-statusbar-icon: var(--sys-text-secondary);
+
+  /* Status Colors (Semantic System additions) */
+  --st-status-success: #22c55e;
+  --st-status-error: #ef4444;
+  --st-status-warning: #eab308;
+  --st-status-info: #3b82f6;
+  --st-status-success-bg: rgba(34, 197, 94, 0.1);
+  --st-status-error-bg: rgba(239, 68, 68, 0.1);
+  --st-status-warning-bg: rgba(234, 179, 8, 0.1);
+  --st-status-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* CustomSelect */
+  --st-select-bg: var(--input-background);
+  --st-select-border: var(--input-border-color);
+  --st-select-text: var(--input-foreground);
+  --st-select-hover: var(--hover-background);
+  --st-select-selected: var(--focus-border-color);
+
+  /* LogSearch */
+  --st-logsearch-bg: var(--widget-background);
+  --st-logsearch-border: var(--widget-border-color);
+  --st-logsearch-text: var(--sys-text-primary);
+  --st-logsearch-match-highlight: rgba(167, 139, 250, 0.2);
+
+  /* SerialInput Toolbar */
+  --st-sendarea-toolbar-bg: var(--editor-background);
+  --st-sendarea-toolbar-border: var(--widget-border-color);
+  --st-sendarea-toolbar-active: var(--accent-color);
+
+  /* Toast & Tooltip additions */
+  --st-toast-bg: var(--widget-background);
+  --st-toast-border: var(--widget-border-color);
+
+  /* Session List Item */
+  --st-list-item-bg: transparent;
+  --session-item-hover-bg: var(--list-hover-background);
+  --session-item-active-bg: var(--list-active-background);
+  --session-item-active-border: var(--sys-color-primary);
+  --session-item-foreground: var(--app-foreground);
+
+  /* Serial Monitor — Chrome 沉浸模式 */
+  --st-monitor-log-bg: var(--editor-background);
+  --st-monitor-toolbar-bg: var(--editor-background);
+  --st-monitor-toolbar-border: var(--widget-border-color);
+  --st-monitor-toolbar-foreground: var(--app-foreground);
+  --st-monitor-divider: var(--widget-border-color);
+
+  /* Serial Input */
+  --st-sendarea-bg: var(--widget-background);
+  --input-focus-border-color: var(--focus-border-color);
+
+  /* Monitor Bubble */
+  --st-msg-bubble-border: var(--widget-border-color);
+  --st-rx-bg: rgba(0, 0, 0, 0.2);
+  --st-tx-bg: rgba(255, 255, 255, 0.05);
+  --st-rx-text: var(--app-foreground);
+  --st-tx-text: var(--app-foreground);
+
+  /* Tcom Sending distinctive colors */
+  --st-tcom-v-bg: rgba(139, 92, 246, 0.15);
+  --st-tcom-v-border: rgba(139, 92, 246, 0.4);
+  --st-tcom-v-text: #a78bfa;
+  --st-tcom-v-msg-text: #c4b5fd;
+
+  --st-tcom-p-bg: rgba(14, 165, 233, 0.15);
+  --st-tcom-p-border: rgba(14, 165, 233, 0.4);
+  --st-tcom-p-text: #38bdf8;
+  --st-tcom-p-msg-text: #7dd3fc;
+
+  /* MQTT Monitor — Chrome 沉浸模式 */
+  --st-mqtt-toolbar-bg: var(--editor-background);
+  --st-mqtt-monitor-bg: var(--editor-background);
+  --st-mqtt-toolbar-border: var(--widget-border-color);
+
+  /* Theme Editor - Dark (Default) */
+  --theme-editor-bg: color-mix(in srgb, #1e1e1e calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --theme-editor-border: rgba(255, 255, 255, 0.08);
+  --theme-editor-card-bg: rgba(255, 255, 255, 0.02);
+  --theme-editor-card-border: rgba(255, 255, 255, 0.06);
+  --theme-editor-card-hover: rgba(255, 255, 255, 0.04);
+  --theme-editor-input-bg: rgba(255, 255, 255, 0.04);
+  --theme-editor-input-border: rgba(255, 255, 255, 0.1);
+  --theme-editor-input-focus: rgba(255, 255, 255, 0.06);
+  --theme-editor-btn-bg: rgba(255, 255, 255, 0.04);
+  --theme-editor-btn-hover: rgba(255, 255, 255, 0.07);
+  --theme-editor-inspect-bg: rgba(79, 70, 229, 0.1);
+  --theme-editor-inspect-border: rgba(79, 70, 229, 0.2);
+  --theme-editor-inspect-text: #818cf8;
+  --theme-editor-inspect-hover: rgba(79, 70, 229, 0.2);
+  --theme-editor-match-bg: rgba(167, 139, 250, 0.08);
+  --theme-editor-match-border: rgba(167, 139, 250, 0.2);
+  --theme-editor-match-text: #c084fc;
+
+  /* Dialog（Overlay 层 → 背景图模式下保持可读） */
+  --st-dialog-header-bg: var(--sys-bg-overlay);
+  --st-dialog-content-bg: var(--sys-bg-overlay);
+  --st-dialog-footer-bg: var(--sys-bg-overlay);
+  --st-dialog-text: var(--app-foreground);
+  --st-dialog-border: var(--widget-border-color);
+  --st-dialog-muted-text: var(--sys-text-secondary);
+  --st-dialog-icon-hover: var(--app-foreground);
+
+  /* === 独立专属 Component Tokens === */
+
+  /* 会话列表侧边栏 */
+  --session-list-sidebar-bg: var(--sidebar-background);
+  --session-list-sidebar-text: var(--st-sidebar-text);
+  --session-list-sidebar-muted: var(--st-sidebar-muted-text);
+  --session-list-sidebar-border: var(--border-color);
+  --session-list-sidebar-header-bg: var(--sidebar-background);
+
+  /* 指令侧边栏 */
+  --command-sidebar-bg: var(--sidebar-background);
+  --command-sidebar-text: var(--st-sidebar-text);
+  --command-sidebar-border: var(--border-color);
+  --command-sidebar-empty-text: var(--st-command-empty-text);
+  --command-sidebar-drop-indicator: var(--st-command-drop-indicator);
+
+  /* 模块管理侧边栏 */
+  --module-manager-bg: var(--sidebar-background);
+  --module-manager-text: var(--st-sidebar-text);
+  --module-manager-border: var(--border-color);
+  --module-manager-item-hover: var(--list-hover-background);
+
+  /* 串口配置侧边栏 */
+  --serial-config-bg: var(--sidebar-background);
+  --serial-config-text: var(--st-monitor-config-text);
+  --serial-config-label: var(--st-monitor-config-label);
+
+  /* MQTT 配置面板 */
+  --mqtt-config-bg: var(--st-config-item-bg);
+  --mqtt-config-text: var(--st-monitor-config-text);
+  --mqtt-config-input-bg: var(--input-background);
+  --mqtt-config-input-text: var(--input-foreground);
+  --mqtt-config-success-bg: var(--st-config-success-bg);
+
+  /* 虚拟串口终端 — Chrome 沉浸模式 */
+  --monitor-terminal-bg: var(--editor-background);
+  --monitor-terminal-toolbar-bg: var(--editor-background);
+  --monitor-terminal-toolbar-border: var(--st-widget-border);
+  --monitor-terminal-toolbar-text: var(--st-monitor-toolbar-foreground);
+
+  /* 编辑器主区域 Tab 栏 */
+  --editor-area-bg: var(--app-background);
+  --editor-area-tabs-bg: var(--st-editor-tabs-bg);
+  --editor-area-tab-border: var(--widget-border-color);
+  --editor-area-tab-text: var(--st-panel-header-text);
+  --editor-area-accent: var(--accent-color);
+
+  /* 右键菜单 — Overlay 层 */
+  --context-menu-bg: var(--sys-bg-overlay);
+  --context-menu-text: var(--menu-foreground);
+  --context-menu-border: var(--menu-border-color);
+  --context-menu-item-hover: var(--context-menu-hover-bg);
+
+  /* 设置编辑器 */
+  --settings-editor-bg: var(--editor-background);
+  --settings-editor-toolbar-bg: var(--widget-background);
+  --settings-editor-title-text: var(--st-settings-title-text);
+  --settings-editor-text: var(--st-settings-text);
+  --settings-editor-danger-bg: var(--st-settings-danger-bg);
+
+  /* 新建会话对话框 */
+  --new-session-dialog-bg: var(--st-dialog-content-bg);
+  --new-session-dialog-header-bg: var(--st-dialog-header-bg);
+  --new-session-dialog-text: var(--st-dialog-text);
+  --new-session-dialog-border: var(--menu-border-color);
+
+  /* StatusBar 按钮/状态 */
+  --statusbar-btn-hover: var(--hover-background);
+  --statusbar-btn-text: var(--st-statusbar-text);
+  --statusbar-icon: var(--st-statusbar-text);
+  --statusbar-success-text: #4ec9b0;
+
+  /* CustomSelect */
+  --custom-select-bg: var(--dropdown-background);
+  --custom-select-text: var(--app-foreground);
+  --custom-select-border: var(--dropdown-border-color);
+  --custom-select-hover: var(--dropdown-item-hover-background);
+  --custom-select-selected-text: var(--dropdown-item-selected-foreground);
+  --custom-select-trigger-bg: var(--input-background);
+
+  /* LogSearch 搜索栏 */
+  --log-search-bg: var(--widget-background);
+  --log-search-border: var(--widget-border-color);
+  --log-search-text: var(--app-foreground);
+  --log-search-input-bg: var(--input-background);
+  --log-search-match-bg: rgba(234, 179, 8, 0.3);
+
+  /* SerialInput 工具栏 */
+  --serial-input-toolbar-bg: var(--widget-background);
+  --serial-input-toolbar-border: var(--widget-border-color);
+  --serial-input-toolbar-text: var(--app-foreground);
+  --serial-input-mode-active-bg: var(--accent-color);
+  --serial-input-mode-active-text: var(--button-foreground);
+
+  /* Tooltip */
+  --tooltip-bg: #383838;
+  --tooltip-text: var(--app-foreground);
+  --tooltip-border: var(--widget-border-color);
+
+  /* Toast — Overlay 层 */
+  --toast-bg: var(--sys-bg-overlay);
+  --toast-text: var(--app-foreground);
+  --toast-border: var(--widget-border-color);
+  --toast-success-bg: rgba(34, 197, 94, 0.15);
+  --toast-error-bg: rgba(239, 68, 68, 0.15);
+
+  /* ConfirmDialog */
+  --confirm-dialog-bg: var(--st-dialog-content-bg);
+  --confirm-dialog-header-bg: var(--st-dialog-header-bg);
+  --confirm-dialog-text: var(--st-dialog-text);
+  --confirm-dialog-border: var(--menu-border-color);
+  --confirm-dialog-danger-bg: #a1260d;
+  --confirm-dialog-danger-hover: #c4250a;
+
+  /* UpdateDialog */
+  --update-dialog-bg: var(--st-dialog-content-bg);
+  --update-dialog-header-bg: var(--st-dialog-header-bg);
+  --update-dialog-text: var(--st-dialog-text);
+  --update-dialog-border: var(--menu-border-color);
+  --update-dialog-progress-bg: var(--accent-color);
+}
