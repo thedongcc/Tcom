@@ -85,12 +85,27 @@ pub fn theme_load_all(app: tauri::AppHandle) -> Result<Value, String> {
                         let base_name = path.file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown");
-                        themes.push(serde_json::json!({
+                        // name: JSON 内有则使用，否则 fallback 到文件名
+                        let display_name = parsed.get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(base_name);
+                        // 图片主题判断：字段 image:true 或旧格式 type:"image"
+                        let is_image = parsed.get("image")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false)
+                            || parsed.get("type")
+                            .and_then(|v| v.as_str())
+                            .map(|t| t == "image")
+                            .unwrap_or(false);
+                        let mut obj = serde_json::json!({
                             "id": base_name,
-                            "name": base_name,
-                            "type": parsed.get("type").and_then(|v| v.as_str()).unwrap_or("dark"),
+                            "name": display_name,
                             "colors": parsed["colors"]
-                        }));
+                        });
+                        if is_image {
+                            obj["image"] = serde_json::Value::Bool(true);
+                        }
+                        themes.push(obj);
                     }
                 }
             }

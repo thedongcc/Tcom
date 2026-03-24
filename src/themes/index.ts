@@ -1,7 +1,8 @@
 export interface ThemeDefinition {
     id: string;
     name: string;
-    type: 'light' | 'dark';
+    /** 图片主题标识：true = 需要背景图；普通主题不写此字段 */
+    image?: true;
     colors: Record<string, string>;
 }
 
@@ -84,9 +85,8 @@ export function applyTheme(theme: ThemeDefinition): void {
         }
     });
 
-    // 标记当前主题 ID 和类型，供 CSS 选择器匹配
+    // 标记当前主题 ID，供 CSS 选择器匹配
     root.setAttribute('data-theme', theme.id);
-    root.setAttribute('data-theme-type', theme.type);
 
     // 清除所有旧的主题 class
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim();
@@ -114,16 +114,17 @@ export function importTheme(json: string): ThemeDefinition | null {
         const parsed = JSON.parse(json);
         if (
             typeof parsed.id === 'string' &&
-            typeof parsed.name === 'string' &&
             typeof parsed.colors === 'object' &&
             parsed.colors !== null
         ) {
-            return {
+            const result: ThemeDefinition = {
                 id: parsed.id,
-                name: parsed.name,
-                type: parsed.type === 'light' ? 'light' : 'dark',
+                name: typeof parsed.name === 'string' ? parsed.name : parsed.id,
                 colors: parsed.colors,
             };
+            // image 字段：true 表示图片主题
+            if (parsed.image === true || parsed.type === 'image') result.image = true;
+            return result;
         }
     } catch {
         // 解析失败

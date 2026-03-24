@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化状态栏设置
 - 主题颜色完整性优化
 - 工具栏数据筛选按钮位置调换
+- 优化配色方案文件
 
 ### Removed
 - 取消侧边栏右键配置显示隐藏功能

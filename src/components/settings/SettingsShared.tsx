@@ -68,12 +68,12 @@ export const SettingRow = ({
 export const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
     <div
         onClick={onChange}
-        className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all ${checked
+        className={`w-[15px] h-[15px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all ${checked
             ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
             : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
             }`}
     >
-        {checked && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+        {checked && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
     </div>
 );
 

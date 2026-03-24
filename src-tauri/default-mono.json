@@ -1,6 +1,4 @@
 {
-  "name": "黑白",
-  "type": "dark",
   "colors": {
     "--sys-bg-base": "#000000",
     "--sys-bg-surface": "#000000",

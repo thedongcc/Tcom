@@ -1,6 +1,4 @@
 {
-  "name": "Dark",
-  "type": "dark",
   "colors": {
     "--app-background": "#181b1f",
     "--app-foreground": "#c8ccd4",

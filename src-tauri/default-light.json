@@ -1,6 +1,4 @@
 {
-  "name": "Light",
-  "type": "light",
   "colors": {
     "--app-background": "#fafbfc",
     "--app-foreground": "#1e293b",

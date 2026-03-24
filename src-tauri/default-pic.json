@@ -1,6 +1,5 @@
 {
-  "name": "Pic",
-  "type": "dark",
+  "image": true,
   "colors": {
     "--app-background": "rgba(24, 27, 31, 0.35)",
     "--app-foreground": "#c8ccd4",

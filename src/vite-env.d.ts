@@ -144,7 +144,7 @@ declare global {
             updateTitleBar?: (config: { bgColor: string; symbolColor: string }) => void;
             openFolder?: () => void;
             openFile?: (themeId: string) => void;
-            loadAll?: () => Promise<{ success: boolean; themes: Array<{ id: string; name: string; type: 'light' | 'dark'; colors: Record<string, string> }> }>;
+            loadAll?: () => Promise<{ success: boolean; themes: Array<{ id: string; name: string; image?: true; colors: Record<string, string> }> }>;
             componentPicked?: (data: { className: string; outerHTML: string; tagName: string }) => void;
         }
         EyeDropper?: unknown;

@@ -9,7 +9,7 @@
  * - useSettingsActions.ts — 导入导出/重置等操作逻辑
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore, Eye } from 'lucide-react';
+import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore, Eye, Settings2 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { confirm } from '../../services/confirmManager';
@@ -118,6 +118,9 @@ export const SettingsEditor = () => {
             }
         });
     }, [availableThemes, config.theme]);
+    // 显示状态栏设置展开控制
+    const [showStatusBarOptions, setShowStatusBarOptions] = useState(false);
+
     const settingSections: SettingSection[] = [
         {
             title: t('settings.groups.appearance'),
@@ -349,9 +352,22 @@ export const SettingsEditor = () => {
                 {
                     label: t('settings.layout.showStatusBar'),
                     description: t('settings.layout.showStatusBarDesc'),
-                    expandedContent: config.ui.showStatusBar ? <StatusBarSettingsInline /> : undefined,
+                    expandedContent: showStatusBarOptions ? <StatusBarSettingsInline /> : undefined,
                     render: () => (
-                        <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
+                        <div className="flex items-center gap-2">
+                            <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
+                            <button
+                                onClick={() => setShowStatusBarOptions(v => !v)}
+                                title="状态栏详细设置"
+                                className={`p-1 rounded transition-colors ${
+                                    showStatusBarOptions
+                                        ? 'text-[var(--accent-color)] bg-[var(--list-hover-background)]'
+                                        : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
+                                }`}
+                            >
+                                <Settings2 size={14} />
+                            </button>
+                        </div>
                     ),
                 },
             ],

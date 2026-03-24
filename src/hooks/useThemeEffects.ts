@@ -13,9 +13,15 @@ import type { ThemeDefinition } from '../themes';
 import { applyTheme } from '../themes';
 
 /**
- * 判断主题是否支持背景图（Pic 主题）
+ * 判断主题是否为图片主题（image === true）
+ * - 传入主题列表时，查找对应 ThemeDefinition 以 image 字段判断
+ * - 无法查到时降级为 id === 'pic'（向后兼容旧版本）
  */
-export function isGlassTheme(themeId: string): boolean {
+export function isGlassTheme(themeId: string, themes?: ThemeDefinition[]): boolean {
+    if (themes) {
+        const def = themes.find(t => t.id === themeId);
+        if (def) return def.image === true;
+    }
     return themeId === 'pic';
 }
 
