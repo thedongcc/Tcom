@@ -179,7 +179,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
             scrollPositions.set(session.id, scrollRef.current.scrollHeight);
         }
-    }, [filteredLogs.length, autoScroll, session.id]);
+    }, [filteredLogs, autoScroll, session.id]);
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) {

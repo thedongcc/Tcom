@@ -43,6 +43,7 @@ export interface ThemeConfig {
     images: ThemeImages;
     typography: ThemeTypography;
     timestampFormat: string; // 例如 "HH:mm:ss.SSS"
+    maxLogEntries: number; // 屏幕最大保留日志条数
     language: 'zh-CN' | 'en-US';
     ui: UIConfig;
     keybindings: KeybindingsConfig;
@@ -57,6 +58,7 @@ export const DEFAULT_THEME: ThemeConfig = {
         lineHeight: 1.5
     },
     timestampFormat: 'HH:mm:ss.SSS',
+    maxLogEntries: 1000,
     language: 'zh-CN',
     ui: {
         sidebarPosition: 'left',

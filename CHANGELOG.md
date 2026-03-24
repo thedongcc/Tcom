@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 重构主题系统
 - 重构设置页面
 - 工具栏后面增加连接和断开按钮
+- 增加屏幕最大日志缓冲数设置
+- 增加输入框输入内容限制
 
 ### Fixed
 - 修复工作区加载问题

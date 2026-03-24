@@ -79,7 +79,7 @@ pub fn serial_timed_send_start_dynamic(
     connection_id: String,
     frames: Vec<Vec<u8>>,
     interval_ms: u64,
-    _timestamp_slots: Value,
+    timestamp_slots: Vec<timer::TimestampSlot>,
 ) -> Result<Value, String> {
-    timer::start_dynamic_timed_send(&app, connection_id, frames, interval_ms)
+    timer::start_dynamic_timed_send(&app, connection_id, frames, interval_ms, timestamp_slots)
 }

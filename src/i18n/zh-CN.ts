@@ -158,6 +158,8 @@ export const zhCN = {
         logFormat: {
             timestampFormat: '时间戳格式',
             timestampFormatDesc: '可用占位符：HH(时)、mm(分)、ss(秒)、SSS(毫秒)',
+            maxLogEntries: '屏幕最大日志缓冲数',
+            maxLogEntriesDesc: '日志超载时从顶端丢弃旧日志，设置过大可能导致渲染卡顿崩溃',
             bgImage: '背景图片',
             bgImageDesc: '设置整个应用的背景图片（本地文件或 https:// URL）',
             bgImagePlaceholder: '无',

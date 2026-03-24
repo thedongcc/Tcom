@@ -151,7 +151,7 @@ export function useMonitorTerminalState(session: SessionState) {
     // ── 自动滚动 ──
     useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) { scrollRef.current.scrollTop = scrollRef.current.scrollHeight; scrollPositions.set(session.id, scrollRef.current.scrollHeight); }
-    }, [filteredLogs.length, autoScroll, session.id]);
+    }, [filteredLogs, autoScroll, session.id]);
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) { scrollRef.current.scrollTop = scrollPositions.get(session.id)!; }

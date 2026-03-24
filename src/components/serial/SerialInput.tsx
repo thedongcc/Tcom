@@ -42,8 +42,10 @@ interface SerialInputProps {
     hideExtras?: boolean;
     /** Hide top border (e.g. when nested inside Monitor with target selector) */
     hideBorderTop?: boolean;
-    /** 原生高精度定时器启动接口 */
+    /** 原生高精度定时器启动接口（固定帧）*/
     onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
+    /** 动态帧定时器启动接口（Ring Buffer + 时间戳 Slot 原位填充）*/
+    onTimedSendStartDynamic?: (sessionId: string, frames: number[][], intervalMs: number, timestampSlots: object[]) => void;
     /** 原生高精度定时器停止接口 */
     onTimedSendStop?: (sessionId: string) => void;
 }
@@ -54,7 +56,7 @@ export const SerialInput = ({
     initialMode = 'hex', initialLineEnding = '', initialTimerInterval = 1000,
     isConnected = false, fontSize = 15, fontFamily = 'AppCoreFont',
     onConnectRequest, onStateChange, hideExtras = false, hideBorderTop = false,
-    onTimedSendStart, onTimedSendStop
+    onTimedSendStart, onTimedSendStartDynamic, onTimedSendStop
 }: SerialInputProps) => {
     const { t } = useI18n();
     const [mode, setMode] = useState<'text' | 'hex'>(initialMode);
@@ -83,7 +85,35 @@ export const SerialInput = ({
             class: "absolute inset-0 bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-text z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium h-fit flex-1",
             style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)')};`
         },
-    }), [fontSize, fontFamily]);
+        // 键盘输入过滤
+        handleTextInput(_view: unknown, _from: number, _to: number, text: string): boolean {
+            if (mode === 'hex') {
+                // hex 模式：只允许 0-9 A-F a-f 和空格/Tab
+                return !/^[0-9A-Fa-f\s]*$/.test(text);
+            } else {
+                // text 模式：只允许可打印 ASCII（U+0020~U+007E），过滤汉字等
+                return !/^[\x20-\x7E]*$/.test(text);
+            }
+        },
+        // 粘贴过滤：保留合法字符后重新插入
+        handlePaste(view: { dispatch: (tr: ReturnType<typeof view.state.tr.insertText>) => void; state: { tr: { insertText: (s: string) => unknown } } }, event: ClipboardEvent): boolean {
+            const raw = event.clipboardData?.getData('text') ?? '';
+            let filtered: string;
+            if (mode === 'hex') {
+                filtered = raw.replace(/[^0-9A-Fa-f\s]/g, '');
+            } else {
+                // eslint-disable-next-line no-control-regex
+                filtered = raw.replace(/[^\x20-\x7E]/g, '');
+            }
+            if (filtered === raw) return false; // 无需过滤，走默认逻辑
+            // 有非法字符：插入过滤后的内容
+            if (filtered) {
+                const { tr } = view.state;
+                view.dispatch(tr.insertText(filtered));
+            }
+            return true; // 阻止默认 paste
+        },
+    }), [fontSize, fontFamily, mode]);
 
     const editor = useEditor({
         extensions,
@@ -174,7 +204,7 @@ export const SerialInput = ({
     const { handleSend } = useSerialInputLogic({
         editor, mode, lineEnding, isConnected, isEmpty,
         sessionId, isTimerRunning, timerInterval, contentVersion, isSyncingRef,
-        onSend, onConnectRequest, onTimedSendStart, onTimedSendStop
+        onSend, onConnectRequest, onTimedSendStart, onTimedSendStartDynamic, onTimedSendStop
     });
 
     return (

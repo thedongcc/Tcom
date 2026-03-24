@@ -216,6 +216,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 key={session.id} sessionId={session.id}
                 onSend={handleSend}
                 onTimedSendStart={window.serialAPI?.timedSendStart}
+                onTimedSendStartDynamic={window.serialAPI?.timedSendStartDynamic}
                 onTimedSendStop={window.serialAPI?.timedSendStop}
                 initialContent={uiState.inputContent || ''} initialHTML={uiState.inputHTML || ''}
                 initialTokens={uiState.inputTokens as Record<string, Token> || {}}

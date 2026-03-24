@@ -44,6 +44,8 @@ export const autoIncPlugin: TokenPlugin = {
         step: 1,
     }),
 
+    isDynamic: true,
+
     getLabel(config: AutoIncConfig): string {
         const hex = config.currentValue || config.defaultValue || '00';
         const dec = parseInt(hex.replace(/\s/g, ''), 16);

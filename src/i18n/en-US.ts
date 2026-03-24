@@ -160,6 +160,8 @@ export const enUS = {
         logFormat: {
             timestampFormat: 'Timestamp Format',
             timestampFormatDesc: 'Tokens: HH(hour), mm(min), ss(sec), SSS(ms)',
+            maxLogEntries: 'Max Screen Logs Buffer',
+            maxLogEntriesDesc: 'Oldest logs are discarded when exceeded. High volume may heavily impact render performance.',
             bgImage: 'Background Image',
             bgImageDesc: 'Set the background image for the entire application (local file or https:// URL)',
             bgImagePlaceholder: 'None',

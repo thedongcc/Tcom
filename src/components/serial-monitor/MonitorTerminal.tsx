@@ -277,6 +277,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                     sessionId={session.id}
                     onSend={handleSend}
                     onTimedSendStart={handleTimedSendStart}
+                    onTimedSendStartDynamic={window.serialAPI?.timedSendStartDynamic}
                     onTimedSendStop={handleTimedSendStop}
                     initialContent={uiState.inputContent as string} initialHTML={uiState.inputHTML as string}
                     initialTokens={uiState.inputTokens as Record<string, import('../../types/token').Token>} initialMode={(uiState.inputMode as string as 'text' | 'hex') || 'hex'}

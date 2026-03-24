@@ -5,8 +5,9 @@
  */
 import { useCallback, useRef } from 'react';
 import { SessionState, LogEntry } from '../types/session';
+import { useSettings } from '../context/SettingsContext';
 
-const MAX_LOGS = 1000;
+
 
 /**
  * 比较两条日志的数据是否相同（支持 string 和 Uint8Array）
@@ -53,6 +54,9 @@ export interface UseSessionLogReturn {
 export const useSessionLog = (
     setSessions: React.Dispatch<React.SetStateAction<SessionState[]>>
 ): UseSessionLogReturn => {
+    const { config } = useSettings();
+    const maxLogs = config?.maxLogEntries || 1000;
+
     const logBufferRef = useRef<Map<string, LogEntry[]>>(new Map());
     const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rxBuffersRef = useRef<Map<string, Uint8Array[]>>(new Map());
@@ -77,7 +81,7 @@ export const useSessionLog = (
             const mergeRepeats = !!s.config.uiState?.mergeRepeats;
             let newLogs = [...s.logs];
             bufferLogs.forEach(incoming => mergeIncomingLog(newLogs, incoming, mergeRepeats));
-            if (newLogs.length > MAX_LOGS) newLogs = newLogs.slice(-MAX_LOGS);
+            if (newLogs.length > maxLogs) newLogs = newLogs.slice(-maxLogs);
 
             // 统计字节数
             let newTxBytes = s.txBytes || 0;
@@ -101,7 +105,7 @@ export const useSessionLog = (
         if (elapsed > 5) {
             console.warn(`[Flush DIAG] ${elapsed.toFixed(1)}ms | entries=${totalEntries}`);
         }
-    }, [setSessions]);
+    }, [setSessions, maxLogs]);
 
     const addLog = useCallback((
         sessionId: string,

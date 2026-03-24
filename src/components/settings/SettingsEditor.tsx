@@ -390,6 +390,25 @@ export const SettingsEditor = () => {
                         />
                     ),
                 },
+                {
+                    label: t('settings.logFormat.maxLogEntries'),
+                    description: t('settings.logFormat.maxLogEntriesDesc'),
+                    render: () => (
+                        <div className="w-64">
+                            <CustomSelect
+                                items={[
+                                    { label: '500', value: 500 },
+                                    { label: '1000', value: 1000 },
+                                    { label: '2000', value: 2000 },
+                                    { label: '5000', value: 5000 },
+                                    { label: '10000', value: 10000 },
+                                ]}
+                                value={config.maxLogEntries || 1000}
+                                onChange={(val) => updateConfig({ maxLogEntries: Number(val) })}
+                            />
+                        </div>
+                    ),
+                },
             ],
         },
         {

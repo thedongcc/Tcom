@@ -3,7 +3,7 @@
  * 串口监视器搜索/滚动/过滤/格式化逻辑 — 从 SerialMonitor.tsx 中提取。
  * 管理搜索状态持久化、日志过滤、自动滚动和 formatData。
  */
-import { useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+    import { useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { LogEntry } from '../../types/session';
 import { useLogSearch } from '../common/LogSearch';
 import { Token } from '../../types/token';
@@ -128,12 +128,12 @@ export function useSerialMonitorSearch({
     const userScrollUpTimeRef = useRef(0);
 
     // ── 日志过滤 ──
-    const filteredLogs = logs.filter(log => {
+    const filteredLogs = useMemo(() => logs.filter(log => {
         if (log.type === 'INFO' || log.type === 'ERROR') return true;
         if (filterMode === 'rx') return log.type === 'RX';
         if (filterMode === 'tx') return log.type === 'TX';
         return true;
-    });
+    }), [logs, filterMode]);
 
     // ── 自动滚动（useLayoutEffect 在 DOM 变更后、浏览器绘制前同步执行，scrollHeight 已确定） ──
     useLayoutEffect(() => {
@@ -145,7 +145,7 @@ export function useSerialMonitorSearch({
                 isProgrammaticScrollRef.current = false;
             });
         }
-    }, [filteredLogs.length, autoScroll, sessionId]);
+    }, [filteredLogs, autoScroll, sessionId]);
 
     // session 切换时恢复滚动位置
     useEffect(() => {
