@@ -30,45 +30,6 @@ import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashRepo
 const sectionId = (index: number) => `settings-section-${index}`;
 const MODULE_SECTION_ID = 'settings-section-modules';
 
-// ─── 独立高性能滑块组件 (绕开 Context 重绘实现 60fps 实时预览) ───────────────────
-const LiveSlider = ({ value, min, max, unit, label, onChange, liveUpdate }: {
-    value: number; min: number; max: number; unit: string; label: string;
-    onChange: (val: number) => void;
-    liveUpdate: (val: number) => void;
-}) => {
-    const [local, setLocal] = useState(value);
-    useEffect(() => setLocal(value), [value]);
-
-    const startPeek = (e: React.PointerEvent) => {
-        document.body.classList.add('settings-peek-mode');
-        const row = (e.target as HTMLElement).closest('[data-peek-row]');
-        if (row) row.classList.add('peek-active-slider');
-    };
-
-    return (
-        <div className="flex items-center justify-between mt-1" data-peek-row>
-            <span className="text-[11px] text-[var(--input-placeholder-color)]">{label}</span>
-            <div className="flex items-center gap-2 w-48">
-                <input
-                    type="range"
-                    min={min} max={max}
-                    value={local}
-                    onChange={e => {
-                        const val = Number(e.target.value);
-                        setLocal(val);
-                        liveUpdate(val);
-                    }}
-                    onPointerUp={() => onChange(local)}
-                    onPointerDown={startPeek}
-                    className="flex-1 accent-[var(--focus-border-color)] h-1 cursor-grab active:cursor-grabbing"
-                />
-                <span className="text-[11px] text-[var(--input-placeholder-color)] w-12 shrink-0 text-right font-mono">
-                    {local}{unit}
-                </span>
-            </div>
-        </div>
-    );
-};
 
 // ─── 主组件 ───────────────────────────────────────────────────────────────────
 export const SettingsEditor = () => {

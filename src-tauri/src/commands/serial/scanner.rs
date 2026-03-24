@@ -8,18 +8,35 @@ use tauri::Manager;
 
 use super::state::{lock_err, PortInfo, SerialState};
 
+
 /// 扫描系统串口列表
 pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
     let state = app.state::<SerialState>();
     let ports_map = state.ports.lock().map_err(lock_err)?;
-    let opened_paths: std::collections::HashSet<String> = ports_map
-        .values()
-        .map(|_| String::new())
-        .collect();
     drop(ports_map);
 
     // 获取系统串口列表
     let sys_ports = serialport::available_ports().unwrap_or_default();
+
+    // 1. 先并行发起所有端口的检测线程（不阻塞等待）
+    let checks: Vec<(String, std::sync::mpsc::Receiver<bool>)> = sys_ports
+        .iter()
+        .map(|p| {
+            let path = p.port_name.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            let path2 = path.clone();
+            std::thread::spawn(move || {
+                let is_err = serialport::new(&path2, 9600)
+                    .timeout(std::time::Duration::from_millis(10))
+                    .open()
+                    .is_err();
+                let _ = tx.send(is_err);
+            });
+            (path, rx)
+        })
+        .collect();
+
+    // 2. 构建端口信息（busy 默认 false，稍后从并行检测结果填充）
     let mut result: Vec<PortInfo> = sys_ports
         .iter()
         .map(|p| {
@@ -80,7 +97,6 @@ pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
             }
         }
     }
-    let _ = opened_paths;
 
     // Windows: 为缺少 friendlyName 的端口从注册表获取 FriendlyName
     #[cfg(target_os = "windows")]
@@ -92,6 +108,42 @@ pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
                     port.friendly_name = Some(name.clone());
                 }
             }
+        }
+    }
+
+    // 3. 等待所有并行检测线程结果，并回填 busy 状态（最多等 200ms/个）
+    let mut busy_map: std::collections::HashMap<String, bool> = std::collections::HashMap::new();
+    for (path, rx) in checks {
+        let is_busy = rx
+            .recv_timeout(std::time::Duration::from_millis(200))
+            .unwrap_or(true); // 超时 = 认为 busy（端口响应太慢）
+        busy_map.insert(path, is_busy);
+    }
+
+    // 对注册表兜底端口也做检测（在已有并行结果中没有对应项时）
+    for port in &result {
+        if !busy_map.contains_key(&port.path) {
+            let path = port.path.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let is_err = serialport::new(&path, 9600)
+                    .timeout(std::time::Duration::from_millis(10))
+                    .open()
+                    .is_err();
+                let _ = tx.send(is_err);
+            });
+            let is_busy = rx
+                .recv_timeout(std::time::Duration::from_millis(200))
+                .unwrap_or(true);
+            busy_map.insert(port.path.clone(), is_busy);
+        }
+    }
+
+    // 4. 用 busy_map 回填所有端口状态
+    for port in &mut result {
+        if let Some(&is_busy) = busy_map.get(&port.path) {
+            port.busy = is_busy;
+            port.status = if is_busy { "busy".into() } else { "available".into() };
         }
     }
 

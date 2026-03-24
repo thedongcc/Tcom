@@ -10,6 +10,8 @@
   to quiet IDE warnings and provide a safe baseline before JS loads.
 */
 :root {
+  /* 由 JS 动态注入，默认 100 = 完全不透明（无背景图时）*/
+  --tcom-ui-opacity: 100;
   --sys-bg-base: #181b1f;
   --sys-bg-surface: #1e2227;
   --sys-bg-elevated: #282c34;
@@ -112,7 +114,7 @@
   --st-monitor-btn-filter-rx-active-bg: #0e639c;
   --st-monitor-btn-filter-tx-active-bg: #6a9955;
   --st-monitor-btn-target-physical-active-bg: #0e639c;
-  --st-monitor-btn-target-virtual-active-bg: #22c55e;
+  --st-monitor-btn-target-virtual-active-bg: #6A9955;
   --st-monitor-btn-text: #cccccc;
   --st-monitor-btn-view-hex-active-bg: #0e639c;
   --st-monitor-btn-view-txt-active-bg: #0e639c;

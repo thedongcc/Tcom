@@ -290,7 +290,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                     onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
                     style={{ fontSize: `${fontSize}px`, fontFamily: fontStyle, lineHeight: '1.5' }}
                 >
-                    {filteredLogs.map((log, index) => {
+                    {filteredLogs.map((log, _index) => {
                         const isTX = log.type === 'TX';
                         const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? 'var(--st-mqtt-topic-default-tx-color)' : 'var(--st-mqtt-topic-default-rx-color)');

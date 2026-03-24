@@ -37,7 +37,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
     // ── 核心状态（全部委托给 Hook） ──
     const state = useMonitorTerminalState(session);
     const {
-        scrollRef, initialLogCountRef, mountTimeRef, scrollPositions,
+        scrollRef, scrollPositions,
         sessionManager, isConnected, config, themeConfig, uiState,
         viewMode, showTimestamp, showPacketType, showDataLength,
         mergeRepeats, filterMode, encoding, fontSize, fontFamily,
@@ -244,7 +244,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                     style={{ background: 'var(--list-hover-background)', display: 'none' }}
                 />
                 <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}>
-                    {filteredLogs.map((log, index) => {
+                    {filteredLogs.map((log, _index) => {
                         const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
