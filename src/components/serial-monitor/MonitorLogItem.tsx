@@ -67,6 +67,21 @@ export const MonitorLogItem = React.memo(({
 
     const { parseSystemMessage } = useSystemMessage();
 
+    const [shouldFlash, setShouldFlash] = React.useState(() => {
+        if (isNewLog && flashNewMessage && !(log as any)._flashed) {
+            return true;
+        }
+        return false;
+    });
+
+    React.useEffect(() => {
+        if (shouldFlash) {
+            (log as any)._flashed = true;
+            const timer = setTimeout(() => setShouldFlash(false), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [shouldFlash, log]);
+
     const lineHeightPx = Math.floor(fontSize * 1.5);
     const itemHeightPx = Math.floor(fontSize * 1.4);
 
@@ -94,7 +109,7 @@ export const MonitorLogItem = React.memo(({
     // 常规数据日志渲染
     return (
         <div
-            className={`log-row flex items-start gap-1.5 mb-1 rounded-sm px-1.5 py-0.5 group relative ${(isNewLog && flashNewMessage) ? 'animate-flash-new' : ''} border border-transparent`}
+            className={`log-row flex items-start gap-1.5 mb-1 rounded-sm px-1.5 py-0.5 group relative ${shouldFlash ? 'animate-flash-new' : ''} border border-transparent`}
             style={{
                 fontSize: 'inherit',
                 fontFamily: 'inherit',
@@ -156,7 +171,7 @@ export const MonitorLogItem = React.memo(({
                 {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                     <span
                         key={log.repeatCount}
-                        className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                        className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${shouldFlash ? 'animate-flash-gold' : ''}`}
                         style={{ height: `${itemHeightPx}px` }}
                     >
                         x{log.repeatCount}

@@ -127,6 +127,14 @@ export function useSerialMonitorSearch({
     const isProgrammaticScrollRef = useRef(false);
     const userScrollUpTimeRef = useRef(0);
 
+    // ── 日志过滤 ──
+    const filteredLogs = logs.filter(log => {
+        if (log.type === 'INFO' || log.type === 'ERROR') return true;
+        if (filterMode === 'rx') return log.type === 'RX';
+        if (filterMode === 'tx') return log.type === 'TX';
+        return true;
+    });
+
     // ── 自动滚动（useLayoutEffect 在 DOM 变更后、浏览器绘制前同步执行，scrollHeight 已确定） ──
     useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) {
@@ -137,7 +145,7 @@ export function useSerialMonitorSearch({
                 isProgrammaticScrollRef.current = false;
             });
         }
-    }, [logs, autoScroll, sessionId]);
+    }, [filteredLogs.length, autoScroll, sessionId]);
 
     // session 切换时恢复滚动位置
     useEffect(() => {
@@ -145,14 +153,6 @@ export function useSerialMonitorSearch({
             scrollRef.current.scrollTop = scrollPositions.get(sessionId) as number;
         }
     }, [sessionId]);
-
-    // ── 日志过滤 ──
-    const filteredLogs = logs.filter(log => {
-        if (log.type === 'INFO' || log.type === 'ERROR') return true;
-        if (filterMode === 'rx') return log.type === 'RX';
-        if (filterMode === 'tx') return log.type === 'TX';
-        return true;
-    });
 
     // ── 输入状态变更回调 ──
     const handleInputStateChange = useCallback((state: {

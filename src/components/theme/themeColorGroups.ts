@@ -9,48 +9,63 @@ import { componentTokenMap } from '../../themes/componentTokenMap';
 export const REGION_GROUPS = [
     {
         id: 'semantic-sys',
-        label: '✨ 系统级核心语义色 (全局生效)',
+        label: '系统语义色',
+        labelEn: '✨ System Semantic Colors (Global)',
         components: ['sys-colors']
     },
     {
         id: 'global-variables',
-        label: '基础全局与基座',
-        components: ['global-common', 'global-components', 'global-scrollbar', 'st-status-indicators', 'custom-select']
+        label: '全局基础',
+        labelEn: 'Global Basics & Controls',
+        components: ['button', 'global-components', 'global-scrollbar', 'st-status-indicators', 'custom-select', 'list-select', 'danger-colors']
     },
     {
         id: 'layout',
-        label: '全局与布局',
+        label: '布局框架',
+        labelEn: 'Layout',
         components: ['titlebar', 'activitybar', 'sidebar', 'editor-area', 'editor-tabs', 'statusbar']
     },
     {
         id: 'sidebar-menus',
-        label: '侧边栏及菜单',
-        components: ['session-list-sidebar', 'session-list-item', 'command-sidebar', 'module-manager-sidebar']
+        label: '侧边栏与菜单',
+        labelEn: 'Sidebars & Menus',
+        components: ['session-list-sidebar', 'session-list-item', 'command-sidebar', 'module-manager-sidebar', 'menu']
     },
     {
         id: 'serial-tabs',
         label: '串口与终端模块',
-        components: ['serial-monitor', 'serial-input', 'serial-config', 'monitor-terminal', 'virtual-port-plugin', 'st-connection-control']
+        labelEn: 'Serial & Terminal',
+        components: ['serial-monitor', 'serial-input', 'serial-config', 'monitor-terminal', 'terminal-monitor', 'virtual-port-plugin', 'st-connection-control']
     },
     {
         id: 'mqtt-tabs',
-        label: 'MQTT 与配置模块',
+        label: 'MQTT与配置',
+        labelEn: 'MQTT & Config',
         components: ['mqtt-monitor', 'mqtt-config']
     },
     {
         id: 'messaging',
-        label: '消息气泡与通讯',
+        label: '消息与通讯',
+        labelEn: 'Messages & Communication',
         components: ['monitor-bubble', 'system-message', 'log-search']
     },
     {
         id: 'popups',
-        label: '弹出与对话框',
+        label: '弹窗与对话框',
+        labelEn: 'Popups & Dialogs',
         components: ['context-menu', 'dialog', 'tooltip', 'toast']
     },
     {
         id: 'settings-tools',
-        label: '⚙设置与高级工具',
-        components: ['settings-editor', 'graph-editor']
+        label: '设置与工具',
+        labelEn: '⚙ Settings & Tools',
+        components: ['settings-editor', 'graph-editor', 'update-panel']
+    },
+    {
+        id: 'data-colors',
+        label: '数据着色',
+        labelEn: 'Data Colors & Highlight',
+        components: ['token-colors', 'json-highlight']
     }
 ];
 

@@ -130,15 +130,6 @@ export function SerialMonitorToolbar({
             <div className="flex items-center gap-4">
                 {/* TX/RX 统计过滤器 */}
                 <div className="flex items-center border border-[var(--st-serial-filter-group-border)] rounded-[3px] divide-x divide-[var(--st-serial-filter-group-divider)] overflow-hidden h-[26px] bg-[var(--st-serial-filter-group-bg)]">
-                    <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
-                        <div
-                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-serial-btn-filter-tx-active-bg)] text-[var(--st-serial-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-serial-btn-filter-tx-hover-bg)] text-[var(--st-serial-btn-filter-tx-text)] bg-[var(--st-serial-btn-filter-tx-bg)]'}`}
-                            onClick={() => toggleFilter('tx')}
-                        >
-                            <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
-                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
-                        </div>
-                    </Tooltip>
                     <Tooltip content={filterMode === 'rx' ? t('monitor.cancelFilter') : t('monitor.filterRxOnly')} position="bottom">
                         <div
                             className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'rx' ? 'bg-[var(--st-serial-btn-filter-rx-active-bg)] text-[var(--st-serial-btn-filter-rx-active-text)] shadow-sm' : 'hover:bg-[var(--st-serial-btn-filter-rx-hover-bg)] text-[var(--st-serial-btn-filter-rx-text)] bg-[var(--st-serial-btn-filter-rx-bg)]'}`}
@@ -146,6 +137,15 @@ export function SerialMonitorToolbar({
                         >
                             <span className="text-[11px] font-bold font-mono opacity-70">R:</span>
                             <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{rxBytes.toLocaleString()}</span>
+                        </div>
+                    </Tooltip>
+                    <Tooltip content={filterMode === 'tx' ? t('monitor.cancelFilter') : t('monitor.filterTxOnly')} position="bottom">
+                        <div
+                            className={`flex items-center justify-between gap-1.5 px-2 min-w-[56px] h-full transition-colors cursor-pointer ${filterMode === 'tx' ? 'bg-[var(--st-serial-btn-filter-tx-active-bg)] text-[var(--st-serial-btn-filter-tx-active-text)] shadow-sm' : 'hover:bg-[var(--st-serial-btn-filter-tx-hover-bg)] text-[var(--st-serial-btn-filter-tx-text)] bg-[var(--st-serial-btn-filter-tx-bg)]'}`}
+                            onClick={() => toggleFilter('tx')}
+                        >
+                            <span className="text-[11px] font-bold font-mono opacity-70">T:</span>
+                            <span className="text-[11px] font-bold font-mono tabular-nums leading-none">{txBytes.toLocaleString()}</span>
                         </div>
                     </Tooltip>
                 </div>

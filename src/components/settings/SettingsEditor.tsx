@@ -235,7 +235,7 @@ export const SettingsEditor = () => {
                                 }}
                             />
                             <LiveSlider
-                                label="UI 面板不透明度"
+                                label="UI面板不透明度"
                                 value={config.images.uiOpacity ?? 100}
                                 min={0} max={100} unit="%"
                                 onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, uiOpacity: val } }))}

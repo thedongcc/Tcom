@@ -22,7 +22,8 @@ interface Props {
 }
 
 export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
+    const isEn = locale === 'en-US';
     const {
         expandedGroups, setExpandedGroups,
         isInspecting, copiedVar,
@@ -81,15 +82,16 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
             const filteredComps = group.components.map(compId => {
                 const compMeta = componentTokenMap[compId];
                 if (!compMeta) return null;
-                if (compMeta.label.toLowerCase().includes(lowerSearch) || compId.toLowerCase().includes(lowerSearch)) return compId;
+                const compLabel = isEn ? compMeta.labelEn : compMeta.label;
+                if (compLabel.toLowerCase().includes(lowerSearch) || compId.toLowerCase().includes(lowerSearch)) return compId;
                 const hasMatchingToken = compMeta.tokens.some(t =>
-                    t.var.toLowerCase().includes(lowerSearch) || t.label.toLowerCase().includes(lowerSearch)
+                    t.var.toLowerCase().includes(lowerSearch) || (isEn ? t.labelEn : t.label).toLowerCase().includes(lowerSearch)
                 );
                 return hasMatchingToken ? compId : null;
             }).filter(Boolean) as string[];
             return filteredComps.length > 0 ? { ...group, components: filteredComps } : null;
         }).filter(Boolean) as typeof REGION_GROUPS;
-    }, [lowerSearch]);
+    }, [lowerSearch, isEn]);
 
     useEffect(() => {
         if (lowerSearch && filteredGroups.length > 0) {
@@ -234,7 +236,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                                     <ChevronDown size={12} className={isExpanded ? 'text-[var(--accent-color)]' : 'opacity-40'} style={{ color: isExpanded ? undefined : 'var(--app-foreground)' }} />
                                                 </div>
                                                 <span className="text-[11px] font-semibold transition-colors" style={{ color: 'var(--app-foreground)', opacity: isExpanded ? 1 : 0.7 }}>
-                                                    {group.label}
+                                                    {isEn ? (group as any).labelEn || group.label : group.label}
                                                 </span>
                                             </div>
                                             <div className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-mono tabular-nums" style={{ color: 'var(--app-foreground)', opacity: 0.6, backgroundColor: 'var(--theme-editor-input-bg)' }}>
@@ -250,21 +252,22 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                                         {group.components.map(compId => {
                                                             const compMeta = componentTokenMap[compId];
                                                             if (!compMeta) return null;
+                                                            const compLabel = isEn ? compMeta.labelEn : compMeta.label;
                                                             const tokens = compMeta.tokens.filter(t =>
-                                                                !lowerSearch || t.var.toLowerCase().includes(lowerSearch) || t.label.toLowerCase().includes(lowerSearch) || compMeta.label.toLowerCase().includes(lowerSearch)
+                                                                !lowerSearch || t.var.toLowerCase().includes(lowerSearch) || (isEn ? t.labelEn : t.label).toLowerCase().includes(lowerSearch) || compLabel.toLowerCase().includes(lowerSearch)
                                                             );
                                                             if (tokens.length === 0) return null;
                                                             return (
                                                                 <div key={compId} className="flex flex-col gap-1.5 shrink-0">
                                                                     <div className="text-[10px] font-bold uppercase tracking-widest pb-0.5 border-b" style={{ color: 'var(--app-foreground)', opacity: 0.5, borderColor: 'var(--theme-editor-card-border)' }}>
-                                                                        {compMeta.label}
+                                                                        {compLabel}
                                                                     </div>
                                                                     <div className="grid grid-cols-2 gap-x-1 gap-y-1">
                                                                         {tokens.map(token => (
                                                                             <div key={token.var} className="min-w-0">
                                                                                 <TokenRow
                                                                                     varName={token.var}
-                                                                                    label={token.label}
+                                                                                    label={isEn ? token.labelEn : token.label}
                                                                                     value={getColorValue(token.var)}
                                                                                     isCopied={copiedVar === token.var}
                                                                                     onColorChange={handleColorChange}

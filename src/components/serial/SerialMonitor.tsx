@@ -192,7 +192,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                         <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]"><p>No data</p></div>
                     )}
                     {filteredLogs.map((log, index) => {
-                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
+                        const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         return (
                             <LogItem
                                 key={log.id}

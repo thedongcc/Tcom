@@ -174,13 +174,12 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         });
     }, [logs, filterMode, config.topics]);
 
-    // ── 滚动管理 ──
     useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
             scrollPositions.set(session.id, scrollRef.current.scrollHeight);
         }
-    }, [logs, autoScroll, session.id]);
+    }, [filteredLogs.length, autoScroll, session.id]);
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) {
@@ -192,14 +191,16 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
         if (!scrollRef.current) return;
         const observer = new ResizeObserver(() => {
             if (scrollRef.current && scrollRef.current.clientHeight > 0) {
-                if (scrollPositions.has(session.id)) {
+                if (autoScroll) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                } else if (scrollPositions.has(session.id)) {
                     scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
                 }
             }
         });
         observer.observe(scrollRef.current);
         return () => observer.disconnect();
-    }, [session.id]);
+    }, [session.id, autoScroll]);
 
     // 计算字体样式
     const fontStyle = fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)');
@@ -291,7 +292,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 >
                     {filteredLogs.map((log, index) => {
                         const isTX = log.type === 'TX';
-                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
+                        const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? 'var(--st-mqtt-topic-default-tx-color)' : 'var(--st-mqtt-topic-default-rx-color)');
 
                         return (

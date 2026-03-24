@@ -39,6 +39,22 @@ export const MqttLogItem = React.memo(({
     matches, activeMatch,
 }: MqttLogItemProps) => {
     const { parseSystemMessage } = useSystemMessage();
+
+    const [shouldFlash, setShouldFlash] = React.useState(() => {
+        if (isNewLog && flashNewMessage && !(log as any)._flashed) {
+            return true;
+        }
+        return false;
+    });
+
+    React.useEffect(() => {
+        if (shouldFlash) {
+            (log as any)._flashed = true;
+            const timer = setTimeout(() => setShouldFlash(false), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [shouldFlash, log]);
+
     const itemHeightPx = Math.floor(fontSize * 1.4);
 
     // 高亮搜索匹配
@@ -126,7 +142,7 @@ export const MqttLogItem = React.memo(({
             className={`flex w-full ${isTX ? 'justify-end' : 'justify-start'}`}
         >
             <div
-                className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${((isNewLog || (log.repeatCount && log.repeatCount > 1)) && flashNewMessage && isNewLog) ? 'animate-flash-new' : 'bg-[var(--input-background)]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[var(--st-monitor-gold-flash)]' : ''}`}
+                className={`relative max-w-[90%] rounded-lg px-3 py-1.5 border shadow-sm ${isTX ? 'rounded-br-sm' : 'rounded-bl-sm'} ${shouldFlash ? 'animate-flash-new' : 'bg-[var(--input-background)]'} ${activeMatch?.logId === log.id ? 'ring-1 ring-[var(--st-monitor-gold-flash)]' : ''}`}
                 style={{ borderColor: isTX ? 'var(--monitor-bubble-tx-border)' : 'var(--monitor-bubble-rx-border)' }}
             >
                 <div className={`flex items-center gap-1.5 shrink-0 mb-1 ${isTX ? 'flex-row-reverse' : 'flex-row'}`} style={{ height: `${itemHeightPx}px` }}>
@@ -151,7 +167,7 @@ export const MqttLogItem = React.memo(({
                     )}
                     {mergeRepeats && log.repeatCount && log.repeatCount > 1 && (
                         <span
-                            className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${(isNewLog && flashNewMessage) ? 'animate-flash-gold' : ''}`}
+                            className={`flex items-center justify-center text-[0.8em] leading-none text-[var(--st-monitor-gold-flash)] font-bold font-mono bg-[var(--st-monitor-gold-flash-bg)] px-[0.5em] rounded-[0.2em] border border-[var(--st-monitor-gold-flash-border)] min-w-[1.8em] select-none shrink-0 pt-[1px] tabular-nums tracking-tight ${shouldFlash ? 'animate-flash-gold' : ''}`}
                             style={{ height: `${itemHeightPx}px` }}
                         >
                             x{log.repeatCount}

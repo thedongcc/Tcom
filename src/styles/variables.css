@@ -60,7 +60,7 @@
   --logsearch-btn-regex-active-bg: #007acc;
   --logsearch-nav-active-bg: #007fd4;
   --monitor-bubble-rx-border: #6a9955;
-  --monitor-bubble-tx-border: #d16969;
+  --monitor-bubble-tx-border: #0e639c;
   --monitor-options-hover-bg: #4a4a4a;
   --monitor-rx-label-bg: #6A99554D;
   --monitor-rx-label-border: #6a995566;
@@ -93,7 +93,11 @@
   --st-graph-toolbar-bg: color-mix(in srgb, #1e2227 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --st-graph-toolbar-border: #2d3139;
   --st-input-bg: var(--input-background);
-  --st-input-border: #2d3139;
+  --st-input-border: #31415AD6;
+  --st-timer-input-bg: var(--input-background);
+  --st-timer-input-border: #283346;
+  --st-timer-input-text: #d4d4d4;
+  --st-timer-input-focus-border: #007acc;
   --st-input-btn-mode-hex-active-bg: #0e639c;
   --st-input-btn-mode-txt-active-bg: #0e639c;
   --st-input-btn-send-bg: #0e639c;
@@ -105,10 +109,10 @@
   --st-menu-bg: #1e2227;
   --st-monitor-btn-autoscroll-active-bg: #0e639c;
   --st-monitor-btn-export-bg: #0e639c;
-  --st-monitor-btn-filter-rx-active-bg: #22c55e;
-  --st-monitor-btn-filter-tx-active-bg: #d16969;
-  --st-monitor-btn-target-physical-active-bg: #22c55e;
-  --st-monitor-btn-target-virtual-active-bg: #0e639c;
+  --st-monitor-btn-filter-rx-active-bg: #0e639c;
+  --st-monitor-btn-filter-tx-active-bg: #6a9955;
+  --st-monitor-btn-target-physical-active-bg: #0e639c;
+  --st-monitor-btn-target-virtual-active-bg: #22c55e;
   --st-monitor-btn-text: #cccccc;
   --st-monitor-btn-view-hex-active-bg: #0e639c;
   --st-monitor-btn-view-txt-active-bg: #0e639c;
@@ -134,12 +138,12 @@
   --st-mqtt-btn-clear-border: transparent;
   --st-mqtt-btn-clear-hover-bg: #3c3c3c;
   --st-mqtt-btn-clear-icon: #cccccc;
-  --st-mqtt-btn-filter-rx-active-bg: #22c55e;
+  --st-mqtt-btn-filter-rx-active-bg: #6A9955;
   --st-mqtt-btn-filter-rx-active-text: #ffffff;
   --st-mqtt-btn-filter-rx-bg: transparent;
   --st-mqtt-btn-filter-rx-hover-bg: #3c3c3c;
   --st-mqtt-btn-filter-rx-text: #cccccc;
-  --st-mqtt-btn-filter-tx-active-bg: #d16969;
+  --st-mqtt-btn-filter-tx-active-bg: #0E639C;
   --st-mqtt-btn-filter-tx-active-text: #ffffff;
   --st-mqtt-btn-filter-tx-bg: transparent;
   --st-mqtt-btn-filter-tx-hover-bg: #3c3c3c;
@@ -373,6 +377,8 @@
   --st-titlebar-text: var(--app-foreground);
   --st-titlebar-icon: var(--sys-text-secondary);
   --st-titlebar-icon-hover: var(--app-foreground);
+  --st-titlebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --st-titlebar-active-bg: rgba(255, 255, 255, 0.08);
 
   /* ActivityBar */
   --st-activitybar-icon-hover: var(--app-foreground);

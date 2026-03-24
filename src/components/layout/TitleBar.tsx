@@ -51,8 +51,8 @@ const EditorToggleButton = () => {
         className={[
           'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
           isEditorOpen
-            ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
-            : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
+            ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--st-titlebar-active-bg,rgba(255,255,255,0.08))]'
+            : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--st-titlebar-hover-bg,rgba(255,255,255,0.08))]',
         ].join(' ')}
         onClick={() => window.themeAPI?.openThemeEditor()}
       >
@@ -153,8 +153,8 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
               className={[
                 'flex items-center justify-center w-[46px] h-full transition-colors duration-150',
                 isPinned
-                  ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--vscode-toolbar-activeBackground,rgba(255,255,255,0.08))]'
-                  : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]',
+                  ? 'text-[var(--focus-border-color,#007fd4)] bg-[var(--st-titlebar-active-bg,rgba(255,255,255,0.08))]'
+                  : 'text-[var(--st-titlebar-icon)] opacity-60 hover:text-[var(--st-titlebar-icon-hover)] hover:opacity-100 hover:bg-[var(--st-titlebar-hover-bg,rgba(255,255,255,0.08))]',
               ].join(' ')}
               onClick={togglePin}
             >
@@ -171,7 +171,7 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
 
           {/* 最小化 */}
           <button
-            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))] transition-colors duration-150"
+            className="flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] opacity-60 hover:opacity-100 hover:bg-[var(--st-titlebar-hover-bg,rgba(255,255,255,0.08))] transition-colors duration-150"
             onClick={() => window.windowAPI?.minimize()}
           >
             <Minus size={16} />
@@ -181,8 +181,8 @@ export const TitleBar = ({ workspaceName }: TitleBarProps) => {
           <button
             className={`flex items-center justify-center w-[46px] h-full text-[var(--st-titlebar-icon)] transition-colors duration-150 ${
               isMaxHover
-                ? 'opacity-100 bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]'
-                : 'opacity-60 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground,rgba(255,255,255,0.08))]'
+                ? 'opacity-100 bg-[var(--st-titlebar-hover-bg,rgba(255,255,255,0.08))]'
+                : 'opacity-60 hover:opacity-100 hover:bg-[var(--st-titlebar-hover-bg,rgba(255,255,255,0.08))]'
             }`}
             onClick={async () => {
               const maximized = await window.windowAPI?.toggleMaximize();

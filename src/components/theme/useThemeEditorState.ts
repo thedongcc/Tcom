@@ -34,6 +34,8 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     const lastAppliedEditsRef = useRef<Record<string, string>>({});
     const previousThemeId = useRef<string | null>(null);
     const initDone = useRef(false);
+    // 主题切换版本号 — 递增以强制 getColorValue 重新读取 CSS 计算值
+    const [themeVersion, setThemeVersion] = useState(0);
 
     // 派生状态
     const currentThemeId = config.theme || localStorage.getItem('tcom-theme') || 'dark';
@@ -67,6 +69,22 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             unInspectorStop?.();
         };
     }, [isInspecting, onClose]);
+
+    // ── 监听 DOM 上 data-theme 属性变化（最可靠的主题切换信号） ──
+    useEffect(() => {
+        if (!isOpen) return;
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+                    // applyTheme 已完成 DOM 写入，延迟等 computed styles 稳定
+                    setTimeout(() => setThemeVersion(v => v + 1), 50);
+                    break;
+                }
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => observer.disconnect();
+    }, [isOpen]);
 
     // ── 初始化：获取 expandedGroups + pendingEdits ──
     useEffect(() => {
@@ -131,6 +149,8 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
                     document.documentElement.style.setProperty(varName, color);
                 });
                 window.themeAPI?.applyPreview?.(themeEdits);
+                // 延迟刷新：等待 CSS 变量切换完成后才重新读取计算值
+                setTimeout(() => setThemeVersion(v => v + 1), 80);
             }
             previousThemeId.current = currentThemeDef.id;
         }
@@ -138,16 +158,23 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
 
     // ── CDP 检查器监听 ──
     const extractVars = useCallback((html: string, compKey?: string | null) => {
-        const vars = new Set<string>();
-
-        // 1. 从 HTML 字符串中正则提取 var(--xxx)
-        const regex = /var\((--[^),]+)/g;
-        let match;
-        while ((match = regex.exec(html)) !== null) {
-            vars.add(match[1].trim());
+        // 构建已注册变量的白名单集合（只有注册过的颜色变量才允许显示）
+        const registeredVars = new Set<string>();
+        for (const group of Object.values(componentTokenMap)) {
+            group.tokens.forEach(t => registeredVars.add(t.var));
         }
 
-        // 2. 如果有 data-component key，从 componentTokenMap 中获取该组件全部变量
+        const vars = new Set<string>();
+
+        // 1. 从 HTML 中提取 var(--xxx)，只保留已注册的颜色变量
+        const regex = /var\((--[\w][\w-]*)/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const varName = match[1].trim();
+            if (registeredVars.has(varName)) vars.add(varName);
+        }
+
+        // 2. 如果有 data-component key，补入该组件的全部已注册变量
         if (compKey && componentTokenMap[compKey]) {
             componentTokenMap[compKey].tokens.forEach(t => vars.add(t.var));
         }
@@ -203,7 +230,8 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             }
         }
         return '#808080';
-    }, [edits, currentThemeDef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edits, currentThemeDef, themeVersion]);
 
     const handleColorChange = useCallback((varName: string, color: string) => {
         const themeId = currentThemeDef?.id || config.theme || 'dark';
@@ -275,6 +303,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         currentThemeDef,
         edits,
         editCount,
+        themeVersion,
         getColorValue,
         handleColorChange,
         handleSave,

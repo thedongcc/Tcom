@@ -245,7 +245,7 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
                 />
                 <div className="absolute inset-0 overflow-auto p-4" ref={scrollRef} onScroll={(e) => { if (!autoScroll) scrollPositions.set(session.id, e.currentTarget.scrollTop); }} style={{ fontSize: fontSize ? `${fontSize}px` : 'var(--st-font-size)', fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}>
                     {filteredLogs.map((log, index) => {
-                        const isNewLog = flashNewMessage && (index >= initialLogCountRef.current || log.timestamp > mountTimeRef.current);
+                        const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         const virtualSerPort = (config as MonitorSessionConfig).virtualSerialPort;
                         const physPort = (config as MonitorSessionConfig).connection?.path || 'DEV';
                         const rxCRC = (config.rxCRC) || { enabled: false, algorithm: 'modbus-crc16', startIndex: 0, endIndex: 0 };

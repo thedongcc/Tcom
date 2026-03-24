@@ -17,6 +17,7 @@ import { useColorPicker } from '../hooks/useColorPicker';
 import { useThemeEffects } from '../hooks/useThemeEffects';
 import { loadInitialConfig, mergeAndMigrate } from './settingsConfigMigration';
 import { flushRegistry } from '../hooks/useFlushOnExit';
+import { emit, listen } from '@tauri-apps/api/event';
 
 interface SettingsContextType {
     config: ThemeConfig;
@@ -101,6 +102,19 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         return () => { cancelled = true; };
     }, []);
 
+    // ── 跨窗口主题同步（编辑器窗口监听主窗口的主题切换） ──
+    useEffect(() => {
+        let unlisten: (() => void) | null = null;
+        listen<string>('theme:switched', (event) => {
+            const newThemeId = event.payload;
+            setConfig(prev => {
+                if (prev.theme === newThemeId) return prev;
+                return { ...prev, theme: newThemeId };
+            });
+        }).then(fn => { unlisten = fn; });
+        return () => { unlisten?.(); };
+    }, []);
+
     // 防抖保存到文件（变更后 500ms 写盘）
     useEffect(() => {
         if (!isLoaded) return;
@@ -163,6 +177,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
     const setTheme = (themeId: string) => {
         setConfig(prev => ({ ...prev, theme: themeId }));
+        // 通知所有窗口（含主题编辑器独立窗口）主题已切换
+        emit('theme:switched', themeId).catch(() => {});
     };
 
     const importConfig = (json: string) => {

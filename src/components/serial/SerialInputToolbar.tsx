@@ -131,7 +131,7 @@ export const SerialInputToolbar = React.memo(({
                         </Tooltip>
                         <input
                             type="text"
-                            className="w-12 h-[22px] bg-[var(--input-background)] border border-[var(--st-input-border)] text-[var(--st-input-text)] text-[11px] px-1 rounded-sm focus:border-[var(--st-input-focus-border)] outline-none text-center font-mono"
+                            className="w-12 h-[22px] bg-[var(--st-timer-input-bg)] border border-[var(--st-timer-input-border)] text-[var(--st-timer-input-text)] text-[11px] px-1 rounded-sm focus:border-[var(--st-timer-input-focus-border)] outline-none text-center font-mono"
                             value={timerIntervalInput}
                             onChange={(e) => {
                                 const val = e.target.value;

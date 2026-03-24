@@ -142,31 +142,37 @@ export function useMonitorTerminalState(session: SessionState) {
         }
     }, [activeMatchRev]);
 
+    // ── 日志过滤 ──
+    const filteredLogs = useMemo(() => logs.filter(log => {
+        if (log.type === 'INFO' || log.type === 'ERROR') return true;
+        return filterMode === 'rx' ? log.topic === 'physical' : filterMode === 'tx' ? log.topic === 'virtual' : true;
+    }), [logs, filterMode]);
+
     // ── 自动滚动 ──
     useLayoutEffect(() => {
         if (autoScroll && scrollRef.current) { scrollRef.current.scrollTop = scrollRef.current.scrollHeight; scrollPositions.set(session.id, scrollRef.current.scrollHeight); }
-    }, [logs, autoScroll, session.id]);
+    }, [filteredLogs.length, autoScroll, session.id]);
 
     useLayoutEffect(() => {
         if (scrollRef.current && scrollPositions.has(session.id)) { scrollRef.current.scrollTop = scrollPositions.get(session.id)!; }
     }, [session.id]);
 
     useEffect(() => {
-        if (!scrollRef.current || !autoScroll) return;
+        if (!scrollRef.current) return;
         const observer = new ResizeObserver(() => {
             if (scrollRef.current && scrollRef.current.clientHeight > 0) {
-                if (scrollPositions.has(session.id)) { scrollRef.current.scrollTop = scrollPositions.get(session.id)!; }
+                if (autoScroll) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                } else if (scrollPositions.has(session.id)) {
+                    scrollRef.current.scrollTop = scrollPositions.get(session.id)!;
+                }
             }
         });
         observer.observe(scrollRef.current);
         return () => observer.disconnect();
     }, [session.id, autoScroll]);
 
-    // ── 日志过滤 ──
-    const filteredLogs = useMemo(() => logs.filter(log => {
-        if (log.type === 'INFO' || log.type === 'ERROR') return true;
-        return filterMode === 'rx' ? log.topic === 'physical' : filterMode === 'tx' ? log.topic === 'virtual' : true;
-    }), [logs, filterMode]);
+
 
     // ── 工具栏回调（带持久化） ──
     const handleFilterChange = useCallback((mode: 'all' | 'rx' | 'tx') => { setFilterMode(mode); saveUIState({ filterMode: mode }); }, [saveUIState]);
