@@ -44,7 +44,7 @@ function getLogByteLength(data: string | Uint8Array): number {
 }
 
 export interface UseSessionLogReturn {
-    addLog: (sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus?: LogEntry['crcStatus'], topic?: string, commandName?: string, tsOverride?: number) => void;
+    addLog: (sessionId: string, type: LogEntry['type'], data: string | Uint8Array, crcStatus?: LogEntry['crcStatus'], topic?: string, commandName?: string, tsOverride?: number, sender?: string) => void;
     clearLogs: (sessionId: string, updateSession: (id: string, updater: (prev: SessionState) => Partial<SessionState>) => void) => void;
     flushLogBuffer: () => void;
     rxBuffersRef: React.MutableRefObject<Map<string, Uint8Array[]>>;

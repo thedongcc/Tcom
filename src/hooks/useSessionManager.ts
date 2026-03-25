@@ -67,7 +67,7 @@ export const useSessionManager = () => {
             }
         }
 
-        console.log(`[SessionManager] Updating config for ${sessionId}`, updates);
+// log(`[SessionManager] Updating config for ${sessionId}`, updates);
 
         // 1. 即时更新运行时会话
         updateSession(sessionId, (prev) => ({ config: { ...prev.config, ...updates } as SessionConfig }));

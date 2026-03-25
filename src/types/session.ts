@@ -18,7 +18,7 @@ export interface LogEntry {
     sender?: string;
 }
 
-export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'graph' | 'monitor';
+export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'monitor';
 
 export interface BaseSessionConfig {
     id: string;
@@ -125,14 +125,6 @@ export interface MqttSessionConfig extends BaseSessionConfig {
     };
 }
 
-export interface GraphSessionConfig extends BaseSessionConfig {
-    type: 'graph';
-    graphData?: {
-        nodes: Record<string, unknown>[];
-        edges: Record<string, unknown>[];
-        // visual metadata?
-    };
-}
 
 export interface MonitorSessionConfig extends BaseSessionConfig {
     type: 'monitor';
@@ -172,7 +164,7 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
     };
 }
 
-export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | GraphSessionConfig | MonitorSessionConfig;
+export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | MonitorSessionConfig;
 
 export interface SessionState {
     id: string; // Same as config.id

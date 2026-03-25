@@ -23,12 +23,11 @@ export const ConfigSidebar = () => {
     const getConfigTitle = () => {
         if (!activeSession) return t('sidebar.configuration');
         switch (activeSession.config.type) {
-            case 'settings': { const res = t('configSidebar.globalSettings'); return res === 'configSidebar.globalSettings' ? '全局设置' : res; }
-            case 'mqtt': { const res = t('configSidebar.mqttConfig'); return res === 'configSidebar.mqttConfig' ? 'MQTT配置' : res; }
-            case 'monitor': { const res = t('configSidebar.monitorConfig'); return res === 'configSidebar.monitorConfig' ? '监控配置' : res; }
-            case 'graph': { const res = t('configSidebar.graphConfig'); return res === 'configSidebar.graphConfig' ? '图表配置' : res; }
+            case 'settings': return t('configSidebar.globalSettings');
+            case 'mqtt': return t('configSidebar.mqttConfig');
+            case 'monitor': return t('configSidebar.monitorConfig');
             case 'serial':
-            default: { const res = t('configSidebar.serialConfig'); return res === 'configSidebar.serialConfig' ? '串口配置' : res; }
+            default: return t('configSidebar.serialConfig');
         }
     };
 
@@ -66,15 +65,6 @@ export const ConfigSidebar = () => {
             );
         }
 
-        // 图编辑器会话
-        if (activeSession.config.type === 'graph') {
-            return (
-                <div className="p-4 text-[var(--st-config-muted-text)] text-xs text-center mt-10">
-                    {t('configSidebar.graphActive')}<br />
-                    {t('configSidebar.noSidebarSettings')}
-                </div>
-            );
-        }
 
         // 监控器会话
         if (activeSession.config.type === 'monitor') {

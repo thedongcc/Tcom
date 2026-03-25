@@ -119,6 +119,7 @@ export const enUS = {
             sidebarRight: 'Right',
             showStatusBar: 'Show Status Bar',
             showStatusBarDesc: 'Show or hide the status bar at the bottom',
+            statusBarDetailSettings: 'Status Bar Detailed Settings',
             statusBarItems: 'Configure visible items',
             statusBarVersion: 'Version',
             statusBarCpu: 'CPU Usage',
@@ -185,6 +186,7 @@ export const enUS = {
             bgPositionBottomRight: 'Bottom Right',
             bgOpacity: 'Image Visibility',
             bgBlur: 'Image Blur',
+            bgImagePeek: 'Hold to preview background effect',
             uiOpacity: 'UI Panel Opacity',
         },
 

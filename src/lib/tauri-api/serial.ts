@@ -75,7 +75,7 @@ export function registerSerialAPI(): void {
             let disposed = false;
             listen<{ connectionId: string; data: number[]; timestamp: number }[]>('serial:timed-send-tick-batch', (event) => {
                 const batch = event.payload;
-                console.log("[Serial Batch Received]", batch);
+// log("[Serial Batch Received]", batch);
                 if (batch && batch.length > 0 && batch[0].connectionId === connectionId) {
                     callback(batch);
                 }

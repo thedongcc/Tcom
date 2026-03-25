@@ -74,7 +74,7 @@ export function registerMonitorAPI(): void {
             import('@tauri-apps/api/event').then(({ listen }) => {
                 listen<{ sessionId: string; type: string; target?: string; data: number[]; timestamp: number }[]>('monitor:timed-send-tick-batch', (event) => {
                     const batch = event.payload;
-                    console.log("[Monitor Batch Received]", batch);
+// log("[Monitor Batch Received]", batch);
                     if (batch && batch.length > 0 && batch[0].sessionId === sessionId) {
                         callback(batch.map(e => ({ data: e.data, timestamp: e.timestamp, target: e.target })));
                     }

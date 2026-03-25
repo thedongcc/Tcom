@@ -62,7 +62,7 @@ export function initFlushOnExit(): void {
             // 阻止默认关闭行为
             event.preventDefault();
 
-            console.log('[FlushOnExit] 窗口关闭请求，执行 flush（超时 2s）...');
+// log('[FlushOnExit] 窗口关闭请求，执行 flush（超时 2s）...');
 
             // 使用 Promise.race 竞速：flushAll vs 超时
             const timeout = new Promise<void>(resolve => {
@@ -77,7 +77,7 @@ export function initFlushOnExit(): void {
                 timeout,
             ]);
 
-            console.log('[FlushOnExit] flush 完成/超时，销毁窗口');
+// log('[FlushOnExit] flush 完成/超时，销毁窗口');
 
             // 销毁窗口
             await win.destroy();

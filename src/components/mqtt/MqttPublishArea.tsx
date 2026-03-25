@@ -95,7 +95,7 @@ export const MqttPublishArea = React.memo(({
                             className="bg-transparent border-none outline-none text-[var(--input-foreground)] text-[12px] flex-1 font-mono min-w-0"
                             value={topic}
                             onChange={e => { setTopic(e.target.value); saveUIState({ publishTopic: e.target.value }); }}
-                            placeholder="输入或选择主题..."
+                            placeholder={t('mqtt.topicPlaceholder')}
                         />
                         {subscribedTopics.length > 0 && (
                             <Tooltip content={t('mqtt.addTopic')} position="top" wrapperClassName="shrink-0 flex items-center">

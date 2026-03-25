@@ -168,11 +168,11 @@ export const MonitorTerminal = ({ session, onConnectRequest }: MonitorTerminalPr
 
             if (filePath) {
                 await writeTextFile(filePath, content);
-                showToast(t('toast.exportSuccess') || '导出成功', 'success', 1500);
+                showToast(t('toast.exportSuccess'), 'success', 1500);
             }
         } catch (e) {
             console.error('导出日志失败:', e);
-            showToast(t('toast.exportFailed') || '导出失败', 'error', 2000);
+            showToast(t('toast.exportFailed'), 'error', 2000);
         }
     };
 

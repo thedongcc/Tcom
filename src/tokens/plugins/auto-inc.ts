@@ -66,8 +66,6 @@ export const autoIncPlugin: TokenPlugin = {
         (config as any).currentValue = bigIntToHex(next, bytes);
     },
 
-    isDynamic: true,
-
     createTimedState(config: AutoIncConfig): TokenTimedState {
         const bytes = config.bytes || 1;
         const step = BigInt(config.step || 0);

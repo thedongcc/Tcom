@@ -14,10 +14,10 @@ const VirtualPortFeature: Feature = {
     icon: ArrowRightLeft as any,
     sidebarComponent: VirtualPortSidebar as any,
     activate: () => {
-        console.log('[Feature:virtual-port] 虚拟串口已激活');
+// log('[Feature:virtual-port] 虚拟串口已激活');
     },
     deactivate: () => {
-        console.log('[Feature:virtual-port] 虚拟串口已停用');
+// log('[Feature:virtual-port] 虚拟串口已停用');
     },
 };
 

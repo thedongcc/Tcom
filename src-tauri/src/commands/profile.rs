@@ -6,25 +6,25 @@
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::Manager;
+
 
 use super::fs_utils::atomic_write_str;
 
 // ─── 路径工具 ────────────────────────────────────────────────────────
 
 /// 获取 profiles 根目录
-fn profiles_dir(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap().join("profiles")
+fn profiles_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(crate::commands::fs_utils::get_app_data_dir(app)?.join("profiles"))
 }
 
 /// 获取指定 Profile 目录
-fn profile_dir(app: &tauri::AppHandle, name: &str) -> PathBuf {
-    profiles_dir(app).join(sanitize_name(name))
+fn profile_dir(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+    Ok(profiles_dir(app)?.join(sanitize_name(name)))
 }
 
 /// 获取 Profile 的 sessions 子目录
-fn sessions_dir(app: &tauri::AppHandle, name: &str) -> PathBuf {
-    profile_dir(app, name).join("sessions")
+fn sessions_dir(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+    Ok(profile_dir(app, name)?.join("sessions"))
 }
 
 /// 清理名称中的非法字符
@@ -42,7 +42,7 @@ fn sanitize_name(name: &str) -> String {
 /// 列出所有 Profile
 #[tauri::command]
 pub fn profile_list(app: tauri::AppHandle) -> Result<Value, String> {
-    let dir = profiles_dir(&app);
+    let dir = profiles_dir(&app)?;
     if !dir.exists() {
         fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
         return Ok(serde_json::json!({ "success": true, "profiles": [] }));
@@ -80,7 +80,8 @@ pub fn profile_create(app: tauri::AppHandle, name: String) -> Result<Value, Stri
         return Err("Profile 名称不能为空".into());
     }
 
-    let dir = profile_dir(&app, trimmed);
+    let dir = profile_dir(&app, trimmed)?
+;
     if dir.exists() {
         return Err(format!("Profile \"{}\" 已存在", trimmed));
     }
@@ -104,7 +105,7 @@ pub fn profile_create(app: tauri::AppHandle, name: String) -> Result<Value, Stri
 /// 删除 Profile
 #[tauri::command]
 pub fn profile_delete(app: tauri::AppHandle, name: String) -> Result<Value, String> {
-    let dir = profile_dir(&app, &name);
+    let dir = profile_dir(&app, &name)?;
     if !dir.exists() {
         return Err(format!("Profile \"{}\" 不存在", name));
     }
@@ -115,8 +116,8 @@ pub fn profile_delete(app: tauri::AppHandle, name: String) -> Result<Value, Stri
 /// 重命名 Profile
 #[tauri::command]
 pub fn profile_rename(app: tauri::AppHandle, old_name: String, new_name: String) -> Result<Value, String> {
-    let old_dir = profile_dir(&app, &old_name);
-    let new_dir = profile_dir(&app, &new_name);
+    let old_dir = profile_dir(&app, &old_name)?;
+    let new_dir = profile_dir(&app, &new_name)?;
 
     if !old_dir.exists() {
         return Err(format!("Profile \"{}\" 不存在", old_name));
@@ -160,8 +161,8 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result
 /// 复制 Profile
 #[tauri::command]
 pub fn profile_duplicate(app: tauri::AppHandle, old_name: String, new_name: String) -> Result<Value, String> {
-    let old_dir = profile_dir(&app, &old_name);
-    let new_dir = profile_dir(&app, &new_name);
+    let old_dir = profile_dir(&app, &old_name)?;
+    let new_dir = profile_dir(&app, &new_name)?;
 
     if !old_dir.exists() {
         return Err(format!("Profile \"{}\" 不存在", old_name));
@@ -192,7 +193,8 @@ pub fn profile_duplicate(app: tauri::AppHandle, old_name: String, new_name: Stri
 /// 列出 Profile 内的所有 Session
 #[tauri::command]
 pub fn profile_list_sessions(app: tauri::AppHandle, profile_name: String) -> Result<Value, String> {
-    let dir = sessions_dir(&app, &profile_name);
+    let dir = sessions_dir(&app, &profile_name)?
+;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
     let mut sessions = Vec::new();
@@ -217,7 +219,8 @@ pub fn profile_list_sessions(app: tauri::AppHandle, profile_name: String) -> Res
 /// 保存 Session 到 Profile
 #[tauri::command]
 pub fn profile_save_session(app: tauri::AppHandle, profile_name: String, config: Value) -> Result<Value, String> {
-    let dir = sessions_dir(&app, &profile_name);
+    let dir = sessions_dir(&app, &profile_name)?
+;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
     let name = config
@@ -236,7 +239,7 @@ pub fn profile_save_session(app: tauri::AppHandle, profile_name: String, config:
 /// 删除 Session
 #[tauri::command]
 pub fn profile_delete_session(app: tauri::AppHandle, profile_name: String, config: Value) -> Result<Value, String> {
-    let dir = sessions_dir(&app, &profile_name);
+    let dir = sessions_dir(&app, &profile_name)?;
     let name = config
         .get("name")
         .and_then(|v| v.as_str())
@@ -256,7 +259,7 @@ pub fn profile_rename_session(
     old_name: String,
     new_name: String,
 ) -> Result<Value, String> {
-    let dir = sessions_dir(&app, &profile_name);
+    let dir = sessions_dir(&app, &profile_name)?;
     let old_path = dir.join(format!("{}.json", sanitize_name(&old_name)));
     let new_path = dir.join(format!("{}.json", sanitize_name(&new_name)));
     fs::rename(&old_path, &new_path).map_err(|e| e.to_string())?;
@@ -268,7 +271,7 @@ pub fn profile_rename_session(
 /// 读取 Profile 的命令菜单数据
 #[tauri::command]
 pub fn profile_get_commands(app: tauri::AppHandle, profile_name: String) -> Result<Value, String> {
-    let file = profile_dir(&app, &profile_name).join("commands.json");
+    let file = profile_dir(&app, &profile_name)?.join("commands.json");
     if !file.exists() {
         return Ok(serde_json::json!({ "success": true, "data": [] }));
     }
@@ -280,7 +283,7 @@ pub fn profile_get_commands(app: tauri::AppHandle, profile_name: String) -> Resu
 /// 保存 Profile 的命令菜单数据
 #[tauri::command]
 pub fn profile_save_commands(app: tauri::AppHandle, profile_name: String, data: Value) -> Result<Value, String> {
-    let dir = profile_dir(&app, &profile_name);
+    let dir = profile_dir(&app, &profile_name)?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
     atomic_write_str(&dir.join("commands.json"), &json)?;
@@ -292,7 +295,7 @@ pub fn profile_save_commands(app: tauri::AppHandle, profile_name: String, data: 
 /// 读取 Profile 的自动回复规则
 #[tauri::command]
 pub fn profile_get_auto_reply(app: tauri::AppHandle, profile_name: String) -> Result<Value, String> {
-    let file = profile_dir(&app, &profile_name).join("auto-reply.json");
+    let file = profile_dir(&app, &profile_name)?.join("auto-reply.json");
     if !file.exists() {
         return Ok(serde_json::json!({
             "success": true,
@@ -307,7 +310,7 @@ pub fn profile_get_auto_reply(app: tauri::AppHandle, profile_name: String) -> Re
 /// 保存 Profile 的自动回复规则
 #[tauri::command]
 pub fn profile_save_auto_reply(app: tauri::AppHandle, profile_name: String, data: Value) -> Result<Value, String> {
-    let dir = profile_dir(&app, &profile_name);
+    let dir = profile_dir(&app, &profile_name)?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
     atomic_write_str(&dir.join("auto-reply.json"), &json)?;

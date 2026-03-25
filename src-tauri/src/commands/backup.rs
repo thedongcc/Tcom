@@ -7,22 +7,22 @@ use serde_json::Value;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use tauri::Manager;
+
 use zip::write::SimpleFileOptions;
 
 /// Profile 根目录
-fn profiles_dir(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap().join("profiles")
+fn profiles_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(crate::commands::fs_utils::get_app_data_dir(app)?.join("profiles"))
 }
 
 /// 全局设置路径
-fn settings_path(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap().join("settings.json")
+fn settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(crate::commands::fs_utils::get_app_data_dir(app)?.join("settings.json"))
 }
 
 /// 主题目录
-fn themes_dir(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap().join("themes")
+fn themes_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(crate::commands::fs_utils::get_app_data_dir(app)?.join("themes"))
 }
 
 // ── 递归添加目录到 zip ──
@@ -68,7 +68,7 @@ fn add_dir_to_zip<W: Write + std::io::Seek>(
 pub fn backup_export_profile(app: tauri::AppHandle, profile_name: String) -> Result<Value, String> {
     use tauri_plugin_dialog::DialogExt;
 
-    let profile_path = profiles_dir(&app).join(&profile_name);
+    let profile_path = profiles_dir(&app)?.join(&profile_name);
     if !profile_path.exists() {
         return Err(format!("Profile \"{}\" 不存在", profile_name));
     }
@@ -136,7 +136,7 @@ pub fn backup_import_profile(app: tauri::AppHandle) -> Result<Value, String> {
     };
 
     // 确定目标目录（如已存在则添加后缀）
-    let base_dir = profiles_dir(&app);
+    let base_dir = profiles_dir(&app)?;
     let mut target_name = profile_name.clone();
     let mut target_dir = base_dir.join(&target_name);
     let mut counter = 1;
@@ -210,10 +210,10 @@ pub fn backup_export_all(app: tauri::AppHandle) -> Result<Value, String> {
         .compression_method(zip::CompressionMethod::Deflated);
 
     // 1. 所有 Profile
-    add_dir_to_zip(&mut zip, &profiles_dir(&app), "profiles", options)?;
+    add_dir_to_zip(&mut zip, &profiles_dir(&app)?, "profiles", options)?;
 
     // 2. 全局设置
-    let settings = settings_path(&app);
+    let settings = settings_path(&app)?;
     if settings.exists() {
         let data = fs::read(&settings).map_err(|e| e.to_string())?;
         zip.start_file("settings.json", options)
@@ -222,7 +222,7 @@ pub fn backup_export_all(app: tauri::AppHandle) -> Result<Value, String> {
     }
 
     // 3. 自定义主题
-    add_dir_to_zip(&mut zip, &themes_dir(&app), "themes", options)?;
+    add_dir_to_zip(&mut zip, &themes_dir(&app)?, "themes", options)?;
 
     zip.finish().map_err(|e| e.to_string())?;
 
@@ -248,7 +248,7 @@ pub fn backup_import_all(app: tauri::AppHandle) -> Result<Value, String> {
 
     let file = fs::File::open(&zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
-    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_data = crate::commands::fs_utils::get_app_data_dir(&app)?;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;

@@ -71,7 +71,7 @@ export const Com0Com = {
         // Note: parameters are key=value. Quotes needed if spaces.
         const cmd = `"${setupcPath}" install PortName=${portA} PortName=${portB}`;
 
-        console.log('[Com0Com] Executing:', cmd);
+// log('[Com0Com] Executing:', cmd);
         const res = await window.com0comAPI.exec(cmd);
         if (!res.success) {
             const combinedError = (res.stderr || '') + (res.stdout || '') + (res.error || '');
@@ -79,7 +79,7 @@ export const Com0Com = {
             return { success: false, error: combinedError };
         }
 
-        console.log('[Com0Com] createPair success, setting names...');
+// log('[Com0Com] createPair success, setting names...');
 
         // Try to set friendly names immediately
         if (window.com0comAPI?.setFriendlyName) {
@@ -95,7 +95,7 @@ export const Com0Com = {
     removePair: async (setupcPath: string, indexOrPort: string): Promise<boolean> => {
         if (!window.com0comAPI) throw new Error('com0comAPI not available');
         const cmd = `"${setupcPath}" remove ${indexOrPort}`;
-        console.log('[Com0Com] Executing:', cmd);
+// log('[Com0Com] Executing:', cmd);
         const res = await window.com0comAPI.exec(cmd);
         return res.success;
     },

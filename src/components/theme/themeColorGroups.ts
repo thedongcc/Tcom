@@ -59,7 +59,7 @@ export const REGION_GROUPS = [
         id: 'settings-tools',
         label: '设置与工具',
         labelEn: '⚙ Settings & Tools',
-        components: ['settings-editor', 'graph-editor', 'update-panel']
+        components: ['settings-editor', 'update-panel']
     },
     {
         id: 'data-colors',

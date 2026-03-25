@@ -83,7 +83,7 @@ declare global {
             // 高精度监视器专用发送
             startTimedSend: (sessionId: string, target: 'virtual' | 'physical', data: number[], intervalMs: number) => Promise<{ success: boolean; error?: string }>;
             stopTimedSend: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
-            onTimedSendTickBatch?: (sessionId: string, callback: (events: { data: number[], timestamp: number }[]) => void) => () => void;
+            onTimedSendTickBatch?: (sessionId: string, callback: (events: { data: number[], timestamp: number, target?: string }[]) => void) => () => void;
         }
         tcpAPI: {
             start: (port: number) => Promise<{ success: boolean; error?: string }>;

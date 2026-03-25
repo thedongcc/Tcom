@@ -101,6 +101,9 @@ pub struct PortInfo {
     pub pnp_id: Option<String>,
     pub busy: bool,
     pub status: String,
+    /// 端口被占用时的具体错误信息（busy = true 时填充）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Windows 高精度定时器 RAII 守卫

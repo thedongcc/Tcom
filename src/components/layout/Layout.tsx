@@ -10,7 +10,6 @@ import { useSession } from '../../context/SessionContext';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
-import { useI18n } from '../../context/I18nContext';
 import { isGlassTheme } from '../../hooks/useThemeEffects';
 import { SessionConfig } from '../../types/session';
 
@@ -22,7 +21,6 @@ interface LayoutProps {
 export const Layout = ({ children, editorLayout }: LayoutProps) => {
     const sessionManager = useSession();
     const { config, updateUI } = useSettings();
-    const { t } = useI18n();
     const activeView = config.ui.activeActivityItem;
     const setActiveView = (view: string) => updateUI({ activeActivityItem: view });
 

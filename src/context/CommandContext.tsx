@@ -211,47 +211,21 @@ export const CommandProvider = ({ children }: { children: ReactNode }) => {
     const importCommands = useCallback(() => {
         readCommandsFromFile().then(imported => {
             if (!imported) return;
-            confirm({
-                title: t('command.importTitle'),
-                message: t('command.importMessage'),
-                type: 'info',
-                confirmText: t('command.importMerge'),
-                cancelText: t('command.importReplace')
-            }).then(ok => {
-                if (ok) {
-                    setCommands(prev => [...prev, ...imported]);
-                } else {
-                    setCommands(imported);
-                }
-            });
+            confirm({ title: t('command.importTitle'), message: t('command.importMessage'), type: 'info', confirmText: t('command.importMerge'), cancelText: t('command.importReplace') })
+                .then(ok => setCommands(prev => ok ? [...prev, ...imported] : imported));
         });
-    }, [setCommands, confirm]);
+    }, [setCommands, confirm, t]);
 
     const exportCommands = useCallback(() => {
         downloadCommandsAsJson(commands);
     }, [commands]);
 
-    const value = {
-        commands,
-        addGroup,
-        addCommand,
-        updateEntity,
-        deleteEntity,
-        deleteEntities,
-        duplicateEntity,
-        duplicateEntities,
-        clearAll,
-        setAllCommands,
-        importCommands,
-        exportCommands,
-        undo,
-        redo,
-        canUndo,
-        canRedo
-    };
-
     return (
-        <CommandContext.Provider value={value}>
+        <CommandContext.Provider value={{
+            commands, addGroup, addCommand, updateEntity, deleteEntity, deleteEntities,
+            duplicateEntity, duplicateEntities, clearAll, setAllCommands, importCommands,
+            exportCommands, undo, redo, canUndo, canRedo
+        }}>
             {children}
         </CommandContext.Provider>
     );

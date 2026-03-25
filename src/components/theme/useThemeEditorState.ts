@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSettings } from '../../context/SettingsContext';
 import { throttledIpcSync } from './ThemeTokenRow';
-import { componentTokenMap } from '../../themes/componentTokenMap';
+import { useThemeInspector } from './useThemeInspector';
 
 /** 将 rgb(r, g, b) / rgba(r, g, b, a) 格式转为 #hex，防止颜色选择器崩溃 */
 const rgbToHex = (rgb: string): string => {
@@ -27,10 +27,8 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     const { availableThemes, config, loadThemes } = useSettings();
     const [allEdits, setAllEdits] = useState<Record<string, Record<string, string>>>({});
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-    const [isInspecting, setIsInspecting] = useState(false);
     const [copiedVar, setCopiedVar] = useState<string | null>(null);
-    const [lastPickedVars, setLastPickedVars] = useState<string[]>([]);
-    const [cdpDebugData, setCdpDebugData] = useState<{ compKey: string | null, className: string, outerHTML: string } | null>(null);
+    const inspector = useThemeInspector(onClose);
     const lastAppliedEditsRef = useRef<Record<string, string>>({});
     const previousThemeId = useRef<string | null>(null);
     const initDone = useRef(false);
@@ -43,32 +41,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
     const edits: Record<string, string> = allEdits[currentThemeId] || {};
     const editCount = Object.values(allEdits).reduce((sum, m) => sum + Object.keys(m).length, 0);
 
-    // ── 键盘事件 + Inspector 监听 ──
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (isInspecting) {
-                    setIsInspecting(false);
-                    window.themeAPI?.stopInspector?.();
-                } else {
-                    onClose();
-                }
-            }
-        };
-        const unInspectorStop = window.themeAPI?.onInspectorStopped?.(() => {
-            setIsInspecting(false);
-        });
-        const unInspectorStart = window.themeAPI?.onInspectorStarted?.(() => {
-            setIsInspecting(true);
-        });
 
-        window.addEventListener('keydown', handleKeyDown, true);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown, true);
-            unInspectorStart?.();
-            unInspectorStop?.();
-        };
-    }, [isInspecting, onClose]);
 
     // ── 监听 DOM 上 data-theme 属性变化（最可靠的主题切换信号） ──
     useEffect(() => {
@@ -156,58 +129,12 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         }
     }, [isOpen, currentThemeDef?.id, allEdits]);
 
-    // ── CDP 检查器监听 ──
-    const extractVars = useCallback((html: string, compKey?: string | null) => {
-        // 构建已注册变量的白名单集合（只有注册过的颜色变量才允许显示）
-        const registeredVars = new Set<string>();
-        for (const group of Object.values(componentTokenMap)) {
-            group.tokens.forEach(t => registeredVars.add(t.var));
-        }
 
-        const vars = new Set<string>();
-
-        // 1. 从 HTML 中提取 var(--xxx)，只保留已注册的颜色变量
-        const regex = /var\((--[\w][\w-]*)/g;
-        let match;
-        while ((match = regex.exec(html)) !== null) {
-            const varName = match[1].trim();
-            if (registeredVars.has(varName)) vars.add(varName);
-        }
-
-        // 2. 如果有 data-component key，补入该组件的全部已注册变量
-        if (compKey && componentTokenMap[compKey]) {
-            componentTokenMap[compKey].tokens.forEach(t => vars.add(t.var));
-        }
-
-        return Array.from(vars);
-    }, []);
-
-    useEffect(() => {
-        const unsub = window.themeAPI?.onComponentPicked?.((data) => {
-            setCdpDebugData(data);
-            setLastPickedVars(extractVars(data.outerHTML, data.compKey));
-            setTimeout(() => setLastPickedVars([]), 2000);
-        });
-        return () => { unsub?.(); };
-    }, [extractVars]);
-
-    // ── Inspector 控制 ──
-    const startInspect = useCallback(() => {
-        setIsInspecting(true);
-        window.themeAPI?.startInspectorMode?.();
-    }, []);
-
-    const stopInspect = useCallback(() => {
-        if (isInspecting) {
-            setIsInspecting(false);
-                window.themeAPI?.stopInspectorMode?.();
-        }
-    }, [isInspecting]);
 
     // 关闭时清理
     useEffect(() => {
         if (!isOpen) {
-            stopInspect();
+            inspector.stopInspect();
             window.themeAPI?.applyPreview?.({});
             Object.keys(lastAppliedEditsRef.current).forEach(varName => {
                 document.documentElement.style.removeProperty(varName);
@@ -216,7 +143,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
             lastAppliedEditsRef.current = {};
             window.themeAPI?.clearAllPendingEdits?.();
         }
-    }, [isOpen, stopInspect]);
+    }, [isOpen, inspector.stopInspect]);
 
     // ── 颜色操作 ──
     const getColorValue = useCallback((varName: string) => {
@@ -295,11 +222,7 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         allEdits,
         expandedGroups,
         setExpandedGroups,
-        isInspecting,
         copiedVar,
-        lastPickedVars,
-        cdpDebugData,
-        setCdpDebugData,
         currentThemeDef,
         edits,
         editCount,
@@ -309,7 +232,6 @@ export const useThemeEditorState = ({ isOpen, onClose }: UseThemeEditorStatePara
         handleSave,
         handleCancel,
         handleCopy,
-        startInspect,
-        extractVars,
+        ...inspector,
     };
 };

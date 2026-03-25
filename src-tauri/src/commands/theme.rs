@@ -25,8 +25,8 @@ impl Default for ThemeEditorState {
 }
 
 /// 获取主题目录路径
-fn theme_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
-    app.path().app_data_dir().unwrap().join("themes")
+fn theme_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(crate::commands::fs_utils::get_app_data_dir(app)?.join("themes"))
 }
 
 /// 确保默认主题文件存在（首次启动时创建）
@@ -57,7 +57,7 @@ fn ensure_theme_files(dir: &std::path::Path) -> Result<(), String> {
 
 #[tauri::command]
 pub fn theme_load_all(app: tauri::AppHandle) -> Result<Value, String> {
-    let dir = theme_dir(&app);
+    let dir = theme_dir(&app)?;
     ensure_theme_files(&dir)?;
 
     let mut themes = Vec::new();
@@ -117,7 +117,7 @@ pub fn theme_load_all(app: tauri::AppHandle) -> Result<Value, String> {
 
 #[tauri::command]
 pub fn theme_open_folder(app: tauri::AppHandle) -> Result<(), String> {
-    let dir = theme_dir(&app);
+    let dir = theme_dir(&app)?;
     ensure_theme_files(&dir)?;
     // 使用系统文件管理器打开目录
     open::that(&dir).map_err(|e| e.to_string())?;
@@ -126,7 +126,7 @@ pub fn theme_open_folder(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn theme_open_file(app: tauri::AppHandle, theme_id: String) -> Result<(), String> {
-    let dir = theme_dir(&app);
+    let dir = theme_dir(&app)?;
     let file_path = dir.join(format!("{theme_id}.json"));
     if file_path.exists() {
         open::that(&file_path).map_err(|e| e.to_string())?;
@@ -174,7 +174,7 @@ pub fn theme_editor_is_open(app: tauri::AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 pub fn theme_editor_save(app: tauri::AppHandle, id: String, theme_def: Value) -> Result<Value, String> {
-    let dir = theme_dir(&app);
+    let dir = theme_dir(&app)?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
     let file_path = dir.join(format!("{id}.json"));

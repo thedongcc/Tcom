@@ -26,6 +26,36 @@ import { ModuleSettings } from './ModuleSettings';
 import { StatusBarSettingsInline } from './StatusBarSettings';
 import { isCrashReportEnabled, setCrashReportEnabled } from '../../lib/crashReporter';
 
+// ── JIT 实时滑块组件（内联定义，避免外部依赖） ──
+interface LiveSliderProps {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    unit?: string;
+    onChange: (val: number) => void;
+    liveUpdate?: (val: number) => void;
+}
+const LiveSlider = ({ label, value, min, max, unit = '', onChange, liveUpdate }: LiveSliderProps) => (
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-color)] last:border-b-0">
+        <span className="text-[13px] text-[var(--st-settings-text)] font-semibold flex-1">{label}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+            <input
+                type="range"
+                min={min} max={max}
+                value={value}
+                className="w-28 accent-[var(--accent-color)]"
+                onChange={e => {
+                    const v = Number(e.target.value);
+                    liveUpdate?.(v);
+                    onChange(v);
+                }}
+            />
+            <span className="text-[12px] text-[var(--input-placeholder-color)] w-12 text-right tabular-nums">{value}{unit}</span>
+        </div>
+    </div>
+);
+
 // ── 生成分组 ID ──
 const sectionId = (index: number) => `settings-section-${index}`;
 const MODULE_SECTION_ID = 'settings-section-modules';
@@ -189,7 +219,7 @@ export const SettingsEditor = () => {
                                 liveUpdate={val => document.documentElement.style.setProperty('--bg-opacity', (val / 100).toString())}
                             />
                             <LiveSlider
-                                label={t('settings.logFormat.bgBlur') === 'settings.logFormat.bgBlur' ? '图片模糊度 (Blur)' : t('settings.logFormat.bgBlur')}
+                                label={t('settings.logFormat.bgBlur')}
                                 value={config.images.bgBlur ?? 0}
                                 min={0} max={20} unit="px"
                                 onChange={val => updateConfig(prev => ({ ...prev, images: { ...prev.images, bgBlur: val } }))}
@@ -245,7 +275,7 @@ export const SettingsEditor = () => {
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--button-foreground)] rounded border border-[var(--border-color)] transition-colors cursor-pointer"
                                     >
                                         <FolderOpen size={14} />
-                                        <span>浏览图片</span>
+                                        <span>{t('settings.logFormat.bgImageBrowse')}</span>
                                     </button>
                                 </Tooltip>
 
@@ -274,7 +304,7 @@ export const SettingsEditor = () => {
                                             </button>
                                         </Tooltip>
 
-                                        <Tooltip content={t('settings.logFormat.bgImagePeek') === 'settings.logFormat.bgImagePeek' ? '按住预览背景效果' : t('settings.logFormat.bgImagePeek')} position="top">
+                                        <Tooltip content={t('settings.logFormat.bgImagePeek')} position="top">
                                             <button
                                                 onPointerDown={() => document.body.classList.add('settings-peek-mode')}
                                                 className="p-1.5 rounded transition-colors cursor-grab active:cursor-grabbing text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]"
@@ -317,17 +347,18 @@ export const SettingsEditor = () => {
                     render: () => (
                         <div className="flex items-center gap-2">
                             <Checkbox checked={config.ui.showStatusBar} onChange={() => updateUI({ showStatusBar: !config.ui.showStatusBar })} />
-                            <button
-                                onClick={() => setShowStatusBarOptions(v => !v)}
-                                title="状态栏详细设置"
-                                className={`p-1 rounded transition-colors ${
-                                    showStatusBarOptions
-                                        ? 'text-[var(--accent-color)] bg-[var(--list-hover-background)]'
-                                        : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
-                                }`}
-                            >
-                                <Settings2 size={14} />
-                            </button>
+                            <Tooltip content={t('settings.layout.statusBarDetailSettings')} position="top">
+                                <button
+                                    onClick={() => setShowStatusBarOptions(v => !v)}
+                                    className={`p-1 rounded transition-colors ${
+                                        showStatusBarOptions
+                                            ? 'text-[var(--accent-color)] bg-[var(--list-hover-background)]'
+                                            : 'text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]'
+                                    }`}
+                                >
+                                    <Settings2 size={14} />
+                                </button>
+                            </Tooltip>
                         </div>
                     ),
                 },
@@ -374,13 +405,13 @@ export const SettingsEditor = () => {
                         <div className="w-64">
                             <CustomSelect
                                 items={[
-                                    { label: '500', value: 500 },
-                                    { label: '1000', value: 1000 },
-                                    { label: '2000', value: 2000 },
-                                    { label: '5000', value: 5000 },
-                                    { label: '10000', value: 10000 },
+                                    { label: '500', value: '500' },
+                                    { label: '1000', value: '1000' },
+                                    { label: '2000', value: '2000' },
+                                    { label: '5000', value: '5000' },
+                                    { label: '10000', value: '10000' },
                                 ]}
-                                value={config.maxLogEntries || 1000}
+                                value={String(config.maxLogEntries || 1000)}
                                 onChange={(val) => updateConfig({ maxLogEntries: Number(val) })}
                             />
                         </div>

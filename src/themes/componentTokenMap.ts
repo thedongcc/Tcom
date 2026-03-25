@@ -1,8 +1,10 @@
 export interface ComponentThemeMeta {
   label: string;
+  labelEn?: string;
   tokens: Array<{
     var: string; // CSS 变量名
     label: string; // 易读中文描述
+    labelEn?: string;
   }>;
 }
 
@@ -527,26 +529,7 @@ export const componentTokenMap: Record<string, ComponentThemeMeta> = {
       { var: "--st-settings-text-hover", label: "设置-文本-悬停", labelEn: "Text hover" },
     ],
   },
-  "graph-editor": {
-    label: "桥接流图编辑器",
-    labelEn: "Graph Flow Editor",
-    tokens: [
-      { var: "--st-graph-canvas-bg", label: "流图-画布-背景", labelEn: "Infinite canvas bg" },
-      { var: "--st-graph-toolbar-bg", label: "流图-工具栏-背景", labelEn: "Toolbar background" },
-      { var: "--st-graph-node-title", label: "流图-节点-标题", labelEn: "Node card title" },
-      { var: "--st-graph-subnode-bg", label: "流图-子节点-背景", labelEn: "Sub-node inner bg" },
-      { var: "--st-graph-subnode-border", label: "流图-子节点-边框", labelEn: "Sub-node border" },
-      { var: "--st-graph-port-border", label: "流图-端口-边框", labelEn: "Port connector border" },
-      { var: "--st-graph-port-hover-bg", label: "流图-端口-悬停-背景", labelEn: "Port connector hover bg" },
-      { var: "--st-graph-divider", label: "流图-分隔线", labelEn: "Graph divider" },
-      { var: "--st-graph-icon-bus", label: "流图-图标-总线", labelEn: "Bus icon color" },
-      { var: "--st-graph-icon-pair", label: "流图-图标-配对", labelEn: "Pair icon color" },
-      { var: "--st-graph-icon-physical", label: "流图-图标-物理口", labelEn: "Physical icon" },
-      { var: "--st-graph-icon-virtual", label: "流图-图标-虚拟口", labelEn: "Virtual icon" },
-      { var: "--st-graph-port-hover-border", label: "流图-端口-悬停-边框", labelEn: "Port hover border" },
-      { var: "--st-graph-toolbar-border", label: "流图-工具栏-边框", labelEn: "Toolbar border" },
-    ],
-  },
+
 
   // ====================================================
   // === Globals (全局基址与公共小件) ===

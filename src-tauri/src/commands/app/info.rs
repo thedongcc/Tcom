@@ -164,8 +164,8 @@ pub fn is_admin() -> Result<bool, String> {
 
 /// 恢复出厂设置
 pub fn factory_reset(app: &tauri::AppHandle) -> Result<Value, String> {
-    use tauri::Manager;
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+
+    let data_dir = crate::commands::fs_utils::get_app_data_dir(&app)?;
     let flag_path = data_dir.parent()
         .map(|p| p.join(".reset-pending"))
         .ok_or("Cannot determine parent directory")?;

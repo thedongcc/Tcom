@@ -121,7 +121,7 @@ export const MonitorOptionsPanel = ({
                     {!hidePacketType && (
                         <Switch label={t('monitor.packetType')} checked={showPacketType} onChange={(checked) => { setShowPacketType(checked); saveUIState({ showPacketType: checked }); }} />
                     )}
-                    <Switch label={t('monitor.showControlChars') || '控制字符可视化'} checked={showControlChars} onChange={(checked) => { setShowControlChars(checked); saveUIState({ showControlChars: checked }); }} />
+                    <Switch label={t('monitor.showControlChars')} checked={showControlChars} onChange={(checked) => { setShowControlChars(checked); saveUIState({ showControlChars: checked }); }} />
                     <Switch label={t('monitor.dataLength')} checked={showDataLength} onChange={(checked) => { setShowDataLength(checked); saveUIState({ showDataLength: checked }); }} />
                     <Switch label={t('monitor.mergeRepeats')} checked={mergeRepeats} onChange={(checked) => { setMergeRepeats(checked); saveUIState({ mergeRepeats: checked }); }} />
                     <Switch label={t('monitor.flashNewMessage')} checked={flashNewMessage} onChange={(checked) => { setFlashNewMessage(checked); saveUIState({ flashNewMessage: checked }); }} />

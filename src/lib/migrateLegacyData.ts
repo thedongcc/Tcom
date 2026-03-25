@@ -46,7 +46,7 @@ export async function migrateLegacyData(profileName: string): Promise<{
                     const res = await window.profileAPI?.saveCommands(profileName, commands);
                     if (res?.success) {
                         result.commandsMigrated = commands.length;
-                        console.log(`[迁移] 命令菜单: ${commands.length} 条已迁移到 Profile "${profileName}"`);
+// log(`[迁移] 命令菜单: ${commands.length} 条已迁移到 Profile "${profileName}"`);
                     }
                 }
             } catch (e) {
@@ -63,7 +63,7 @@ export async function migrateLegacyData(profileName: string): Promise<{
                     const res = await window.profileAPI?.saveAutoReply(profileName, autoReply);
                     if (res?.success) {
                         result.rulesMigrated = autoReply.rules?.length || 0;
-                        console.log(`[迁移] 自动回复: ${result.rulesMigrated} 条规则已迁移`);
+// log(`[迁移] 自动回复: ${result.rulesMigrated} 条规则已迁移`);
                     }
                 }
             } catch (e) {
@@ -85,7 +85,7 @@ export async function migrateLegacyData(profileName: string): Promise<{
                     const res = await window.globalSettingsAPI?.save(settings);
                     if (res?.success) {
                         result.settingsMigrated = true;
-                        console.log('[迁移] 全局设置已迁移');
+// log('[迁移] 全局设置已迁移');
                     }
                 }
             } catch (e) {
@@ -115,13 +115,13 @@ export async function migrateLegacyData(profileName: string): Promise<{
             });
             if (setupcPath) console.log('[迁移] setupcPath 已迁移');
             if (monitorRaw !== null) console.log('[迁移] monitorEnabled 已迁移');
-            console.log('[迁移] 迁移标记已写入 state.json');
+// log('[迁移] 迁移标记已写入 state.json');
         } catch (e) {
             console.error('[迁移] 写入迁移标记失败:', e);
         }
 
         // 注意：不删除旧 localStorage 数据，作为降级保底
-        console.log('[迁移] 旧数据迁移完成（localStorage 数据已保留作为备份）');
+// log('[迁移] 旧数据迁移完成（localStorage 数据已保留作为备份）');
 
     } catch (e) {
         console.error('[迁移] 迁移过程出错:', e);

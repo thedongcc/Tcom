@@ -59,7 +59,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
         searchOpen, setSearchOpen, uiState, saveUIState,
     });
     const {
-        scrollRef, initialLogCountRef, mountTimeRef,
+        scrollRef,
         formatData, filteredLogs,
         query, isRegex, matchCase, matches, currentIndex, activeMatch, regexError,
         handleQueryChange, handleRegexChange, handleMatchCaseChange, handleToggleSearch,
@@ -191,18 +191,15 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                     {filteredLogs.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]"><p>No data</p></div>
                     )}
-                    {filteredLogs.map((log, index) => {
+                    {filteredLogs.map((log) => {
                         const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
                         return (
                             <LogItem
-                                key={log.id}
-                                log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
+                                key={log.id} log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
                                 showTimestamp={displayState.showTimestamp} showPacketType={displayState.showPacketType}
-                                showDataLength={displayState.showDataLength}
-                                onContextMenu={handleLogContextMenu}
+                                showDataLength={displayState.showDataLength} onContextMenu={handleLogContextMenu}
                                 formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText}
-                                timestampFormat={themeConfig.timestampFormat}
-                                matches={matches} activeMatch={activeMatch}
+                                timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch}
                                 mergeRepeats={displayState.mergeRepeats} flashNewMessage={flashNewMessage}
                                 fontSize={fontSize} showControlChars={displayState.showControlChars}
                                 rxCRC={rxCRC} crcEnabled={crcEnabled}
@@ -225,16 +222,11 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 onStateChange={handleInputStateChange}
                 isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily}
                 onConnectRequest={async () => {
-                    const path = config.type === 'serial' ? config.connection.path : undefined;
-                    if (path && onConnectRequest) {
-                        const result = await onConnectRequest();
-                        if (result === false) {
-                            if (onShowSettings) onShowSettings('serial');
-                            if (onInputStateChange) onInputStateChange({ highlightConnect: Date.now() });
-                        }
+                    const failCb = () => { if (onShowSettings) onShowSettings('serial'); if (onInputStateChange) onInputStateChange({ highlightConnect: Date.now() }); };
+                    if (config.type === 'serial' && config.connection.path && onConnectRequest) {
+                        if (await onConnectRequest() === false) failCb();
                     } else {
-                        if (onShowSettings) onShowSettings('serial');
-                        if (onInputStateChange) onInputStateChange({ highlightConnect: Date.now() });
+                        failCb();
                     }
                 }}
             />

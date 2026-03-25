@@ -28,7 +28,7 @@ interface Props {
 function findTokenLabel(varName: string, isEn: boolean): string {
     for (const meta of Object.values(componentTokenMap)) {
         const token = meta.tokens.find(t => t.var === varName);
-        if (token) return isEn ? token.labelEn : token.label;
+        if (token) return (isEn ? (token.labelEn ?? token.label) : token.label);
     }
     return varName;
 }
@@ -131,8 +131,8 @@ export const CdpDebugPanel: React.FC<Props> = ({
     data, copiedVar, onClose,
     getColorValue, handleColorChange, handleCopy, extractVars,
 }) => {
-    const { t, locale } = useI18n();
-    const isEn = locale === 'en-US';
+    const { t, language } = useI18n();
+    const isEn = language === 'en-US';
 
     // 缓存 token 化后的 HTML
     const htmlTokens = useMemo(() => tokenizeHtml(data.outerHTML), [data.outerHTML]);

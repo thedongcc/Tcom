@@ -85,12 +85,12 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
 
                 // 首次启动且未迁移：执行旧 localStorage 数据迁移
                 if (!migrated) {
-                    console.log('[Profile] 检测到首次使用新存储架构，开始迁移旧数据...');
+// log('[Profile] 检测到首次使用新存储架构，开始迁移旧数据...');
                     const result = await migrateLegacyData('default');
                     if (cancelled) return;
                     if (result.migrated) {
                         setIsMigrated(true);
-                        console.log('[Profile] 旧数据迁移完成:', result);
+// log('[Profile] 旧数据迁移完成:', result);
                     }
                 }
 
@@ -263,7 +263,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
             const latestSession = sessionsRef.current.find(s => s.id === sessionId);
             if (!latestSession) return;
 
-            console.log(`[Profile] 持久化 session ${sessionId} 到磁盘...`);
+// log(`[Profile] 持久化 session ${sessionId} 到磁盘...`);
             try {
                 if (updates.name && updates.name !== latestSession.config.name) {
                     await window.profileAPI?.renameSession(activeProfile, latestSession.config.name, updates.name);

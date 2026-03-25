@@ -8,8 +8,13 @@
  */
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager};
 
+/// 安全获取并封装 App 数据目录，消除 unwrap 隐患
+pub fn get_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_data_dir().map_err(|e| format!("获取应用数据目录失败: {}", e))
+}
 /// 原子写入文件
 /// 1. 写入 `<path>.tmp`
 /// 2. 调用 sync_all 确保数据落盘

@@ -51,7 +51,7 @@ export function createFeatureContextApi(featureId: string, deps: BuildContextApi
         commands: {
             register: (id, label, callback) => {
                 commandsRef.current.set(id, { label, callback });
-                console.log(`[Feature:${featureId}] 命令已注册: ${id}`);
+// log(`[Feature:${featureId}] 命令已注册: ${id}`);
                 const d: Disposable = {
                     dispose: () => {
                         commandsRef.current.delete(id);

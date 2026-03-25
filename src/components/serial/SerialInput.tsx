@@ -45,7 +45,7 @@ interface SerialInputProps {
     /** 原生高精度定时器启动接口（固定帧）*/
     onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
     /** 动态帧定时器启动接口（Ring Buffer + 时间戳 Slot 原位填充）*/
-    onTimedSendStartDynamic?: (sessionId: string, frames: number[][], intervalMs: number, timestampSlots: object[]) => void;
+    onTimedSendStartDynamic?: (sessionId: string, frames: number[][], intervalMs: number, timestampSlots: Array<{ byteOffset: number; byteSize: number; byteOrder: string; format: string }>) => void;
     /** 原生高精度定时器停止接口 */
     onTimedSendStop?: (sessionId: string) => void;
 }
@@ -88,15 +88,15 @@ export const SerialInput = ({
         // 键盘输入过滤
         handleTextInput(_view: unknown, _from: number, _to: number, text: string): boolean {
             if (mode === 'hex') {
-                // hex 模式：只允许 0-9 A-F a-f 和空格/Tab
-                return !/^[0-9A-Fa-f\s]*$/.test(text);
+                // hex 模式：只允许 0-9 A-F a-f、空格/Tab，以及 Token 触发符 /
+                return !/^[0-9A-Fa-f\s\/]*$/.test(text);
             } else {
                 // text 模式：只允许可打印 ASCII（U+0020~U+007E），过滤汉字等
                 return !/^[\x20-\x7E]*$/.test(text);
             }
         },
         // 粘贴过滤：保留合法字符后重新插入
-        handlePaste(view: { dispatch: (tr: ReturnType<typeof view.state.tr.insertText>) => void; state: { tr: { insertText: (s: string) => unknown } } }, event: ClipboardEvent): boolean {
+        handlePaste(view: import('@tiptap/pm/view').EditorView, event: ClipboardEvent): boolean {
             const raw = event.clipboardData?.getData('text') ?? '';
             let filtered: string;
             if (mode === 'hex') {

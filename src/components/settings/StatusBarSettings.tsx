@@ -110,7 +110,6 @@ const SortableRow = ({
 
 // ─── 状态栏设置内联区域（嵌入界面布局分组中） ────────────────────────────
 export const StatusBarSettingsInline = () => {
-    const { t } = useI18n();
     const { config, updateUI } = useSettings();
 
     // 从配置获取排序，兼容没有排序字段的旧配置

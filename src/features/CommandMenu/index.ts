@@ -14,10 +14,10 @@ const CommandMenuFeature: Feature = {
     icon: Terminal as any,
     sidebarComponent: CommandListSidebar,
     activate: () => {
-        console.log('[Feature:commands] 命令菜单已激活');
+// log('[Feature:commands] 命令菜单已激活');
     },
     deactivate: () => {
-        console.log('[Feature:commands] 命令菜单已停用');
+// log('[Feature:commands] 命令菜单已停用');
     },
 };
 

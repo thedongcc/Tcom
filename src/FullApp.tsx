@@ -13,7 +13,7 @@ import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { isGlassTheme } from './hooks/useThemeEffects'
-import { I18nProvider, useI18n } from './context/I18nContext'
+import { I18nProvider } from './context/I18nContext'
 import { ToastContainer } from './context/ToastContext'
 import { CommandProvider } from './context/CommandContext'
 import { ProfileProvider } from './context/ProfileContext'
@@ -26,6 +26,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { composeProviders } from './utils/composeProviders'
 import { checkCrashOnStartup } from './lib/crashReporter'
 import { initFlushOnExit } from './hooks/useFlushOnExit'
+import { useWindowState, restoreWindowState } from './hooks/useWindowState'
 
 // 重型组件懒加载
 const Layout = React.lazy(() => import('./components/layout/Layout').then(m => ({ default: m.Layout })));
@@ -39,73 +40,7 @@ const RootProviders = composeProviders(
     CommandProvider,
 );
 
-// ─── 窗口位置持久化 ─────────────────────────────────────────────
 
-
-const WINDOW_STATE_KEY = 'tcom-window-state';
-
-interface WindowState {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    maximized: boolean;
-}
-
-/** 从 localStorage 恢复窗口位置和尺寸 */
-async function restoreWindowState() {
-    try {
-        const saved = localStorage.getItem(WINDOW_STATE_KEY);
-        if (!saved) return;
-        const state: WindowState = JSON.parse(saved);
-        const win = getCurrentWindow();
-        const { PhysicalPosition, PhysicalSize } = await import('@tauri-apps/api/dpi');
-
-        if (state.maximized) {
-            // 先恢复非最大化状态的位置/尺寸（这样取消最大化时位置正确）
-            if (state.x >= -100 && state.y >= -100 && state.width > 200 && state.height > 200) {
-                await win.setPosition(new PhysicalPosition(state.x, state.y));
-                await win.setSize(new PhysicalSize(state.width, state.height));
-            }
-            await win.maximize();
-        } else {
-            // 校验位置在屏幕范围内（防止窗口跑到不可见区域）
-            if (state.x >= -100 && state.y >= -100 && state.width > 200 && state.height > 200) {
-                await win.setPosition(new PhysicalPosition(state.x, state.y));
-                await win.setSize(new PhysicalSize(state.width, state.height));
-            }
-        }
-    } catch { /* 恢复失败时使用默认位置 */ }
-}
-
-/** 保存当前窗口位置和尺寸到 localStorage（物理像素坐标） */
-async function saveWindowState() {
-    try {
-        const win = getCurrentWindow();
-        const maximized = await win.isMaximized();
-        // 最大化状态下不保存位置/尺寸（保存上次非最大化的值）
-        if (maximized) {
-            const saved = localStorage.getItem(WINDOW_STATE_KEY);
-            if (saved) {
-                const prev: WindowState = JSON.parse(saved);
-                prev.maximized = true;
-                localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(prev));
-            } else {
-                localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify({ x: 100, y: 100, width: 1200, height: 800, maximized: true }));
-            }
-            return;
-        }
-        // outerPosition/outerSize 返回物理像素，直接保存
-        const pos = await win.outerPosition();
-        const size = await win.outerSize();
-        const state: WindowState = {
-            x: pos.x, y: pos.y,
-            width: size.width, height: size.height,
-            maximized: false,
-        };
-        localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(state));
-    } catch { /* 保存失败时静默忽略 */ }
-}
 
 // ─── 组件 ──────────────────────────────────────────────────────
 
@@ -123,7 +58,6 @@ function AppContent() {
 
     const sessionManager = useSessionManager();
     const editorLayout = useEditorLayout();
-    const { t } = useI18n();
     const { config } = useSettings();
     const windowShown = useRef(false);
 
@@ -172,17 +106,8 @@ function AppContent() {
         showMainWindow();
     }, []);
 
-    // 定期保存窗口位置（窗口移动/缩放后）
-    useEffect(() => {
-        const interval = setInterval(saveWindowState, 2000);
-        // 窗口关闭前保存
-        const handleBeforeUnload = () => { saveWindowState(); };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            clearInterval(interval);
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, []);
+    // 窗口位置持久化（定期保存 + 退出前保存）
+    useWindowState();
 
     // 背景图片 URL 计算（仅 Glass/Pic 主题显示）
     const bgImageUrl = (() => {
@@ -215,31 +140,7 @@ function AppContent() {
                 )}
 
                 <Suspense fallback={null}>
-                    <Layout editorLayout={editorLayout}>
-                        <div className="flex flex-1 items-center justify-center h-full">
-                            <div className="flex flex-col items-center max-w-md text-center">
-                                <h1 className="text-4xl font-bold mb-4 text-[var(--st-panel-header-text)]">Tcom</h1>
-                                <p className="text-lg text-[var(--input-placeholder-color)] mb-8">{t('welcome.subtitle')}</p>
-
-                                <div className="flex gap-4">
-                                    <button className="px-4 py-2 bg-[var(--button-background)] text-[var(--button-foreground)] text-sm hover:bg-[var(--button-hover-background)] transition-colors flex items-center gap-2">
-                                        {t('welcome.newConnection')}
-                                    </button>
-                                    <button className="px-4 py-2 bg-[var(--button-secondary-background)] text-[var(--button-foreground)] text-sm hover:bg-[var(--button-secondary-hover-background)] transition-colors">
-                                        {t('welcome.openLog')}
-                                    </button>
-                                </div>
-
-                                <div className="mt-12 text-left w-full">
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--input-placeholder-color)] mb-2">{t('welcome.recent')}</h3>
-                                    <div className="space-y-1">
-                                        <div className="text-[13px] text-[var(--link-foreground)] hover:underline cursor-pointer">COM3 - 115200</div>
-                                        <div className="text-[13px] text-[var(--link-foreground)] hover:underline cursor-pointer">COM7 - 9600</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Layout>
+                    <Layout editorLayout={editorLayout} />
                 </Suspense>
             </FeatureProvider>
 

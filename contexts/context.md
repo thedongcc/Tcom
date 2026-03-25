@@ -115,6 +115,26 @@ src/components/<feature>/
 └── FeatureSubComponent.tsx     # 子组件 — 复用 UI 片段
 ```
 
+**`components/` vs `features/` 分界原则**：
+
+| 目录 | 定义 | 典型内容 |
+|--------|------|----------|
+| `src/components/` | **可复用 UI/业务组件**—可被多个模块引用 | `common/`（通用基础组件）、`serial/`、`mqtt/`、`settings/` 等功能内组件 |
+| `src/features/` | **独立功能域模块**—带有完整业务封装（Hook+组件+注册器），内部自治 | `AutoReply`、`CommandMenu`、`VirtualPort`、`serial-monitor` |
+
+**判断准则**：若一个功能模块需要自己的注册器（`registry.ts`）或內部独立状态扩展点，放入 `features/`；否则放入 `components/`。
+
+**`src/services/` 目录定义**：
+
+| 文件 | 职责 |
+|--------|------|
+| `toastManager.ts` | Toast 命令式 API（可在任意层调用） |
+| `confirmManager.ts` | Confirm 对话框 Promise 驱动 |
+| `MessagePipeline.ts` | 串口/MQTT 消息处理管道 |
+| `GraphService.ts` | 图形软件数据计算服务 |
+
+**铁律**：`services/` 内的模块是纯 TypeScript 类/对象，不引用 React，不使用 Hook API。如果需要访问 Context，应将逻辑提升到 Hook 层。
+
 **铁律**：
 - **分级行数限制**（按组件职责分类）：
   - **基础 UI 组件**（Common UI，如 Button/Tooltip/Switch）：**≤ 150 行**
@@ -411,6 +431,12 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 - `--{component}-text` — 文字色
 - `--{component}-border` — 边框色
 - 按钮/切换类组件额外需要：`--{component}-hover`、`--{component}-active`
+
+**历史命名前缀说明（`--st-` 前缀）**：
+
+项目历史遗留了 `--st-` 前缀的变量（如 `--st-sidebar-text`、`--st-monitor-rx-bg`），这是早期约定的「样式令牌」简称。
+**当前规范的新增变量统一使用 `--{component}-{property}` 格式**，与 `--st-` 并存。
+迁移策略：**新变量不再沿用 `--st-` 前缀**；历史 `--st-` 变量暂不强制重命名，但重构时遇到应顺手迁移。
 
 ### 4.9 反模式（禁止）
 

@@ -119,6 +119,7 @@ export const zhCN = {
             sidebarRight: '右侧',
             showStatusBar: '显示状态栏',
             showStatusBarDesc: '是否在底部显示状态栏',
+            statusBarDetailSettings: '状态栏详细设置',
             statusBarItems: '配置显示项目',
             statusBarVersion: '版本号',
             statusBarCpu: 'CPU 占用率',
@@ -183,6 +184,7 @@ export const zhCN = {
             bgPositionBottomRight: '右下',
             bgOpacity: '图片还原度',
             bgBlur: '图片模糊度',
+            bgImagePeek: '按住预览背景效果',
             uiOpacity: 'UI 界面不透明度',
         },
 

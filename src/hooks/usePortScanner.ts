@@ -107,10 +107,10 @@ export const usePortScanner = (): UsePortScannerReturn => {
                 const pairs = await Com0Com.listPairs(currentSetupcPath, silent);
                 pairs.forEach(pair => {
                     if (!allPorts.find(p => p.path === pair.portA)) {
-                        allPorts.push({ path: pair.portA, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portA})` });
+                        allPorts.push({ path: pair.portA, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portA})`, busy: false });
                     }
                     if (!allPorts.find(p => p.path === pair.portB)) {
-                        allPorts.push({ path: pair.portB, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portB})` });
+                        allPorts.push({ path: pair.portB, manufacturer: 'com0com', friendlyName: `Virtual Port (${pair.portB})`, busy: false });
                     }
                 });
             } catch (e: unknown) {
@@ -161,7 +161,7 @@ export const usePortScanner = (): UsePortScannerReturn => {
             }
             // 非管理员自动关闭监控
             if (!admin && monitorEnabledRef.current) {
-                console.log('[PortScanner] Non-admin detected, auto-disabling monitor.');
+// log('[PortScanner] Non-admin detected, auto-disabling monitor.');
                 setMonitorEnabled(false);
                 localStorage.setItem('tcom-monitor-enabled', 'false');
                 persistMonitorEnabled(false);

@@ -60,7 +60,7 @@ export const RecentWorkspacesMenu = ({
                     }}
                 >
                     <Settings size={12} className="opacity-50" />
-                    <span>管理配置档案...</span>
+                    <span>{t('session.manageProfiles') || '管理配置档案...'}</span>
                 </div>
             )}
         </div>

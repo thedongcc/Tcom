@@ -50,7 +50,7 @@ interface UseSerialInputLogicParams {
     /** 原生高精度定时器启动接口（固定帧）*/
     onTimedSendStart?: (sessionId: string, data: number[], intervalMs: number) => void;
     /** 动态帧定时器启动接口（Ring Buffer + 时间戳 Slot）*/
-    onTimedSendStartDynamic?: (sessionId: string, frames: number[][], intervalMs: number, timestampSlots: object[]) => void;
+    onTimedSendStartDynamic?: (sessionId: string, frames: number[][], intervalMs: number, timestampSlots: Array<{ byteOffset: number; byteSize: number; byteOrder: string; format: string }>) => void;
     /** 原生高精度定时器停止接口 */
     onTimedSendStop?: (sessionId: string) => void;
 }
@@ -168,8 +168,6 @@ export const useSerialInputLogic = ({
             return !!plugin?.createTimedState || !!plugin?.isDynamic;
         });
 
-        console.log('[TimedSend] hasDynamicTokens:', hasDynamicTokens,
-            Object.values(tokens).map(t => `${t.type}(dynamic=${!!(tokenRegistry.get(t.type)?.isDynamic)})`));
 
         if (!hasDynamicTokens) {
             // ── 纯静态内容 → 固定帧高精度 Rust 定时器 ──
@@ -178,7 +176,7 @@ export const useSerialInputLogic = ({
                 const dataArray = data instanceof Uint8Array
                     ? Array.from(data)
                     : Array.from(new TextEncoder().encode(data as string));
-                console.log('[TimedSend] 🧱 Rust 固定帧路径:', dataArray);
+
                 onTimedSendStart(sessionId, dataArray, timerInterval);
                 return () => { onTimedSendStop(sessionId); };
             }
@@ -190,32 +188,30 @@ export const useSerialInputLogic = ({
 
             // 分析 timestamp Token 的 Rust 原位填充槽
             const timestampSlots = analyzeTimestampSlots(segments, tokens);
-            console.log('[TimedSend] 🕐 timestampSlots:', timestampSlots);
 
             // 创建有状态 Token 的状态机
             const timedStates = createTimedStates(tokens);
-            console.log('[TimedSend] 🎧 timedStates keys:', Object.keys(timedStates));
 
             // 预计算 N 帧（1024 帧 @ 100ms = 约 102 秒才循环一次）
             const FRAME_COUNT = 1024;
-            console.log(`[TimedSend] 🧮 预计算 ${FRAME_COUNT} 帧...`);
+
             const frames = computeFrames(FRAME_COUNT, segments, m, tokens, timedStates, lineEndingBytes);
-            console.log(`[TimedSend] ✅ 预计算完成，每帧 ${frames[0]?.length ?? 0} 字节，共 ${frames.length} 帧`);
+
 
             // 订阅 Rust 批处理事件：每批次实时推进 Token 状态并写回编辑器
             // tokens 对象在闭包内被逐步 mutate，无需额外计数
             const tickCleanup = window.serialAPI?.onTimedSendTickBatch?.(sessionId, (batch) => {
-                console.log('[TimedSend Tick] 收到批次，帧数:', batch.length, '当前 tokens:', JSON.parse(JSON.stringify(tokens)));
+
                 const { editor: ed2, isSyncingRef: syncRef } = editorRef.current;
                 // 按本批次帧数推进状态机（每帧一次 compileSegments 即可步进 auto-inc 等动态 Token）
                 for (let i = 0; i < batch.length; i++) {
                     compileSegments(segments, m, tokens);
                 }
-                console.log('[TimedSend Tick] 推进后 tokens:', JSON.parse(JSON.stringify(tokens)));
+
                 // 实时写回编辑器（用 isSyncingRef 屏蔽，防止触发 contentVersion 自增导致定时器重启）
                 if (ed2) flushTokensToEditor(ed2, tokens, syncRef);
             });
-            console.log('[TimedSend] tickCleanup 注册结果:', typeof tickCleanup);
+
 
             // 优先使用 dynamic API；如果没有则回退到只发第一帧（兜底）
             if (onTimedSendStartDynamic) {

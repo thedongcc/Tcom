@@ -22,8 +22,8 @@ interface Props {
 }
 
 export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
-    const { t, locale } = useI18n();
-    const isEn = locale === 'en-US';
+    const { t, language } = useI18n();
+    const isEn = language === 'en-US';
     const {
         expandedGroups, setExpandedGroups,
         isInspecting, copiedVar,
@@ -82,10 +82,10 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
             const filteredComps = group.components.map(compId => {
                 const compMeta = componentTokenMap[compId];
                 if (!compMeta) return null;
-                const compLabel = isEn ? compMeta.labelEn : compMeta.label;
+                const compLabel = isEn ? (compMeta.labelEn ?? compMeta.label) : compMeta.label;
                 if (compLabel.toLowerCase().includes(lowerSearch) || compId.toLowerCase().includes(lowerSearch)) return compId;
                 const hasMatchingToken = compMeta.tokens.some(t =>
-                    t.var.toLowerCase().includes(lowerSearch) || (isEn ? t.labelEn : t.label).toLowerCase().includes(lowerSearch)
+                    t.var.toLowerCase().includes(lowerSearch) || (isEn ? (t.labelEn ?? t.label) : t.label).toLowerCase().includes(lowerSearch)
                 );
                 return hasMatchingToken ? compId : null;
             }).filter(Boolean) as string[];
@@ -209,7 +209,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                         {/* 待保存修改区域 */}
                         <PendingEditsPanel
                             edits={edits}
-                            currentThemeDef={currentThemeDef}
+                            currentThemeDef={currentThemeDef ?? null}
                             copiedVar={copiedVar}
                             handleColorChange={handleColorChange}
                             handleCopy={handleCopy}
@@ -252,9 +252,9 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                                         {group.components.map(compId => {
                                                             const compMeta = componentTokenMap[compId];
                                                             if (!compMeta) return null;
-                                                            const compLabel = isEn ? compMeta.labelEn : compMeta.label;
+                                                            const compLabel = isEn ? (compMeta.labelEn ?? compMeta.label) : compMeta.label;
                                                             const tokens = compMeta.tokens.filter(t =>
-                                                                !lowerSearch || t.var.toLowerCase().includes(lowerSearch) || (isEn ? t.labelEn : t.label).toLowerCase().includes(lowerSearch) || compLabel.toLowerCase().includes(lowerSearch)
+                                                                !lowerSearch || t.var.toLowerCase().includes(lowerSearch) || (isEn ? (t.labelEn ?? t.label) : t.label).toLowerCase().includes(lowerSearch) || compLabel.toLowerCase().includes(lowerSearch)
                                                             );
                                                             if (tokens.length === 0) return null;
                                                             return (
@@ -267,7 +267,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                                                                             <div key={token.var} className="min-w-0">
                                                                                 <TokenRow
                                                                                     varName={token.var}
-                                                                                    label={isEn ? token.labelEn : token.label}
+                                                                                    label={isEn ? (token.labelEn ?? token.label) : token.label}
                                                                                     value={getColorValue(token.var)}
                                                                                     isCopied={copiedVar === token.var}
                                                                                     onColorChange={handleColorChange}

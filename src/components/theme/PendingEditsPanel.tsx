@@ -25,7 +25,7 @@ interface Props {
 function findTokenLabel(varName: string, isEn: boolean): string {
     for (const meta of Object.values(componentTokenMap)) {
         const token = meta.tokens.find(t => t.var === varName);
-        if (token) return isEn ? token.labelEn : token.label;
+        if (token) return (isEn ? (token.labelEn ?? token.label) : token.label);
     }
     return varName;
 }
@@ -48,8 +48,8 @@ export const PendingEditsPanel: React.FC<Props> = ({
     edits, currentThemeDef, copiedVar,
     handleColorChange, handleCopy,
 }) => {
-    const { locale } = useI18n();
-    const isEn = locale === 'en-US';
+    const { t, language } = useI18n();
+    const isEn = language === 'en-US';
     const entries = Object.entries(edits);
     if (entries.length === 0) return null;
 
@@ -63,7 +63,7 @@ export const PendingEditsPanel: React.FC<Props> = ({
             <div className="font-medium pb-1 mb-2 flex items-center justify-between text-[11px] border-b" style={{ color: 'var(--accent-color)', borderColor: 'var(--theme-editor-card-border)' }}>
                 <div className="flex items-center gap-1.5">
                     <Palette size={12} />
-                    <span>{isEn ? 'Pending Changes' : '待保存修改'} ({entries.length})</span>
+                    <span>{t('themeEditor.pendingChanges') || (isEn ? 'Pending Changes' : '待保存修改')} ({entries.length})</span>
                 </div>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -78,7 +78,7 @@ export const PendingEditsPanel: React.FC<Props> = ({
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-editor-card-bg)'}
                         >
                             {/* 原始色块 */}
-                            <Tooltip content={`${isEn ? 'Original' : '原始'}: ${origVal}`} position="top" offset={4}>
+                            <Tooltip content={`${t('themeEditor.original') || (isEn ? 'Original' : '原始')}: ${origVal}`} position="top" offset={4}>
                                 <div
                                     className="shrink-0 cursor-pointer"
                                     style={{ width: 28, height: 20, borderRadius: 4, border: '1px solid var(--border-color)', padding: 2, background: 'rgba(0,0,0,0.2)' }}
@@ -108,7 +108,7 @@ export const PendingEditsPanel: React.FC<Props> = ({
                                     {label}
                                 </span>
                                 <div className="flex items-center gap-1.5 mt-[1px]">
-                                    <Tooltip content={copiedVar === varName ? '✓ Copied' : (isEn ? 'Click to copy var name' : '点击复制变量名')} position="right" delay={150}>
+                                    <Tooltip content={copiedVar === varName ? (t('themeEditor.copied') || '✓ Copied') : (t('themeEditor.copyVarName') || (isEn ? 'Click to copy var name' : '点击复制变量名'))} position="right" delay={150}>
                                         <span
                                             className="text-[9px] font-mono opacity-50 truncate cursor-pointer hover:underline hover:opacity-100"
                                             style={{ color: 'var(--app-foreground)' }}
@@ -116,14 +116,14 @@ export const PendingEditsPanel: React.FC<Props> = ({
                                         >{varName}</span>
                                     </Tooltip>
                                     <span className="text-[9px] opacity-30">|</span>
-                                    <Tooltip content={copiedVar === origVal ? '✓ Copied' : (isEn ? 'Click to copy original' : '点击复制原色值')} position="right" delay={150}>
+                                    <Tooltip content={copiedVar === origVal ? (t('themeEditor.copied') || '✓ Copied') : (t('themeEditor.copyOriginal') || (isEn ? 'Click to copy original' : '点击复制原色值'))} position="right" delay={150}>
                                         <span
                                             className="text-[9px] font-mono opacity-40 cursor-pointer hover:opacity-100 hover:text-[var(--accent-color)] transition-all"
                                             onClick={(e) => { e.stopPropagation(); copyText(origVal); }}
                                         >{origVal}</span>
                                     </Tooltip>
                                     <span className="text-[9px] opacity-30">→</span>
-                                    <Tooltip content={copiedVar === newVal ? '✓ Copied' : (isEn ? 'Click to copy new value' : '点击复制新色值')} position="right" delay={150}>
+                                    <Tooltip content={copiedVar === newVal ? (t('themeEditor.copied') || '✓ Copied') : (t('themeEditor.copyNewValue') || (isEn ? 'Click to copy new value' : '点击复制新色值'))} position="right" delay={150}>
                                         <span
                                             className="text-[9px] font-mono font-bold opacity-80 cursor-pointer hover:opacity-100 hover:text-[var(--accent-color)] transition-all"
                                             onClick={(e) => { e.stopPropagation(); copyText(newVal); }}

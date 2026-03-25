@@ -14,10 +14,10 @@ const AutoReplyFeature: Feature = {
     icon: Reply as any,
     sidebarComponent: AutoReplySidebar,
     activate: () => {
-        console.log('[Feature:auto-reply] 自动回复已激活');
+// log('[Feature:auto-reply] 自动回复已激活');
     },
     deactivate: () => {
-        console.log('[Feature:auto-reply] 自动回复已停用');
+// log('[Feature:auto-reply] 自动回复已停用');
     },
 };
 
