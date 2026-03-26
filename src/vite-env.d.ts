@@ -145,7 +145,7 @@ declare global {
             openFolder?: () => void;
             openFile?: (themeId: string) => void;
             loadAll?: () => Promise<{ success: boolean; themes: Array<{ id: string; name: string; image?: true; colors: Record<string, string> }> }>;
-            componentPicked?: (data: { className: string; outerHTML: string; tagName: string }) => void;
+            componentPicked?: (data: { className: string; outerHTML: string; tagName: string; compKey?: string | null; selfHTML?: string; parentHTML?: string }) => void;
         }
         EyeDropper?: unknown;
         eyedropperAPI?: {

@@ -196,14 +196,18 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
             e.stopImmediatePropagation();
 
             if (lastTarget && api.componentPicked) {
-                // 向上查找最近的 data-component 祖先并收集沿途的 className 和 style
+                // 向上查找最近的 data-component 祖先并分别收集自己和沿途父级的 className 和 style
                 let compKey: string | null = null;
                 let componentEl: HTMLElement = lastTarget;
-                let el: HTMLElement | null = lastTarget;
-                let collectedContext = '';
+                
+                const selfContext = ` className="${lastTarget.className}" style="${lastTarget.getAttribute('style') || ''}"`;
+                const selfHTML = `<mock ${selfContext}></mock>`;
+                
+                let el: HTMLElement | null = lastTarget.parentElement;
+                let collectedParentContext = '';
                 
                 while (el) {
-                    collectedContext += ` className="${el.className}" style="${el.getAttribute('style') || ''}"`;
+                    collectedParentContext += ` className="${el.className}" style="${el.getAttribute('style') || ''}"`;
                     const comp = el.getAttribute('data-component');
                     if (comp) {
                         compKey = comp;
@@ -213,11 +217,14 @@ export function useColorPicker({ availableThemes, config }: UseColorPickerOption
                     el = el.parentElement;
                 }
 
+                const parentHTML = `<mock ${collectedParentContext}></mock>`;
+
                 api.componentPicked({
                     compKey,
                     className: componentEl.className || '',
-                    // 将沿途收集的所有 class 和 style 与截断的 outerHTML 拼在一起保证正则表达式能吃到
-                    outerHTML: `<mock ${collectedContext}>${componentEl.outerHTML.substring(0, 2000)}</mock>`,
+                    outerHTML: componentEl.outerHTML.substring(0, 2000),
+                    selfHTML,
+                    parentHTML,
                     tagName: componentEl.tagName.toLowerCase()
                 });
             }

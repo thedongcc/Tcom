@@ -5,7 +5,9 @@
   "windows": [
     "main",
     "splashscreen",
-    "theme-editor"
+    "theme-editor",
+    "eyedropper-mini",
+    "color-picker-popover"
   ],
   "permissions": [
     "core:default",

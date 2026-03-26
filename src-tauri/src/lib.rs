@@ -149,6 +149,13 @@ pub fn run() {
             commands::theme::eyedropper_pick,
             commands::theme::eyedropper_watch_start,
             commands::theme::eyedropper_watch_stop,
+            commands::theme::eyedropper_mini_open,
+            commands::theme::eyedropper_mini_close,
+            commands::theme::eyedropper_confirm,
+            commands::theme::eyedropper_cancel,
+            commands::theme::color_picker_open,
+            commands::theme::color_picker_close,
+            commands::theme::cursor_move,
             // 崩溃上报
             commands::crash_report::crash_report_send,
             commands::crash_report::crash_report_check,

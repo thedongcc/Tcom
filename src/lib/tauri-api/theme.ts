@@ -167,7 +167,7 @@ export function registerThemeAPI(): void {
         },
 
         onComponentPicked: (callback) =>
-            createGlobalListener<{ compKey: string | null; className: string; outerHTML: string }>(
+            createGlobalListener<{ compKey: string | null; className: string; outerHTML: string; selfHTML?: string; parentHTML?: string; }>(
                 'theme-editor:component-picked', callback,
             ),
 

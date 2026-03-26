@@ -4,7 +4,7 @@
  * outerHTML 支持语法高亮（标签、属性、值、CSS 变量）。
  */
 import React, { useMemo } from 'react';
-import { X, Crosshair, MapPin } from 'lucide-react';
+import { X, Crosshair, MapPin, ChevronRight } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { TokenRow } from './ThemeTokenRow';
 import { componentTokenMap } from '../../themes/componentTokenMap';
@@ -12,6 +12,9 @@ import { useI18n } from '../../context/I18nContext';
 
 interface CdpDebugData {
     outerHTML: string;
+    compKey?: string | null;
+    selfHTML?: string;
+    parentHTML?: string;
 }
 
 interface Props {
@@ -137,6 +140,46 @@ export const CdpDebugPanel: React.FC<Props> = ({
     // 缓存 token 化后的 HTML
     const htmlTokens = useMemo(() => tokenizeHtml(data.outerHTML), [data.outerHTML]);
 
+    // 计算分组层级并去重
+    const displayGroups = useMemo(() => {
+        const selfVars = extractVars(data.selfHTML || '');
+        const parentVars = extractVars(data.parentHTML || '');
+        
+        const compVars = data.compKey && componentTokenMap[data.compKey] 
+            ? componentTokenMap[data.compKey].tokens.map(t => t.var) 
+            : [];
+            
+        const allOuterVars = extractVars(data.outerHTML);
+
+        const groups: { title: string; vars: string[] }[] = [];
+        const seen = new Set<string>();
+
+        if (selfVars.length > 0) {
+            groups.push({ title: t('themeEditor.pickedSelf'), vars: selfVars });
+            selfVars.forEach(v => seen.add(v));
+        }
+
+        const pVars = parentVars.filter(v => !seen.has(v));
+        if (pVars.length > 0) {
+            groups.push({ title: t('themeEditor.pickedParent'), vars: pVars });
+            pVars.forEach(v => seen.add(v));
+        }
+
+        const cVars = compVars.filter(v => !seen.has(v));
+        if (cVars.length > 0) {
+            groups.push({ title: t('themeEditor.pickedComponent'), vars: cVars });
+            cVars.forEach(v => seen.add(v));
+        }
+
+        const oVars = allOuterVars.filter(v => !seen.has(v));
+        if (oVars.length > 0) {
+            groups.push({ title: t('themeEditor.pickedOther'), vars: oVars });
+            oVars.forEach(v => seen.add(v));
+        }
+
+        return groups;
+    }, [data, extractVars, t]);
+
     return (
         <div className="mb-2 flex flex-col gap-1.5 shrink-0">
             {/* 选中元素 outerHTML 展示 */}
@@ -168,13 +211,30 @@ export const CdpDebugPanel: React.FC<Props> = ({
                     <MapPin size={12} />
                     {t('themeEditor.matchedVars')}
                 </div>
-                {extractVars(data.outerHTML).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {extractVars(data.outerHTML).map(v => (
-                            <div key={`matched-${v}`}>
-                                <TokenRow varName={v} label={findTokenLabel(v, isEn)} value={getColorValue(v)} isCopied={copiedVar === v} idPrefix="matched-" onColorChange={handleColorChange} onCopy={handleCopy} />
-                            </div>
-                        ))}
+                {displayGroups.length > 0 ? (
+                    <div className="flex flex-col gap-2.5 mt-2">
+                        {displayGroups.map((group, index) => {
+                            // 默认展开判断: 当前元素/父代继承默认展开，除非项目过多
+                            const isDefaultOpen = index < 2 && group.vars.length < 15;
+                            return (
+                                <details key={group.title} className="group/details" open={isDefaultOpen}>
+                                    <summary 
+                                        className="flex items-center gap-1.5 cursor-pointer text-[10.5px] font-semibold opacity-80 hover:opacity-100 transition-opacity select-none outline-none mb-1.5 list-none [&::-webkit-details-marker]:hidden" 
+                                        style={{ color: 'var(--theme-editor-match-text)' }}
+                                    >
+                                        <ChevronRight size={12} className="transition-transform duration-200 group-open/details:rotate-90" />
+                                        <span>{group.title} <span className="opacity-60 tabular-nums font-normal">({group.vars.length})</span></span>
+                                    </summary>
+                                    <div className="grid grid-cols-2 gap-1.5 pl-2 ml-[5px] border-l pb-1" style={{ borderColor: 'var(--theme-editor-input-border)' }}>
+                                        {group.vars.map(v => (
+                                            <div key={`matched-${v}`}>
+                                                <TokenRow varName={v} label={findTokenLabel(v, isEn)} value={getColorValue(v)} isCopied={copiedVar === v} idPrefix="matched-" onColorChange={handleColorChange} onCopy={handleCopy} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </details>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-3 text-[10px] italic opacity-60" style={{ color: 'var(--theme-editor-match-text)' }}>

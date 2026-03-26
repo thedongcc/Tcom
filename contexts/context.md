@@ -674,3 +674,42 @@ python "$env:USERPROFILE\.skillhub\skills_store_cli.py" install <slug>
 - 新增交互组件时，更新本文件 §4.4
 - 引入新 Skill 时，更新本文件 §6
 - 新增 Rust crate 依赖时，在 `Cargo.toml` 添加注释说明用途
+
+### 5.12 调试信息管理规范
+
+当遇到问题且**首次修改无法解决**时，应在可能出问题的代码中添加详细调试信息，直至用户确认功能正常后再删除。
+
+**统一标记格式**：所有调试信息必须包含 `[DBG]` 标记，便于快速搜索和批量清理。
+
+```rust
+// Rust — 使用 log::info! / log::error! + [DBG] 前缀
+log::info!("[DBG][模块名] 阶段描述: var1={var1}, var2={var2}");
+log::error!("[DBG][模块名] 异常描述: {err}");
+
+// 示例：
+log::info!("[DBG][color_picker_open] build() 前: x={x}, y={y}");
+log::info!("[DBG][color_picker_open] build() 后: success={}", win.is_some());
+```
+
+```typescript
+// TypeScript — 使用 console.log + [DBG] 前缀
+console.log('[DBG][组件名] 阶段描述:', { var1, var2 });
+
+// 示例：
+console.log('[DBG][ColorPickerApp] hideSelf called, hasClosed=', hasClosed.current);
+```
+
+**流程规范**：
+1. **插入时机**：首次修复尝试失败后，在相关代码路径的每个关键节点添加 `[DBG]` 日志
+2. **信息要求**：每条日志必须包含 `[DBG][模块/函数名]` + 当前阶段 + 关键变量值
+3. **保留期限**：用户确认功能正常后，**必须立即清理所有 `[DBG]` 日志**
+4. **清理方式**：全局搜索 `[DBG]` 标记，删除所有包含该标记的日志行
+5. **扫描命令**：
+   - Rust: `grep -rn "\[DBG\]" src-tauri/src/`
+   - TypeScript: `grep -rn "\[DBG\]" src/`
+
+**铁律**：
+- ❌ 禁止不带 `[DBG]` 标记的临时调试日志（`console.log("test")` / `log::info!("here")` 等）
+- ❌ 禁止将 `[DBG]` 日志提交到 Git（提交前必须清理）
+- ✅ 正式的运行日志（不含 `[DBG]`）可保留，如 `log::info!("[color_picker_open] 创建成功")`
+

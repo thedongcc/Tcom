@@ -8,6 +8,7 @@ import ReactDOM from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { registerAllTauriAPIs } from './lib/tauri-api'
 import { reportError, addBreadcrumb, initAutoBreadcrumbs } from './lib/crashReporter'
+import ColorPickerApp from './ColorPickerApp'
 import './index.css'
 
 // 在 React 渲染前注册所有 Tauri IPC 适配层到 window 对象
@@ -38,6 +39,12 @@ const windowLabel = getCurrentWindow().label;
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 if (windowLabel === 'theme-editor') {
+    // 主题编辑器窗口关闭时，同步隐藏颜色选择器弹窗
+    window.addEventListener('pagehide', () => {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+            invoke('color_picker_close').catch(() => {});
+        });
+    });
     // 主题编辑器窗口 — 直接渲染编辑器，跳过 AppShell 骨架
     const ThemeEditorApp = React.lazy(() => import('./ThemeEditorApp'));
     root.render(
@@ -45,6 +52,23 @@ if (windowLabel === 'theme-editor') {
             <Suspense fallback={<div className="flex-1 flex items-center justify-center opacity-40 h-screen bg-[var(--app-background,#1e1e1e)]"><div className="text-sm text-[var(--app-foreground,#ccc)]">Loading...</div></div>}>
                 <ThemeEditorApp />
             </Suspense>
+        </React.StrictMode>,
+    );
+} else if (windowLabel === 'eyedropper') {
+    // 幽灵吸管取色器窗口 — 纯粹的无边框 Canvas 结界
+    const EyedropperApp = React.lazy(() => import('./EyedropperApp'));
+    root.render(
+        <React.StrictMode>
+            <Suspense fallback={null}>
+                <EyedropperApp />
+            </Suspense>
+        </React.StrictMode>,
+    );
+} else if (windowLabel === 'color-picker-popover') {
+    // 独立原生颜色选择器面板（携带放大镜等聚合能力）
+    root.render(
+        <React.StrictMode>
+            <ColorPickerApp />
         </React.StrictMode>,
     );
 } else {

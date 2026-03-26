@@ -5,11 +5,12 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { flushSync } from 'react-dom';
 import { RgbaColorPicker } from 'react-colorful';
 import { Pipette } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
+import { EyedropperViewer } from './EyedropperViewer';
 
 // GlobalWindow definition merged into vite-env.d.ts
 
@@ -78,30 +79,40 @@ export const ChannelInput: React.FC<{ label: string; value: number; max: number;
 
 export const ColorPickerContent: React.FC<{
     value: string;
-    triggerRef: React.RefObject<HTMLDivElement>;
+    triggerRef?: React.RefObject<HTMLDivElement>;
     onChange: (val: string) => void;
     onClose: () => void;
-}> = ({ value, triggerRef, onChange, onClose }) => {
+    isStandalone?: boolean;
+}> = ({ value, triggerRef, onChange, onClose, isStandalone }) => {
     const { t } = useI18n();
     const selfRef = useRef<HTMLDivElement>(null);
+    const outerRef = useRef<HTMLDivElement>(null); // 外层容器，包含 EyedropperViewer，用于测量窗口高度
     const rgba = parseRGBA(value);
     const hex = rgbToHex(value);
     const [localHex, setLocalHex] = useState(hex.startsWith('#') ? hex.substring(1).toUpperCase() : hex.toUpperCase());
-    const [coords, setCoords] = useState({ top: 0, left: 0 });
+    const [coords, setCoords] = useState<{ left: number; top?: number; bottom?: number }>({ top: 0, left: 0 });
     const [isPicking, setIsPicking] = useState(false);
 
-    // 计算弹出位置
+    // 计算弹出位置（fixed 布局，不加 scrollY）
     useEffect(() => {
-        if (triggerRef.current) {
+        if (triggerRef && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
+            // 上下结构宽度固定，不需要 isPicking 动态横向拉宽
             const pickerWidth = 260;
-            const pickerHeight = 380;
-            let left = rect.right - pickerWidth;
-            let top = rect.top - pickerHeight - 8;
-            if (top < 8) top = rect.bottom + 8;
+            const ESTIMATED_HEIGHT = 500; // 预估最大高度（含底部取色器）
+            let left = rect.left;
+            let top: number | undefined = rect.bottom + 8;
+            let bottom: number | undefined = undefined;
+            // 下方空间不足则翻转到上方，锚定 bottom 让浏览器自适应高度
+            if (top + ESTIMATED_HEIGHT > window.innerHeight - 8) {
+                top = undefined;
+                bottom = window.innerHeight - rect.top + 8;
+            }
             if (left < 8) left = 8;
             if (left + pickerWidth > window.innerWidth - 8) left = window.innerWidth - pickerWidth - 8;
-            setCoords({ top: top + window.scrollY, left: left + window.scrollX });
+            setCoords({ top, bottom, left });
+        } else if (isStandalone) {
+            setCoords({ left: 0, top: 0 });
         }
     }, [triggerRef]);
 
@@ -116,7 +127,7 @@ export const ColorPickerContent: React.FC<{
             const target = e.target as Node;
             if (
                 selfRef.current && !selfRef.current.contains(target) &&
-                triggerRef.current && !triggerRef.current.contains(target)
+                (!triggerRef || (triggerRef.current && !triggerRef.current.contains(target)))
             ) {
                 // 如果点击的是 portal 外的内容（且不是触发器本身），则关闭
                 onClose();
@@ -124,26 +135,39 @@ export const ColorPickerContent: React.FC<{
         };
         // 延迟注册以避免触发瞬间的点击事件冲突
         const timer = setTimeout(() => {
-            window.addEventListener('mousedown', handleClickOutside, true);
+            // 如果是独立窗口模式，失焦是在 Rust 层面通过 blur 处理的，不需要注册 DOM click Outside
+            if (!isStandalone) window.addEventListener('mousedown', handleClickOutside, true);
         }, 10);
         return () => {
             clearTimeout(timer);
-            window.removeEventListener('mousedown', handleClickOutside, true);
+            if (!isStandalone) window.removeEventListener('mousedown', handleClickOutside, true);
         };
-    }, [onClose, isPicking]); // triggerRef 是稳定的，无需作为依赖项引起重连
+    }, [onClose, isPicking, isStandalone]); // triggerRef 是稳定的，无需作为依赖项引起重连
+
+    // 独立窗口模式下：isPicking 切换后横向扩展窗口宽度以容纳右侧 EyedropperViewer
+    useEffect(() => {
+        if (!isStandalone) return;
+        const PICKER_W = 248; // 回退至经典 248 宽度
+        const VIEWER_W = 220; // 右侧面版宽
+        const w = isPicking ? PICKER_W + VIEWER_W : PICKER_W;
+        import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
+            getCurrentWindow().setSize(new LogicalSize(w, 284)).catch(() => {});
+        });
+    }, [isPicking, isStandalone]);
 
     const handleEyedropper = async () => {
-        setIsPicking(true);
-        if (window.eyedropperAPI) {
-            const stopWatch = window.eyedropperAPI.onColor((hex) => onChange(hex));
-            const stopPick = window.eyedropperAPI.onPicked((hex) => { onChange(hex); cleanup(); });
-            const stopCancel = window.eyedropperAPI.onCanceled(() => cleanup());
-            await window.eyedropperAPI.watchStart();
-            const cleanup = () => { stopWatch(); stopPick(); stopCancel(); window.eyedropperAPI!.watchStop(); setIsPicking(false); };
-            return;
+        setIsPicking(!isPicking);
+        if (!isPicking) {
+            try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                await invoke('eyedropper_mini_open');
+            } catch (err) {
+                console.error('[EyeDropper] mini open failed:', err);
+                setIsPicking(false);
+            }
+        } else {
+            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
         }
-        alert('环境不支持高级吸管取色，请手动输入颜色值。');
-        setIsPicking(false);
     };
 
     const updateRGBA = (next: { r: number; g: number; b: number; a?: number }) => {
@@ -155,90 +179,199 @@ export const ColorPickerContent: React.FC<{
     };
 
     return (
-        <div
-            ref={selfRef}
-            className="color-picker-popover transition-all duration-[130ms] ease-out animate-in fade-in zoom-in-[0.97] slide-in-from-bottom-1"
-            style={{
+        <div ref={outerRef} style={{
+            ...(isStandalone ? {
+                width: 'fit-content',
+                height: '100%',
+                display: 'flex', flexDirection: 'row',
+                backgroundColor: '#16161a',
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+                overflow: 'hidden',
+            } : {
                 position: 'fixed',
                 left: coords.left,
-                top: coords.top,
-                width: 248,
-                backgroundColor: 'var(--theme-editor-bg)',
-                border: '1px solid var(--theme-editor-border)',
-                borderRadius: 8,
+                ...(coords.top !== undefined ? { top: coords.top } : {}),
+                ...(coords.bottom !== undefined ? { bottom: coords.bottom } : {}),
+                display: 'flex', flexDirection: 'column',
                 zIndex: 2147483647,
+                backgroundColor: '#16161a',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 10,
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            }}
-        >
-            {/* 色相/饱和度选择区 */}
-            <div className="inspector-colorful-wrap">
-                <RgbaColorPicker color={rgba} onChange={updateRGBA} />
-            </div>
+                boxShadow: '0 16px 48px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
+                width: 248,
+            }),
+            ...(isStandalone ? {} : { backdropFilter: 'blur(20px)' }),
+        }}>
+            <div ref={selfRef} style={{ width: isStandalone ? 248 : '100%', flexShrink: 0, backgroundColor: '#16161a' }}>
 
-            {/* 底部控件区 */}
-            <div style={{ padding: '10px 10px 12px' }}>
-                {/* 第一行: 吸管 | 颜色预览 | Hex 输入 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                    <Tooltip content={t('themeEditor.screenPicker')} position="bottom" offset={4}>
-                        <button
-                            onClick={handleEyedropper}
-                            style={{
-                                width: 32, height: 32, flexShrink: 0,
-                                background: isPicking ? 'var(--theme-editor-inspect-bg)' : 'var(--theme-editor-btn-bg)',
-                                border: `1px solid ${isPicking ? 'var(--theme-editor-inspect-border)' : 'var(--theme-editor-input-border)'}`,
-                                borderRadius: 6, cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: 'all 0.15s',
-                            }}
+                {/* ── 色相/饱和度选择区 ── */}
+                <div className="inspector-colorful-wrap" style={{ borderRadius: '10px 10px 0 0', overflow: 'hidden' }}>
+                    <RgbaColorPicker color={rgba} onChange={updateRGBA} />
+                </div>
+
+                {/* ── 工具栏：吸管 + 色块预览 + Hex ── */}
+                <div style={{ padding: '10px 14px 0', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+
+                        {/* 吸管按钮 */}
+                        <Tooltip content={t('themeEditor.screenPicker')} position="bottom" offset={6}>
+                            <button
+                                onClick={handleEyedropper}
+                                style={{
+                                    width: 30, height: 30, flexShrink: 0,
+                                    background: isPicking
+                                        ? 'rgba(99,102,241,0.2)'
+                                        : 'rgba(255,255,255,0.06)',
+                                    border: `1px solid ${isPicking
+                                        ? 'rgba(99,102,241,0.6)'
+                                        : 'rgba(255,255,255,0.1)'}`,
+                                    borderRadius: 7, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.18s ease',
+                                    color: isPicking ? '#818cf8' : 'rgba(255,255,255,0.55)',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isPicking) {
+                                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)';
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+                                    }
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isPicking) {
+                                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)';
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                                    }
+                                }}
+                            >
+                                <Pipette size={13} />
+                            </button>
+                        </Tooltip>
+
+                        {/* 颜色预览块 */}
+                        <div style={{
+                            width: 30, height: 30, borderRadius: 7, flexShrink: 0,
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            backgroundImage: 'repeating-conic-gradient(#2a2a30 0% 25%, #1c1c22 0% 50%)',
+                            backgroundSize: '8px 8px',
+                            position: 'relative', overflow: 'hidden',
+                        }}>
+                            <div style={{ position: 'absolute', inset: 0, backgroundColor: value, borderRadius: 6 }} />
+                        </div>
+
+                        {/* Hex 输入 */}
+                        <div style={{
+                            flex: 1, minWidth: 100, display: 'flex', alignItems: 'center',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 7, height: 30,
+                            paddingLeft: 8, paddingRight: 8, gap: 4,
+                            transition: 'border-color 0.15s',
+                        }}
+                            onFocus={() => {}}
                         >
-                            <Pipette size={14} color={isPicking ? 'var(--theme-editor-inspect-text)' : 'var(--app-foreground)'} />
-                        </button>
-                    </Tooltip>
-
-                    {/* 当前色预览 */}
-                    <div style={{
-                        width: 32, height: 32, borderRadius: 6, flexShrink: 0,
-                        border: '1px solid var(--theme-editor-input-border)', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.1)',
-                        backgroundImage: 'conic-gradient(var(--theme-editor-btn-hover) 25%, transparent 25% 50%, var(--theme-editor-btn-hover) 50% 75%, transparent 75%)',
-                        backgroundSize: '8px 8px', position: 'relative', overflow: 'hidden',
-                    }}>
-                        <div style={{ position: 'absolute', inset: 0, backgroundColor: value }} />
-                    </div>
-
-                    {/* Hex 输入 */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: 11, color: 'var(--app-foreground)', opacity: 0.5, flexShrink: 0, fontFamily: 'monospace' }}>#</span>
-                        <input
-                            value={localHex}
-                            onChange={e => {
-                                const val = e.target.value.replace(/[^A-Fa-f0-9]/g, '').toUpperCase().slice(0, 8);
-                                setLocalHex(val);
-                                if ([3, 4, 6, 8].includes(val.length)) onChange('#' + val);
-                            }}
-                            onBlur={() => {
-                                const h = rgbToHex(value);
-                                setLocalHex(h.startsWith('#') ? h.substring(1).toUpperCase() : h.toUpperCase());
-                            }}
-                            style={{
-                                flex: 1, minWidth: 0, boxSizing: 'border-box', height: 26,
-                                background: 'var(--theme-editor-input-bg)', color: 'var(--app-foreground)',
-                                border: '1px solid var(--theme-editor-input-border)', borderRadius: 4,
-                                padding: '0 6px', fontSize: 12, outline: 'none', fontFamily: 'monospace',
-                            }}
-                            onFocus={e => e.currentTarget.style.borderColor = 'var(--accent-color)'}
-                        />
+                            <span style={{
+                                fontSize: 11, color: 'rgba(255,255,255,0.3)',
+                                flexShrink: 0, fontFamily: '"IBM Plex Mono", monospace',
+                                lineHeight: 1,
+                            }}>#</span>
+                            <input
+                                value={localHex}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^A-Fa-f0-9]/g, '').toUpperCase().slice(0, 8);
+                                    setLocalHex(val);
+                                    if ([3, 4, 6, 8].includes(val.length)) onChange('#' + val);
+                                }}
+                                onBlur={e => {
+                                    const h = rgbToHex(value);
+                                    setLocalHex(h.startsWith('#') ? h.substring(1).toUpperCase() : h.toUpperCase());
+                                    (e.currentTarget.parentElement as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                                }}
+                                onFocus={e => {
+                                    (e.currentTarget.parentElement as HTMLElement).style.borderColor = 'rgba(99,102,241,0.6)';
+                                }}
+                                style={{
+                                    flex: 1, minWidth: 0, background: 'transparent',
+                                    color: 'rgba(255,255,255,0.85)',
+                                    border: 'none', outline: 'none',
+                                    fontSize: 12, fontFamily: '"IBM Plex Mono", monospace',
+                                    letterSpacing: '0.04em',
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* 第二行: R G B A% */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 5 }}>
-                    <ChannelInput label="R" value={rgba.r} max={255} onChange={v => updateChannel('r', v)} />
-                    <ChannelInput label="G" value={rgba.g} max={255} onChange={v => updateChannel('g', v)} />
-                    <ChannelInput label="B" value={rgba.b} max={255} onChange={v => updateChannel('b', v)} />
-                    <ChannelInput label="A%" value={Math.round(rgba.a * 100)} max={100} onChange={v => updateChannel('a', v / 100)} />
+                {/* ── RGBA 通道输入 ── */}
+                <div style={{ padding: '8px 14px 14px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, width: '100%' }}>
+                        {([
+                            { label: 'R', val: rgba.r, max: 255, key: 'r' as const },
+                            { label: 'G', val: rgba.g, max: 255, key: 'g' as const },
+                            { label: 'B', val: rgba.b, max: 255, key: 'b' as const },
+                            { label: 'A%', val: Math.round(rgba.a * 100), max: 100, key: 'a' as const },
+                        ]).map(({ label, val, max, key }) => (
+                            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    value={val}
+                                    min={0}
+                                    max={max}
+                                    onChange={e => {
+                                        const num = parseFloat(e.target.value) || 0;
+                                        updateChannel(key, key === 'a' ? num / 100 : num);
+                                    }}
+                                    style={{
+                                        width: '100%', boxSizing: 'border-box',
+                                        height: 28, textAlign: 'center',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'rgba(255,255,255,0.8)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: 6, outline: 'none',
+                                        fontSize: 11,
+                                        fontFamily: '"IBM Plex Mono", monospace',
+                                        transition: 'border-color 0.15s',
+                                        MozAppearance: 'textfield' as never,
+                                    }}
+                                    onFocus={e => e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'}
+                                    onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                                />
+                                <span style={{
+                                    fontSize: 9.5, color: 'rgba(255,255,255,0.28)',
+                                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                                    fontFamily: 'system-ui, sans-serif',
+                                }}>{label}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
+
+            {/* ── 吸管取色视图（右侧面板） ── */}
+            {isPicking && (
+                <div style={{
+                    borderLeft: '1px solid rgba(255,255,255,0.07)',
+                    background: '#16161a',
+                    width: 220,
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}>
+                    <EyedropperViewer
+                        onConfirm={c => {
+                            onChange(c);
+                            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
+                            setIsPicking(false);
+                        }}
+                        onCancel={() => {
+                            setIsPicking(false);
+                            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -246,15 +379,64 @@ export const ColorPickerContent: React.FC<{
 // ── ColorPickerTrigger（触发器色块）─────────────────────────
 
 export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: string) => void }> = ({ value, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLDivElement>(null);
+
+    const handleClick = async () => {
+        try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            const { listen, emit } = await import('@tauri-apps/api/event');
+            const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+
+            if (triggerRef.current) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                const win = getCurrentWebviewWindow();
+                const innerPos = await win.innerPosition();
+                const factor = await win.scaleFactor();
+
+                // 屏幕边界检测：使用 availHeight 扣除任务栏
+                const PICKER_W = 248;
+                const PICKER_H = 284;
+                const screenW = window.screen.availWidth;
+                const screenH = window.screen.availHeight;
+
+                const rawX = innerPos.x / factor + rect.left;
+                const x = Math.max(0, Math.min(rawX, screenW - PICKER_W));
+
+                const yBelow = innerPos.y / factor + rect.bottom + 8;
+                const yAbove = innerPos.y / factor + rect.top - PICKER_H - 8;
+                const y = (yBelow + PICKER_H > screenH) ? Math.max(0, yAbove) : yBelow;
+
+                localStorage.setItem('color_picker_init', value);
+
+                try {
+                    await invoke('color_picker_open', { x, y });
+                } catch (err) {
+                    console.error('[ColorPickerTrigger] color_picker_open 失败:', err);
+                }
+
+                // 给已驻留缓冲池的 Webview 推送颜色
+                emit('color_picker:init_update', value).catch(() => {});
+
+                // 监听颜色变更和面板关闭，避免重复订阅
+                const unlistenChange = await listen<string>('color_picker:change', (e) => {
+                     onChange(e.payload);
+                });
+                const unlistenClose = await listen('color_picker:closed', () => {
+                     unlistenChange();
+                     unlistenClose();
+                });
+            }
+        } catch (err) {
+            console.error('[ColorPickerTrigger] 打开颜色选择器时出错:', err);
+        }
+    };
 
     return (
         <div style={{ position: 'relative' }}>
             <Tooltip content={value} position="top" offset={4}>
                 <div
                     ref={triggerRef}
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={handleClick}
                     style={{
                         width: 28,
                         height: 20,
@@ -276,16 +458,6 @@ export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: strin
                     </div>
                 </div>
             </Tooltip>
-
-            {typeof document !== 'undefined' && isOpen && createPortal(
-                <ColorPickerContent
-                    value={value}
-                    triggerRef={triggerRef}
-                    onChange={onChange}
-                    onClose={() => setIsOpen(false)}
-                />,
-                document.body
-            )}
         </div>
     );
 };
