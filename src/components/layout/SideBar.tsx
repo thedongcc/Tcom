@@ -10,6 +10,8 @@ import { useI18n } from '../../context/I18nContext';
 // ⚡ 重型侧边栏组件懒加载
 const ConfigSidebar = React.lazy(() => import('../serial/ConfigSidebar').then(m => ({ default: m.ConfigSidebar })));
 const SessionListSidebar = React.lazy(() => import('../serial/SessionListSidebar').then(m => ({ default: m.SessionListSidebar })));
+const ParserSidebar = React.lazy(() => import('../parser/ParserSidebar').then(m => ({ default: m.ParserSidebar })));
+const DashboardSidebar = React.lazy(() => import('../dashboard/DashboardSidebar').then(m => ({ default: m.DashboardSidebar })));
 
 interface SideBarProps {
     activeView: string;
@@ -86,6 +88,8 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
             'commands': t('sidebar.commands'),
             'virtual-port': t('sidebar.virtualPort'),
             'auto-reply': t('sidebar.autoReply'),
+            'parser': t('sidebar.parser') || '数据解析',
+            'dashboard': '仪表盘库',
         };
         const translated = viewMap[activeView];
         if (translated) return translated;
@@ -109,6 +113,8 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
                 {activeView === 'explorer' && <SessionListSidebar editorLayout={editorLayout} />}
                 {activeView === 'search' && <div className="p-4 text-xs text-[var(--st-sidebar-muted-text)]">Search not implemented</div>}
                 {activeView === 'serial' && <ConfigSidebar />}
+                {activeView === 'parser' && <ParserSidebar />}
+                {activeView === 'dashboard' && <DashboardSidebar />}
 
                 {/* 动态模块侧边栏（含懒加载 Suspense） */}
                 {activeFeature && activeFeature.sidebarComponent && (

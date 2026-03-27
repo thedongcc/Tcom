@@ -4,12 +4,13 @@
  * 从 SettingsEditor.tsx 中拆分出来。
  */
 import { useState, useCallback } from 'react';
-import { GripVertical, Files, Monitor } from 'lucide-react';
+import { GripVertical, Files, Monitor, LineChart, LayoutDashboard } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 import { useFeatureManager } from '../../context/FeatureContextShared';
 import { FEATURE_REGISTRY } from '../../features/registry';
 import { Switch } from '../common/Switch';
 import { Group } from './SettingsShared';
+import { useDashboardStore } from '../../store/useDashboardStore';
 import {
     DndContext,
     closestCenter,
@@ -28,17 +29,32 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// 默认侧边栏项（不可关闭）
-const DEFAULT_MODULE_ITEMS = [
-    { id: 'explorer', nameKey: 'sidebar.sessions', descriptionKey: '', icon: Files, tier: 'core' as const },
-    { id: 'serial', nameKey: 'sidebar.configuration', descriptionKey: '', icon: Monitor, tier: 'core' as const },
+// 模块级别
+type ModuleTier = 'core' | 'optional' | 'panel';
+
+// 默认侧边栏项
+const DEFAULT_MODULE_ITEMS: { id: string; nameKey: string; descriptionKey: string; icon: React.ComponentType<any>; tier: ModuleTier }[] = [
+    { id: 'explorer',  nameKey: 'sidebar.sessions',       descriptionKey: '',                     icon: Files,            tier: 'core' },
+    { id: 'serial',    nameKey: 'sidebar.configuration',  descriptionKey: '',                     icon: Monitor,          tier: 'core' },
+    { id: 'parser',    nameKey: 'sidebar.parser',         descriptionKey: 'panel.parserDesc',     icon: LineChart,        tier: 'panel' },
+    { id: 'dashboard', nameKey: 'sidebar.dashboard',      descriptionKey: 'panel.dashboardDesc',  icon: LayoutDashboard,  tier: 'panel' },
 ];
+
+// 'sidebar.parser' 等 i18n key 如果没有对应 descriptionKey 可以留空，组件里判断
+const PANEL_NAME_FALLBACK: Record<string, string> = {
+    parser:    '数据解析',
+    dashboard: '组件库',
+};
+const PANEL_DESC_FALLBACK: Record<string, string> = {
+    parser:    '右侧实时数据面板',
+    dashboard: '仪表盘组件拖拽入口',
+};
 
 // 所有模块项（默认 + 可选）
 const getAllModuleItems = () => [
     ...DEFAULT_MODULE_ITEMS,
     ...FEATURE_REGISTRY.filter(d => d.tier === 'optional').map(d => ({
-        id: d.id, nameKey: d.nameKey, descriptionKey: d.descriptionKey, icon: d.icon, tier: d.tier,
+        id: d.id, nameKey: d.nameKey, descriptionKey: d.descriptionKey, icon: d.icon, tier: 'optional' as ModuleTier,
     })),
 ];
 
@@ -57,6 +73,7 @@ const SortableModuleRow = ({
     deactivateFeature: (id: string) => void;
 }) => {
     const { t } = useI18n();
+    const { isVisible: dataViewVisible, toggleVisible, showDashboard, toggleDashboard } = useDashboardStore();
     const {
         attributes, listeners, setNodeRef, transform, transition, isDragging
     } = useSortable({ id });
@@ -71,12 +88,33 @@ const SortableModuleRow = ({
     const moduleItem = allModuleItems.find(m => m.id === id);
     if (!moduleItem) return null;
 
-    const isOptional = moduleItem.tier === 'optional';
+    const isOptional  = moduleItem.tier === 'optional';
+    const isPanel     = moduleItem.tier === 'panel';
+
+    // 面板类型的激活状态
+    const panelChecked = id === 'parser' ? dataViewVisible : showDashboard;
+    const panelToggle  = id === 'parser' ? toggleVisible   : toggleDashboard;
+
+    // 通用激活状态（core 和 optional）
     const isActive = isOptional
         ? (features.find(f => f.feature.id === id)?.isActive ?? false)
-        : true;
+        : isPanel
+            ? panelChecked
+            : true;
 
     const IconComponent = moduleItem.icon;
+
+    // 名称：先尝试 i18n，对 panel 项降级到硬编码中文
+    const name = (() => {
+        const translated = t(moduleItem.nameKey);
+        if (translated && translated !== moduleItem.nameKey) return translated;
+        return PANEL_NAME_FALLBACK[id] ?? moduleItem.nameKey;
+    })();
+
+    // 描述：panel 项用硬编码，optional 项用 i18n
+    const description = isPanel
+        ? PANEL_DESC_FALLBACK[id]
+        : (moduleItem.descriptionKey ? t(moduleItem.descriptionKey) : '');
 
     return (
         <div
@@ -102,18 +140,24 @@ const SortableModuleRow = ({
             {/* 名称和描述 */}
             <div className="flex-1 min-w-0 flex items-center gap-2">
                 <span className={`text-[13px] font-medium shrink-0 ${isActive ? 'text-[var(--st-settings-text)]' : 'text-[var(--input-placeholder-color)]'}`}>
-                    {t(moduleItem.nameKey)}
+                    {name}
                 </span>
-                {moduleItem.descriptionKey && (
+                {description && (
                     <span className="text-[11px] text-[var(--input-placeholder-color)] truncate">
-                        {t(moduleItem.descriptionKey)}
+                        {description}
                     </span>
                 )}
             </div>
 
-            {/* 核心模块标签 / 可选模块开关 */}
+            {/* 核心标签 / 面板开关 / 可选模块开关 */}
             <div className="flex-shrink-0">
-                {isOptional ? (
+                {moduleItem.tier === 'core' ? (
+                    <span className="text-[13px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
+                        {t('settings.modules.core')}
+                    </span>
+                ) : isPanel ? (
+                    <Switch checked={panelChecked} onChange={panelToggle} />
+                ) : (
                     <Switch
                         checked={isActive}
                         onChange={(checked) => {
@@ -121,10 +165,6 @@ const SortableModuleRow = ({
                             else deactivateFeature(id);
                         }}
                     />
-                ) : (
-                    <span className="text-[13px] text-[var(--input-placeholder-color)] opacity-60 uppercase tracking-wider">
-                        {t('settings.modules.core')}
-                    </span>
                 )}
             </div>
         </div>

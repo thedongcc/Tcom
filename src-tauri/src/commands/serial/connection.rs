@@ -8,10 +8,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use tauri::Emitter;
-use tauri::Manager;
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::state::*;
+use crate::commands::parser::api::ParserState;
 
 /// 打开串口连接并启动读取线程
 pub fn open_port(
@@ -103,7 +103,7 @@ pub fn close_port(app: &tauri::AppHandle, connection_id: String) -> Result<Value
 
 /// 启动后台读取线程（使用独立的 reader_port，不需要获取 writer 锁）
 fn spawn_reader_thread(
-    app: tauri::AppHandle,
+    app: AppHandle,
     connection_id: String,
     reader_port: Box<dyn serialport::SerialPort>,
     alive: Arc<AtomicBool>,
@@ -111,6 +111,21 @@ fn spawn_reader_thread(
     thread::spawn(move || {
         let mut reader = reader_port;
         let mut buf = [0u8; 4096];
+
+        // ── 协议解析引擎初始化（不阻塞 UI，不与原有 Raw 流竞争）──
+        let mut framer = crate::commands::parser::framer::Framer::new();
+        // 初始化使用当前系统的缺省激活方案
+        let mut current_scheme: Option<crate::commands::parser::schema::ParserScheme> = None;
+        if let Some(state) = app.try_state::<ParserState>() {
+            current_scheme = state.active_scheme_snapshot();
+        }
+        
+        // 批量聚合池：收集单次节流窗口内所有解析成功的帧
+        let mut parsed_batch: Vec<std::collections::HashMap<String, f64>> =
+            Vec::with_capacity(100);
+        // 节流锚点：60Hz = 约 16ms 发一次，防止 IPC 桥梁被洪流打爆
+        let mut last_emit = std::time::Instant::now();
+
         while alive.load(Ordering::SeqCst) {
             match reader.read(&mut buf) {
                 Ok(n) if n > 0 => {
@@ -119,6 +134,7 @@ fn spawn_reader_thread(
                         .unwrap_or_default()
                         .as_millis() as u64;
 
+                    // ── 轨道 A：原有 Raw Hex 数据流向前端（不动！）──
                     let _ = app.emit(
                         "serial:data",
                         SerialDataEvent {
@@ -127,6 +143,35 @@ fn spawn_reader_thread(
                             timestamp,
                         },
                     );
+
+                    // 热更新：无阻塞地拉取最新激活方案
+                    if let Some(state) = app.try_state::<ParserState>() {
+                        current_scheme = state.active_scheme_snapshot();
+                    }
+
+                    // 无激活方案则跳过解析
+                    let Some(ref scheme) = current_scheme else {
+                        continue;
+                    };
+
+                    framer.append(&buf[..n]);
+                    let complete_frames = framer.extract_frames(scheme);
+
+                    for frame in complete_frames {
+                        let parsed = crate::commands::parser::decoder::decode_frame(&frame, scheme);
+                        if !parsed.is_empty() {
+                            parsed_batch.push(parsed);
+                        }
+                    }
+
+                    // ── 节流发报（16ms 窗口，~60Hz）──
+                    if !parsed_batch.is_empty()
+                        && last_emit.elapsed().as_millis() >= 16
+                    {
+                        let _ = app.emit("tcom-parsed-data", &parsed_batch);
+                        parsed_batch.clear();
+                        last_emit = std::time::Instant::now();
+                    }
                 }
                 Ok(_) => {
                     // 0 字节 = 超时，继续循环

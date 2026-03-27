@@ -78,7 +78,7 @@ export const useSessionLog = (
             const bufferLogs = buffer.get(s.id);
             if (!bufferLogs?.length) return s;
 
-            const mergeRepeats = !!s.config.uiState?.mergeRepeats;
+            const mergeRepeats = !!(s.config.uiState as any)?.mergeRepeats;
             let newLogs = [...s.logs];
             bufferLogs.forEach(incoming => mergeIncomingLog(newLogs, incoming, mergeRepeats));
             if (newLogs.length > maxLogs) newLogs = newLogs.slice(-maxLogs);

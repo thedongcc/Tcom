@@ -10,6 +10,8 @@ import { FEATURE_REGISTRY } from '../../features/registry';
 import { useI18n } from '../../context/I18nContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Tooltip } from '../common/Tooltip';
+import { LineChart, LayoutDashboard } from 'lucide-react';
+import { useDashboardStore } from '../../store/useDashboardStore';
 
 interface ActivityItemProps {
     icon: ReactNode;
@@ -47,13 +49,16 @@ interface ActivityBarProps {
 
 const DEFAULT_ITEMS = [
     { id: 'explorer', icon: <Files size={24} />, label: 'Explorer' },
+    { id: 'dashboard', icon: <LayoutDashboard size={24} />, label: 'Dashboard' },
     { id: 'serial', icon: <Monitor size={24} />, label: 'Serial Monitor' },
+    { id: 'parser', icon: <LineChart size={24} />, label: 'Data Parser' },
 ];
 
 export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
     const { features } = useFeatureManager();
     const { t } = useI18n();
     const { openSettings } = useSettings();
+    const { showDashboard } = useDashboardStore();
 
     // 合并默认项 + 激活的功能模块
     const allKnownItems = useMemo(() => {
@@ -62,6 +67,7 @@ export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
             let translatedLabel = item.label;
             if (item.id === 'explorer') translatedLabel = t('sidebar.sessions');
             else if (item.id === 'serial') translatedLabel = t('sidebar.configuration');
+            else if (item.id === 'parser') translatedLabel = t('sidebar.parser') || '数据解析';
             return { ...item, label: translatedLabel };
         });
 
@@ -76,8 +82,11 @@ export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
                     label: descriptor ? t(descriptor.nameKey) : (f.feature.name || f.feature.id)
                 };
             });
-        return [...translatedDefaults, ...featureItems];
-    }, [features, t]);
+        return [
+            ...translatedDefaults.filter(item => item.id !== 'dashboard' || showDashboard),
+            ...featureItems
+        ];
+    }, [features, t, showDashboard]);
 
     // 从 localStorage 读取排序（与设置页共享同一 key）
     const [orderedIds, setOrderedIds] = useState<string[]>([]);

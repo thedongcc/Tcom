@@ -31,6 +31,7 @@ use commands::mqtt::MqttState;
 use commands::serial::SerialState;
 use commands::tcp::TcpState;
 use commands::theme::ThemeEditorState;
+use commands::parser::api::ParserState;
 
 // ─── Tauri 应用入口 ───────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ pub fn run() {
         .manage(MqttState::default())
         .manage(MonitorState::default())
         .manage(TcpState::default())
+        .manage(ParserState::new())
         .plugin(
             tauri_plugin_log::Builder::default()
                 .level(log::LevelFilter::Info)
@@ -89,6 +91,11 @@ pub fn run() {
             commands::serial::serial_timed_send_start,
             commands::serial::serial_timed_send_stop,
             commands::serial::serial_timed_send_start_dynamic,
+            // Parser（多方案版）
+            commands::parser::api::get_parser_config,
+            commands::parser::api::update_parser_config,
+            commands::parser::api::get_parser_schema,
+            commands::parser::api::update_parser_schema,
             // MQTT
             commands::mqtt::mqtt_connect,
             commands::mqtt::mqtt_disconnect,

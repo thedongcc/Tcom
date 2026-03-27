@@ -26,6 +26,7 @@ export const ConfigSidebar = () => {
             case 'settings': return t('configSidebar.globalSettings');
             case 'mqtt': return t('configSidebar.mqttConfig');
             case 'monitor': return t('configSidebar.monitorConfig');
+            case 'dashboard': return 'HMI Dashboard';
             case 'serial':
             default: return t('configSidebar.serialConfig');
         }
@@ -72,6 +73,21 @@ export const ConfigSidebar = () => {
                 <MonitorConfigPanel
                     session={activeSession}
                 />
+            );
+        }
+
+        // 仪表盘会话
+        if (activeSession.config.type === 'dashboard') {
+            return (
+                <div className="p-4 text-[var(--st-config-muted-text)] text-xs text-center mt-10">
+                    <div className="mb-2 font-bold text-[var(--st-config-title-text)]">
+                        HMI Dashboard
+                    </div>
+                    <div className="opacity-70 text-[11px] leading-relaxed">
+                        当前为组态画板页面。<br/><br/>
+                        请直接点击画板右侧上方的<br/>「LOCKED/EDITING」按钮切换操作模式。
+                    </div>
+                </div>
             );
         }
 

@@ -17,3 +17,6 @@
 @import "./styles/reset.css";
 @import "./styles/animations.css";
 @import "./styles/glass.css";
+/* react-grid-layout 拖拽/缩放核心样式 — 必须全局引入，否则画布完全崩坏 */
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";

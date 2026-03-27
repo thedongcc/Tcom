@@ -12,6 +12,9 @@ import { UpdateDialog } from '../common/UpdateDialog';
 import { useSettings } from '../../context/SettingsContext';
 import { isGlassTheme } from '../../hooks/useThemeEffects';
 import { SessionConfig } from '../../types/session';
+import { useDashboardStore } from '../../store/useDashboardStore';
+import { DataViewPanel } from '../parser/DataViewPanel';
+import { useDataBusListener } from '../../hooks/useDataBusListener';
 
 interface LayoutProps {
     children?: ReactNode;
@@ -23,6 +26,10 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
     const { config, updateUI } = useSettings();
     const activeView = config.ui.activeActivityItem;
     const setActiveView = (view: string) => updateUI({ activeActivityItem: view });
+    const { isVisible: dataViewVisible } = useDashboardStore();
+
+    // 全局数据总线监听 — 挂载后终生订阅 tcom-parsed-data 事件
+    useDataBusListener();
 
     // sessionManager and editorLayout now come from props
     const { showUpdateDialog, setShowUpdateDialog, hasUpdate, updateVersion, checkForUpdates } = useAutoUpdate();
@@ -102,13 +109,17 @@ export const Layout = ({ children, editorLayout }: LayoutProps) => {
                     editorLayout={editorLayout}
                 />
 
-                <div className="flex-1 flex flex-col min-w-0">
-                    <EditorArea
-                        editorLayout={editorLayout}
-                        onShowSettings={setActiveView}
-                    >
-                        {children}
-                    </EditorArea>
+                <div className="flex-1 flex overflow-hidden min-w-0">
+                    <div className="flex-1 flex flex-col min-w-0">
+                        <EditorArea
+                            editorLayout={editorLayout}
+                            onShowSettings={setActiveView}
+                        >
+                            {children}
+                        </EditorArea>
+                    </div>
+                    {/* 右侧实时数据显示面板 */}
+                    {dataViewVisible && <DataViewPanel />}
                 </div>
             </div>
             {config.ui.showStatusBar && <StatusBar hasUpdate={hasUpdate} updateVersion={updateVersion} onShowUpdate={checkForUpdates} />}

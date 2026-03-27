@@ -655,6 +655,14 @@ export const zhCN = {
         virtualPort: '虚拟串口',
         modules: '模块管理',
         autoReply: '自动回复',
+        parser: '数据解析',
+        dashboard: '组件库',
+        schemes: '方案',
+        fields: '字段',
+        addScheme: '新建方案',
+        addField: '添加字段',
+        duplicateScheme: '复制方案',
+        running: '运行中',
     },
 
     // 面板区域
@@ -680,6 +688,9 @@ export const zhCN = {
         noSidebarSettings: '此类型无侧边栏设置',
         globalSettings: '全局设置',
         globalSettingsDesc: '当前编辑器正在显示全局设置。请在右侧主区域进行配置，侧边栏不提供额外选项。',
+        serialConfig: '串口配置',
+        mqttConfig: 'MQTT 配置',
+        monitorConfig: '监控配置',
     },
 
 
@@ -780,6 +791,7 @@ export const zhCN = {
         details: '查看错误详情',
         crashDetected: '检测到上次异常退出，已自动上报错误日志',
         rateLimitReached: '已达发送上限',
+        close: '关闭软件',
     },
 
     // 自动回复

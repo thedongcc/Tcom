@@ -25,6 +25,7 @@ import {
 const SerialMonitor = React.lazy(() => import('../serial/SerialMonitor').then(m => ({ default: m.SerialMonitor })));
 const MqttMonitor = React.lazy(() => import('../mqtt/MqttMonitor').then(m => ({ default: m.MqttMonitor })));
 const MonitorTerminal = React.lazy(() => import('../serial-monitor/MonitorTerminal').then(m => ({ default: m.MonitorTerminal })));
+const DashboardCanvas = React.lazy(() => import('../dashboard/DashboardCanvas').then(m => ({ default: m.DashboardCanvas })));
 
 interface GroupPanelProps {
     node: LeafNode;
@@ -128,6 +129,12 @@ export const GroupPanel = ({ node, isActive, sessions, sessionManager, layoutAct
                         const session = sessions.find((s: any) => s.id === node.activeViewId);
                         if (!session) return <div className="p-4 text-center text-gray-500">{t('editor.sessionNotFound')}</div>;
 
+                        if (session.config.type === 'dashboard') {
+                            return <DashboardCanvas
+                                key={session.id}
+                                sessionId={session.id}
+                            />;
+                        }
                         if (session.config.type === 'mqtt') {
                             return <MqttMonitor
                                 key={session.id}

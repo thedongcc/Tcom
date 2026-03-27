@@ -654,6 +654,14 @@ export const enUS = {
         virtualPort: 'Virtual Port',
         modules: 'Modules',
         autoReply: 'Auto Reply',
+        parser: 'Data Parser',
+        dashboard: 'Component Library',
+        schemes: 'Schemes',
+        fields: 'Fields',
+        addScheme: 'New Scheme',
+        addField: 'Add Field',
+        duplicateScheme: 'Duplicate Scheme',
+        running: 'Running',
     },
 
     // Panel area
@@ -679,6 +687,9 @@ export const enUS = {
         noSidebarSettings: 'No sidebar settings available.',
         globalSettings: 'Global Settings',
         globalSettingsDesc: 'The editor is currently showing global settings. Configure in the main area on the right; the sidebar provides no additional options.',
+        serialConfig: 'Serial Config',
+        mqttConfig: 'MQTT Config',
+        monitorConfig: 'Monitor Config',
     },
 
     // Module manager
@@ -778,6 +789,7 @@ export const enUS = {
         details: 'View Error Details',
         crashDetected: 'Abnormal exit detected from last session. Crash log has been auto-reported.',
         rateLimitReached: 'Rate limit reached',
+        close: 'Close App',
     },
 
     // Auto Reply

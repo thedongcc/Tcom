@@ -18,7 +18,7 @@ export interface LogEntry {
     sender?: string;
 }
 
-export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'sftp' | 'settings' | 'monitor';
+export type SessionType = 'serial' | 'mqtt' | 'tcp' | 'udp' | 'vnc' | 'rdp' | 'ssh' | 'file' | 'ftp' | 'settings' | 'monitor' | 'dashboard';
 
 export interface BaseSessionConfig {
     id: string;
@@ -164,7 +164,14 @@ export interface MonitorSessionConfig extends BaseSessionConfig {
     };
 }
 
-export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | MonitorSessionConfig;
+export interface DashboardSessionConfig extends BaseSessionConfig {
+    type: 'dashboard';
+    uiState?: {
+        locked?: boolean;
+    };
+}
+
+export type SessionConfig = SerialSessionConfig | MqttSessionConfig | SettingsSessionConfig | MonitorSessionConfig | DashboardSessionConfig;
 
 export interface SessionState {
     id: string; // Same as config.id

@@ -99,19 +99,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                             if (!context) return null;
                             const { t } = context;
                             const reportButtonConfig = {
-                                idle: { text: t('common.sendError'), disabled: false, className: 'bg-[var(--button-background,#0e639c)] text-[var(--button-foreground,#ffffff)] hover:bg-[var(--button-hover-background,#1177bb)]' },
-                                sending: { text: t('common.sending'), disabled: true, className: 'bg-[var(--button-background,#0e639c)] text-[var(--button-foreground,#ffffff)] opacity-70 cursor-wait' },
-                                sent: { text: t('common.sentSuccess'), disabled: true, className: 'bg-[#2ea043] text-white cursor-default' },
-                                rateLimit: { text: t('common.rateLimit'), disabled: true, className: 'bg-[#6e7681] text-white cursor-default' },
+                                idle:      { text: t('errorBoundary.sendReport'),   disabled: false, className: 'bg-[var(--button-background,#0e639c)] text-[var(--button-foreground,#ffffff)] hover:bg-[var(--button-hover-background,#1177bb)]' },
+                                sending:   { text: t('errorBoundary.sending'),      disabled: true,  className: 'bg-[var(--button-background,#0e639c)] text-[var(--button-foreground,#ffffff)] opacity-70 cursor-wait' },
+                                sent:      { text: t('errorBoundary.reportSent'),   disabled: true,  className: 'bg-[#2ea043] text-white cursor-default' },
+                                rateLimit: { text: t('errorBoundary.rateLimitReached'), disabled: true, className: 'bg-[#6e7681] text-white cursor-default' },
                             }[reportStatus] || { text: '...', disabled: true, className: '' };
 
                             return (
                 <div
-                    className="flex flex-col items-center justify-center h-full w-full bg-[var(--editor-background,#1e1e1e)] text-[var(--app-foreground,#cccccc)] select-none"
+                    className="flex flex-col items-center justify-center min-h-screen w-full bg-[var(--editor-background,#1e1e1e)] text-[var(--app-foreground,#cccccc)]"
                     data-component="error-boundary"
                 >
-                    {/* pt-[12vh] 让内容整体偏下，视觉更舒适 */}
-                    <div className="flex flex-col items-center max-w-2xl w-full text-center px-8 pt-[12vh]">
+                    <div className="flex flex-col items-center w-full max-w-[480px] text-center px-6">
                         {/* 图标 */}
                         <div className="mb-5 p-4 rounded-full bg-[var(--st-settings-danger-bg-subtle,#3a1d1d)]">
                             <AlertTriangle
@@ -122,17 +121,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
                         {/* 标题 */}
                         <h2 className="text-xl font-bold mb-2 text-[var(--app-foreground,#cccccc)]">
-                            {t('common.renderError')}
+                            {t('errorBoundary.title')}
                         </h2>
 
                         {/* 描述 */}
-                        <p className="text-sm text-[var(--input-placeholder-color,#858585)] mb-6 leading-relaxed max-w-md">
-                            {t('common.errorDesc')}
+                        <p className="text-sm text-[var(--input-placeholder-color,#858585)] mb-6 leading-relaxed w-full">
+                            {t('errorBoundary.description')}
                         </p>
 
-                        {/* 操作按钮 — 左右两列布局 */}
-                        <div className="flex gap-3 mb-5">
-                            {/* 主操作：发送错误报告 */}
+                        {/* 操作按钮 */}
+                        <div className="flex flex-wrap gap-3 mb-5 w-full justify-center">
+                            {/* 发送错误报告 */}
                             <button
                                 onClick={this.handleSendReport}
                                 disabled={reportButtonConfig.disabled}
@@ -142,31 +141,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                                 {reportButtonConfig.text}
                             </button>
 
-                            {/* 重试 */}
-                            <button
-                                onClick={this.handleRetry}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--button-secondary-background,#3a3d41)] text-[var(--button-foreground,#ffffff)] text-sm rounded-sm hover:bg-[var(--button-secondary-hover-background,#45494e)] transition-colors border border-[var(--border-color,#474747)]"
-                            >
-                                <RotateCcw size={14} />
-                                {t('common.retry')}
-                            </button>
-
-                            {/* 刷新页面 */}
-                            <button
-                                onClick={this.handleReload}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--button-secondary-background,#3a3d41)] text-[var(--button-foreground,#ffffff)] text-sm rounded-sm hover:bg-[var(--button-secondary-hover-background,#45494e)] transition-colors border border-[var(--border-color,#474747)]"
-                            >
-                                <RefreshCw size={14} />
-                                {t('common.refresh')}
-                            </button>
-
                             {/* 重启应用 */}
                             <button
                                 onClick={this.handleRestart}
                                 className="flex items-center gap-2 px-4 py-2 bg-transparent text-[var(--st-status-warning,#cca700)] text-sm rounded-sm hover:bg-[#3a3520] transition-colors border border-[var(--st-status-warning,#cca70033)]"
                             >
                                 <Power size={14} />
-                                {t('common.restart')}
+                                {t('errorBoundary.restart')}
                             </button>
 
                             {/* 关闭软件 */}
@@ -175,14 +156,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                                 className="flex items-center gap-2 px-4 py-2 bg-transparent text-[var(--st-status-error,#f14c4c)] text-sm rounded-sm hover:bg-[#3a1d1d] transition-colors border border-[var(--st-status-error,#f14c4c33)]"
                             >
                                 <XCircle size={14} />
-                                {t('common.quit')}
+                                {t('errorBoundary.close')}
                             </button>
                         </div>
 
                         {/* 上报成功提示 */}
                         {reportStatus === 'sent' && (
                             <p className="text-xs text-[#2ea043] mb-4">
-                                {t('common.errorSent')}
+                                {t('errorBoundary.reportSentHint')}
                             </p>
                         )}
 
@@ -190,9 +171,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         {error && (
                             <div className="w-full text-left mt-2">
                                 <div className="text-xs text-[var(--input-placeholder-color,#858585)] mb-2 select-none">
-                                    {t('common.errorDetails')}
+                                    {t('errorBoundary.details')}
                                 </div>
-                                <div className="bg-[var(--input-background,#3c3c3c)] border border-[var(--border-color,#474747)] rounded-sm p-4 text-[13px] font-mono overflow-auto max-h-64 custom-scrollbar">
+                                <div className="bg-[var(--input-background,#3c3c3c)] border border-[var(--border-color,#474747)] rounded-sm p-4 text-[13px] font-mono overflow-auto max-h-64 custom-scrollbar select-text cursor-text">
                                     <p className="text-[var(--st-status-error,#f14c4c)] mb-3 font-semibold break-all">
                                         {error.name}: {error.message}
                                     </p>

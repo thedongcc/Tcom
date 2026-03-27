@@ -121,6 +121,9 @@ export const useSessionManager = () => {
         } else if (type === 'monitor') {
             baseConfig.name = generateUniqueName(existingNames, 'Monitor');
             baseConfig.connection = { path: '', baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' };
+        } else if (type === 'dashboard') {
+            baseConfig.name = generateUniqueName(existingNames, 'Dashboard');
+            // Dashboard 没有原生连接需求，纯 UI 视角配置
         }
 
         const newState: SessionState = { id: newId, config: baseConfig as unknown as SessionConfig, isConnected: false, isConnecting: false, txBytes: 0, rxBytes: 0, logs: [] };

@@ -59,10 +59,6 @@ export function mergeAndMigrate(parsed: Partial<ThemeConfig> & Record<string, un
         merged.typography.fontFamily = 'AppCoreFont';
     }
 
-    // 每次启动强制默认侧边栏为 'explorer'
-    if (merged.ui) {
-        merged.ui.activeActivityItem = 'explorer';
-    }
 
     return merged;
 }

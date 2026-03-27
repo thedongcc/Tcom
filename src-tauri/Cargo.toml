@@ -28,6 +28,7 @@ open = "5"
 serialport = "4"
 rumqttc = { version = "0.24", features = ["websocket"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+uuid = { version = "1", features = ["v4"] }
 winreg = "0.55"
 # HTTP 客户端 — 崩溃上报到飞书 Webhook
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
