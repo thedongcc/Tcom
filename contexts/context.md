@@ -56,7 +56,9 @@ src-tauri/src/
     ├── tcp.rs                 # TCP 服务器（TcpState）
     ├── profile.rs             # Profile（配置档案）CRUD + Session/命令/自动回复
     ├── backup.rs              # Profile/全量备份导出导入（ZIP）
-    ├── theme.rs               # 主题管理 + 编辑器状态 + 取色器
+    ├── theme.rs               # 主题加载/保存（ThemeEditorState 定义）
+    ├── theme_editor.rs        # 主题编辑器 Commands（pending/expanded 缓存 + 窗口控制）
+    ├── eyedropper.rs          # 取色器 + 迷你取色器 + ColorPicker 窗口
     ├── app/                   # 应用级功能
     │   ├── mod.rs             # Command 门面层
     │   ├── info.rs            # 版本/统计/管理员检测/工厂重置
@@ -298,6 +300,26 @@ docs: 更新项目规范文档
 ---
 
 ## 四、UI/UX 设计规范
+
+### 4.0 CSS 技术分层规范
+
+Tcom 同时使用 **Tailwind CSS v4** 和 **CSS 变量** 两套体系，两者职责严格分离：
+
+| 技术 | 职责 | 示例 |
+|------|------|------|
+| **Tailwind CSS v4** | 结构性布局、弹性/网格、尺寸、溢出、定位等**不涉及颜色/主题**的工具类 | `flex`、`h-screen`、`w-full`、`overflow-hidden`、`shrink-0`、`gap-2` |
+| **CSS 变量** | 所有颜色、背景色、边框色、主题相关间距、字体大小等**视觉 token** | `var(--editor-background)`、`var(--border-color)` |
+| **组合写法** | 骨架层/布局层中用 Tailwind 引用 CSS 变量（Tailwind 任意值语法） | `bg-[var(--titlebar-background)]`、`text-[var(--app-foreground)]` |
+
+**铁律**：
+- ✅ **允许**：`<div className="flex h-screen overflow-hidden">` — 纯布局类
+- ✅ **允许**：`<div className="bg-[var(--editor-background)]">` — Tailwind 引用 CSS 变量
+- ❌ **禁止**：`<div className="bg-blue-500 text-white">` — 在业务组件中 hardcode Tailwind 颜色类
+- ❌ **禁止**：`<div style={{ background: '#1e1e1e' }}>` — 内联 hardcode 颜色（CSS 变量引用除外）
+
+**适用范围**：
+- **骨架层**（`App.tsx` 的 `AppShell`）：可使用组合写法，因其依赖 `boot-theme.js` 预注入的 CSS 变量
+- **业务组件**（`components/`、`features/`）：颜色/主题值必须全部通过组件专属 CSS 变量（`--{component}-{property}`）引用，不得直接使用 Tailwind 颜色工具类
 
 ### 4.1 主题系统
 

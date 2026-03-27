@@ -5,7 +5,6 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import { RgbaColorPicker } from 'react-colorful';
 import { Pipette } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';

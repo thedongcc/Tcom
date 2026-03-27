@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
-// 放大镜常量：SCALE=10 → 每个逻辑像素占 10×10 canvas 像素；200×200 canvas 以 200px CSS 精确 1:1 渲染
-const SIZE = 20, SCALE = 10, OUT = SIZE * SCALE;
+// 放大镜常量：SCALE=10 → 每个逻辑像素占 10×10 canvas 像素
+const SIZE = 20, SCALE = 10;
 
 function drawMagnifier(canvas: HTMLCanvasElement, b64: string) {
     const ctx = canvas.getContext('2d');

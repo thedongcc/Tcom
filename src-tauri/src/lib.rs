@@ -4,20 +4,22 @@
  * ⚠️ 铁律：本文件禁止编写任何业务逻辑，仅做 Plugin/State/Command 注册。
  *
  * 子模块（全部真实实现）：
- * - commands/serial/   — 串口扫描/连接/读写/定时发送（目录化）
- * - commands/mqtt.rs   — MQTT 客户端
- * - commands/monitor/  — 虚拟串口监控（双向桥接，目录化）
- * - commands/tcp.rs    — TCP 服务器
- * - commands/profile.rs — Profile（配置档案）CRUD + Session/命令/自动回复
- * - commands/backup.rs — Profile/全量备份导出导入
- * - commands/theme.rs  — 主题管理 + 编辑器状态
- * - commands/app/      — 应用级功能 + com0com（目录化）
- * - commands/shell.rs  — 外部链接 + 文件对话框
- * - commands/window.rs — 窗口管理（置顶控制）
- * - commands/updater.rs — 应用更新（占位）
+ * - commands/serial/        — 串口扫描/连接/读写/定时发送（目录化）
+ * - commands/mqtt.rs        — MQTT 客户端
+ * - commands/monitor/       — 虚拟串口监控（双向桥接，目录化）
+ * - commands/tcp.rs         — TCP 服务器
+ * - commands/profile.rs     — Profile（配置档案）CRUD + Session/命令/自动回复
+ * - commands/backup.rs      — Profile/全量备份导出导入
+ * - commands/theme.rs       — 主题加载/保存 + ThemeEditorState 状态定义
+ * - commands/theme_editor.rs — 主题编辑器 pending/expanded 缓存 + 窗口控制
+ * - commands/eyedropper.rs  — 取色器、迷你取色器、color_picker 窗口
+ * - commands/app/           — 应用级功能 + com0com（目录化）
+ * - commands/shell.rs       — 外部链接 + 文件对话框
+ * - commands/window.rs      — 窗口管理（置顶控制）
+ * - commands/updater.rs     — 应用更新（占位）
  * - commands/crash_report.rs — 崩溃上报
  * - commands/global_settings.rs — 全局设置持久化
- * - commands/fs_utils.rs — 文件系统工具
+ * - commands/fs_utils.rs    — 文件系统工具
  */
 
 mod commands;
@@ -127,35 +129,37 @@ pub fn run() {
             commands::updater::update_check,
             commands::updater::update_download,
             commands::updater::update_install,
-            // 主题
+            // 主题（加载/保存）
             commands::theme::theme_load_all,
             commands::theme::theme_open_folder,
             commands::theme::theme_open_file,
-            commands::theme::theme_editor_open,
-            commands::theme::theme_editor_close,
-            commands::theme::theme_editor_is_open,
-            commands::theme::theme_editor_save,
-            commands::theme::theme_editor_preview,
-            commands::theme::theme_editor_get_pending,
-            commands::theme::theme_editor_get_all_pending,
-            commands::theme::theme_editor_clear_all_pending,
-            commands::theme::theme_editor_set_pending,
-            commands::theme::theme_editor_start_inspector,
-            commands::theme::theme_editor_stop_inspector,
-            commands::theme::theme_editor_component_picked,
-            commands::theme::theme_editor_get_expanded_groups,
-            commands::theme::theme_editor_set_expanded_groups,
-            commands::theme::theme_editor_init_data,
-            commands::theme::eyedropper_pick,
-            commands::theme::eyedropper_watch_start,
-            commands::theme::eyedropper_watch_stop,
-            commands::theme::eyedropper_mini_open,
-            commands::theme::eyedropper_mini_close,
-            commands::theme::eyedropper_confirm,
-            commands::theme::eyedropper_cancel,
-            commands::theme::color_picker_open,
-            commands::theme::color_picker_close,
-            commands::theme::cursor_move,
+            // 主题编辑器
+            commands::theme_editor::theme_editor_open,
+            commands::theme_editor::theme_editor_close,
+            commands::theme_editor::theme_editor_is_open,
+            commands::theme_editor::theme_editor_save,
+            commands::theme_editor::theme_editor_preview,
+            commands::theme_editor::theme_editor_get_pending,
+            commands::theme_editor::theme_editor_get_all_pending,
+            commands::theme_editor::theme_editor_clear_all_pending,
+            commands::theme_editor::theme_editor_set_pending,
+            commands::theme_editor::theme_editor_start_inspector,
+            commands::theme_editor::theme_editor_stop_inspector,
+            commands::theme_editor::theme_editor_component_picked,
+            commands::theme_editor::theme_editor_get_expanded_groups,
+            commands::theme_editor::theme_editor_set_expanded_groups,
+            commands::theme_editor::theme_editor_init_data,
+            // 取色器
+            commands::eyedropper::eyedropper_pick,
+            commands::eyedropper::eyedropper_watch_start,
+            commands::eyedropper::eyedropper_watch_stop,
+            commands::eyedropper::eyedropper_mini_open,
+            commands::eyedropper::eyedropper_mini_close,
+            commands::eyedropper::eyedropper_confirm,
+            commands::eyedropper::eyedropper_cancel,
+            commands::eyedropper::color_picker_open,
+            commands::eyedropper::color_picker_close,
+            commands::eyedropper::cursor_move,
             // 崩溃上报
             commands::crash_report::crash_report_send,
             commands::crash_report::crash_report_check,

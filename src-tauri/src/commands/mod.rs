@@ -1,4 +1,6 @@
 pub mod theme;
+pub mod theme_editor;
+pub mod eyedropper;
 pub mod app;
 pub mod shell;
 pub mod serial;
