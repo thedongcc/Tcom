@@ -7,6 +7,7 @@ import { useParserStore, ParserScheme, FieldDef, DataType } from '../../store/us
 import { useDashboardStore } from '../../store/useDashboardStore';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession } from '../../context/SessionContext';
+import { Switch } from '../common/Switch';
 
 
 
@@ -461,49 +462,35 @@ export const ParserSidebar: React.FC = () => {
     if (!config) return null;
 
     return (
-        <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--sidebar-background)', color: 'var(--app-foreground)' }}>
+        <div className="flex flex-col h-full overflow-hidden bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]">
             <style>{SCROLL_CSS}</style>
 
-            {/* ══ 顶部固定区（标题 + 实时数据开关） ══ */}
-            <div className="flex-shrink-0 px-4 pt-3 pb-2.5" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: 'var(--sys-text-muted)' }}>
-                    {t('sidebar.parser') || 'DATA PARSER'}
-                </p>
-                {/* 实时数据 Switch */}
-                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <span className="text-[11px] font-medium" style={{ color: 'var(--sys-text-secondary)' }}>实时数据</span>
-                    <Toggle checked={dataViewVisible} onChange={toggleVisible} />
-                </div>
+            {/* 实时数据开关——和 AutoReplySidebar 完全一致：px-4 py-2 + direct Switch */}
+            <div className="px-4 py-2 border-b border-[var(--border-color)] shrink-0">
+                <Switch
+                    label="实时数据"
+                    checked={dataViewVisible}
+                    onChange={toggleVisible}
+                />
             </div>
 
-            {/* ══ 方案列表（可折叠） ══ */}
+            {/* ══ 方案列表滚动区 ══ */}
             <div className="flex-1 overflow-y-auto overscroll-contain ps-scroll">
-                {/* 方案区标题行 */}
-                <div className="px-4 py-2 flex items-center justify-between sticky top-0 z-10"
-                    style={{ background: 'var(--sidebar-background)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                {/* 方案区标题行（可折叠）——与 MqttConfigPanel Broker Connection 标题行完全一致 */}
+                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--serial-config-bg)] sticky top-0 flex items-center justify-between cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)] z-10"
+                    onClick={() => setSchemesOpen(o => !o)}
+                >
+                    <div className="flex items-center gap-2">
+                        {schemesOpen
+                            ? <IconChevron open={true} />
+                            : <IconChevronRight open={false} />}
+                        <span>{t('sidebar.schemes') || 'SCHEMES'} · {config.schemes.length}</span>
+                    </div>
                     <button
-                        className="flex items-center gap-1.5 cursor-pointer transition-opacity hover:opacity-80"
-                        onClick={() => setSchemesOpen(o => !o)}
-                        style={{ background: 'none', border: 'none', padding: 0 }}
+                        className="text-[10px] px-2 py-0.5 rounded-sm text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] transition-colors cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); const { addScheme } = useParserStore.getState(); addScheme(); setSchemesOpen(true); }}
                     >
-                        <IconChevronRight open={schemesOpen} />
-                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--sys-text-muted)' }}>
-                            {t('sidebar.schemes') || 'SCHEMES'} · {config.schemes.length}
-                        </span>
-                    </button>
-                    <button
-                        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md cursor-pointer transition-colors duration-150"
-                        style={{ color: 'var(--accent-color)' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-color)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--accent-color)'; }}
-                        onClick={() => {
-                            const { addScheme } = useParserStore.getState();
-                            addScheme();
-                            setSchemesOpen(true);
-                        }}
-                    >
-                        <IconPlus />{t('sidebar.addScheme') || '新建方案'}
+                        + {t('sidebar.addScheme') || '新建'}
                     </button>
                 </div>
 

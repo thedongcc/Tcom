@@ -38,7 +38,7 @@ html[data-theme="light"] {
   --monitor-terminal-toolbar-text: #616161;
   --monitor-tx-label-bg: #007ACC4D;
   --monitor-tx-label-border: #007ACC66;
-  --mqtt-config-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --mqtt-config-bg: var(--serial-config-bg);
   --mqtt-config-input-bg: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --mqtt-config-input-text: #333333;
   --mqtt-config-text: #333333;
@@ -49,6 +49,9 @@ html[data-theme="light"] {
   --serial-config-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
   --serial-config-label: #616161;
   --serial-config-text: #333333;
+  --monitor-config-bg: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --monitor-config-label: #616161;
+  --monitor-config-text: #333333;
   --session-item-active-bg: #e4e6f1;
   --session-item-active-border: #007acc;
   --session-item-foreground: #333333;

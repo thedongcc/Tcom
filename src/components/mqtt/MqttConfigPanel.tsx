@@ -22,7 +22,8 @@ interface MqttConfigPanelProps {
 
 // 公共输入框样式
 const inputCls = 'w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50';
-const labelCls = 'text-[11px] text-[var(--input-placeholder-color)]';
+const labelCls = 'text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium';
+
 
 export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, onConnectToken, onDisconnectToken }: MqttConfigPanelProps) => {
     const isConnectionExpanded = config.uiState?.connectionExpanded !== undefined ? config.uiState.connectionExpanded : (!isConnected);
@@ -44,7 +45,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
             {/* 连接设置 */}
             <div className="border-b border-[var(--border-color)] shrink-0">
                 <div
-                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--st-config-item-bg)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
+                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--mqtt-config-bg)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
                     onClick={toggleConnectionExpanded}
                 >
                     {isConnectionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -52,7 +53,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                 </div>
 
                 {isConnectionExpanded && (
-                    <div className="p-3 flex flex-col gap-2.5 animate-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-2 gap-3 flex flex-col animate-in slide-in-from-top-2 duration-200">
                         {/* Host */}
                         <div className="flex flex-col gap-1 min-w-0">
                             <label className={labelCls}>{t('mqtt.broker')}</label>
@@ -161,8 +162,8 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         </div>
 
                         {/* KeepAlive + Timeout */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="flex flex-col gap-1">
+                        <div className="flex gap-2">
+                            <div className="flex flex-col gap-1 flex-1">
                                 <label className={labelCls}>{t('mqtt.keepAlive')}</label>
                                 <input
                                     type="number"
@@ -172,7 +173,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     disabled={isLocked}
                                 />
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 flex-1">
                                 <label className={labelCls}>{t('mqtt.timeout')}</label>
                                 <input
                                     type="number"
@@ -189,11 +190,11 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <div
                                     onClick={() => !isLocked && onUpdate({ cleanSession: !config.cleanSession })}
                                     className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${config.cleanSession
-                                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
-                                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
+                                        ? 'bg-[var(--checkbox-background)] border border-[var(--checkbox-border-color)]'
+                                        : 'bg-transparent border-2 border-[var(--input-border-color)] hover:border-[var(--input-placeholder-color)]'
                                     } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    {config.cleanSession && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                                    {config.cleanSession && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground)]" />}
                                 </div>
                                 <label className={labelCls}>{t('mqtt.cleanSession')}</label>
                             </div>
@@ -201,18 +202,18 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                 <div
                                     onClick={() => !isLocked && onUpdate({ autoReconnect: !config.autoReconnect })}
                                     className={`w-[18px] h-[18px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${config.autoReconnect
-                                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
-                                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
+                                        ? 'bg-[var(--checkbox-background)] border border-[var(--checkbox-border-color)]'
+                                        : 'bg-transparent border-2 border-[var(--input-border-color)] hover:border-[var(--input-placeholder-color)]'
                                     } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    {config.autoReconnect && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                                    {config.autoReconnect && <Check size={14} strokeWidth={3} className="text-[var(--checkbox-foreground)]" />}
                                 </div>
                                 <label className={labelCls}>{t('mqtt.autoReconnect')}</label>
                             </div>
                         </div>
 
                         {/* 连接按钮 */}
-                        <div className="pt-2">
+                        <div className="pt-3">
                             <button
                                 className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
                                     ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'

@@ -50,7 +50,7 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--st-config-item-bg)] sticky top-0 border-b border-[var(--border-color)] shrink-0">
+            <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--mqtt-config-bg)] sticky top-0 border-b border-[var(--border-color)] shrink-0">
                 {t('mqtt.subscriptions')}
             </div>
 
@@ -104,7 +104,7 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
                                 {/* 订阅开关 */}
                                 <Tooltip content={topic.subscribed ? t('mqtt.topicSubscribed') : t('mqtt.topicPaused')} position="bottom" wrapperClassName="flex items-center px-0.5">
                                     <button
-                                        className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[var(--st-config-success-bg)]' : 'bg-[var(--input-border-color)]'}`}
+                                        className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${topic.subscribed ? 'bg-[var(--switch-active-bg)]' : 'bg-[var(--input-border-color)]'}`}
                                         onClick={() => updateTopic(topic.id, { subscribed: !topic.subscribed })}
                                     >
                                         <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${topic.subscribed ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -114,7 +114,7 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
                                 {/* 删除 */}
                                 <Trash2
                                     size={14}
-                                    className="text-[var(--input-placeholder-color)] hover:text-[var(--st-danger-text)] cursor-pointer"
+                                    className="text-[var(--input-placeholder-color)] hover:text-[var(--st-status-error)] cursor-pointer transition-colors"
                                     onClick={() => handleRemoveTopic(topic.id)}
                                 />
                             </div>

@@ -54,8 +54,8 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--sidebar-background)] text-[var(--app-foreground)]">
-            <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto">
+        <div className="flex flex-col h-full bg-[var(--monitor-config-bg)] text-[var(--monitor-config-text)]" data-component="monitor-config">
+            <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
                 {/* 未开启虚拟串口功能时显示提示 */}
                 {(!monitorEnabled || !isAdmin) && (
                     <div className="p-3 border border-[var(--st-status-error)] bg-[var(--st-status-error-bg)] rounded-sm">
@@ -69,9 +69,9 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
 
 
                     {/* Select Virtual Port (from existing pairs) */}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1">
                         <div className="flex flex-col gap-1">
-                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.externalPort')}</label>
+                            <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('monitor.externalPort')}</label>
                             <CustomSelect
                                 items={availablePairOptions.length > 0 ? availablePairOptions.map(opt => ({
                                     label: `${opt.value} ${t('monitor.pairedWith', { port: opt.paired })}`,
@@ -117,7 +117,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
 
                     {/* Physical Port */}
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] font-medium flex justify-between">
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium flex justify-between">
                             {t('monitor.physicalPort')}
                             <Tooltip content={t('monitor.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
                                 <button onClick={() => listPorts()} className="text-[var(--activitybar-inactive-foreground)] hover:text-[var(--button-foreground)] transition-colors">
@@ -151,18 +151,16 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                         />
                     </div>
 
-                    <div className="py-1">
-                        <Switch
+                    <Switch
                             label={t('monitor.autoDestroyPair')}
                             checked={monitorConfig.autoDestroyPair ?? false}
                             onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
                             disabled={isConnected}
                         />
-                    </div>
 
                     {/* Baud Rate & Params for Physical Port */}
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.baudRate')}</label>
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('monitor.baudRate')}</label>
                         <CustomSelect
                             items={COMMON_BAUD_RATES.map(rate => ({
                                 label: String(rate),
@@ -178,7 +176,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
 
                     <div className="flex gap-2">
                         <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.dataBits')}</label>
+                            <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('monitor.dataBits')}</label>
                             <CustomSelect
                                 items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.dataBits || 8)}
@@ -187,7 +185,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                             />
                         </div>
                         <div className="flex flex-col gap-1 flex-1">
-                            <label className="text-[11px] text-[var(--app-foreground)] font-medium">{t('monitor.stopBits')}</label>
+                            <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('monitor.stopBits')}</label>
                             <CustomSelect
                                 items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                                 value={String(monitorConfig.connection?.stopBits || 1)}
@@ -198,7 +196,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] opacity-80 font-medium">{t('monitor.parity')}</label>
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('monitor.parity')}</label>
                         <CustomSelect
                             items={['none', 'even', 'odd', 'mark', 'space'].map(p => ({
                                 label: p.charAt(0).toUpperCase() + p.slice(1),
@@ -211,7 +209,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                     </div>
 
                     <div className="flex flex-col gap-1 pt-2 border-t border-[var(--border-color)] mt-1">
-                        <label className="text-[11px] text-[var(--app-foreground)] font-medium flex items-center justify-between">
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                                 {t('monitor.nagleTimeout')}
                                 <Tooltip content={t('monitor.nagleTimeoutTooltip')} position="right" delay={200}>
@@ -238,21 +236,21 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
 
                 </div>
 
-                <div className="space-y-2 mt-auto pt-4 border-t border-[var(--border-color)]">
+                <div className="pt-1 flex flex-col gap-2">
                     <button
-                        className={`w-full py-2 px-3 text-white text-[13px] font-bold rounded-sm transition-all flex items-center justify-center gap-2 ${isConnected
-                            ? 'bg-[var(--st-danger-bg)] hover:bg-[var(--st-danger-hover-bg)]'
-                            : (isAdmin && monitorEnabled ? 'bg-[var(--button-background)] hover:bg-[var(--button-hover-background)]' : 'bg-[var(--input-background)] text-[var(--input-placeholder-color)] cursor-not-allowed opacity-50')
+                        className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
+                            ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'
+                            : (isAdmin && monitorEnabled ? 'bg-[var(--button-background)] text-[var(--button-foreground)] hover:bg-[var(--button-hover-background)]' : 'bg-[var(--input-background)] text-[var(--input-placeholder-color)] cursor-not-allowed opacity-50')
                             }`}
                         disabled={(isConnecting || !monitorEnabled || !isAdmin) && !isConnected}
                         onClick={handleToggleConnection}
                     >
                         {isConnecting ? (
-                            <RefreshCw size={14} className="animate-spin" />
+                            <RefreshCw size={12} className="animate-spin" />
                         ) : isConnected ? (
-                            <Square size={14} fill="currentColor" />
+                            <Square size={12} fill="currentColor" />
                         ) : (
-                            <Play size={14} fill="currentColor" />
+                            <Play size={12} fill="currentColor" />
                         )}
                         {isConnecting ? t('monitor.starting') : isConnected ? t('monitor.stopMonitor') : t('monitor.startMonitor')}
                     </button>

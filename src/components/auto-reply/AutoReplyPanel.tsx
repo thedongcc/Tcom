@@ -87,12 +87,12 @@ export const AutoReplyPanel = ({
                             }
                             <div
                                 className={`w-[14px] h-[14px] rounded-[2px] flex items-center justify-center cursor-pointer transition-all shrink-0 ${rule.enabled
-                                    ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
-                                    : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)]'
+                                    ? 'bg-[var(--checkbox-background)] border border-[var(--checkbox-border-color)]'
+                                    : 'bg-transparent border-2 border-[var(--input-border-color)]'
                                 }`}
                                 onClick={(e) => { e.stopPropagation(); onToggleRule(rule.id); }}
                             >
-                                {rule.enabled && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                                {rule.enabled && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground)]" />}
                             </div>
                             <span className={`text-[12px] flex-1 truncate ${rule.enabled ? 'text-[var(--app-foreground)]' : 'text-[var(--activitybar-inactive-foreground)] line-through opacity-60'}`}>
                                 {rule.name || rule.matchPattern || t('autoReply.untitled')}
@@ -190,14 +190,6 @@ export const AutoReplyPanel = ({
                 );
             })}
 
-            {/* 添加按钮 */}
-            <button
-                className="w-full flex items-center justify-center gap-1.5 h-7 text-[11px] text-[var(--app-foreground)] bg-[var(--widget-background)] hover:bg-[var(--list-hover-background)] rounded border border-[var(--widget-border-color)] hover:border-[var(--focus-border-color)] transition-colors cursor-pointer"
-                onClick={onAddRule}
-            >
-                <Plus size={13} />
-                <span>{t('autoReply.addRule')}</span>
-            </button>
         </div>
     );
 };

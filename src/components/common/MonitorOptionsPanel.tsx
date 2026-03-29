@@ -183,14 +183,14 @@ export const MonitorOptionsPanel = ({
             <div className="pt-2 border-t border-[var(--st-monitor-divider)]">
                 <button
                     disabled={!hasLogs}
-                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-white text-[11px] rounded transition-colors ${
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 text-[var(--button-foreground)] text-[13px] rounded-sm transition-colors ${
                         hasLogs
                             ? 'bg-[var(--st-btn-primary-bg)] hover:bg-[var(--st-btn-primary-hover)] cursor-pointer'
                             : 'bg-[var(--st-btn-primary-bg)] opacity-50 cursor-not-allowed'
                     }`}
                     onClick={() => { if (hasLogs) onExportLogs(); }}
                 >
-                    <Download size={14} />
+                    <Download size={12} />
                     <span>{t('monitor.exportLog')}</span>
                 </button>
             </div>

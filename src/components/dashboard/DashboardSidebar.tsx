@@ -38,26 +38,14 @@ const WidgetCard: React.FC<{
 }> = ({ type, label, icon, desc, onPointerDown }) => (
     <div
         onPointerDown={(e) => onPointerDown(e, type)}
-        className="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-all duration-150 select-none touch-none"
-        style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-        }}
-        onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(var(--accent-rgb,56,189,248),0.08)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(var(--accent-rgb,56,189,248),0.25)';
-        }}
-        onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)';
-        }}
+        className="group flex items-center gap-2.5 px-2.5 py-2 rounded-sm cursor-grab active:cursor-grabbing transition-all duration-150 select-none touch-none border border-[var(--widget-border-color)] bg-[var(--widget-background)] hover:border-[var(--focus-border-color)] hover:bg-[var(--list-hover-background)]"
     >
-        <span className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--accent-color)' }}>
+        <span className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity text-[var(--button-background)]">
             {icon}
         </span>
         <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-medium truncate" style={{ color: 'var(--app-foreground)' }}>{label}</div>
-            <div className="text-[9px] truncate mt-0.5" style={{ color: 'var(--sys-text-muted)' }}>{desc}</div>
+            <div className="text-[11px] font-medium truncate text-[var(--app-foreground)]">{label}</div>
+            <div className="text-[9px] truncate mt-0.5 text-[var(--activitybar-inactive-foreground)] opacity-70">{desc}</div>
         </div>
         {/* 拖拽提示 */}
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -70,14 +58,10 @@ const WidgetCard: React.FC<{
     </div>
 );
 
-// ─── 分区标题 ──────────────────────────────────
+// ─── 分区标题（与 MqttConfigPanel Broker 折叠标题一致）────────
 const SectionTitle: React.FC<{ label: string; en: string }> = ({ label, en }) => (
-    <div className="flex items-center gap-2 px-1 mb-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--sys-text-muted)' }}>
-            {en}
-        </span>
-        <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-        <span className="text-[9px]" style={{ color: 'var(--sys-text-muted)', opacity: 0.5 }}>{label}</span>
+    <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase text-[var(--serial-config-label)] opacity-80 border-b border-[var(--border-color)] bg-[var(--serial-config-bg)] sticky top-0">
+        {en}&nbsp;<span className="text-[10px] font-normal opacity-60">{label}</span>
     </div>
 );
 
@@ -109,25 +93,15 @@ export const DashboardSidebar: React.FC = () => {
     const allWidgets = [...DISPLAY_WIDGETS, ...CONTROL_WIDGETS];
 
     return (
-        <div className="flex flex-col h-full" style={{ background: 'var(--sidebar-background)', color: 'var(--app-foreground)' }}>
+        <div className="flex flex-col h-full overflow-hidden bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]">
             <style>{SCROLL_CSS}</style>
 
-            {/* 顶部栏 */}
-            <div className="flex-shrink-0 px-4 pt-3 pb-2.5" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--sys-text-muted)' }}>
-                    组件库
-                </p>
-                <p className="text-[10px] mt-1" style={{ color: 'var(--sys-text-muted)', opacity: 0.5 }}>
-                    解锁画布后拖入放置
-                </p>
-            </div>
-
             {/* 组件列表 */}
-            <div className="flex-1 overflow-y-auto overscroll-contain db-scroll px-3 py-3 space-y-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain db-scroll flex flex-col gap-0">
                 {/* DISPLAY 区 */}
                 <section>
                     <SectionTitle label="展示" en="DISPLAY" />
-                    <div className="space-y-1.5">
+                    <div className="px-3 py-2 space-y-1.5">
                         {DISPLAY_WIDGETS.map(w => (
                             <WidgetCard key={w.type} {...w} onPointerDown={onPointerDown} />
                         ))}
@@ -137,7 +111,7 @@ export const DashboardSidebar: React.FC = () => {
                 {/* CONTROL 区 */}
                 <section>
                     <SectionTitle label="控制" en="CONTROL" />
-                    <div className="space-y-1.5">
+                    <div className="px-3 py-2 space-y-1.5">
                         {CONTROL_WIDGETS.map(w => (
                             <WidgetCard key={w.type} {...w} onPointerDown={onPointerDown} />
                         ))}

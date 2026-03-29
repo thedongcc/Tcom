@@ -69,11 +69,11 @@ export const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: ()
     <div
         onClick={onChange}
         className={`w-[15px] h-[15px] rounded-[3px] flex items-center justify-center cursor-pointer transition-all ${checked
-            ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
-            : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)] hover:border-[var(--input-placeholder-color,#999)]'
+            ? 'bg-[var(--checkbox-background)] border border-[var(--checkbox-border-color)]'
+            : 'bg-transparent border-2 border-[var(--input-border-color)] hover:border-[var(--input-placeholder-color)]'
             }`}
     >
-        {checked && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+        {checked && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground)]" />}
     </div>
 );
 

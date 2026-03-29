@@ -37,6 +37,11 @@
   --flash-border: transparent;
   --flash-color: transparent;
 
+  /* 危险操作颜色（由 JSON 主题提供，此处为 CSS fallback 防止 JS 注入前闪烁）*/
+  --st-danger-bg: #a1260d;
+  --st-danger-hover-bg: #c93f24;
+  --st-danger-text: #ffffff;
+
   --st-command-drop-indicator: #007acc;
   --st-command-empty-text: var(--sys-text-muted);
   --st-config-item-bg: rgba(0, 0, 0, 0.2);
@@ -531,8 +536,13 @@
   --serial-config-text: var(--st-monitor-config-text);
   --serial-config-label: var(--st-monitor-config-label);
 
+  /* 监控配置侧边栏 */
+  --monitor-config-bg: var(--sidebar-background);
+  --monitor-config-text: var(--st-monitor-config-text);
+  --monitor-config-label: var(--st-monitor-config-label);
+
   /* MQTT 配置面板 */
-  --mqtt-config-bg: var(--st-config-item-bg);
+  --mqtt-config-bg: var(--sidebar-background);
   --mqtt-config-text: var(--st-monitor-config-text);
   --mqtt-config-input-bg: var(--input-background);
   --mqtt-config-input-text: var(--input-foreground);

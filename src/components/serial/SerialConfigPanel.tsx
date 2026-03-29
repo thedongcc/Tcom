@@ -61,15 +61,15 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
             className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]"
             data-component="serial-config"
         >
-            <div className="px-4 py-2 flex flex-col gap-3">
+            <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
                 {/* 端口选择 */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium flex justify-between items-center">
+                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
                             {t('serial.portLabel')}
                         </div>
                         <Tooltip content={t('configSidebar.refreshPorts')} position="bottom" wrapperClassName="flex items-center">
-                            <button onClick={() => listPorts()} className="hover:text-[var(--button-foreground)] transition-colors">
+                            <button onClick={() => listPorts()} className="hover:text-[var(--button-foreground)] transition-colors cursor-pointer">
                                 <RefreshCw size={12} />
                             </button>
                         </Tooltip>
@@ -86,7 +86,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
 
                 {/* 波特率 */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.baudRate')}</label>
+                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.baudRate')}</label>
                     <CustomSelect
                         items={COMMON_BAUD_RATES.map(rate => ({
                             label: String(rate),
@@ -103,7 +103,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                 {/* 数据位 / 停止位 */}
                 <div className="flex gap-2">
                     <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.dataBits')}</label>
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.dataBits')}</label>
                         <CustomSelect
                             items={[5, 6, 7, 8].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.dataBits)}
@@ -113,7 +113,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                     </div>
 
                     <div className="flex flex-col gap-1 flex-1">
-                        <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.stopBits')}</label>
+                        <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.stopBits')}</label>
                         <CustomSelect
                             items={[1, 1.5, 2].map(bit => ({ label: String(bit), value: String(bit) }))}
                             value={String(connection.stopBits)}
@@ -125,7 +125,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
 
                 {/* 校验位 */}
                 <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">{t('serial.parity')}</label>
+                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.parity')}</label>
                     <CustomSelect
                         items={[
                             { label: t('serial.none'), value: 'none' },
@@ -141,8 +141,8 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                 </div>
 
                 {/* 解码方案绑定 */}
-                <div className="flex flex-col gap-1 border-t border-[var(--widget-border-color)] pt-2 mt-1">
-                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">Data Parser</label>
+                <div className="flex flex-col gap-1 border-t border-[var(--border-color)] pt-2 mt-1">
+                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.parser')}</label>
                     <CustomSelect
                         items={[
                             { label: 'None (Raw Logs)', value: '' },
@@ -157,7 +157,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                 </div>
 
                 {/* 连接/断开按钮 */}
-                <div className="space-y-2 mt-auto pt-2">
+                <div className="pt-1 flex flex-col gap-2">
                     <button
                         className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
                             ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'

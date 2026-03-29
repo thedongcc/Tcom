@@ -137,10 +137,10 @@ export const MqttPublishArea = React.memo(({
                 </div>
                 <label className="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--input-background)] border border-[var(--input-border-color)] px-2 rounded h-full hover:bg-[var(--list-hover-background)] transition-colors shrink-0" onClick={() => setRetain(!retain)}>
                     <div className={`w-[14px] h-[14px] rounded-[2px] flex items-center justify-center transition-all shrink-0 ${retain
-                        ? 'bg-[var(--checkbox-background,#1a7fd4)] border border-[var(--checkbox-border-color,#1a7fd4)]'
-                        : 'bg-transparent border-2 border-[var(--input-border-color,#6b6b6b)]'
+                        ? 'bg-[var(--checkbox-background)] border border-[var(--checkbox-border-color)]'
+                        : 'bg-transparent border-2 border-[var(--input-border-color)]'
                     }`}>
-                        {retain && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground,#fff)]" />}
+                        {retain && <Check size={11} strokeWidth={3} className="text-[var(--checkbox-foreground)]" />}
                     </div>
                     <span className="text-[var(--input-foreground)] text-[11px]">Retain</span>
                 </label>

@@ -383,13 +383,25 @@ Tcom 使用 CSS 变量驱动的主题系统，支持自定义主题文件（JSON
 
 #### ContextMenu（右键菜单）
 - 智能定位：自动检测边缘防溢出
-- 列表项：12px 文字 + 图标，悬停 `#094771`
+- 列表项：12px 文字 + 图标，悬停 `var(--list-hover-background)`
 - 点击外部立即关闭
 
-#### Select（下拉选择器）
-- 触发按钮：高度 `h-7`（28px），背景 `#3c3c3c`
-- 弹出菜单：背景 `#1f1f1f`，紧贴触发按钮
-- 滚动条：悬浮式（Overlay），不占宽度
+#### 侧边栏菜单（完整规范）
+
+> **专项规范文档**：`brain/sidebar_style_spec.md`（侧边栏菜单像素级样式规范 v1.0）
+
+**核心摘要**：
+- **侧边栏顶部标题栏**：`h-[42px]`，`px-3`，`border-b`，`font-semibold text-[11px] uppercase tracking-wider opacity-80`
+- **配置内容区**：`px-4 py-2`，`gap-3`（字段组）/ `gap-1`（Label 到控件）
+- **字段 Label**：`text-[11px]`，`var(--serial-config-label)`，`font-medium`，`opacity-80`
+- **Section 子分组标题**：`text-[10px] font-bold uppercase tracking-wider`，颜色 `var(--activitybar-inactive-foreground)`
+
+#### CustomSelect（下拉选择器）—— 基准控件
+- **触发按钮**：`h-7`（28px），`px-2`，`rounded-[4px]`，背景 `var(--input-background)`，边框 `1px solid var(--input-border-color)`
+- **弹出菜单**：背景 `var(--st-select-bg)`，边框 `var(--st-select-border)`，圆角 `4px`，阴影 `0 10px 30px rgba(0,0,0,0.4)`
+- **列表项**：`h-7`（28px），`px-3`，`text-[12px]`，选中色 `var(--st-select-selected)`
+- **滚动条**：悬浮式（Overlay），宽 `4px`，圆角 `4px`，颜色 `var(--scrollbar-slider-hover-color)`，平时透明悬浮时半透明
+- **弹出菜单通过 Portal 渲染**（防被父容器裁剪）
 
 #### Switch（开关组件）
 - 尺寸：`h-4 w-8`，圆点 `h-3 w-3`
