@@ -12,7 +12,6 @@ import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { listen } from '@tauri-apps/api/event';
-import { useDataBusStore } from '../../store/useDataBusStore';
 import { useDashboardStore } from '../../store/useDashboardStore';
 import { ValueWidget } from './widgets/ValueWidget';
 import { UPlotChartWidget } from './widgets/UPlotChartWidget';
@@ -39,7 +38,6 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
     const isEditing = useDashboardStore(s => !!s.isEditing[sessionId]);
     const selectedWidgetId = useDashboardStore(s => s.selectedWidgetId[sessionId]);
     const { updateLayout, toggleEditing, addWidget, initSession, selectWidget } = useDashboardStore();
-    const ingestBatch = useDataBusStore.getState().ingestBatch;
 
     // 自主测量真正的容器内部可用宽度
     const containerRef = useRef<HTMLDivElement>(null);
@@ -62,28 +60,6 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
     useEffect(() => {
         initSession(sessionId);
     }, [sessionId, initSession]);
-
-    // 监听 Rust 推送的批量解析数据（数据总线入口）
-    const unlistenRef = useRef<(() => void) | null>(null);
-    useEffect(() => {
-        let cancelled = false;
-
-        listen<Array<Record<string, number>>>('tcom-parsed-data', (e) => {
-            if (!cancelled && e.payload && Array.isArray(e.payload)) ingestBatch(e.payload);
-        }).then((unlisten) => {
-            if (cancelled) {
-                unlisten();
-            } else {
-                unlistenRef.current = unlisten;
-            }
-        });
-
-        return () => {
-            cancelled = true;
-            unlistenRef.current?.();
-            unlistenRef.current = null;
-        };
-    }, [ingestBatch]);
 
     // 将布局 Widget 映射为 react-grid-layout 的基本 layout 格式 (不再使用多断点字典)
     const layoutConfig = React.useMemo(() => (
@@ -225,11 +201,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
                             className={selectedWidgetId === widget.id ? 'ring-2 ring-[var(--accent-color)] ring-offset-2 ring-offset-[var(--app-background)] rounded-xl relative z-50' : ''}
                         >
                             <WidgetContainer widget={widget} sessionId={sessionId}>
-                                {widget.type === 'ValueWidget' && <ValueWidget bindKey={widget.bindKey} />}
-                                {widget.type === 'LineChartWidget' && <UPlotChartWidget bindKey={widget.bindKey} />}
-                                {widget.type === 'GaugeWidget' && <GaugeWidget bindKey={widget.bindKey} title={widget.title} />}
-                                {widget.type === 'SliderWidget' && <SliderWidget bindKey={widget.bindKey} min={0} max={2000} />}
-                                {widget.type === 'ButtonWidget' && <ButtonWidget bindKey={widget.bindKey} title={widget.title} />}
+                                {widget.type === 'ValueWidget' && <ValueWidget bindKey={widget.bindKey} sessionId={sessionId} />}
+                                {widget.type === 'LineChartWidget' && <UPlotChartWidget bindKey={widget.bindKey} sessionId={sessionId} />}
+                                {widget.type === 'GaugeWidget' && <GaugeWidget bindKey={widget.bindKey} title={widget.title} sessionId={sessionId} />}
+                                {widget.type === 'SliderWidget' && <SliderWidget bindKey={widget.bindKey} min={0} max={2000} sessionId={sessionId} />}
+                                {widget.type === 'ButtonWidget' && <ButtonWidget bindKey={widget.bindKey} title={widget.title} sessionId={sessionId} />}
                             </WidgetContainer>
                         </div>
                     ))}

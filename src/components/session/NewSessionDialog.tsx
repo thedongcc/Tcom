@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { X, Network, Cpu, Activity } from 'lucide-react';
+import { X, Network, Cpu, Activity, LayoutDashboard } from 'lucide-react';
 import { SessionType } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 
@@ -20,6 +20,7 @@ const OPTIONS: SessionTypeOption[] = [
     { type: 'serial', labelKey: 'session.serial', descKey: 'session.serialDesc', icon: Cpu },
     { type: 'mqtt', labelKey: 'session.mqtt', descKey: 'session.mqttDesc', icon: Network },
     { type: 'monitor', labelKey: 'session.monitor', descKey: 'session.monitorDesc', icon: Activity },
+    { type: 'dashboard', labelKey: 'sidebar.dashboard', descKey: 'session.dashboardDesc', icon: LayoutDashboard },
 ];
 
 export const NewSessionDialog = ({ onSelect, onClose, position }: NewSessionDialogProps) => {

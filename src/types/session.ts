@@ -30,6 +30,7 @@ export interface BaseSessionConfig {
     connection?: SerialOpenOptions | Record<string, unknown>;
     txCRC?: CRCConfig;
     rxCRC?: CRCConfig;
+    parserSchemeId?: string; // 物理会话专属的解析方案 ID
 }
 
 export interface SettingsSessionConfig extends BaseSessionConfig {

@@ -11,6 +11,8 @@ import { SessionConfig } from '../../types/session';
 const MONO_KEYWORDS = ['mono', 'console', 'code', 'courier', 'fixed', 'terminal'];
 
 export interface SerialMonitorDisplayState {
+    showDashboard: boolean;
+    setShowDashboard: (show: boolean) => void;
     viewMode: 'text' | 'hex' | 'both';
     setViewMode: (mode: 'text' | 'hex' | 'both') => void;
     showTimestamp: boolean;
@@ -59,6 +61,7 @@ export function useSerialMonitorState(
     const uiState = ((config as any).uiState as Record<string, any>) || {};
 
     // ── 显示状态 ──
+    const [showDashboard, setShowDashboard] = useState<boolean>(!!uiState.showDashboard);
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'both'>((uiState.viewMode as any) || 'hex');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? !!uiState.showTimestamp : true);
     const [showPacketType, setShowPacketType] = useState(uiState.showPacketType !== undefined ? !!uiState.showPacketType : true);
@@ -144,6 +147,7 @@ export function useSerialMonitorState(
     }, [onUpdateConfig]);
 
     return {
+        showDashboard, setShowDashboard,
         viewMode, setViewMode,
         showTimestamp, setShowTimestamp,
         showPacketType, setShowPacketType,

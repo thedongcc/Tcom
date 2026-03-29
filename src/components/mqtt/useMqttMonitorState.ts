@@ -25,6 +25,7 @@ export function useMqttMonitorState({ config, onUpdateConfig }: UseMqttMonitorSt
     const uiState = config.uiState || {};
 
     // 显示设置
+    const [showDashboard, setShowDashboard] = useState<boolean>(!!uiState.showDashboard);
     const [viewMode, setViewMode] = useState<'text' | 'hex' | 'json' | 'base64'>(uiState.viewMode || 'text');
     const [showTimestamp, setShowTimestamp] = useState(uiState.showTimestamp !== undefined ? uiState.showTimestamp : true);
     const [showDataLength, setShowDataLength] = useState(uiState.showDataLength !== undefined ? uiState.showDataLength : false);
@@ -109,6 +110,7 @@ export function useMqttMonitorState({ config, onUpdateConfig }: UseMqttMonitorSt
 
     return {
         // 显示设置
+        showDashboard, setShowDashboard,
         viewMode, setViewMode,
         showTimestamp, setShowTimestamp,
         showDataLength, setShowDataLength,

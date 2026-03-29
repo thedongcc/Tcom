@@ -16,13 +16,13 @@ export function useDataBusListener() {
 
         console.log('[DataBus] 正在注册 tcom-parsed-data 全局事件监听器...');
 
-        listen<Array<Record<string, number>>>('tcom-parsed-data', (e) => {
+        listen<{ session_id: string; batch: Array<Record<string, number>> }>('tcom-parsed-data', (e) => {
             if (cancelled) return;
 
-            const batch = e.payload;
-            console.log('[DataBus] 收到解析批次, 帧数:', batch.length, '预览:', JSON.stringify(batch[batch.length - 1] ?? {}));
+            const { session_id, batch } = e.payload;
+            // console.log(`[DataBus] 收到解析批次, 会话: ${session_id}, 帧数: ${batch.length}`);
 
-            useDataBusStore.getState().ingestBatch(batch);
+            useDataBusStore.getState().ingestBatch(session_id, batch);
         }).then((fn) => {
             if (cancelled) {
                 fn();

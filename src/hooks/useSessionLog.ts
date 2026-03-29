@@ -103,7 +103,7 @@ export const useSessionLog = (
         const elapsed = performance.now() - t0;
 
         if (elapsed > 5) {
-            console.warn(`[Flush DIAG] ${elapsed.toFixed(1)}ms | entries=${totalEntries}`);
+            // console.warn(`[Flush DIAG] ${elapsed.toFixed(1)}ms | entries=${totalEntries}`);
         }
     }, [setSessions, maxLogs]);
 

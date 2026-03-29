@@ -16,7 +16,8 @@ export const WidgetConfigPanel: React.FC<WidgetConfigPanelProps> = ({ sessionId 
     const { selectWidget, updateWidgetConfig } = useDashboardStore();
     
     // 从数据总线抓取最新出现的全部 Key 来作为下拉选项（包含标量和未知的新字段）
-    const latestValues = useDataBusStore(s => s.latestValues);
+    const sessionDataEntry = useDataBusStore(s => s.sessionsData[sessionId]?.latestValues);
+    const latestValues = sessionDataEntry || {};
     const availableKeys = Object.keys(latestValues).sort();
 
     if (!selectedWidgetId) return null;

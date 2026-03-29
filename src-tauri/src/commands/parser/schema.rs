@@ -74,10 +74,16 @@ pub struct ParserScheme {
 
     /// 字段定义列表
     pub fields: Vec<FieldDef>,
+
+    /// 前端专属黑盒存储（UI 积木列表、可见性等）
+    /// Rust 只负责序列化/反序列化，完全不干涉内容
+    #[serde(default)]
+    pub ui_meta: Option<serde_json::Value>,
 }
 
 impl ParserScheme {
-    /// 返回实际生效的最小帧长
+    /// 返回实际生效的最小帧长（保留备用：framer.rs 已改为 unwrap_or(10) 直接处理）
+    #[allow(dead_code)]
     pub fn effective_min_frame_len(&self) -> usize {
         self.min_frame_len
             .unwrap_or_else(|| self.frame_header.len().saturating_add(1))
@@ -95,6 +101,7 @@ impl ParserScheme {
                 FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0 },
                 FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0 },
             ],
+            ui_meta: None,
         }
     }
 }

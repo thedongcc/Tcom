@@ -35,11 +35,12 @@ const UNIT_MAP: Record<string, string> = {
 
 interface ValueWidgetProps {
     bindKey: string;
+    sessionId: string;
 }
 
-export const ValueWidget: React.FC<ValueWidgetProps> = ({ bindKey }) => {
+export const ValueWidget: React.FC<ValueWidgetProps> = ({ bindKey, sessionId }) => {
     // ⭐ 精准原子化订阅 — 只有 latestValues[bindKey] 变化才触发此组件重渲染
-    const value = useDataBusStore((s) => s.latestValues[bindKey] ?? null);
+    const value = useDataBusStore((s) => s.sessionsData[sessionId]?.latestValues[bindKey] ?? null);
 
     const icon = ICON_MAP[bindKey] ?? '📊';
     const unit = UNIT_MAP[bindKey] ?? '';

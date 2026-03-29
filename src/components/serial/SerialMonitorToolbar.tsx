@@ -4,7 +4,7 @@
  * 从 SerialMonitor.tsx 中拆分出来，包含连接状态指示器、TX/RX 过滤器、
  * 视图模式切换、选项菜单入口和操作按钮。
  */
-import { Trash2, ArrowDownToLine, Unplug, Plug } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Unplug, Plug, TerminalSquare, LayoutDashboard } from 'lucide-react';
 import { SessionConfig } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -61,6 +61,7 @@ export function SerialMonitorToolbar({
 }: SerialMonitorToolbarProps) {
     const { t } = useI18n();
     const {
+        showDashboard, setShowDashboard,
         viewMode, setViewMode,
         filterMode, setFilterMode,
         autoScroll, setAutoScroll,
@@ -126,6 +127,8 @@ export function SerialMonitorToolbar({
                     )
                 )}
             </div>
+
+
 
             <div className="flex items-center gap-4">
                 {/* TX/RX 统计过滤器 */}

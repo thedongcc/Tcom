@@ -27,6 +27,7 @@ import { SerialMonitorToolbar } from './SerialMonitorToolbar';
 import { useSerialMonitorSearch } from './useSerialMonitorSearch';
 import { useSession } from '../../context/SessionContext';
 
+
 interface SerialMonitorProps {
     session: SessionState;
     onShowSettings?: (view: string) => void;
@@ -166,70 +167,72 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
             />
 
-            <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>
-                <div className="absolute top-4 right-4 z-10">
-                    <LogSearch
-                        isOpen={searchOpen} onToggle={handleToggleSearch}
-                        query={query} isRegex={isRegex} isMatchCase={matchCase}
-                        onQueryChange={handleQueryChange} onRegexChange={handleRegexChange} onMatchCaseChange={handleMatchCaseChange}
-                        onNext={nextMatch} onPrev={prevMatch}
-                        logs={logs} currentIndex={currentIndex} totalMatches={matches.length}
-                        viewMode={viewMode} formatData={formatData} encoding={encoding} regexError={regexError}
+                <div className="flex-1 w-full h-full flex flex-col relative min-h-0">
+                    <div className="flex-1 relative overflow-hidden" ref={wrapperRef}>
+                        <div className="absolute top-4 right-4 z-30">
+                            <LogSearch
+                                isOpen={searchOpen} onToggle={handleToggleSearch}
+                                query={query} isRegex={isRegex} isMatchCase={matchCase}
+                                onQueryChange={handleQueryChange} onRegexChange={handleRegexChange} onMatchCaseChange={handleMatchCaseChange}
+                                onNext={nextMatch} onPrev={prevMatch}
+                                logs={logs} currentIndex={currentIndex} totalMatches={matches.length}
+                                viewMode={viewMode} formatData={formatData} encoding={encoding} regexError={regexError}
+                            />
+                        </div>
+                        {/* 悬浮高亮覆盖层 —— 不在滚动内容中，不会跟随数据移动 */}
+                        <div
+                            ref={hoverOverlayRef}
+                            className="absolute pointer-events-none rounded-sm z-10"
+                            style={{ background: 'var(--list-hover-background)', display: 'none' }}
+                        />
+                        <div
+                            className="absolute inset-0 overflow-auto pt-4 px-4 pb-6 z-20"
+                            style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}
+                            ref={scrollRef} onScroll={handleScroll} onWheel={handleWheel}
+                        >
+                            {filteredLogs.length === 0 && (
+                                <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]"><p>No data</p></div>
+                            )}
+                            {filteredLogs.map((log) => {
+                                const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
+                                return (
+                                    <LogItem
+                                        key={log.id} log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
+                                        showTimestamp={displayState.showTimestamp} showPacketType={displayState.showPacketType}
+                                        showDataLength={displayState.showDataLength} onContextMenu={handleLogContextMenu}
+                                        formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText}
+                                        timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch}
+                                        mergeRepeats={displayState.mergeRepeats} flashNewMessage={flashNewMessage}
+                                        fontSize={fontSize} showControlChars={displayState.showControlChars}
+                                        rxCRC={rxCRC} crcEnabled={crcEnabled}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <SerialInput
+                        key={session.id} sessionId={session.id}
+                        onSend={handleSend}
+                        onTimedSendStart={window.serialAPI?.timedSendStart}
+                        onTimedSendStartDynamic={window.serialAPI?.timedSendStartDynamic}
+                        onTimedSendStop={window.serialAPI?.timedSendStop}
+                        initialContent={uiState.inputContent || ''} initialHTML={uiState.inputHTML || ''}
+                        initialTokens={uiState.inputTokens as Record<string, Token> || {}}
+                        initialMode={uiState.inputMode || 'hex'}
+                        initialLineEnding={uiState.lineEnding ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
+                        onStateChange={handleInputStateChange}
+                        isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily}
+                        onConnectRequest={async () => {
+                            const failCb = () => { if (onShowSettings) onShowSettings('serial'); if (onInputStateChange) onInputStateChange({ highlightConnect: Date.now() }); };
+                            if (config.type === 'serial' && config.connection.path && onConnectRequest) {
+                                if (await onConnectRequest() === false) failCb();
+                            } else {
+                                failCb();
+                            }
+                        }}
                     />
                 </div>
-                {/* 悬浮高亮覆盖层 —— 不在滚动内容中，不会跟随数据移动 */}
-                <div
-                    ref={hoverOverlayRef}
-                    className="absolute pointer-events-none rounded-sm"
-                    style={{ background: 'var(--list-hover-background)', display: 'none' }}
-                />
-                <div
-                    className="absolute inset-0 overflow-auto pt-4 px-4 pb-6"
-                    style={{ fontSize: `${fontSize}px`, fontFamily: fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)'), lineHeight: `${Math.floor(fontSize * 1.5)}px` }}
-                    ref={scrollRef} onScroll={handleScroll} onWheel={handleWheel}
-                >
-                    {filteredLogs.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-[var(--st-monitor-empty-text)]"><p>No data</p></div>
-                    )}
-                    {filteredLogs.map((log) => {
-                        const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
-                        return (
-                            <LogItem
-                                key={log.id} log={log} isNewLog={isNewLog} viewMode={viewMode} encoding={encoding}
-                                showTimestamp={displayState.showTimestamp} showPacketType={displayState.showPacketType}
-                                showDataLength={displayState.showDataLength} onContextMenu={handleLogContextMenu}
-                                formatData={formatData} formatTimestamp={formatTimestamp} getDataLengthText={getDataLengthText}
-                                timestampFormat={themeConfig.timestampFormat} matches={matches} activeMatch={activeMatch}
-                                mergeRepeats={displayState.mergeRepeats} flashNewMessage={flashNewMessage}
-                                fontSize={fontSize} showControlChars={displayState.showControlChars}
-                                rxCRC={rxCRC} crcEnabled={crcEnabled}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
-
-            <SerialInput
-                key={session.id} sessionId={session.id}
-                onSend={handleSend}
-                onTimedSendStart={window.serialAPI?.timedSendStart}
-                onTimedSendStartDynamic={window.serialAPI?.timedSendStartDynamic}
-                onTimedSendStop={window.serialAPI?.timedSendStop}
-                initialContent={uiState.inputContent || ''} initialHTML={uiState.inputHTML || ''}
-                initialTokens={uiState.inputTokens as Record<string, Token> || {}}
-                initialMode={uiState.inputMode || 'hex'}
-                initialLineEnding={uiState.lineEnding ?? ''} initialTimerInterval={(uiState.inputTimerInterval as number) || 1000}
-                onStateChange={handleInputStateChange}
-                isConnected={isConnected} fontSize={fontSize} fontFamily={fontFamily}
-                onConnectRequest={async () => {
-                    const failCb = () => { if (onShowSettings) onShowSettings('serial'); if (onInputStateChange) onInputStateChange({ highlightConnect: Date.now() }); };
-                    if (config.type === 'serial' && config.connection.path && onConnectRequest) {
-                        if (await onConnectRequest() === false) failCb();
-                    } else {
-                        failCb();
-                    }
-                }}
-            />
 
             {contextMenu && (
                 <ContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} items={[

@@ -13,26 +13,28 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { dataBusHistory } from '../../../store/useDataBusStore';
 
-interface Props { bindKey: string; }
+interface Props { bindKey: string; sessionId: string; }
 
 const DEFAULT_WINDOW_SEC = 30; // 默认显示最近 30 秒
 const MIN_WINDOW_SEC     = 2;
 const MAX_WINDOW_SEC     = 300;
 
-export const UPlotChartWidget: React.FC<Props> = ({ bindKey }) => {
+export const UPlotChartWidget: React.FC<Props> = ({ bindKey, sessionId }) => {
     const uplotRef     = useRef<uPlot | null>(null);
     const roRef        = useRef<ResizeObserver | null>(null);
     const rafRef       = useRef<number | undefined>(undefined);
     const bindRef      = useRef(bindKey);
+    const sessionRef   = useRef(sessionId);
     const windowSecRef = useRef(DEFAULT_WINDOW_SEC); // 当前时间窗口大小（秒）
 
     useEffect(() => { bindRef.current = bindKey; }, [bindKey]);
+    useEffect(() => { sessionRef.current = sessionId; }, [sessionId]);
 
     // ── RAF 高频轮询：滑动窗口实时刷新 ────────────────────────────────────
     useEffect(() => {
         const loop = () => {
             const plot    = uplotRef.current;
-            const history = dataBusHistory[bindRef.current];
+            const history = dataBusHistory[sessionRef.current]?.[bindRef.current];
             if (plot && history && history.t.length > 0) {
                 const t    = history.t;
                 const now  = t[t.length - 1];          // 最新时间戳

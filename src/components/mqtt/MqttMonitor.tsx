@@ -228,6 +228,8 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 logs={logs}
                 filterMode={filterMode}
                 setFilterMode={setFilterMode}
+                monitorView={state.monitorView}
+                setMonitorView={state.setMonitorView}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 showOptionsMenu={showOptionsMenu}
@@ -261,86 +263,88 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
             />
 
-            {/* 日志区域 */}
-            <div className="flex-1 relative overflow-hidden">
-                <div className="absolute top-4 right-4 z-10">
-                    <LogSearch
-                        isOpen={searchOpen}
-                        onToggle={handleToggleSearch}
-                        query={query}
-                        isRegex={isRegex}
-                        isMatchCase={matchCase}
-                        onQueryChange={handleQueryChange}
-                        onRegexChange={handleRegexChange}
-                        onMatchCaseChange={handleMatchCaseChange}
-                        onNext={nextMatch}
-                        onPrev={prevMatch}
-                        logs={logs}
-                        currentIndex={currentIndex}
-                        totalMatches={matches.length}
-                        viewMode={viewMode}
-                        formatData={formatData}
-                        encoding="utf-8"
-                        regexError={regexError}
-                    />
-                </div>
-                <div
-                    className="absolute inset-0 overflow-auto p-2 flex flex-col gap-1.5 select-text"
-                    ref={scrollRef}
-                    onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
-                    style={{ fontSize: `${fontSize}px`, fontFamily: fontStyle, lineHeight: '1.5' }}
-                >
-                    {filteredLogs.map((log, _index) => {
-                        const isTX = log.type === 'TX';
-                        const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
-                        const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? 'var(--st-mqtt-topic-default-tx-color)' : 'var(--st-mqtt-topic-default-rx-color)');
+            <div className="flex-1 w-full h-full flex flex-col relative min-h-0">
+                {/* 日志区域 */}
+                <div className="flex-1 relative overflow-hidden">
+                    <div className="absolute top-4 right-4 z-10">
+                        <LogSearch
+                            isOpen={searchOpen}
+                            onToggle={handleToggleSearch}
+                            query={query}
+                            isRegex={isRegex}
+                            isMatchCase={matchCase}
+                            onQueryChange={handleQueryChange}
+                            onRegexChange={handleRegexChange}
+                            onMatchCaseChange={handleMatchCaseChange}
+                            onNext={nextMatch}
+                            onPrev={prevMatch}
+                            logs={logs}
+                            currentIndex={currentIndex}
+                            totalMatches={matches.length}
+                            viewMode={viewMode}
+                            formatData={formatData}
+                            encoding="utf-8"
+                            regexError={regexError}
+                        />
+                    </div>
+                    <div
+                        className="absolute inset-0 overflow-auto p-2 flex flex-col gap-1.5 select-text"
+                        ref={scrollRef}
+                        onScroll={(e) => scrollPositions.set(session.id, e.currentTarget.scrollTop)}
+                        style={{ fontSize: `${fontSize}px`, fontFamily: fontStyle, lineHeight: '1.5' }}
+                    >
+                        {filteredLogs.map((log, _index) => {
+                            const isTX = log.type === 'TX';
+                            const isNewLog = flashNewMessage && (Date.now() - log.timestamp < 300);
+                            const topicColor = (config.topics || []).find(t => t.path === log.topic)?.color || (isTX ? 'var(--st-mqtt-topic-default-tx-color)' : 'var(--st-mqtt-topic-default-rx-color)');
 
-                        return (
-                            <MqttLogItem
-                                key={`${log.id}-${log.repeatCount || 1}`}
-                                log={log}
-                                isNewLog={isNewLog}
-                                isTX={isTX}
-                                topicColor={topicColor}
-                                viewMode={viewMode}
-                                showTimestamp={showTimestamp}
-                                showDataLength={showDataLength}
-                                mergeRepeats={mergeRepeats}
-                                flashNewMessage={flashNewMessage}
-                                fontSize={fontSize}
-                                formatTimestamp={formatTimestamp}
-                                getDataLengthText={getDataLengthText}
-                                formatData={formatData}
-                                matches={matches}
-                                activeMatch={activeMatch}
-                            />
-                        );
-                    })}
+                            return (
+                                <MqttLogItem
+                                    key={`${log.id}-${log.repeatCount || 1}`}
+                                    log={log}
+                                    isNewLog={isNewLog}
+                                    isTX={isTX}
+                                    topicColor={topicColor}
+                                    viewMode={viewMode}
+                                    showTimestamp={showTimestamp}
+                                    showDataLength={showDataLength}
+                                    mergeRepeats={mergeRepeats}
+                                    flashNewMessage={flashNewMessage}
+                                    fontSize={fontSize}
+                                    formatTimestamp={formatTimestamp}
+                                    getDataLengthText={getDataLengthText}
+                                    formatData={formatData}
+                                    matches={matches}
+                                    activeMatch={activeMatch}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
+
+                {/* 发布区 */}
+                <MqttPublishArea
+                    isConnected={isConnected}
+                    isConnecting={session.isConnecting}
+                    topic={state.topic}
+                    setTopic={state.setTopic}
+                    showTopicDropdown={state.showTopicDropdown}
+                    setShowTopicDropdown={state.setShowTopicDropdown}
+                    subscribedTopics={subscribedTopics}
+                    payload={state.payload}
+                    setPayload={state.setPayload}
+                    publishFormat={state.publishFormat}
+                    setPublishFormat={state.setPublishFormat}
+                    qos={state.qos}
+                    setQos={state.setQos}
+                    retain={state.retain}
+                    setRetain={state.setRetain}
+                    fontSize={fontSize}
+                    fontFamily={fontFamily}
+                    saveUIState={saveUIState}
+                    handleSend={handleSend}
+                />
             </div>
-
-            {/* 发布区 */}
-            <MqttPublishArea
-                isConnected={isConnected}
-                isConnecting={session.isConnecting}
-                topic={state.topic}
-                setTopic={state.setTopic}
-                showTopicDropdown={state.showTopicDropdown}
-                setShowTopicDropdown={state.setShowTopicDropdown}
-                subscribedTopics={subscribedTopics}
-                payload={state.payload}
-                setPayload={state.setPayload}
-                publishFormat={state.publishFormat}
-                setPublishFormat={state.setPublishFormat}
-                qos={state.qos}
-                setQos={state.setQos}
-                retain={state.retain}
-                setRetain={state.setRetain}
-                fontSize={fontSize}
-                fontFamily={fontFamily}
-                saveUIState={saveUIState}
-                handleSend={handleSend}
-            />
         </div >
     );
 };

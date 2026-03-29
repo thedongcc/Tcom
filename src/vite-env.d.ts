@@ -30,7 +30,7 @@ export interface SerialOpenOptions {
 
 export interface SerialAPI {
     listPorts: (options?: { includeCom0ComNames?: boolean }) => Promise<{ success: boolean; ports: SerialPortInfo[]; error?: string }>;
-    open: (connectionId: string, options: SerialOpenOptions) => Promise<{ success: boolean; error?: string }>;
+    open: (connectionId: string, options: SerialOpenOptions, parserSchemeId?: string) => Promise<{ success: boolean; error?: string }>;
     close: (connectionId: string) => Promise<{ success: boolean; error?: string }>;
     write: (connectionId: string, data: string | number[] | Uint8Array) => Promise<{ success: boolean; error?: string }>;
     onData: (connectionId: string, callback: (data: Uint8Array, timestamp?: number) => void) => () => void;

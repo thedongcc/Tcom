@@ -32,7 +32,7 @@ impl Framer {
     pub fn extract_frames(&mut self, scheme: &ParserScheme) -> Vec<Vec<u8>> {
         let mut frames = Vec::new();
         let header = &scheme.frame_header;
-        let frame_len = scheme.effective_min_frame_len();
+        let frame_len = scheme.min_frame_len.unwrap_or(10);
 
         if header.is_empty() || frame_len == 0 {
             return frames;
@@ -71,7 +71,6 @@ impl Framer {
     #[allow(dead_code)]
     pub fn buffer_len(&self) -> usize { self.buffer.len() }
 
-    #[allow(dead_code)]
     pub fn clear(&mut self) { self.buffer.clear(); }
 }
 
@@ -170,18 +169,26 @@ mod tests {
     }
 
     #[test]
-    fn min_frame_len_none_uses_header_plus_one() {
+    fn min_frame_len_none_defaults_to_10() {
+        // min_frame_len: None → unwrap_or(10) → 需要 10 字节才切帧
         let scheme = ParserScheme {
             id: "x".into(), name: "t".into(),
             frame_header: vec![0xAA],
-            min_frame_len: None, // effective = 2
+            min_frame_len: None,
             fields: vec![],
         };
+        // 仅 2 字节：不足 10，不应切出帧
         let mut framer = Framer::new();
         framer.append(&[0xAA, 0x42]);
-        let frames = framer.extract_frames(&scheme);
+        assert!(framer.extract_frames(&scheme).is_empty());
+        // 补足 10 字节：应切出 1 帧
+        let mut bytes = vec![0xAA_u8];
+        bytes.extend_from_slice(&[0x00; 9]);
+        let mut framer2 = Framer::new();
+        framer2.append(&bytes);
+        let frames = framer2.extract_frames(&scheme);
         assert_eq!(frames.len(), 1);
-        assert_eq!(frames[0], vec![0xAA, 0x42]);
+        assert_eq!(frames[0].len(), 10);
     }
 
     #[test]

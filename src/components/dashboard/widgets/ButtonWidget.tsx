@@ -3,6 +3,7 @@ import { useDataBusStore } from '../../../store/useDataBusStore';
 
 interface ButtonWidgetProps {
     bindKey: string;
+    sessionId: string;
     title?: string;
     actionValue?: number; // 要下发的值，默认为 1
     variant?: 'primary' | 'danger' | 'warning';
@@ -10,6 +11,7 @@ interface ButtonWidgetProps {
 
 export const ButtonWidget: React.FC<ButtonWidgetProps> = ({
     bindKey,
+    sessionId,
     title,
     actionValue = 1,
     variant = 'primary'
@@ -29,7 +31,7 @@ export const ButtonWidget: React.FC<ButtonWidgetProps> = ({
     };
 
     const handleClick = () => {
-        publishValue(bindKey, actionValue);
+        publishValue(sessionId, bindKey, actionValue);
     };
 
     return (

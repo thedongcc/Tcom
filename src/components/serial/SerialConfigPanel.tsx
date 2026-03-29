@@ -10,6 +10,7 @@ import { SerialSessionConfig, COMMON_BAUD_RATES } from '../../types/session';
 import { CustomSelect } from '../common/CustomSelect';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
+import { useParserStore } from '../../store/useParserStore';
 
 interface SerialConfigPanelProps {
     session: any;
@@ -22,6 +23,7 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
 
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = useSession();
     const uiState = config.uiState || {};
+    const parserConfig = useParserStore(s => s.config);
     const [highlight, setHighlight] = useState(false);
 
     useEffect(() => {
@@ -134,6 +136,22 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                         ]}
                         value={connection.parity || 'none'}
                         onChange={(val) => updateConnection({ parity: val as 'none' | 'even' | 'mark' | 'odd' | 'space' })}
+                        disabled={isConnected}
+                    />
+                </div>
+
+                {/* 解码方案绑定 */}
+                <div className="flex flex-col gap-1 border-t border-[var(--widget-border-color)] pt-2 mt-1">
+                    <label className="text-[11px] text-[var(--st-monitor-config-label)] opacity-80 font-medium">Data Parser</label>
+                    <CustomSelect
+                        items={[
+                            { label: 'None (Raw Logs)', value: '' },
+                            ...(parserConfig?.schemes.map(s => ({ label: s.name, value: s.id })) || [])
+                        ]}
+                        value={config.parserSchemeId || ''}
+                        onChange={(val) => {
+                            void updateSessionConfig(session.id, { parserSchemeId: val || undefined });
+                        }}
                         disabled={isConnected}
                     />
                 </div>

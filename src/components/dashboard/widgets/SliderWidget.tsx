@@ -3,6 +3,7 @@ import { useDataBusStore } from '../../../store/useDataBusStore';
 
 interface SliderWidgetProps {
     bindKey: string;
+    sessionId: string;
     title?: string;
     min?: number;
     max?: number;
@@ -11,12 +12,13 @@ interface SliderWidgetProps {
 
 export const SliderWidget: React.FC<SliderWidgetProps> = ({
     bindKey,
+    sessionId,
     title,
     min = 0,
     max = 100,
     step = 1
 }) => {
-    const storeValue = useDataBusStore(s => s.latestValues[bindKey] ?? 0);
+    const storeValue = useDataBusStore(s => s.sessionsData[sessionId]?.latestValues[bindKey] ?? 0);
     const publishValue = useDataBusStore(s => s.publishValue);
     
     // 本地拖拽状态，只有没在拖拽时才接受 store 传来的远程更新
@@ -36,7 +38,7 @@ export const SliderWidget: React.FC<SliderWidgetProps> = ({
     const handleCommit = () => {
         // 完成拖拽或回车，正式发送到总线
         setIsDragging(false);
-        publishValue(bindKey, localValue);
+        publishValue(sessionId, bindKey, localValue);
     };
 
     return (

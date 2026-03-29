@@ -7,6 +7,7 @@ import React, { useRef } from 'react';
 import { useDataBusStore } from '../../store/useDataBusStore';
 import { useParserStore } from '../../store/useParserStore';
 import { FIELD_COLORS } from '../parser/ParserSidebar';
+import { useSession } from '../../context/SessionContext';
 
 // ─── 可点击颜色圆点（与 ParserSidebar 共用逻辑） ─
 const ColorDot = ({ color, onChange }: { color: string; onChange: (c: string) => void }) => {
@@ -37,10 +38,20 @@ const IconTrash = () => (
 );
 
 export const DataViewPanel: React.FC = () => {
-    const { latestValues, reset } = useDataBusStore();
+    const { activeSessionId, sessions } = useSession();
+    const activeSession = sessions.find(s => s.id === activeSessionId);
+    
+    // 从当前会话的配置中提取绑定的解析方案
+    const boundSchemeId = (activeSession?.config as any)?.parserSchemeId;
+
+    const sessionDataEntry = useDataBusStore(s => activeSessionId ? s.sessionsData[activeSessionId]?.latestValues : undefined);
+    const latestValues = sessionDataEntry || {};
+    const resetSession = useDataBusStore(s => s.resetSession);
+    
     const { config, updateScheme } = useParserStore();
 
-    const activeScheme = config?.schemes.find(s => s.id === config.active_id) ?? config?.schemes[0] ?? null;
+    // 必须使用当前会话真正绑定的方案，如果没绑定任何方案，则它只是 Raw 模式，即使编辑器里有激活的方案也不该应用。
+    const activeScheme = config?.schemes.find(s => s.id === boundSchemeId) ?? null;
     const fields = activeScheme?.fields ?? [];
     const fieldKeys = fields.map(f => f.name);
     const extraKeys = Object.keys(latestValues).filter(k => !fieldKeys.includes(k));
@@ -79,7 +90,7 @@ export const DataViewPanel: React.FC = () => {
                 <button
                     className="p-1 rounded opacity-30 hover:opacity-100 hover:bg-[var(--st-status-error-bg)] hover:text-[var(--st-status-error)] transition-all flex items-center justify-center cursor-pointer"
                     title="清空显示数据"
-                    onClick={() => reset()}
+                    onClick={() => { if (activeSessionId) resetSession(activeSessionId); }}
                 >
                     <IconTrash />
                 </button>
@@ -150,7 +161,8 @@ export const DataViewPanel: React.FC = () => {
                                         color: hasValue ? 'var(--app-foreground)' : 'rgba(255,255,255,0.15)',
                                     }}
                                 >
-                                    {hasValue ? value!.toFixed(4) : '—'}
+                                    {hasValue ? Number(value!.toFixed(3)).toString() : '—'}
+
                                 </div>
 
                                 {/* 元信息 */}

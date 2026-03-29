@@ -3,26 +3,13 @@
  * 协议解析规则配置面板 — 二期重构版
  */
 import { useI18n } from '../../context/I18nContext';
-import { useParserStore, ParserScheme, FieldDef, ParserConfig } from '../../store/useParserStore';
+import { useParserStore, ParserScheme, FieldDef, DataType } from '../../store/useParserStore';
 import { useDashboardStore } from '../../store/useDashboardStore';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { CustomSelect } from '../common/CustomSelect';
+import { useSession } from '../../context/SessionContext';
 
-// ─── 数据类型选项 ──────────────────────────────
-const DATA_TYPE_OPTIONS = [
-    { value: 'u8',     label: 'U8 · 无符号 1B' },
-    { value: 'i8',     label: 'I8 · 有符号 1B' },
-    { value: 'u16_le', label: 'U16_LE · 2B 小端' },
-    { value: 'u16_be', label: 'U16_BE · 2B 大端' },
-    { value: 'i16_le', label: 'I16_LE · 有符号 2B 小端' },
-    { value: 'i16_be', label: 'I16_BE · 有符号 2B 大端' },
-    { value: 'u32_le', label: 'U32_LE · 4B 小端' },
-    { value: 'u32_be', label: 'U32_BE · 4B 大端' },
-    { value: 'i32_le', label: 'I32_LE · 有符号 4B 小端' },
-    { value: 'i32_be', label: 'I32_BE · 有符号 4B 大端' },
-    { value: 'f32_le', label: 'F32_LE · 单精度 小端' },
-    { value: 'f32_be', label: 'F32_BE · 单精度 大端' },
-];
+
+
 
 // ─── 默认颜色调色板 ────────────────────────────
 export const FIELD_COLORS = [
@@ -152,7 +139,7 @@ const FieldCard: React.FC<{
 
                 <span className="text-[9px] font-mono flex-shrink-0 opacity-25" style={{ color: 'var(--sys-text-muted)' }}>#{index}</span>
 
-                {/* 删除按钮 — 明显更大 */}
+                {/* 删除按钮 */}
                 <button
                     title="删除字段"
                     className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-all duration-150 cursor-pointer"
@@ -181,19 +168,42 @@ const FieldCard: React.FC<{
             {open && (
                 <div className="px-3 py-2.5 grid grid-cols-2 gap-x-2.5 gap-y-2" style={{ background: 'rgba(0,0,0,0.18)' }}>
                     <div>
-                        <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>偏移量</label>
+                        <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>字节偏移 (含帧头)</label>
                         <input type="number" min={0} className={INPUT_CLS} value={field.offset}
                             onChange={e => onChange({ offset: parseInt(e.target.value) || 0 })} />
                     </div>
                     <div>
-                        <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>乘积系数</label>
+                        <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>换算比例 (×)</label>
                         <input type="number" step="0.001" className={INPUT_CLS} value={field.multiplier}
                             onChange={e => onChange({ multiplier: parseFloat(e.target.value) || 1.0 })} />
                     </div>
                     <div className="col-span-2">
                         <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>数据类型</label>
-                        <CustomSelect value={field.data_type} items={DATA_TYPE_OPTIONS}
-                            onChange={v => onChange({ data_type: v as any })} />
+                        <select
+                            className={INPUT_CLS}
+                            value={field.data_type}
+                            style={{ cursor: 'pointer' }}
+                            onChange={e => onChange({ data_type: e.target.value as DataType })}
+                        >
+                            <optgroup label="── 1 字节 ──">
+                                <option value="u8">U8 · 无符号</option>
+                                <option value="i8">I8 · 有符号</option>
+                            </optgroup>
+                            <optgroup label="── 2 字节 ──">
+                                <option value="u16_le">U16-LE · 小端</option>
+                                <option value="u16_be">U16-BE · 大端</option>
+                                <option value="i16_le">I16-LE · 有符号小端</option>
+                                <option value="i16_be">I16-BE · 有符号大端</option>
+                            </optgroup>
+                            <optgroup label="── 4 字节 ──">
+                                <option value="u32_le">U32-LE · 小端</option>
+                                <option value="u32_be">U32-BE · 大端</option>
+                                <option value="i32_le">I32-LE · 有符号小端</option>
+                                <option value="i32_be">I32-BE · 有符号大端</option>
+                                <option value="f32_le">F32-LE · 单精度小端</option>
+                                <option value="f32_be">F32-BE · 单精度大端</option>
+                            </optgroup>
+                        </select>
                     </div>
                 </div>
             )}
@@ -207,17 +217,29 @@ const FieldCard: React.FC<{
 const SchemeRow: React.FC<{
     scheme: ParserScheme;
     isActive: boolean;
+    usedByPorts: string[];
     onActivate: () => void;
     onUpdate: (s: ParserScheme) => void;
     onDelete: () => void;
     onDuplicate: () => void;
     canDelete: boolean;
-}> = ({ scheme, isActive, onActivate, onUpdate, onDelete, onDuplicate, canDelete }) => {
+}> = ({ scheme, isActive, usedByPorts, onActivate, onUpdate, onDelete, onDuplicate, canDelete }) => {
     const { t } = useI18n();
-    const [open, setOpen] = useState(isActive);
+    const [open, setOpen] = useState(false);
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+    const ctxRef = useRef<HTMLDivElement>(null);
 
-    // 当 isActive 变化时展开
-    useEffect(() => { if (isActive) setOpen(true); }, [isActive]);
+    // 点击外部关闭右键菜单
+    useEffect(() => {
+        if (!ctxMenu) return;
+        const close = (e: MouseEvent) => {
+            if (ctxRef.current && !ctxRef.current.contains(e.target as Node)) {
+                setCtxMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', close);
+        return () => document.removeEventListener('mousedown', close);
+    }, [ctxMenu]);
 
     const updateField = (i: number, patch: Partial<FieldDef>) =>
         onUpdate({ ...scheme, fields: scheme.fields.map((f, idx) => idx === i ? { ...f, ...patch } : f) });
@@ -227,16 +249,20 @@ const SchemeRow: React.FC<{
         onUpdate({ ...scheme, fields: [...scheme.fields, { name: `field_${scheme.fields.length}`, offset: 0, data_type: 'u16_be' as const, multiplier: 1.0, color: FIELD_COLORS[scheme.fields.length % FIELD_COLORS.length] }] });
 
     return (
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isActive ? 'var(--accent-color)' : 'rgba(255,255,255,0.07)'}`, transition: 'border-color 0.15s' }}>
+        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isActive ? 'var(--accent-color)' : 'rgba(255,255,255,0.07)'}`, transition: 'border-color 0.15s', position: 'relative' }}>
             {/* 方案行头 */}
             <div
-                className="flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-colors duration-150"
+                className="flex items-center gap-2 px-2.5 py-2 transition-colors duration-150 cursor-pointer"
                 style={{ background: isActive ? 'var(--sys-bg-active)' : 'rgba(255,255,255,0.02)' }}
-                onClick={() => { onActivate(); setOpen(o => !o || !isActive ? true : !o); }}
+                onClick={onActivate}
+                onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
             >
-                {/* 激活状态圆点 */}
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-200"
-                    style={{ background: isActive ? 'var(--st-status-success)' : 'rgba(255,255,255,0.2)', boxShadow: isActive ? '0 0 6px rgba(34,197,94,0.6)' : 'none' }} />
+                {/* 图标替代单选框 */}
+                <span className="flex-shrink-0 flex items-center justify-center opacity-60" style={{ width: 14, height: 14 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+                    </svg>
+                </span>
 
                 {/* 内联方案名 */}
                 <input
@@ -244,61 +270,87 @@ const SchemeRow: React.FC<{
                     style={{ color: isActive ? 'var(--app-foreground)' : 'var(--sys-text-secondary)', height: 20 }}
                     value={scheme.name}
                     spellCheck={false}
-                    onClick={e => e.stopPropagation()}
                     onChange={e => onUpdate({ ...scheme, name: e.target.value })}
                 />
 
-                {/* 运行中标签 */}
-                {isActive && (
-                    <span className="text-[8px] px-1.5 py-0.5 rounded flex-shrink-0 font-bold"
+                {/* 运行中标签 -> 正在使用的端口 */}
+                {usedByPorts.length > 0 && (
+                    <span className="text-[8px] px-1.5 py-0.5 rounded flex-shrink-0 font-bold max-w-[80px] truncate"
+                        title={usedByPorts.join(', ')}
                         style={{ color: 'var(--st-status-success)', border: '1px solid var(--st-status-success)', background: 'var(--st-status-success-bg)', whiteSpace: 'nowrap' }}>
-                        {t('sidebar.running') || '运行中'}
+                        被 {usedByPorts.length} 个端口使用
                     </span>
                 )}
 
-                {/* 复制按钮 */}
-                <button title="复制方案"
-                    className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded transition-all duration-150 cursor-pointer"
-                    style={{ color: 'var(--sys-text-muted)', opacity: 0.5 }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.5'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                    onClick={e => { e.stopPropagation(); onDuplicate(); }}
-                >
-                    <IconCopy />
-                </button>
-
-                {/* 删除按钮 */}
-                {canDelete && (
-                    <button title="删除方案"
-                        className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded transition-all duration-150 cursor-pointer"
-                        style={{ color: 'var(--sys-text-muted)', opacity: 0.5 }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--st-status-error)'; (e.currentTarget as HTMLElement).style.background = 'var(--st-status-error-bg)'; (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--sys-text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.opacity = '0.5'; }}
-                        onClick={e => { e.stopPropagation(); onDelete(); }}
-                    >
-                        <IconTrash />
-                    </button>
-                )}
-
-                {/* 展开折叠 */}
-                <button className="flex-shrink-0 w-5 h-5 flex items-center justify-center cursor-pointer opacity-40 hover:opacity-80 transition-opacity"
+                {/* 展开折叠 — 放大 */}
+                <button
+                    title={open ? '折叠' : '展开'}
+                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer opacity-40 hover:opacity-90 hover:bg-white/10 transition-all duration-150"
                     style={{ color: 'var(--sys-text-muted)' }}
-                    onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+                    onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
                 >
                     <IconChevron open={open} />
                 </button>
             </div>
 
+            {/* 右键菜单 */}
+            {ctxMenu && (
+                <div
+                    ref={ctxRef}
+                    className="fixed z-50 rounded-lg overflow-hidden shadow-xl py-1"
+                    style={{
+                        left: ctxMenu.x, top: ctxMenu.y,
+                        background: 'var(--menu-background, #1e1e2e)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        minWidth: 140,
+                    }}
+                >
+                    <button
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors duration-100"
+                        style={{ color: 'var(--app-foreground)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                        onClick={() => { onDuplicate(); setCtxMenu(null); }}
+                    >
+                        <IconCopy />
+                        <span>复制方案</span>
+                    </button>
+                    {canDelete && (
+                        <button
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors duration-100"
+                            style={{ color: 'var(--st-status-error)' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--st-status-error-bg)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                            onClick={() => { onDelete(); setCtxMenu(null); }}
+                        >
+                            <IconTrash />
+                            <span>删除方案</span>
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* 展开的编辑区 */}
             {open && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    {/* 帧头 */}
-                    <div className="px-3 pt-2.5 pb-2">
-                        <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>帧头 HEX</label>
-                        <input type="text" spellCheck={false} className={INPUT_CLS}
-                            placeholder="AA 55"
-                            value={bufToHex(scheme.frame_header)}
-                            onChange={e => onUpdate({ ...scheme, frame_header: hexToBuf(e.target.value) })} />
+                    {/* 帧头 HEX + 总帧长两列并排 */}
+                    <div className="px-3 pt-2.5 pb-2 grid grid-cols-2 gap-x-2.5">
+                        <div>
+                            <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>帧头 HEX</label>
+                            <input type="text" spellCheck={false} className={INPUT_CLS}
+                                placeholder="AA 55"
+                                value={bufToHex(scheme.frame_header)}
+                                onChange={e => onUpdate({ ...scheme, frame_header: hexToBuf(e.target.value) })} />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--sys-text-muted)' }}>总帧长 (字节)</label>
+                            <input
+                                type="number" min={1} className={INPUT_CLS}
+                                value={scheme.min_frame_len ?? 10}
+                                onChange={e => onUpdate({ ...scheme, min_frame_len: Math.max(1, parseInt(e.target.value) || 10) })}
+                            />
+                            <p className="text-[9px] mt-1 leading-none" style={{ color: 'var(--sys-text-muted)', opacity: 0.45 }}>含帧头在内，达到此字节数才切帧</p>
+                        </div>
                     </div>
 
                     {/* 字段列表头 */}
@@ -355,6 +407,7 @@ export const ParserSidebar: React.FC = () => {
     const { t } = useI18n();
     const { config, isLoading, error, loadConfig, deleteScheme, setActiveScheme, updateScheme, pushToEngine } = useParserStore();
     const { isVisible: dataViewVisible, toggleVisible } = useDashboardStore();
+    const { sessions } = useSession();
 
     const [schemesOpen, setSchemesOpen] = useState(true);
     const initialized = useRef(false);
@@ -462,6 +515,7 @@ export const ParserSidebar: React.FC = () => {
                                 key={scheme.id}
                                 scheme={scheme}
                                 isActive={scheme.id === config.active_id}
+                                usedByPorts={sessions.filter((s: any) => s.config.parserSchemeId === scheme.id).map((s: any) => s.config.name)}
                                 canDelete={config.schemes.length > 1}
                                 onActivate={() => setActiveScheme(scheme.id)}
                                 onUpdate={s => updateScheme(scheme.id, () => s)}

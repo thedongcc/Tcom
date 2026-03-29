@@ -136,9 +136,10 @@ export function useSessionConnection({
             return false;
         }
         const serialOpts = connection as import('../vite-env').SerialOpenOptions;
+        const parserId = (session.config as import('../types/session').SerialSessionConfig).parserSchemeId;
         updateSession(sessionId, () => ({ isConnecting: true }));
         try {
-            const result = await window.serialAPI.open(sessionId, serialOpts);
+            const result = await window.serialAPI.open(sessionId, serialOpts, parserId);
             if (result.success) {
                 updateSession(sessionId, () => ({ isConnected: true, isConnecting: false }));
                 sessionLog.addLog(sessionId, 'INFO', `Connected to ${serialOpts.path}`);

@@ -13,11 +13,17 @@ use tauri::{AppHandle, Emitter, Manager};
 use super::state::*;
 use crate::commands::parser::api::ParserState;
 
+#[derive(Clone, serde::Serialize)]
+struct ParsedDataPayload {
+    session_id: String,
+    batch: Vec<std::collections::HashMap<String, f64>>,
+}
 /// 打开串口连接并启动读取线程
 pub fn open_port(
     app: &tauri::AppHandle,
     connection_id: String,
     options: SerialOpenOptions,
+    parser_scheme_id: Option<String>,
 ) -> Result<Value, String> {
     let state = app.state::<SerialState>();
 
@@ -61,7 +67,7 @@ pub fn open_port(
     let alive = Arc::new(AtomicBool::new(true));
 
     // 启动读取线程
-    spawn_reader_thread(app.clone(), connection_id.clone(), reader_port, Arc::clone(&alive));
+    spawn_reader_thread(app.clone(), connection_id.clone(), reader_port, parser_scheme_id, Arc::clone(&alive));
 
     // 保存句柄
     let mut ports = state.ports.lock().map_err(lock_err)?;
@@ -106,18 +112,19 @@ fn spawn_reader_thread(
     app: AppHandle,
     connection_id: String,
     reader_port: Box<dyn serialport::SerialPort>,
+    parser_scheme_id: Option<String>,
     alive: Arc<AtomicBool>,
 ) {
     thread::spawn(move || {
         let mut reader = reader_port;
         let mut buf = [0u8; 4096];
 
-        // ── 协议解析引擎初始化（不阻塞 UI，不与原有 Raw 流竞争）──
+        // ── 协议解析引擎初始化（克隆指定 ID 的配置方案，不再跟踪 active_scheme_snapshot）──
         let mut framer = crate::commands::parser::framer::Framer::new();
-        // 初始化使用当前系统的缺省激活方案
         let mut current_scheme: Option<crate::commands::parser::schema::ParserScheme> = None;
-        if let Some(state) = app.try_state::<ParserState>() {
-            current_scheme = state.active_scheme_snapshot();
+        if let (Some(id), Some(state)) = (&parser_scheme_id, app.try_state::<ParserState>()) {
+            let config = state.config.lock().unwrap();
+            current_scheme = config.schemes.iter().find(|s| s.id == *id).cloned();
         }
         
         // 批量聚合池：收集单次节流窗口内所有解析成功的帧
@@ -125,6 +132,8 @@ fn spawn_reader_thread(
             Vec::with_capacity(100);
         // 节流锚点：60Hz = 约 16ms 发一次，防止 IPC 桥梁被洪流打爆
         let mut last_emit = std::time::Instant::now();
+        // 方案切换检测：记录上一次使用的方案 ID，切换时清空 Framer 缓冲区防止脏包
+        let mut last_scheme_id: Option<String> = None;
 
         while alive.load(Ordering::SeqCst) {
             match reader.read(&mut buf) {
@@ -144,15 +153,25 @@ fn spawn_reader_thread(
                         },
                     );
 
-                    // 热更新：无阻塞地拉取最新激活方案
-                    if let Some(state) = app.try_state::<ParserState>() {
-                        current_scheme = state.active_scheme_snapshot();
+                    // 热更新：如果前端通过 UI 修改了同一个 ID 的方案，这里也能拿到最新！
+                    if let (Some(id), Some(state)) = (&parser_scheme_id, app.try_state::<ParserState>()) {
+                        let config = state.config.lock().unwrap();
+                        current_scheme = config.schemes.iter().find(|s| s.id == *id).cloned();
+                    }
+
+                    // 方案切换检测：清空 Framer 缓冲区防止脏包污染新方案
+                    let current_id = current_scheme.as_ref().map(|s| s.id.clone());
+                    if current_id != last_scheme_id {
+                        framer.clear();
+                        parsed_batch.clear();
+                        last_scheme_id = current_id;
                     }
 
                     // 无激活方案则跳过解析
                     let Some(ref scheme) = current_scheme else {
                         continue;
                     };
+
 
                     framer.append(&buf[..n]);
                     let complete_frames = framer.extract_frames(scheme);
@@ -168,7 +187,11 @@ fn spawn_reader_thread(
                     if !parsed_batch.is_empty()
                         && last_emit.elapsed().as_millis() >= 16
                     {
-                        let _ = app.emit("tcom-parsed-data", &parsed_batch);
+                        let payload = ParsedDataPayload {
+                            session_id: connection_id.clone(),
+                            batch: parsed_batch.clone(),
+                        };
+                        let _ = app.emit("tcom-parsed-data", &payload);
                         parsed_batch.clear();
                         last_emit = std::time::Instant::now();
                     }
