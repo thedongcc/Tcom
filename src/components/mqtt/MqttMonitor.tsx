@@ -261,6 +261,7 @@ export const MqttMonitor = ({ session, onShowSettings, onPublish, onUpdateConfig
                 handleSaveLogs={handleSaveLogs}
                 onDisconnect={() => disconnectSession(session.id)}
                 onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
+                onShowSettings={onShowSettings}
             />
 
             <div className="flex-1 w-full h-full flex flex-col relative min-h-0">

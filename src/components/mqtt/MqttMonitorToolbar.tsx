@@ -58,6 +58,7 @@ interface MqttMonitorToolbarProps {
     handleSaveLogs: () => void;
     onDisconnect?: () => void;
     onConnect?: () => void;
+    onShowSettings?: (view: string) => void;
 }
 
 export const MqttMonitorToolbar = React.memo(({
@@ -80,6 +81,7 @@ export const MqttMonitorToolbar = React.memo(({
     saveUIState, uiState, onClearLogs, handleSaveLogs,
     onDisconnect,
     onConnect,
+    onShowSettings,
 }: MqttMonitorToolbarProps) => {
     const { t } = useI18n();
 
@@ -91,7 +93,14 @@ export const MqttMonitorToolbar = React.memo(({
                 ) : (
                     <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />
                 )}
-                {host}:{port}
+                <Tooltip content={t('session.configure')} position="bottom">
+                    <div 
+                        className="cursor-pointer hover:text-[var(--accent-color)] transition-colors pl-1"
+                        onClick={() => onShowSettings?.('serial')}
+                    >
+                        {host}:{port}
+                    </div>
+                </Tooltip>
 
                 {/* 连接/断开按钮 */}
                 {isConnected ? (

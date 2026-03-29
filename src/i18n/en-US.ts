@@ -271,6 +271,7 @@ export const enUS = {
         portAvailable: 'Available',
         noPort: 'No Port',
         notConfigured: 'Not Configured',
+        configure: 'Click to Configure',
     },
 
     // Serial

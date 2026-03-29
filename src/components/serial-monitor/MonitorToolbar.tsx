@@ -61,6 +61,7 @@ interface MonitorToolbarProps {
     onFontSize: (v: number) => void;
     onDisconnect?: () => void;
     onConnect?: () => void;
+    onShowSettings?: (view: string) => void;
 }
 
 export const MonitorToolbar = React.memo(({
@@ -76,6 +77,7 @@ export const MonitorToolbar = React.memo(({
     onEncoding, onFontFamily, onFontSize,
     onDisconnect,
     onConnect,
+    onShowSettings,
 }: MonitorToolbarProps) => {
     const { t } = useI18n();
     const optionsButtonRef = useRef<HTMLButtonElement>(null);
@@ -84,10 +86,17 @@ export const MonitorToolbar = React.memo(({
         <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--st-toolbar-bg)] shrink-0">
             <div className="text-sm font-medium text-[var(--st-monitor-toolbar-foreground)] flex items-center gap-2">
                 {isConnected ? <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-online)] shadow-[0_0_8px_var(--st-monitor-status-online)] animate-pulse" style={{ opacity: 0.8 }} /> : <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />}
-                <span className="opacity-80">Monitor: </span>
-                <span className="text-blue-400 font-bold">{(config as MonitorSessionConfig).virtualSerialPort}</span>
-                <span className="text-gray-600 px-1">⟷</span>
-                <span className="text-emerald-400 font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
+                <Tooltip content={t('session.configure')} position="bottom">
+                    <div 
+                        className="flex items-center cursor-pointer hover:text-[var(--accent-color)] transition-colors pl-1"
+                        onClick={() => onShowSettings?.('serial')}
+                    >
+                        <span className="opacity-80">Monitor: </span>
+                        <span className="text-blue-400 font-bold ml-1">{(config as MonitorSessionConfig).virtualSerialPort}</span>
+                        <span className="text-gray-600 px-1">⟷</span>
+                        <span className="text-emerald-400 font-bold">{(config as MonitorSessionConfig).connection?.path || 'No Device'}</span>
+                    </div>
+                </Tooltip>
 
                 {/* 连接/断开按钮 */}
                 {isConnected ? (

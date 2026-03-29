@@ -269,6 +269,7 @@ export const zhCN = {
         portAvailable: '可用',
         noPort: '未配置端口',
         notConfigured: '未配置',
+        configure: '点击配置参数',
     },
 
     // 串口

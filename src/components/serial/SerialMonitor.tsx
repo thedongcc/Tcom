@@ -165,6 +165,7 @@ export const SerialMonitor = ({ session, onShowSettings, onSend, onUpdateConfig,
                 onClearLogs={doClearLogs} onSaveLogs={handleSaveLogs} hasLogs={logs.length > 0} scrollRef={scrollRef}
                 onDisconnect={() => disconnectSession(session.id)}
                 onConnect={onConnectRequest ? () => onConnectRequest() : undefined}
+                onShowSettings={onShowSettings}
             />
 
                 <div className="flex-1 w-full h-full flex flex-col relative min-h-0">

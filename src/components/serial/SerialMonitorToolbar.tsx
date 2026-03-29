@@ -40,6 +40,8 @@ interface SerialMonitorToolbarProps {
     onDisconnect?: () => void;
     /** 连接 */
     onConnect?: () => void;
+    /** 打开设置 */
+    onShowSettings?: (view: string) => void;
 }
 
 export function SerialMonitorToolbar({
@@ -58,6 +60,7 @@ export function SerialMonitorToolbar({
     scrollRef,
     onDisconnect,
     onConnect,
+    onShowSettings,
 }: SerialMonitorToolbarProps) {
     const { t } = useI18n();
     const {
@@ -97,10 +100,17 @@ export function SerialMonitorToolbar({
                     <div className="w-2 h-2 rounded-full bg-[var(--st-monitor-status-offline)]" />
                 )}
 
-                {config.type === 'serial' ?
-                    `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${(config.connection.parity ?? 'none') === 'none' ? 'N' : (config.connection.parity ?? 'none').toUpperCase()}${config.connection.stopBits}`
-                    : config.type === 'mqtt' ?
-                        `${config.host}:${config.port} ` : 'Connected'}
+                <Tooltip content={t('session.configure')} position="bottom">
+                    <div 
+                        className="cursor-pointer hover:text-[var(--accent-color)] transition-colors pl-1"
+                        onClick={() => onShowSettings?.('serial')}
+                    >
+                        {config.type === 'serial' ?
+                            `${config.connection.path || 'No Port'}-${config.connection.baudRate}-${config.connection.dataBits}${(config.connection.parity ?? 'none') === 'none' ? 'N' : (config.connection.parity ?? 'none').toUpperCase()}${config.connection.stopBits}`
+                            : config.type === 'mqtt' ?
+                                `${config.host}:${config.port} ` : 'Connected'}
+                    </div>
+                </Tooltip>
 
                 {/* 连接/断开按钮 */}
                 {isConnected ? (
