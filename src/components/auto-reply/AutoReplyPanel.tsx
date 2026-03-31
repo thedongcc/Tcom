@@ -6,13 +6,17 @@
  *   右：折叠箭头
  *   右键菜单：复制、删除
  */
-import { ChevronDown, ChevronRight, Zap, GripVertical } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown, ChevronRight, Zap, GripVertical, Copy as IconCopy, Trash2 as IconTrash } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { CustomSelect } from '../common/CustomSelect';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { AutoReplyRule } from '../../types/autoReply';
 import React from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
 
 interface AutoReplyPanelProps {
     rules: AutoReplyRule[];
@@ -45,30 +49,21 @@ const INPUT_CLS = "w-full h-7 px-2 text-[12px] bg-[var(--input-background)] bord
 // ──────────────────────────────────────────────
 const RuleRow = ({
     rule,
-    index,
     onUpdate,
     onDelete,
     onToggle,
     onDuplicate,
-    onDragStart,
-    onDragOver,
-    onDrop,
 }: {
     rule: AutoReplyRule;
-    index: number;
     onUpdate: (updates: Partial<AutoReplyRule>) => void;
     onDelete: () => void;
     onToggle: () => void;
     onDuplicate: () => void;
-    onDragStart: (e: React.DragEvent, index: number) => void;
-    onDragOver: (e: React.DragEvent, index: number) => void;
-    onDrop: (e: React.DragEvent, index: number) => void;
 }) => {
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
     const ctxRef = useRef<HTMLDivElement>(null);
-    const [isDragOver, setIsDragOver] = useState(false);
 
     // 点击外部关闭右键菜单
     useEffect(() => {
@@ -80,15 +75,24 @@ const RuleRow = ({
         return () => document.removeEventListener('mousedown', close);
     }, [ctxMenu]);
 
+    const {
+        attributes, listeners, setNodeRef, transform, transition, isDragging
+    } = useSortable({ id: rule.id });
+
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+    };
+
     return (
         <div
+            ref={setNodeRef}
+            style={style}
             className={`rounded-sm overflow-hidden border transition-colors duration-150 relative ${
-                isDragOver ? 'border-[var(--focus-border-color)] opacity-60' :
+                isDragging ? 'border-[var(--focus-border-color)] opacity-60 shadow-lg' :
                 open ? 'border-[var(--focus-border-color)]' : 'border-[var(--border-color)]'
             }`}
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); onDragOver(e, index); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={(e) => { setIsDragOver(false); onDrop(e, index); }}
         >
             {/* 规则头部 — 左：拖拽+圆点 • 中：名称只读 • 右：折叠箭头 */}
             <div
@@ -99,17 +103,12 @@ const RuleRow = ({
                 {/* 拖拽手柄 — 最左侧 */}
                 <Tooltip content={t('sidebar.dragOrder')} position="top">
                 <span
-                    draggable
-                    onDragStart={e => {
-                        e.stopPropagation();
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', index.toString());
-                        onDragStart(e, index);
-                    }}
-                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--activitybar-inactive-foreground)] opacity-30 hover:opacity-80 transition-opacity"
+                    {...attributes}
+                    {...listeners}
+                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--activitybar-inactive-foreground)] opacity-30 hover:opacity-80 transition-opacity outline-none"
                     onClick={e => e.stopPropagation()}
                 >
-                    <GripVertical size={13} />
+                    <GripVertical size={13} pointerEvents="none" />
                 </span>
                 </Tooltip>
 
@@ -145,17 +144,17 @@ const RuleRow = ({
                 >
                     <button
                         className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]"
-                        onClick={() => { onDuplicate(); setCtxMenu(null); }}
+                        onClick={(e) => { e.stopPropagation(); onDuplicate(); setCtxMenu(null); }}
                     >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        <span>复制规则</span>
+                        <IconCopy size={14} />
+                        <span>{t('common.duplicate') || '复制规则'}</span>
                     </button>
                     <button
                         className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)]"
-                        onClick={() => { onDelete(); setCtxMenu(null); }}
+                        onClick={(e) => { e.stopPropagation(); onDelete(); setCtxMenu(null); }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/></svg>
-                        <span>删除规则</span>
+                        <IconTrash size={14} />
+                        <span>{t('common.delete') || '删除规则'}</span>
                     </button>
                 </div>
             )}
@@ -255,22 +254,46 @@ export const AutoReplyPanel = ({
     onDuplicateRule,
 }: AutoReplyPanelProps) => {
     const { t } = useI18n();
-    const dragIndexRef = useRef<number>(-1);
 
-    const handleDragStart = useCallback((_e: React.DragEvent, index: number) => {
-        dragIndexRef.current = index;
-    }, []);
+    // --- 真实悬浮滚动条状态 ---
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [scrollRatio, setScrollRatio] = useState(0);
+    const [thumbHeight, setThumbHeight] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollTimerRef = useRef<NodeJS.Timeout>();
 
-    const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
-        e.preventDefault();
-    }, []);
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        const maxScroll = scrollHeight - clientHeight;
+        const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0;
+        setScrollRatio(ratio);
+        setThumbHeight(Math.max((clientHeight / scrollHeight) * clientHeight, 35));
+        setContainerHeight(clientHeight);
+        setIsScrolling(true);
+        if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+        scrollTimerRef.current = setTimeout(() => setIsScrolling(false), 1000);
+    };
 
-    const handleDrop = useCallback((_e: React.DragEvent, toIndex: number) => {
-        const fromIndex = dragIndexRef.current;
-        if (fromIndex === -1 || fromIndex === toIndex) return;
-        onReorderRules(fromIndex, toIndex);
-        dragIndexRef.current = -1;
-    }, [onReorderRules]);
+    useEffect(() => {
+        handleScroll();
+    }, [rules]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = rules.findIndex(r => r.id === active.id);
+            const newIndex = rules.findIndex(r => r.id === over.id);
+            if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+                onReorderRules(oldIndex, newIndex);
+            }
+        }
+    };
 
     if (rules.length === 0) {
         return (
@@ -284,21 +307,42 @@ export const AutoReplyPanel = ({
     }
 
     return (
-        <div className="space-y-1.5">
-            {rules.map((rule, index) => (
-                <RuleRow
-                    key={rule.id}
-                    rule={rule}
-                    index={index}
-                    onUpdate={updates => onUpdateRule(rule.id, updates)}
-                    onDelete={() => onDeleteRule(rule.id)}
-                    onToggle={() => onToggleRule(rule.id)}
-                    onDuplicate={() => onDuplicateRule(rule.id)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                />
-            ))}
+        <div className="flex-1 min-h-0 relative">
+            <div 
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="h-full overflow-y-auto overscroll-contain scrollbar-none px-2 py-2 space-y-1.5"
+            >
+                <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
+                    <SortableContext items={rules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                        {rules.map((rule) => (
+                            <RuleRow
+                                key={rule.id}
+                                rule={rule}
+                                onUpdate={(patch) => onUpdateRule(rule.id, patch)}
+                                onDelete={() => onDeleteRule(rule.id)}
+                                onToggle={() => onToggleRule(rule.id)}
+                                onDuplicate={() => onDuplicateRule(rule.id)}
+                            />
+                        ))}
+                    </SortableContext>
+                </DndContext>
+            </div>
+
+            {/* 悬浮滚动条 Thumb */}
+            {containerHeight > 0 && thumbHeight < containerHeight && (
+                <div className="absolute right-[2px] top-0 bottom-0 w-[4px] pointer-events-none z-[100]">
+                    <div
+                        className="w-full rounded-full transition-opacity transition-colors duration-300"
+                        style={{
+                            height: thumbHeight,
+                            transform: `translateY(${scrollRatio * (containerHeight - thumbHeight)}px)`,
+                            backgroundColor: isScrolling ? 'var(--scrollbar-slider-active-color)' : 'var(--scrollbar-slider-color)',
+                            opacity: isScrolling ? 0.8 : 0
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 };

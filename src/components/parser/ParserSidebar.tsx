@@ -12,6 +12,11 @@ import { Tooltip } from '../common/Tooltip';
 import { GripVertical } from 'lucide-react';
 import { ColorPickerTrigger } from '../theme/ColorPickerShared';
 
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
+
 
 
 
@@ -22,14 +27,6 @@ const bufToHex = (arr: number[]) =>
     arr.map(x => x.toString(16).padStart(2, '0').toUpperCase()).join(' ');
 const hexToBuf = (hex: string) =>
     hex.split(/\s+/).filter(Boolean).map(x => parseInt(x, 16)).filter(x => !isNaN(x));
-
-// ─── 悬浮滚动条 ────────────────────────────────
-const SCROLL_CSS = `
-.ps-scroll::-webkit-scrollbar { width: 3px; }
-.ps-scroll::-webkit-scrollbar-track { background: transparent; }
-.ps-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
-.ps-scroll:hover::-webkit-scrollbar-thumb { background: var(--scrollbar-slider-color); }
-`;
 
 // ─── 统一输入框样式 ────────────────────────────
 const INPUT_CLS =
@@ -61,9 +58,6 @@ const IconChevronRight = ({ open }: { open: boolean }) => (
     </svg>
 );
 
-// ─── 悬浮滚动条 ────────────────────────────────
-
-
 // ══════════════════════════════════════════════
 //  字段编辑卡片
 // ══════════════════════════════════════════════
@@ -73,16 +67,65 @@ const FieldCard: React.FC<{
     color: string;
     onChange: (patch: Partial<FieldDef>) => void;
     onDelete: () => void;
+    onDuplicate: () => void;
     onColorChange: (c: string) => void;
-}> = ({ field, index, color, onChange, onDelete, onColorChange }) => {
+}> = ({ field, index, color, onChange, onDelete, onDuplicate, onColorChange }) => {
     const [open, setOpen] = useState(true);
-    const { t } = useI18n();
+
+    const {
+        attributes, listeners, setNodeRef, transform, transition, isDragging
+    } = useSortable({ id: field.name || `field_${index}` });
+
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+    };
+
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+    const ctxRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!ctxMenu) return;
+        const close = (e: MouseEvent) => {
+            if (ctxRef.current && !ctxRef.current.contains(e.target as Node)) setCtxMenu(null);
+        };
+        document.addEventListener('mousedown', close);
+        return () => document.removeEventListener('mousedown', close);
+    }, [ctxMenu]);
 
     return (
-        <div className={`rounded-sm overflow-hidden border ${open ? 'border-[var(--border-color)]' : 'border-[var(--widget-border-color)]'}`}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`rounded-sm overflow-hidden border transition-colors duration-150 ${
+                isDragging ? 'border-[var(--focus-border-color)] opacity-60 shadow-lg' :
+                open ? 'border-[var(--border-color)]' : 'border-[var(--widget-border-color)]'
+            }`}
+        >
             {/* 卡片头 */}
-            <div className="px-3 py-2 flex items-center gap-2 bg-[var(--serial-config-bg)]">
-                <ColorPickerTrigger value={color} onChange={onColorChange} shape="circle" size={14} />
+            <div 
+                className={`px-3 py-2 flex items-center gap-2 bg-[var(--widget-background)] cursor-pointer select-none ${open ? '' : 'hover:bg-[var(--list-hover-background)]'}`}
+                onClick={() => setOpen(o => !o)}
+                onContextMenu={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCtxMenu({ x: e.clientX, y: e.clientY });
+                }}
+            >
+                {/* 拖拽手柄 */}
+                <span
+                    {...attributes}
+                    {...listeners}
+                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--activitybar-inactive-foreground)] opacity-30 hover:opacity-80 transition-opacity flex items-center justify-center p-1 -ml-1 outline-none"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <GripVertical size={13} pointerEvents="none" />
+                </span>
+
+                <div onClick={e => e.stopPropagation()}>
+                    <ColorPickerTrigger value={color} onChange={onColorChange} shape="circle" size={14} />
+                </div>
 
                 <input
                     className="flex-1 bg-transparent text-[12px] font-mono font-semibold outline-none min-w-0 border-b border-transparent focus:border-[var(--focus-border-color)] transition-colors duration-150 text-[var(--app-foreground)]"
@@ -94,44 +137,51 @@ const FieldCard: React.FC<{
                     onChange={e => onChange({ name: e.target.value })}
                 />
 
-                <span className="text-[10px] font-mono flex-shrink-0 opacity-30 text-[var(--activitybar-inactive-foreground)]">#{index}</span>
-
-                {/* 删除按钮 */}
-                <Tooltip content={t('common.delete')} position="top">
-                <button
-                    className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-sm transition-all duration-150 cursor-pointer opacity-50 hover:opacity-100 text-[var(--activitybar-inactive-foreground)] hover:text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)]"
-                    onClick={e => { e.stopPropagation(); onDelete(); }}
-                >
-                    <IconTrash />
-                </button>
-                </Tooltip>
-
-                {/* 折叠按钮 */}
-                <Tooltip content={open ? t('common.collapse') : t('common.expand')} position="top">
-                <button
-                    className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-sm transition-all duration-150 cursor-pointer opacity-50 hover:opacity-100 text-[var(--activitybar-inactive-foreground)] hover:bg-[var(--list-hover-background)]"
-                    onClick={() => setOpen(o => !o)}
-                >
+                {/* 折叠按钮外观（作为状态指示，不再独立响应点击） */}
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center pointer-events-none text-[var(--activitybar-inactive-foreground)] opacity-50">
                     <IconChevron open={open} />
-                </button>
-                </Tooltip>
+                </div>
             </div>
+
+            {/* 右键菜单（含复制、删除） */}
+            {ctxMenu && (
+                <div
+                    ref={ctxRef}
+                    className="fixed z-[5000] rounded-sm overflow-hidden shadow-xl py-1 bg-[var(--st-menu-bg)] border border-[var(--menu-border-color)] min-w-[140px]"
+                    style={{ left: ctxMenu.x, top: ctxMenu.y }}
+                >
+                    <button
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors text-[var(--app-foreground)] hover:bg-[var(--list-hover-background)]"
+                        onClick={(e) => { e.stopPropagation(); onDuplicate(); setCtxMenu(null); }}
+                    >
+                        <IconCopy />
+                        <span>复制字段</span>
+                    </button>
+                    <button
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors text-[var(--st-status-error)] hover:bg-[var(--st-status-error-bg)]"
+                        onClick={(e) => { e.stopPropagation(); onDelete(); setCtxMenu(null); }}
+                    >
+                        <IconTrash />
+                        <span>删除字段</span>
+                    </button>
+                </div>
+            )}
 
             {/* 字段详情 */}
             {open && (
-                <div className="px-3 py-2.5 grid grid-cols-2 gap-x-2.5 gap-y-2 bg-[var(--input-background)] border-t border-[var(--border-color)]">
+                <div className="px-3 py-2.5 grid grid-cols-2 gap-x-2.5 gap-y-2 bg-[var(--input-background)] border-t border-[var(--border-color)] cursor-default" onClick={e => e.stopPropagation()}>
                     <div>
-                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1">字节偏移 (含帧头)</label>
+                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1 whitespace-nowrap truncate">字节偏移 (含帧头)</label>
                         <input type="number" min={0} className={INPUT_CLS} value={field.offset}
                             onChange={e => onChange({ offset: parseInt(e.target.value) || 0 })} />
                     </div>
                     <div>
-                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1">换算比例 (×)</label>
+                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1 whitespace-nowrap truncate">换算比例 (×)</label>
                         <input type="number" step="0.001" className={INPUT_CLS} value={field.multiplier}
                             onChange={e => onChange({ multiplier: parseFloat(e.target.value) || 1.0 })} />
                     </div>
                     <div className="col-span-2">
-                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1">数据类型</label>
+                        <label className="block text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium uppercase tracking-wide mb-1 whitespace-nowrap truncate">数据类型</label>
                         <div className="relative w-full">
                             <select
                                 className={INPUT_CLS + ' cursor-pointer appearance-none pr-7'}
@@ -172,23 +222,18 @@ const FieldCard: React.FC<{
 // ════════════════════════════════════════════
 const SchemeRow: React.FC<{
     scheme: ParserScheme;
-    index: number;
     isActive: boolean;
     usedByPorts: string[];
     onActivate: () => void;
     onUpdate: (s: ParserScheme) => void;
     onDelete: () => void;
     onDuplicate: () => void;
-    onDragStart: (e: React.DragEvent, index: number) => void;
-    onDragOver: (e: React.DragEvent, index: number) => void;
-    onDrop: (e: React.DragEvent, index: number) => void;
     canDelete: boolean;
-}> = ({ scheme, index, isActive, usedByPorts, onActivate, onUpdate, onDelete, onDuplicate, onDragStart, onDragOver, onDrop, canDelete }) => {
+}> = ({ scheme, isActive, usedByPorts, onActivate, onUpdate, onDelete, onDuplicate, canDelete }) => {
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
     const ctxRef = useRef<HTMLDivElement>(null);
-    const [isDragOver, setIsDragOver] = useState(false);
 
     // 点击外部关闭右键菜单
     useEffect(() => {
@@ -204,18 +249,54 @@ const SchemeRow: React.FC<{
         onUpdate({ ...scheme, fields: scheme.fields.map((f, idx) => idx === i ? { ...f, ...patch } : f) });
     const deleteField = (i: number) =>
         onUpdate({ ...scheme, fields: scheme.fields.filter((_, idx) => idx !== i) });
+    const duplicateField = (i: number) => {
+        const field = scheme.fields[i];
+        const newFields = [...scheme.fields];
+        newFields.splice(i + 1, 0, { ...field, name: `${field.name}_copy` });
+        onUpdate({ ...scheme, fields: newFields });
+    };
     const addField = () =>
         onUpdate({ ...scheme, fields: [...scheme.fields, { name: `field_${scheme.fields.length}`, offset: 0, data_type: 'u16_be' as const, multiplier: 1.0, color: FIELD_COLORS[scheme.fields.length % FIELD_COLORS.length] }] });
 
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    );
+
+    const handleFieldDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = scheme.fields.findIndex(f => (f.name || `field_unknown`) === active.id || `field_${scheme.fields.indexOf(f)}` === active.id);
+            const newIndex = scheme.fields.findIndex(f => (f.name || `field_unknown`) === over.id || `field_${scheme.fields.indexOf(f)}` === over.id);
+
+            // Fallback for names
+            const safeOldIndex = oldIndex !== -1 ? oldIndex : scheme.fields.findIndex((_, idx) => `field_${idx}` === active.id);
+            const safeNewIndex = newIndex !== -1 ? newIndex : scheme.fields.findIndex((_, idx) => `field_${idx}` === over.id);
+
+            if (safeOldIndex !== -1 && safeNewIndex !== -1 && safeOldIndex !== safeNewIndex) {
+                const newFields = arrayMove(scheme.fields, safeOldIndex, safeNewIndex);
+                onUpdate({ ...scheme, fields: newFields });
+            }
+        }
+    };
+
+    const {
+        attributes, listeners, setNodeRef, transform, transition, isDragging
+    } = useSortable({ id: scheme.id });
+
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+    };
+
     return (
         <div
+            ref={setNodeRef}
+            style={style}
             className={`rounded-sm overflow-hidden border transition-colors duration-150 relative ${
-                isDragOver ? 'border-[var(--focus-border-color)] opacity-60' :
+                isDragging ? 'border-[var(--focus-border-color)] opacity-60 shadow-lg' :
                 (isActive || open) ? 'border-[var(--focus-border-color)]' : 'border-[var(--border-color)]'
             }`}
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); onDragOver(e, index); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={(e) => { setIsDragOver(false); onDrop(e, index); }}
         >
             {/* 方案头部 — 左：拖拽+圆点 • 中：名称只读 • 右：折叠箭头 */}
             <div
@@ -226,17 +307,12 @@ const SchemeRow: React.FC<{
                 {/* 拖拽手柄 — 最左侧 */}
                 <Tooltip content={t('settings.modules.dragToReorder')} position="top">
                 <span
-                    draggable
-                    onDragStart={e => {
-                        e.stopPropagation();
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', index.toString());
-                        onDragStart(e, index);
-                    }}
-                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--activitybar-inactive-foreground)] opacity-30 hover:opacity-80 transition-opacity"
+                    {...attributes}
+                    {...listeners}
+                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--activitybar-inactive-foreground)] opacity-30 hover:opacity-80 transition-opacity outline-none"
                     onClick={e => e.stopPropagation()}
                 >
-                    <GripVertical size={13} />
+                    <GripVertical size={13} pointerEvents="none" />
                 </span>
                 </Tooltip>
 
@@ -354,20 +430,29 @@ const SchemeRow: React.FC<{
                     )}
 
                     <div className="px-3 pb-3 space-y-2 mt-1">
-                        {scheme.fields.map((field, i) => {
-                            const color = field.color ?? FIELD_COLORS[i % FIELD_COLORS.length];
-                            return (
-                                <FieldCard
-                                    key={i}
-                                    field={field}
-                                    index={i}
-                                    color={color}
-                                    onChange={patch => updateField(i, patch)}
-                                    onDelete={() => deleteField(i)}
-                                    onColorChange={c => updateField(i, { color: c })}
-                                />
-                            );
-                        })}
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleFieldDragEnd}>
+                            <SortableContext 
+                                items={scheme.fields.map((f, i) => f.name || `field_${i}`)} 
+                                strategy={verticalListSortingStrategy}
+                            >
+                                {scheme.fields.map((field, i) => {
+                                    const color = field.color ?? FIELD_COLORS[i % FIELD_COLORS.length];
+                                    const computedId = field.name || `field_${i}`;
+                                    return (
+                                        <FieldCard
+                                            key={computedId}
+                                            field={field}
+                                            index={i}
+                                            color={color}
+                                            onChange={patch => updateField(i, patch)}
+                                            onDelete={() => deleteField(i)}
+                                            onDuplicate={() => duplicateField(i)}
+                                            onColorChange={c => updateField(i, { color: c })}
+                                        />
+                                    );
+                                })}
+                            </SortableContext>
+                        </DndContext>
                     </div>
                 </div>
             )}
@@ -388,8 +473,31 @@ export const ParserSidebar: React.FC = () => {
     const initialized = useRef(false);
     const lastPushedConfigRef = useRef<string>('');
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // 拖拽排序状态
-    const dragIndexRef = useRef<number>(-1);
+
+    // --- 真实悬浮滚动条状态 ---
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [scrollRatio, setScrollRatio] = useState(0);
+    const [thumbHeight, setThumbHeight] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollTimerRef = useRef<NodeJS.Timeout>();
+
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        const maxScroll = scrollHeight - clientHeight;
+        const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0;
+        setScrollRatio(ratio);
+        setThumbHeight(Math.max((clientHeight / scrollHeight) * clientHeight, 35));
+        setContainerHeight(clientHeight);
+        setIsScrolling(true);
+        if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+        scrollTimerRef.current = setTimeout(() => setIsScrolling(false), 1000);
+    };
+
+    useEffect(() => {
+        if (config) handleScroll();
+    }, [config, schemesOpen]);
 
     useEffect(() => { loadConfig(); }, []); // eslint-disable-line
 
@@ -419,21 +527,27 @@ export const ParserSidebar: React.FC = () => {
         scheduleAutoSave();
     }, [config, scheduleAutoSave]);
 
+    useEffect(() => {
+        if (!config || !initialized.current) return;
+        if (JSON.stringify(config) === lastPushedConfigRef.current) return;
+        scheduleAutoSave();
+    }, [config, scheduleAutoSave]);
+
     // 拖拽排序处理
-    const handleDragStart = useCallback((_e: React.DragEvent, index: number) => {
-        dragIndexRef.current = index;
-    }, []);
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    );
 
-    const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
-        e.preventDefault();
-    }, []);
-
-    const handleDrop = useCallback((_e: React.DragEvent, toIndex: number) => {
-        const fromIndex = dragIndexRef.current;
-        if (fromIndex === -1 || fromIndex === toIndex) return;
-        reorderSchemes(fromIndex, toIndex);
-        dragIndexRef.current = -1;
-    }, [reorderSchemes]);
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = config!.schemes.findIndex(s => s.id === active.id);
+            const newIndex = config!.schemes.findIndex(s => s.id === over.id);
+            if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+                reorderSchemes(oldIndex, newIndex);
+            }
+        }
+    };
 
     if (error) return <div className="p-4 text-[11px] text-[var(--st-status-error)]">{error}</div>;
     if (isLoading && !config) return <div className="p-4 text-[11px] animate-pulse text-[var(--activitybar-inactive-foreground)] opacity-60">正在加载…</div>;
@@ -441,8 +555,6 @@ export const ParserSidebar: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full overflow-hidden bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]">
-            <style>{SCROLL_CSS}</style>
-
             {/* 实时数据开关——和 AutoReplySidebar 完全一致：px-4 py-2 + direct Switch */}
             <div className="px-4 py-2 border-b border-[var(--border-color)] shrink-0">
                 <Switch
@@ -452,46 +564,67 @@ export const ParserSidebar: React.FC = () => {
                 />
             </div>
 
-            {/* ══ 方案列表滚动区 ══ */}
-            <div className="flex-1 overflow-y-auto overscroll-contain ps-scroll">
-                {/* 方案区标题行（可折叠）——与 MqttConfigPanel Broker Connection 标题行完全一致 */}
-                <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--serial-config-bg)] sticky top-0 flex items-center justify-between cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)] z-10"
-                    onClick={() => setSchemesOpen(o => !o)}
+            {/* ══ 方案列表滚动区（真实悬浮滚动条层） ══ */}
+            <div className="flex-1 min-h-0 relative">
+                <div 
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="h-full overflow-y-auto overscroll-contain scrollbar-none"
                 >
-                    <div className="flex items-center gap-2">
-                        {schemesOpen
-                            ? <IconChevron open={true} />
-                            : <IconChevronRight open={false} />}
-                        <span>{t('sidebar.schemes') || 'SCHEMES'} · {config.schemes.length}</span>
-                    </div>
-                    <button
-                        className="text-[10px] px-2 py-0.5 rounded-sm text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] transition-colors cursor-pointer"
-                        onClick={(e) => { e.stopPropagation(); const { addScheme } = useParserStore.getState(); addScheme(); setSchemesOpen(true); }}
+                    {/* 方案区标题行（可折叠）——与 MqttConfigPanel Broker Connection 标题行完全一致 */}
+                    <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--serial-config-bg)] sticky top-0 flex items-center justify-between cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)] z-10"
+                        onClick={() => { setSchemesOpen(o => !o); setTimeout(handleScroll, 10); }}
                     >
-                        + {t('sidebar.addScheme') || '新建'}
-                    </button>
+                        <div className="flex items-center gap-2">
+                            {schemesOpen
+                                ? <IconChevron open={true} />
+                                : <IconChevronRight open={false} />}
+                            <span>{t('sidebar.schemes') || 'SCHEMES'} · {config.schemes.length}</span>
+                        </div>
+                        <button
+                            className="text-[10px] px-2 py-0.5 rounded-sm text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] transition-colors cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); const { addScheme } = useParserStore.getState(); addScheme(); setSchemesOpen(true); setTimeout(handleScroll, 10); }}
+                        >
+                            + {t('sidebar.addScheme') || '新建'}
+                        </button>
+                    </div>
+
+                    {/* 方案列表 */}
+                    {schemesOpen && (
+                        <div className="px-2 py-2 space-y-1.5 pb-6">
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd}>
+                                <SortableContext items={config.schemes.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                    {config.schemes.map((scheme) => (
+                                        <SchemeRow
+                                            key={scheme.id}
+                                            scheme={scheme}
+                                            isActive={config.active_ids.includes(scheme.id)}
+                                            usedByPorts={sessions.filter((s: unknown) => (s as { config?: { parserSchemeIds?: string[]; parserSchemeId?: string; name?: string } }).config?.parserSchemeIds?.includes(scheme.id) || (s as { config?: { parserSchemeId?: string } }).config?.parserSchemeId === scheme.id).map((s: unknown) => (s as { config: { name: string } }).config.name)}
+                                            canDelete={config.schemes.length > 1}
+                                            onActivate={() => toggleActiveScheme(scheme.id)}
+                                            onUpdate={s => updateScheme(scheme.id, () => s)}
+                                            onDelete={() => deleteScheme(scheme.id)}
+                                            onDuplicate={() => duplicateScheme(scheme)}
+                                        />
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
+                        </div>
+                    )}
                 </div>
 
-                {/* 方案列表 */}
-                {schemesOpen && (
-                    <div className="px-2 py-2 space-y-1.5 pb-6">
-                        {config.schemes.map((scheme, schemeIndex) => (
-                            <SchemeRow
-                                key={scheme.id}
-                                scheme={scheme}
-                                index={schemeIndex}
-                                isActive={config.active_ids.includes(scheme.id)}
-                                usedByPorts={sessions.filter((s: unknown) => (s as { config?: { parserSchemeIds?: string[]; parserSchemeId?: string; name?: string } }).config?.parserSchemeIds?.includes(scheme.id) || (s as { config?: { parserSchemeId?: string } }).config?.parserSchemeId === scheme.id).map((s: unknown) => (s as { config: { name: string } }).config.name)}
-                                canDelete={config.schemes.length > 1}
-                                onActivate={() => toggleActiveScheme(scheme.id)}
-                                onUpdate={s => updateScheme(scheme.id, () => s)}
-                                onDelete={() => deleteScheme(scheme.id)}
-                                onDuplicate={() => duplicateScheme(scheme)}
-                                onDragStart={handleDragStart}
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                            />
-                        ))}
+                {/* 悬浮滚动条 Thumb */}
+                {containerHeight > 0 && thumbHeight < containerHeight && (
+                    <div className="absolute right-[2px] top-0 bottom-0 w-[4px] pointer-events-none z-[100]">
+                        <div
+                            className="w-full rounded-full transition-opacity transition-colors duration-300"
+                            style={{
+                                height: thumbHeight,
+                                transform: `translateY(${scrollRatio * (containerHeight - thumbHeight)}px)`,
+                                backgroundColor: isScrolling ? 'var(--scrollbar-slider-active-color)' : 'var(--scrollbar-slider-color)',
+                                opacity: isScrolling ? 0.8 : 0
+                            }}
+                        />
                     </div>
                 )}
             </div>

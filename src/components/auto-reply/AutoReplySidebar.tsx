@@ -109,7 +109,7 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
             </div>
 
             {/* 规则列表 */}
-            <div className={`flex-1 overflow-y-auto px-2 py-2 min-h-0 ${!autoReply.enabled ? 'opacity-40 pointer-events-none' : ''} transition-all duration-300`}>
+            <div className={`flex-1 flex flex-col min-h-0 ${!autoReply.enabled ? 'opacity-40 pointer-events-none' : ''} transition-all duration-300`}>
                 {rulesOpen && (
                     <AutoReplyPanel
                         rules={autoReply.rules}
