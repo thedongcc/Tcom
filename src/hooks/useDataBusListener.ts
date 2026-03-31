@@ -7,7 +7,7 @@
  */
 import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { useDataBusStore } from '../store/useDataBusStore';
+import { useDataBusStore, type ParsedEntry } from '../store/useDataBusStore';
 
 export function useDataBusListener() {
     useEffect(() => {
@@ -15,7 +15,7 @@ export function useDataBusListener() {
         let cancelled = false;
 
 
-        listen<{ session_id: string; batch: Array<Record<string, number>> }>('tcom-parsed-data', (e) => {
+        listen<{ session_id: string; batch: ParsedEntry[] }>('tcom-parsed-data', (e) => {
             if (cancelled) return;
 
             const { session_id, batch } = e.payload;

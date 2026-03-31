@@ -18,7 +18,14 @@ export const SliderWidget: React.FC<SliderWidgetProps> = ({
     max = 100,
     step = 1
 }) => {
-    const storeValue = useDataBusStore(s => s.sessionsData[sessionId]?.latestValues[bindKey] ?? 0);
+    const storeValue = useDataBusStore(s => {
+        const sv = s.sessionsData[sessionId]?.schemeValues;
+        if (!sv) return 0;
+        for (const scheme of Object.values(sv)) {
+            if (bindKey in scheme) return scheme[bindKey];
+        }
+        return 0;
+    });
     const publishValue = useDataBusStore(s => s.publishValue);
     
     // 本地拖拽状态，只有没在拖拽时才接受 store 传来的远程更新

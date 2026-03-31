@@ -3,31 +3,49 @@ import { create } from 'zustand';
 /** 物理量值字典：key=字段名，value=物理量（已含 multiplier 换算） */
 export type PhysicalValues = Record<string, number>;
 
+/**
+ * 按方案隔离的数据空间：
+ * schemeValues[schemeId][fieldName] = 最新物理量值
+ *
+ * 相比原来的平铺 latestValues，这里按 scheme_id 分层，
+ * 彻底解决多方案同名字段互相覆盖的问题。
+ */
 export interface SessionDataBus {
-    latestValues: PhysicalValues;
+    /** 按 schemeId 分层的最新值 */
+    schemeValues: Record<string, PhysicalValues>;
 }
 
-/** 
- * 全局定长波形环形队列，为避免 React 频繁渲染引发 GC 卡顿，脱离在 Zustand 之外维护。
- * 格式： sessionId -> fieldName -> { t: number[], v: number[] }
+/**
+ * 全局定长波形环形队列，脱离 Zustand 之外维护，避免高频写入引发 React 全量重渲染。
+ * 格式：sessionId -> schemeId -> fieldName -> { t, v }
  */
-export const dataBusHistory: Record<string, Record<string, { t: number[]; v: number[] }>> = {};
+export const dataBusHistory: Record<
+    string,
+    Record<string, Record<string, { t: number[]; v: number[] }>>
+> = {};
+
+/** 单条解析结果（与 Rust ParsedEntry 对应） */
+export interface ParsedEntry {
+    scheme_id: string;
+    fields: Record<string, number>;
+}
 
 interface DataBusState {
-    /** 每个 Session 的专属数据空间 */
     sessionsData: Record<string, SessionDataBus>;
-    
-    /** 将 Rust 批量推送的数组定向覆盖到特定 Session，并静默填入二级 dataBusHistory */
-    ingestBatch: (sessionId: string, batch: Array<Record<string, number>>) => void;
-    
-    /** 反向交互：覆盖某 Session 变量池的数据，未来接入 Rust 逆向组包发出 Hex */
-    publishValue: (sessionId: string, key: string, value: number) => void;
-    
-    /** 清空某个特定的 Session 数据（连接断开时调用） */
+
+    /**
+     * 将 Rust 推送的 batch（含 scheme_id）注入对应 Session 的按方案分层存储。
+     */
+    ingestBatch: (sessionId: string, batch: ParsedEntry[]) => void;
+
+    /** 清空某个特定的 Session 数据 */
     resetSession: (sessionId: string) => void;
 
     /** 重置所有数据（兜底清理） */
     resetAll: () => void;
+
+    /** 直接发布单个值（保留旧接口兼容性，归入 '__manual__' scheme） */
+    publishValue: (sessionId: string, key: string, value: number) => void;
 }
 
 export const useDataBusStore = create<DataBusState>()((set) => ({
@@ -35,35 +53,40 @@ export const useDataBusStore = create<DataBusState>()((set) => ({
 
     ingestBatch: (sessionId, batch) => {
         if (batch.length === 0) return;
-        
-        // 取得当前时间戳用于 X 轴，同批次内微调错开避免垂直连线
-        const now = Date.now() / 1000; 
+
+        const now = Date.now() / 1000;
 
         set((state) => {
-            const currentSession = state.sessionsData[sessionId] || { latestValues: {} };
-            let mergedValues = { ...currentSession.latestValues };
+            const currentSession = state.sessionsData[sessionId] || { schemeValues: {} };
+            const newSchemeValues = { ...currentSession.schemeValues };
 
             if (!dataBusHistory[sessionId]) {
                 dataBusHistory[sessionId] = {};
             }
-            
-            for (let i = 0; i < batch.length; i++) {
-                const frame = batch[i];
-                mergedValues = { ...mergedValues, ...frame };
-                
-                // 填入二级 dataBusHistory
-                for (const key in frame) {
-                    if (!dataBusHistory[sessionId][key]) {
-                        dataBusHistory[sessionId][key] = { t: [], v: [] };
+
+            for (const entry of batch) {
+                const { scheme_id, fields } = entry;
+
+                // 合并到对应方案的 values
+                newSchemeValues[scheme_id] = {
+                    ...(newSchemeValues[scheme_id] || {}),
+                    ...fields,
+                };
+
+                // 写入历史（用于图表）
+                if (!dataBusHistory[sessionId][scheme_id]) {
+                    dataBusHistory[sessionId][scheme_id] = {};
+                }
+                for (const key in fields) {
+                    if (!dataBusHistory[sessionId][scheme_id][key]) {
+                        dataBusHistory[sessionId][scheme_id][key] = { t: [], v: [] };
                     }
-                    const timeOffset = now - ((batch.length - i - 1) * 0.001);
-                    dataBusHistory[sessionId][key].t.push(timeOffset);
-                    dataBusHistory[sessionId][key].v.push(frame[key]);
-                    
-                    // 维持 2000 个点，避免无限溢出
-                    if (dataBusHistory[sessionId][key].t.length > 2000) {
-                        dataBusHistory[sessionId][key].t.shift();
-                        dataBusHistory[sessionId][key].v.shift();
+                    dataBusHistory[sessionId][scheme_id][key].t.push(now);
+                    dataBusHistory[sessionId][scheme_id][key].v.push(fields[key]);
+                    // 保持最近 2000 个点
+                    if (dataBusHistory[sessionId][scheme_id][key].t.length > 2000) {
+                        dataBusHistory[sessionId][scheme_id][key].t.shift();
+                        dataBusHistory[sessionId][scheme_id][key].v.shift();
                     }
                 }
             }
@@ -71,8 +94,8 @@ export const useDataBusStore = create<DataBusState>()((set) => ({
             return {
                 sessionsData: {
                     ...state.sessionsData,
-                    [sessionId]: { latestValues: mergedValues }
-                }
+                    [sessionId]: { schemeValues: newSchemeValues },
+                },
             };
         });
     },
@@ -89,36 +112,39 @@ export const useDataBusStore = create<DataBusState>()((set) => ({
     },
 
     resetAll: () => {
-        for (const sessionId in dataBusHistory) delete dataBusHistory[sessionId];
+        for (const sid in dataBusHistory) delete dataBusHistory[sid];
         set({ sessionsData: {} });
     },
 
     publishValue: (sessionId, key, value) => {
-        // 先更新前端显示
+        // 归入 '__manual__' 虚拟方案，不与实际解析方案混淆
         set((state) => {
-            const currentSession = state.sessionsData[sessionId] || { latestValues: {} };
+            const cur = state.sessionsData[sessionId] || { schemeValues: {} };
             return {
                 sessionsData: {
                     ...state.sessionsData,
                     [sessionId]: {
-                        latestValues: { ...currentSession.latestValues, [key]: value }
-                    }
-                }
+                        schemeValues: {
+                            ...cur.schemeValues,
+                            __manual__: { ...(cur.schemeValues['__manual__'] || {}), [key]: value },
+                        },
+                    },
+                },
             };
         });
-        
-        // 记录到该 session 的波形中
+
+        // 历史记录
         const now = Date.now() / 1000;
         if (!dataBusHistory[sessionId]) dataBusHistory[sessionId] = {};
-        if (!dataBusHistory[sessionId][key]) dataBusHistory[sessionId][key] = { t: [], v: [] };
-        
-        dataBusHistory[sessionId][key].t.push(now);
-        dataBusHistory[sessionId][key].v.push(value);
-        if (dataBusHistory[sessionId][key].t.length > 2000) {
-            dataBusHistory[sessionId][key].t.shift();
-            dataBusHistory[sessionId][key].v.shift();
+        if (!dataBusHistory[sessionId]['__manual__']) dataBusHistory[sessionId]['__manual__'] = {};
+        if (!dataBusHistory[sessionId]['__manual__'][key]) {
+            dataBusHistory[sessionId]['__manual__'][key] = { t: [], v: [] };
         }
-
-        // TODO: invoke('pack_and_send_variable', { sessionId, key, value })
-    }
+        dataBusHistory[sessionId]['__manual__'][key].t.push(now);
+        dataBusHistory[sessionId]['__manual__'][key].v.push(value);
+        if (dataBusHistory[sessionId]['__manual__'][key].t.length > 2000) {
+            dataBusHistory[sessionId]['__manual__'][key].t.shift();
+            dataBusHistory[sessionId]['__manual__'][key].v.shift();
+        }
+    },
 }));

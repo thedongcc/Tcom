@@ -1,9 +1,6 @@
 /**
  * framer.rs
  * 流式切帧器（多方案版）— 解决串口"粘包"和"半包"问题。
- *
- * 变更：接受 &ParserScheme 替代 &ProtocolSchema，
- * 使用 scheme.effective_min_frame_len() 替代固定 frame_length。
  */
 use super::schema::ParserScheme;
 
@@ -26,8 +23,8 @@ impl Framer {
     ///
     /// 切帧策略：
     /// 1. 找帧头起始位置，丢弃帧头前脏数据
-    /// 2. 等待缓冲区累积到 `scheme.effective_min_frame_len()` 字节
-    /// 3. 切出从帧头起到 effective_min_frame_len 字节的数据
+    /// 2. 等待缓冲区累积到 `min_frame_len` 字节
+    /// 3. 切出完整帧并做帧头二次校验（双重保险）
     /// 4. 循环直到缓冲区字节不足
     pub fn extract_frames(&mut self, scheme: &ParserScheme) -> Vec<Vec<u8>> {
         let mut frames = Vec::new();
@@ -38,7 +35,18 @@ impl Framer {
             return frames;
         }
 
+        // 防护：如果缓冲区已累积到帧长 16 倍以上却始终找不到帧头，
+        // 说明该方案与当前数据流完全不匹配，直接清空以防内存无限堆积。
+        let max_buffer = frame_len * 16;
+
         loop {
+            // 缓冲区超大保护
+            if self.buffer.len() > max_buffer {
+                let retain = header.len().saturating_sub(1);
+                let drain_end = self.buffer.len().saturating_sub(retain);
+                self.buffer.drain(..drain_end);
+            }
+
             let Some(header_pos) = find_subsequence(&self.buffer, header) else {
                 // 未找到帧头：保留尾部 (header.len()-1) 字节防止跨 append 拆帧
                 let retain = header.len().saturating_sub(1);
@@ -57,9 +65,15 @@ impl Framer {
                 break;
             }
 
-            // 切出完整帧并保存
+            // 切出完整帧，并做最终帧头校验（双重保险）
             if let Some(frame_bytes) = self.buffer.get(..frame_len) {
-                frames.push(frame_bytes.to_vec());
+                if frame_bytes.starts_with(header) {
+                    frames.push(frame_bytes.to_vec());
+                } else {
+                    // 帧头字节意外不符（缓冲状态异常），跳过 1 字节重新搜索
+                    self.buffer.drain(..1);
+                    continue;
+                }
             }
 
             self.buffer.drain(..frame_len);
@@ -72,7 +86,7 @@ impl Framer {
     pub fn buffer_len(&self) -> usize { self.buffer.len() }
 
     #[allow(dead_code)]
-    pub fn clear(&mut self) { self.buffer.clear(); }
+    pub fn clear(&mut self) { self.buffer.clear() }
 }
 
 impl Default for Framer {
@@ -171,18 +185,15 @@ mod tests {
 
     #[test]
     fn min_frame_len_none_defaults_to_10() {
-        // min_frame_len: None → unwrap_or(10) → 需要 10 字节才切帧
         let scheme = ParserScheme {
             id: "x".into(), name: "t".into(),
             frame_header: vec![0xAA],
             min_frame_len: None,
             fields: vec![],
         };
-        // 仅 2 字节：不足 10，不应切出帧
         let mut framer = Framer::new();
         framer.append(&[0xAA, 0x42]);
         assert!(framer.extract_frames(&scheme).is_empty());
-        // 补足 10 字节：应切出 1 帧
         let mut bytes = vec![0xAA_u8];
         bytes.extend_from_slice(&[0x00; 9]);
         let mut framer2 = Framer::new();

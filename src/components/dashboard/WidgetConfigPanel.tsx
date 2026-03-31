@@ -15,10 +15,11 @@ export const WidgetConfigPanel: React.FC<WidgetConfigPanelProps> = ({ sessionId 
     const widgets = useDashboardStore(s => s.widgets[sessionId] || EMPTY_WIDGETS);
     const { selectWidget, updateWidgetConfig } = useDashboardStore();
     
-    // 从数据总线抓取最新出现的全部 Key 来作为下拉选项（包含标量和未知的新字段）
-    const sessionDataEntry = useDataBusStore(s => s.sessionsData[sessionId]?.latestValues);
-    const latestValues = sessionDataEntry || {};
-    const availableKeys = Object.keys(latestValues).sort();
+    // 从所有 schemeValues 聊局全部可用字段名作为下拉选项
+    const schemeValues = useDataBusStore(s => s.sessionsData[sessionId]?.schemeValues);
+    const availableKeys = [...new Set(
+        Object.values(schemeValues ?? {}).flatMap(sv => Object.keys(sv))
+    )].sort();
 
     if (!selectedWidgetId) return null;
 

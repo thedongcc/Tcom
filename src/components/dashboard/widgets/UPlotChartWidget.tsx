@@ -33,8 +33,19 @@ export const UPlotChartWidget: React.FC<Props> = ({ bindKey, sessionId }) => {
     // ── RAF 高频轮询：滑动窗口实时刷新 ────────────────────────────────────
     useEffect(() => {
         const loop = () => {
-            const plot    = uplotRef.current;
-            const history = dataBusHistory[sessionRef.current]?.[bindRef.current];
+            const plot = uplotRef.current;
+            // dataBusHistory 现在是三层结构：session -> scheme -> field
+            // 遍历所有 scheme 查找 bindKey 对应的历史数据
+            const sessionHistory = dataBusHistory[sessionRef.current];
+            let history: { t: number[]; v: number[] } | undefined;
+            if (sessionHistory) {
+                for (const schemeHistory of Object.values(sessionHistory)) {
+                    if (bindRef.current in schemeHistory) {
+                        history = schemeHistory[bindRef.current];
+                        break;
+                    }
+                }
+            }
             if (plot && history && history.t.length > 0) {
                 const t    = history.t;
                 const now  = t[t.length - 1];          // 最新时间戳

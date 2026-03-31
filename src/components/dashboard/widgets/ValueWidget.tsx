@@ -39,8 +39,15 @@ interface ValueWidgetProps {
 }
 
 export const ValueWidget: React.FC<ValueWidgetProps> = ({ bindKey, sessionId }) => {
-    // ⭐ 精准原子化订阅 — 只有 latestValues[bindKey] 变化才触发此组件重渲染
-    const value = useDataBusStore((s) => s.sessionsData[sessionId]?.latestValues[bindKey] ?? null);
+    // 从所有 scheme 合并取值（Dashboard 视图不区分方案，取第一个有值的）
+    const value = useDataBusStore((s) => {
+        const sv = s.sessionsData[sessionId]?.schemeValues;
+        if (!sv) return null;
+        for (const scheme of Object.values(sv)) {
+            if (bindKey in scheme) return scheme[bindKey];
+        }
+        return null;
+    });
 
     const icon = ICON_MAP[bindKey] ?? '📊';
     const unit = UNIT_MAP[bindKey] ?? '';

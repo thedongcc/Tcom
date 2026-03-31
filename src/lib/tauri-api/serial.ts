@@ -41,7 +41,7 @@ export function registerSerialAPI(): void {
 
         write: (connectionId, data) => {
             // 将 Uint8Array 转为 number[] 以支持 JSON 序列化
-            const payload = data instanceof Uint8Array ? Array.from(data) : data
+            const payload = data instanceof Uint8Array || (typeof data === 'object' && 'buffer' in data) ? Array.from(data as Uint8Array) : data
             return invoke('serial_write', { connectionId, data: payload })
         },
 

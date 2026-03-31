@@ -119,7 +119,7 @@ export const SettingsEditor = () => {
         const scale = val / 100;
         const root = document.documentElement;
         Object.entries(theme.colors).forEach(([key, colorValue]) => {
-            if (typeof colorValue === 'string' && colorValue.startsWith('rgba(')) {
+            if (colorValue.startsWith('rgba(')) {
                 const match = colorValue.match(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([0-9.]+)\)/);
                 if (match) {
                     root.style.setProperty(key, `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${(parseFloat(match[4]) * scale).toFixed(3)})`);
@@ -130,8 +130,7 @@ export const SettingsEditor = () => {
     // 显示状态栏设置展开控制
     const [showStatusBarOptions, setShowStatusBarOptions] = useState(false);
 
-    const settingSections: SettingSection[] = useMemo(() => {
-        const sections = [
+    const settingSections: SettingSection[] = useMemo(() => [
         {
             title: t('settings.groups.appearance'),
             items: [
@@ -578,9 +577,7 @@ export const SettingsEditor = () => {
             ],
         },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    ]; // sections
-        return sections;
-    }, [t, config, availableThemes, showBgSettings, showStatusBarOptions, crashReportOn,
+    ], [t, config, availableThemes, showBgSettings, showStatusBarOptions, crashReportOn,
         setShowBgSettings, setShowStatusBarOptions, setCrashReportOn, updateConfig, updateUI, setTheme,
         loadThemes, JITAlphaUpdate, finalFontList, setResetInput, setShowFactoryReset]);
 

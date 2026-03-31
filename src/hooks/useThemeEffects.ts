@@ -118,7 +118,7 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
         if (isGlassTheme(config.theme) && theme) {
             const uiOpacityScale = (config.images.uiOpacity ?? 100) / 100;
             Object.entries(theme.colors).forEach(([key, value]) => {
-                if (typeof value === 'string' && value.startsWith('rgba(')) {
+                if (value.startsWith('rgba(')) {
                     const match = value.match(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*([0-9.]+)\)/);
                     if (match) {
                         const alpha = parseFloat(match[4]) * uiOpacityScale;

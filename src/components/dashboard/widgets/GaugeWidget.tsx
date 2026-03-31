@@ -18,7 +18,14 @@ export const GaugeWidget: React.FC<GaugeWidgetProps> = ({
     unit = ''
 }) => {
     // 仪表盘属于低频或中频显示（非图表级高频），使用 Zustand Selector 精准定点重新渲染足矣
-    const value = useDataBusStore((state) => state.sessionsData[sessionId]?.latestValues[bindKey] ?? 0);
+    const value = useDataBusStore((state) => {
+        const sv = state.sessionsData[sessionId]?.schemeValues;
+        if (!sv) return 0;
+        for (const scheme of Object.values(sv)) {
+            if (bindKey in scheme) return scheme[bindKey];
+        }
+        return 0;
+    });
     
     // 限制范围在 min 和 max 之间
     const clampedValue = Math.min(Math.max(value, min), max);

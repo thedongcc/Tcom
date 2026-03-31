@@ -11,8 +11,26 @@ use std::collections::HashMap;
 use super::schema::{DataType, ParserScheme};
 
 /// 将一帧字节数据按方案解码为物理量字典（越界字段自动跳过）。
+///
+/// 安全校验：若帧头非空且实际帧字节不以方案帧头开头，立即返回空结果，
+/// 防止多方案并发时缓冲区脏数据被误解码。
 pub fn decode_frame(frame: &[u8], scheme: &ParserScheme) -> HashMap<String, f64> {
     let mut result = HashMap::new();
+
+    // ── 帧头二次校验（防御层）──
+    // Framer 理论上已保证切出的帧以帧头开头，但在多方案并发场景下，
+    // 缓冲区可能因数据流竞争而残留脏字节，需在此兜底校验。
+    if !scheme.frame_header.is_empty() {
+        if !frame.starts_with(&scheme.frame_header) {
+            log::debug!(
+                "[Decoder] 方案 '{}' 帧头校验失败: 期望 {:02X?}, 实际前缀 {:02X?}, 丢弃该帧",
+                scheme.name,
+                &scheme.frame_header,
+                frame.get(..scheme.frame_header.len().min(frame.len())).unwrap_or(&[])
+            );
+            return result;
+        }
+    }
 
     for field in &scheme.fields {
         let byte_count = field.data_type.byte_size();

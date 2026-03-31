@@ -13,10 +13,18 @@ use tauri::{AppHandle, Emitter, Manager};
 use super::state::*;
 use crate::commands::parser::api::ParserState;
 
+#[derive(Clone, serde::Serialize, Debug)]
+struct ParsedEntry {
+    /// 产生该条数据的解析方案 ID
+    scheme_id: String,
+    /// 解析出的物理量字段键值对
+    fields: std::collections::HashMap<String, f64>,
+}
+
 #[derive(Clone, serde::Serialize)]
 struct ParsedDataPayload {
     session_id: String,
-    batch: Vec<std::collections::HashMap<String, f64>>,
+    batch: Vec<ParsedEntry>,
 }
 /// 打开串口连接并启动读取线程
 pub fn open_port(
@@ -136,7 +144,7 @@ fn spawn_reader_thread(
             }
         }
         
-        let mut parsed_batch: Vec<std::collections::HashMap<String, f64>> = Vec::with_capacity(100);
+        let mut parsed_batch: Vec<ParsedEntry> = Vec::with_capacity(100);
         let mut last_emit = std::time::Instant::now();
         
         // 方案切换检测指纹：如果用户在面板中修改了规则，需要重置对应的引擎以防脏包串流
@@ -192,14 +200,17 @@ fn spawn_reader_thread(
                         continue;
                     }
 
-                    // 批量喂数据进各个协议分光仪
+                    // 批量喂数据进各个协议分光仪（每帧携带 scheme_id，前端按方案隔离存储）
                     for p in &mut active_parsers {
                         p.framer.append(&buf[..n]);
                         let complete_frames = p.framer.extract_frames(&p.scheme);
                         for frame in complete_frames {
-                            let parsed = crate::commands::parser::decoder::decode_frame(&frame, &p.scheme);
-                            if !parsed.is_empty() {
-                                parsed_batch.push(parsed);
+                            let fields = crate::commands::parser::decoder::decode_frame(&frame, &p.scheme);
+                            if !fields.is_empty() {
+                                parsed_batch.push(ParsedEntry {
+                                    scheme_id: p.scheme.id.clone(),
+                                    fields,
+                                });
                             }
                         }
                     }

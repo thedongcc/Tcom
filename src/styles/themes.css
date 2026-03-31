@@ -397,49 +397,14 @@ body.theme-mono {
   --st-extension-user-text: #cccccc;
   --st-extension-warning-text: #aaaaaa;
   
-  --logsearch-btn-match-case-active-bg: #e5e5e5;
-  --logsearch-btn-regex-active-bg: #e5e5e5;
-  --logsearch-nav-active-bg: #e5e5e5;
   
-  --monitor-bubble-rx-border: #666666;
-  --monitor-bubble-tx-border: #444444;
-  --monitor-rx-label-bg: rgba(255, 255, 255, 0.2);
-  --monitor-rx-label-border: rgba(255, 255, 255, 0.4);
-  --monitor-tx-label-bg: rgba(136, 136, 136, 0.2);
-  --monitor-tx-label-border: rgba(136, 136, 136, 0.4);
   
-  --st-btn-secondary-bg: #1a1a1a;
   
-  --st-graph-icon-bus: #cccccc;
-  --st-graph-icon-pair: #cccccc;
-  --st-graph-icon-physical: #cccccc;
-  --st-graph-icon-virtual: #cccccc;
   
-  --st-input-btn-mode-hex-active-bg: #e5e5e5;
-  --st-input-btn-mode-txt-active-bg: #e5e5e5;
-  --st-input-btn-send-bg: #e5e5e5;
-  --st-input-btn-timer-active-bg: #e5e5e5;
-  --st-input-focus-border: #ffffff;
   
-  --st-monitor-btn-export-bg: #e5e5e5;
-  --st-monitor-btn-filter-rx-active-bg: #e5e5e5;
-  --st-monitor-btn-filter-tx-active-bg: #e5e5e5;
-  --st-monitor-log-rx-label-bg: rgba(255, 255, 255, 0.2);
-  --st-monitor-log-tx-label-bg: rgba(136, 136, 136, 0.2);
   
-  --st-mqtt-btn-filter-rx-active-bg: #e5e5e5;
-  --st-mqtt-btn-filter-tx-active-bg: #e5e5e5;
-  --st-mqtt-btn-view-active-bg: #e5e5e5;
-  --st-mqtt-topic-default-rx-color: #cccccc;
-  --st-mqtt-topic-default-tx-color: #888888;
-  --st-mqtt-topic-selected-text: #ffffff;
   
-  --st-serial-btn-crc-active-bg: #e5e5e5;
-  --st-serial-btn-filter-rx-active-bg: #e5e5e5;
-  --st-serial-btn-filter-tx-active-bg: #e5e5e5;
-  --st-serial-btn-view-active-bg: #e5e5e5;
   
-  --st-session-serial-text: #cccccc;
   
   --st-settings-danger-title: #ffffff;
   --st-settings-danger-bg-subtle: rgba(255, 255, 255, 0.2);
@@ -448,11 +413,6 @@ body.theme-mono {
   --st-timestamp: #888888;
   --st-update-spinner: #ffffff;
   
-  --st-token-auto-inc: #cccccc;
-  --st-token-crc: #cccccc;
-  --st-token-flag: #cccccc;
-  --st-token-random: #cccccc;
-  --st-token-timestamp: #cccccc;
   
   /* === JSON 语法高亮脱色 === */
   --st-json-key: #ffffff;
@@ -463,15 +423,7 @@ body.theme-mono {
   --st-json-null: #888888;
   
   /* === Tcom 消息脱色 === */
-  --st-tcom-v-bg: rgba(255, 255, 255, 0.08);
-  --st-tcom-v-border: rgba(255, 255, 255, 0.3);
-  --st-tcom-v-text: #ffffff;
-  --st-tcom-v-msg-text: #cccccc;
   
-  --st-tcom-p-bg: rgba(255, 255, 255, 0.08);
-  --st-tcom-p-border: rgba(255, 255, 255, 0.3);
-  --st-tcom-p-text: #ffffff;
-  --st-tcom-p-msg-text: #cccccc;
   
   --st-monitor-status-offline: #a3a3a3;
   --st-monitor-status-online: #ffffff;

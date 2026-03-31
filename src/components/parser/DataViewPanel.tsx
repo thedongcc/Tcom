@@ -5,7 +5,7 @@
  */
 import React, { useRef, useState, useEffect } from 'react';
 import { useDataBusStore } from '../../store/useDataBusStore';
-import { useParserStore, type DataType, FIELD_COLORS } from '../../store/useParserStore';
+import { useParserStore, FIELD_COLORS } from '../../store/useParserStore';
 import { useSession } from '../../context/SessionContext';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -92,10 +92,10 @@ export const DataViewPanel: React.FC = () => {
     const sessionConfig = activeSession?.config as any;
     const boundSchemeIds: string[] = sessionConfig?.parserSchemeIds ?? (sessionConfig?.parserSchemeId ? [sessionConfig.parserSchemeId] : []);
 
-    const sessionDataEntry = useDataBusStore(s => activeSessionId ? s.sessionsData[activeSessionId]?.latestValues : undefined);
-    const latestValues = sessionDataEntry || {};
+    // 按 scheme_id 隔离读取：每个方案只看自己产生的数据
+    const schemeValues = useDataBusStore(s => activeSessionId ? s.sessionsData[activeSessionId]?.schemeValues : undefined);
     const resetSession = useDataBusStore(s => s.resetSession);
-    
+
     const { config, updateScheme, loadConfig, isLoading: parserLoading, pushToEngine } = useParserStore();
 
     useEffect(() => {
@@ -108,9 +108,14 @@ export const DataViewPanel: React.FC = () => {
     const activeSchemes = config?.schemes.filter(s => boundSchemeIds.includes(s.id)) ?? [];
     const allKnownFields = activeSchemes.flatMap(s => s.fields);
     const fieldKeys = allKnownFields.map(f => f.name);
-    const extraKeys = Object.keys(latestValues).filter(k => !fieldKeys.includes(k));
-    const allKeys = [...fieldKeys, ...extraKeys];
-    const hasData = allKeys.length > 0 && Object.keys(latestValues).length > 0;
+    // hasData：随便一个方案有值就算有数据
+    const hasData = activeSchemes.some(s => {
+        const sv = schemeValues?.[s.id];
+        return sv && Object.keys(sv).length > 0;
+    });
+    // extraKeys：所有已知字段名之外的裸字段（Unmapped）
+    const allReceivedKeys = Object.keys(schemeValues ?? {}).flatMap(sid => Object.keys(schemeValues![sid]));
+    const extraKeys = [...new Set(allReceivedKeys)].filter(k => !fieldKeys.includes(k));
 
     // 通过 updateScheme 持久化特定方案内的颜色变更
     const setFieldColor = (schemeId: string, key: string, color: string) => {
@@ -145,7 +150,7 @@ export const DataViewPanel: React.FC = () => {
 
     useEffect(() => {
         handleScroll();
-    }, [latestValues]);
+    }, [schemeValues]);
 
     return (
         <div
@@ -199,6 +204,10 @@ export const DataViewPanel: React.FC = () => {
                     <>
                         {activeSchemes.map((scheme) => {
                             if (scheme.fields.length === 0) return null;
+                            // 没有收到任何匹配帧 → 该方案区块完全不显示
+                            const hasReceivedData = schemeValues?.[scheme.id] !== undefined
+                                && Object.keys(schemeValues[scheme.id]).length > 0;
+                            if (!hasReceivedData) return null;
                             return (
                                 <div key={scheme.id} className="mb-4 last:mb-0 space-y-2.5">
                                     <div className="text-[10px] font-bold text-[var(--sidebar-muted-foreground)] uppercase tracking-wide px-1 opacity-70 flex items-center gap-1.5 overflow-hidden">
@@ -208,7 +217,8 @@ export const DataViewPanel: React.FC = () => {
                                     </div>
                                     {scheme.fields.map((fieldDef, localIndex) => {
                                         const key = fieldDef.name;
-                                        const value = latestValues[key];
+                                        // 从该方案专属的 schemeValues 中读取，不会被其它方案擂写
+                                        const value = schemeValues?.[scheme.id]?.[key];
                                         const hasValue = value !== undefined;
                                         // 使用在方案内的索引（localIndex）使其与 ParserSidebar 保存默认色相一致
                                         const color = fieldDef.color ?? FIELD_COLORS[Math.max(0, localIndex) % FIELD_COLORS.length];
@@ -248,7 +258,10 @@ export const DataViewPanel: React.FC = () => {
                                     <span className="flex-1 h-[1px] bg-[var(--sidebar-muted-foreground)] opacity-50" />
                                 </div>
                                 {extraKeys.map((key, index) => {
-                                    const value = latestValues[key];
+                                    // extraKeys 从所有 schemeValues 中收集，取任意有值的显示
+                                    const value = Object.values(schemeValues ?? {}).reduce<number | undefined>(
+                                        (acc, sv) => acc ?? sv?.[key], undefined
+                                    );
                                     const hasValue = value !== undefined;
                                     const color = FIELD_COLORS[(fieldKeys.length + index) % FIELD_COLORS.length];
 
@@ -291,7 +304,7 @@ export const DataViewPanel: React.FC = () => {
 
             {/* 状态栏 */}
             <div className="px-3 py-1.5 border-t border-[var(--border-color)] flex items-center justify-between flex-shrink-0">
-                <span className="text-[8px] font-mono text-[var(--sidebar-muted-foreground)] opacity-40">{allKeys.length} FIELDS</span>
+                <span className="text-[8px] font-mono text-[var(--sidebar-muted-foreground)] opacity-40">{fieldKeys.length + extraKeys.length} FIELDS</span>
                 <span className="text-[8px] font-mono text-[var(--sidebar-muted-foreground)] opacity-30">60Hz</span>
             </div>
         </div>

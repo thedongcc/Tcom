@@ -23,7 +23,7 @@ function hexToBytes(hex: string): Uint8Array {
 
 /** 将数据转为 HEX 字符串（大写，无空格） */
 function dataToHex(data: string | Uint8Array): string {
-    if (data instanceof Uint8Array) {
+    if (data instanceof Uint8Array || (typeof data === 'object' && 'buffer' in data)) {
         return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
     }
     return Array.from(new TextEncoder().encode(data)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
