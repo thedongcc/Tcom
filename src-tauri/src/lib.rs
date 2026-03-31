@@ -132,6 +132,7 @@ pub fn run() {
             commands::window::window_set_always_on_top,
             commands::window::window_is_always_on_top,
             commands::window::window_set_bg_color,
+            commands::window::window_open_devtools,
             // 更新（占位）
             commands::updater::update_check,
             commands::updater::update_download,

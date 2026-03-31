@@ -32,9 +32,9 @@ pub fn serial_open(
     app: tauri::AppHandle,
     connection_id: String,
     options: state::SerialOpenOptions,
-    parser_scheme_id: Option<String>,
+    parser_scheme_ids: Option<Vec<String>>,
 ) -> Result<Value, String> {
-    connection::open_port(&app, connection_id, options, parser_scheme_id)
+    connection::open_port(&app, connection_id, options, parser_scheme_ids)
 }
 
 #[tauri::command]

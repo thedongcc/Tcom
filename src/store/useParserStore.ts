@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 
+export const FIELD_COLORS = [
+    '#60a5fa', '#34d399', '#f59e0b', '#a78bfa',
+    '#f87171', '#38bdf8', '#fb923c', '#4ade80',
+    '#e879f9', '#facc15',
+];
+
 // ─── 与 Rust 严格对应的类型定义（多方案版） ───
 
 export type DataType =
@@ -33,7 +39,7 @@ export interface ParserScheme {
 /** 解析器全局配置（所有方案 + 激活 ID） */
 export interface ParserConfig {
     schemes: ParserScheme[];
-    active_id: string | null;
+    active_ids: string[];
 }
 
 // ─── Store 接口 ───────────────────────────────────
@@ -50,8 +56,10 @@ export interface ParserState {
     // ── 方案操作（本地更新，需手动 saveConfig 推送） ──
     addScheme: (name?: string) => void;
     deleteScheme: (id: string) => void;
-    setActiveScheme: (id: string) => void;
+    toggleActiveScheme: (id: string) => void;
     updateScheme: (id: string, updater: (s: ParserScheme) => ParserScheme) => void;
+    reorderSchemes: (fromIndex: number, toIndex: number) => void;
+    duplicateScheme: (scheme: ParserScheme) => void;
 
     // ── 一键推送当前 config 到引擎 ──
     pushToEngine: () => Promise<void>;
@@ -88,7 +96,7 @@ export const useParserStore = create<ParserState>()((set, get) => ({
                 const scheme = await invoke<ParserScheme>('get_parser_schema');
                 const config: ParserConfig = {
                     schemes: [scheme],
-                    active_id: scheme.id,
+                    active_ids: [scheme.id],
                 };
                 set({ config, isLoading: false });
             } catch {
@@ -115,7 +123,7 @@ export const useParserStore = create<ParserState>()((set, get) => ({
         const scheme = defaultScheme(name);
         const newConfig: ParserConfig = config
             ? { ...config, schemes: [...config.schemes, scheme] }
-            : { schemes: [scheme], active_id: scheme.id };
+            : { schemes: [scheme], active_ids: [scheme.id] };
         set({ config: newConfig });
     },
 
@@ -123,16 +131,17 @@ export const useParserStore = create<ParserState>()((set, get) => ({
         const { config } = get();
         if (!config) return;
         const schemes = config.schemes.filter(s => s.id !== id);
-        const active_id = config.active_id === id
-            ? (schemes[0]?.id ?? null)
-            : config.active_id;
-        set({ config: { schemes, active_id } });
+        const active_ids = config.active_ids.filter(a => a !== id);
+        set({ config: { schemes, active_ids } });
     },
 
-    setActiveScheme: (id: string) => {
+    toggleActiveScheme: (id: string) => {
         const { config } = get();
         if (!config) return;
-        set({ config: { ...config, active_id: id } });
+        const active_ids = config.active_ids.includes(id)
+            ? config.active_ids.filter(a => a !== id)
+            : [...config.active_ids, id];
+        set({ config: { ...config, active_ids } });
     },
 
     updateScheme: (id: string, updater) => {
@@ -142,18 +151,34 @@ export const useParserStore = create<ParserState>()((set, get) => ({
         set({ config: { ...config, schemes } });
     },
 
+    reorderSchemes: (fromIndex: number, toIndex: number) => {
+        const { config } = get();
+        if (!config) return;
+        const schemes = [...config.schemes];
+        const [moved] = schemes.splice(fromIndex, 1);
+        schemes.splice(toIndex, 0, moved);
+        set({ config: { ...config, schemes } });
+    },
+
+    duplicateScheme: (scheme: ParserScheme) => {
+        const { config } = get();
+        if (!config) return;
+        const copy: ParserScheme = {
+            ...scheme,
+            id: generateId(),
+            name: scheme.name + ' (副本)',
+            fields: scheme.fields.map(f => ({ ...f })),
+        };
+        const idx = config.schemes.findIndex(s => s.id === scheme.id);
+        const schemes = [...config.schemes];
+        schemes.splice(idx + 1, 0, copy);
+        set({ config: { ...config, schemes } });
+    },
+
     pushToEngine: async () => {
         const { config, saveConfig } = get();
         if (!config) return;
-        // 推送前剔除前端专用的 color 字段，避免 Rust 严格反序列化报错
-        const stripped: ParserConfig = {
-            ...config,
-            schemes: config.schemes.map(s => ({
-                ...s,
-                fields: s.fields.map(({ color: _c, ...rest }) => rest),
-            })),
-        };
-        await saveConfig(stripped);
+        await saveConfig(config);
     },
 }));
 
@@ -164,4 +189,4 @@ export type ProtocolSchema = ParserScheme;
 
 /** @deprecated 使用 useParserStore().config */
 export const schemaSelector = (s: ParserState) =>
-    s.config?.schemes.find(x => x.id === s.config?.active_id) ?? null;
+    s.config?.schemes.find(x => s.config?.active_ids?.includes(x.id)) ?? null;

@@ -1,0 +1,36 @@
+/* 骨架屏变量默认值（被 boot-theme.js 覆盖为用户主题颜色） */
+:root {
+  --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
+  --st-font-size: 15px;
+  --st-line-height: 1.5;
+  --loading-bg: #1e1e1e;
+  --loading-titlebar: #2d2d2d;
+  --loading-activitybar: #333333;
+  --loading-sidebar: #252526;
+  --loading-text: #888888;
+  --loading-spinner-track: #3c3c3c;
+  --loading-spinner-accent: #007acc;
+}
+
+body { margin: 0; overflow: hidden; background-color: var(--loading-bg); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+
+/* 骨架屏 CSS 类（替代内联 style 以符合 CSP） */
+.sk-container { height:100vh; width:100vw; display:flex; flex-direction:column; overflow:hidden; background:var(--loading-bg); }
+.sk-titlebar { height:35px; background:var(--loading-titlebar); -webkit-app-region:drag; user-select:none; display:flex; align-items:center; padding:0 12px; flex-shrink:0; }
+.sk-title { font-size:12px; color:var(--loading-text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; opacity:0.7; }
+.sk-main { display:flex; flex:1; overflow:hidden; }
+.sk-activitybar { width:48px; background:var(--loading-activitybar); flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:12px; gap:18px; }
+.sk-icon { width:22px; height:22px; border-radius:4px; background:var(--loading-spinner-track); animation:pulse 2s ease-in-out infinite; }
+.sk-icon-2 { animation-delay:0.3s; }
+.sk-icon-3 { animation-delay:0.6s; }
+.sk-sidebar { width:250px; background:var(--loading-sidebar); flex-shrink:0; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; padding:10px; }
+.sk-line-1 { height:14px; width:60%; background:var(--loading-spinner-track); border-radius:3px; margin-bottom:16px; animation:pulse 2s ease-in-out infinite; }
+.sk-line-2 { height:10px; width:80%; background:var(--loading-spinner-track); border-radius:2px; margin-bottom:8px; opacity:0.5; animation:pulse 2s ease-in-out infinite 0.2s; }
+.sk-line-3 { height:10px; width:65%; background:var(--loading-spinner-track); border-radius:2px; margin-bottom:8px; opacity:0.4; animation:pulse 2s ease-in-out infinite 0.4s; }
+.sk-line-4 { height:10px; width:75%; background:var(--loading-spinner-track); border-radius:2px; opacity:0.3; animation:pulse 2s ease-in-out infinite 0.6s; }
+.sk-content { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+.sk-spinner { width:28px; height:28px; border:3px solid var(--loading-spinner-track); border-top-color:var(--loading-spinner-accent); border-radius:50%; animation:spin 1s linear infinite; }
+.sk-text { font-size:13px; color:var(--loading-text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; letter-spacing:0.5px; }

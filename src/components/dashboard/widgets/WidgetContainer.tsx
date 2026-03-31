@@ -1,6 +1,8 @@
 import React from 'react';
 import { useDashboardStore, WidgetConfig } from '../../../store/useDashboardStore';
 import { GripHorizontal, X } from 'lucide-react';
+import { Tooltip } from '../../common/Tooltip';
+import { useI18n } from '../../../context/I18nContext';
 
 interface WidgetContainerProps {
     sessionId: string;
@@ -11,6 +13,7 @@ interface WidgetContainerProps {
 export const WidgetContainer: React.FC<WidgetContainerProps> = ({ sessionId, widget, children }) => {
     const isEditing = useDashboardStore(s => s.isEditing[sessionId]);
     const removeWidget = useDashboardStore(s => s.removeWidget);
+    const { t } = useI18n();
 
     return (
         <div
@@ -44,13 +47,14 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({ sessionId, wid
                             {widget.title || widget.type.replace('Widget', '')}
                         </span>
                     </div>
+                    <Tooltip content={t('sidebar.deleteWidget')} position="top">
                     <button
                         onClick={() => removeWidget(sessionId, widget.id)}
                         className="text-[var(--st-status-error)] opacity-50 hover:opacity-100 hover:bg-black/20 p-1 rounded transition-all ml-2 flex-shrink-0 cursor-pointer"
-                        title="删除组件"
                     >
                         <X size={13} />
                     </button>
+                    </Tooltip>
                 </div>
             )}
 

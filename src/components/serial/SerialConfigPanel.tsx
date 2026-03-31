@@ -23,8 +23,14 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
 
     const { updateSessionConfig, connectSession, disconnectSession, listPorts, ports } = useSession();
     const uiState = config.uiState || {};
-    const parserConfig = useParserStore(s => s.config);
+    const { config: parserConfig, loadConfig, isLoading: parserLoading } = useParserStore();
     const [highlight, setHighlight] = useState(false);
+
+    useEffect(() => {
+        if (!parserConfig && !parserLoading) {
+            void loadConfig();
+        }
+    }, [parserConfig, parserLoading, loadConfig]);
 
     useEffect(() => {
         if (uiState.highlightConnect) {
@@ -140,24 +146,8 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                     />
                 </div>
 
-                {/* 解码方案绑定 */}
-                <div className="flex flex-col gap-1 border-t border-[var(--border-color)] pt-2 mt-1">
-                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.parser')}</label>
-                    <CustomSelect
-                        items={[
-                            { label: 'None (Raw Logs)', value: '' },
-                            ...(parserConfig?.schemes.map(s => ({ label: s.name, value: s.id })) || [])
-                        ]}
-                        value={config.parserSchemeId || ''}
-                        onChange={(val) => {
-                            void updateSessionConfig(session.id, { parserSchemeId: val || undefined });
-                        }}
-                        disabled={isConnected}
-                    />
-                </div>
-
                 {/* 连接/断开按钮 */}
-                <div className="pt-1 flex flex-col gap-2">
+                <div className="pt-3 flex flex-col gap-2 border-t border-[var(--border-color)] mt-1">
                     <button
                         className={`w-full py-1.5 px-3 text-[13px] rounded-sm transition-colors flex items-center justify-center gap-2 ${isConnected
                             ? 'bg-[var(--st-settings-danger-bg)] text-[var(--st-settings-danger-text)] hover:bg-[var(--st-settings-danger-hover)]'
@@ -184,6 +174,39 @@ export const SerialConfigPanel = ({ session }: SerialConfigPanelProps) => {
                         </div>
                     )}
                 </div>
+
+                {/* 解码方案绑定 (多选) */}
+                <div className="flex flex-col gap-1 border-t border-[var(--border-color)] pt-2 mt-2">
+                    <label className="text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium">{t('serial.parser') || '解析引擎绑定'}</label>
+                    {(!parserConfig?.schemes || parserConfig.schemes.length === 0) ? (
+                        <span className="text-[11px] opacity-50">无可用方案，请先在下方创建</span>
+                    ) : (
+                        <div className="flex flex-wrap gap-1.5 mt-0.5">
+                            {parserConfig.schemes.map(s => {
+                                const selected = config.parserSchemeIds?.includes(s.id) || config.parserSchemeId === s.id;
+                                return (
+                                    <button
+                                        key={s.id}
+                                        disabled={isConnected}
+                                        onClick={() => {
+                                            const currentIds = config.parserSchemeIds || (config.parserSchemeId ? [config.parserSchemeId] : []);
+                                            const newIds = selected ? currentIds.filter((id: string) => id !== s.id) : [...currentIds, s.id];
+                                            void updateSessionConfig(session.id, { parserSchemeIds: newIds, parserSchemeId: undefined });
+                                        }}
+                                        className={`px-1.5 py-[3px] text-[11px] rounded-[3px] border border-solid transition-colors ${
+                                            selected
+                                                ? 'bg-[var(--focus-border-color)] border-[var(--focus-border-color)] text-white'
+                                                : 'bg-transparent border-[var(--border-color)] text-[var(--activitybar-inactive-foreground)] hover:border-[var(--focus-border-color)] opacity-70 hover:opacity-100'
+                                        } disabled:opacity-50`}
+                                    >
+                                        {s.name || '未命名'}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
             </div>
 
 

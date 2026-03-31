@@ -19,9 +19,11 @@ export const enUS = {
         info: 'Info',
         copy: 'Copy',
         paste: 'Paste',
-        duplicate: 'Duplicate',
+        duplicate: 'Clone',
         addCommand: 'Add to Command',
         addToCommand: 'Add to Command Library',
+        collapse: 'Collapse',
+        expand: 'Expand',
     },
 
     // Settings page
@@ -258,6 +260,7 @@ export const enUS = {
         sessionName: 'Session Name',
         sessionNamePlaceholder: 'Enter session name...',
         sessionNameExists: 'This name is already in use, please choose another.',
+        manageProfiles: 'Manage Profiles...',
         recentWorkspaces: 'Switch Profile',
         noWorkspaceOpen: 'No profile loaded',
         openWorkspace: 'New Profile',
@@ -276,6 +279,7 @@ export const enUS = {
 
     // Serial
     serial: {
+        parser: 'Data Parser Binding',
         connect: 'Connect',
         disconnect: 'Disconnect',
         send: 'Send',
@@ -658,11 +662,21 @@ export const enUS = {
         parser: 'Data Parser',
         dashboard: 'Component Library',
         schemes: 'Schemes',
+        unnamedScheme: 'Unnamed Scheme',
         fields: 'Fields',
         addScheme: 'New Scheme',
         addField: 'Add Field',
         duplicateScheme: 'Duplicate Scheme',
         running: 'Running',
+        schemeActive: 'Active Scheme',
+        activateScheme: 'Click to activate this scheme',
+        noFields: 'No fields yet',
+        noRules: 'No rules, right-click to add',
+        clearData: 'Clear display data',
+        deleteWidget: 'Delete widget',
+        dragOrder: 'Drag to reorder',
+        ruleEnabled: 'Rule enabled (click to disable)',
+        ruleDisabled: 'Rule disabled (click to enable)',
     },
 
     // Panel area
@@ -691,6 +705,9 @@ export const enUS = {
         serialConfig: 'Serial Config',
         mqttConfig: 'MQTT Config',
         monitorConfig: 'Monitor Config',
+        dashboardTitle: 'HMI Dashboard',
+        hmiMessage: 'You are viewing the HMI Dashboard canvas.',
+        hmiInstruction: 'Click the "LOCKED/EDITING" button on the top right to switch modes.'
     },
 
     // Module manager
@@ -796,6 +813,7 @@ export const enUS = {
     // Auto Reply
     autoReply: {
         title: 'Auto Reply',
+        rules: 'Rules',
         noRules: 'No rules yet. Click below to add one.',
         addRule: 'Add Rule',
         untitled: 'Untitled Rule',
@@ -817,5 +835,23 @@ export const enUS = {
         enabled: 'Enabled',
         disabled: 'Disabled',
         rulesActive: 'rules active',
+    },
+
+    // Dashboard Sidebar
+    dashboardSidebar: {
+        display: 'DISPLAY',
+        control: 'CONTROL',
+        widgets: {
+            monitorValue: 'Monitor Value',
+            monitorValueDesc: 'Large prominent text display',
+            uplotWaveform: 'uPlot Waveform',
+            uplotWaveformDesc: 'Ultra-fast real-time rendering',
+            dialGauge: 'Dial Gauge',
+            dialGaugeDesc: 'Vector based pointer gauge',
+            controlSlider: 'Control Slider',
+            controlSliderDesc: 'Closed-loop draggable slider',
+            actionButton: 'Action Button',
+            actionButtonDesc: 'Quick action trigger button'
+        }
     },
 } as const;

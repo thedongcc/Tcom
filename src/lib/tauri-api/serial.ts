@@ -33,8 +33,8 @@ export function registerSerialAPI(): void {
         listPorts: (options) =>
             invoke('serial_list_ports', { options: options ?? {} }),
 
-        open: (connectionId, options, parserSchemeId) =>
-            invoke('serial_open', { connectionId, options, parserSchemeId }),
+        open: (connectionId, options, parserSchemeIds) =>
+            invoke('serial_open', { connectionId, options, parserSchemeIds }),
 
         close: (connectionId) =>
             invoke('serial_close', { connectionId }),

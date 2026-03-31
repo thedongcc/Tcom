@@ -11,8 +11,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { listen } from '@tauri-apps/api/event';
-import { useDashboardStore } from '../../store/useDashboardStore';
+import { useDashboardStore, WidgetConfig } from '../../store/useDashboardStore';
+import type { WidgetType } from '../../store/useDashboardStore';
 import { ValueWidget } from './widgets/ValueWidget';
 import { UPlotChartWidget } from './widgets/UPlotChartWidget';
 import { GaugeWidget } from './widgets/GaugeWidget';
@@ -30,7 +30,7 @@ interface DashboardCanvasProps {
     sessionId: string;
 }
 
-const EMPTY_WIDGETS: any[] = [];
+const EMPTY_WIDGETS: WidgetConfig[] = [];
 
 export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) => {
     // 按块粒度显式订阅单页数据
@@ -77,10 +77,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
         }))
     ), [widgets, isEditing]);
 
-    const handleLayoutChange = (layoutData: readonly any[]) => {
-        console.log('[DashboardCanvas] > handleLayoutChange 触发! 当前生效布局项目数:', layoutData.length);
-        const current = layoutData as GridLayoutItem[];
-        updateLayout(sessionId, current);
+    const handleLayoutChange = (layoutData: readonly GridLayoutItem[]) => {
+        updateLayout(sessionId, layoutData as GridLayoutItem[]);
     };
 
 
@@ -92,7 +90,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
                 <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-color)] animate-pulse" />
                     <span className="text-xs font-bold tracking-widest text-[var(--accent-color)]">HMI</span>
-                    <span className="text-xs text-[var(--sys-text-muted)] tracking-wider">实时工业组态面板</span>
+                    <span className="text-xs text-[var(--activitybar-inactive-foreground)] tracking-wider">实时工业组态面板</span>
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -105,7 +103,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold tracking-widest transition-all duration-200 border ${
                             isEditing 
                             ? 'bg-[var(--accent-color)] text-white border-[var(--accent-color)] shadow-[0_0_10px_rgba(96,165,250,0.3)]' 
-                            : 'bg-[var(--sys-bg-hover)] text-[var(--sys-text-muted)] border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:text-[var(--accent-color)]'
+                            : 'bg-[var(--list-hover-background)] text-[var(--activitybar-inactive-foreground)] border-[var(--border-color)] hover:border-[var(--focus-border-color)]/30 hover:text-[var(--focus-border-color)]'
                         }`}
                     >
                         {isEditing ? <Unlock size={12} /> : <Lock size={12} />}
@@ -125,7 +123,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
                     e.preventDefault();
                     e.stopPropagation();
 
-                    console.log('🌟 [DashboardCanvas] Pointer全局放舱! 类型:', draggingType);
+
                     
                     if (!isEditing) {
                         toggleEditing(sessionId);
@@ -155,7 +153,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({ sessionId }) =
                     else if (draggingType === 'ValueWidget') { w = 10; h = 4; }
 
                     addWidget(sessionId, {
-                        type: draggingType as any,
+                        type: draggingType as WidgetType,
                         bindKey: 'unknown',
                         title: 'New ' + draggingType.replace('Widget', ''),
                         layout: { x, y, w, h }

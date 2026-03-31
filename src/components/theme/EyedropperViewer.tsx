@@ -90,9 +90,7 @@ export const EyedropperViewer: React.FC<{
             if (e.key === 'Enter') {
                 e.preventDefault(); // 阻止默认「点击 focused 按钮」行为，防止吸管按钮被重新激活
                 e.stopPropagation();
-                console.log('[EVw] Enter pressed, colorRef=', colorRef.current, ' confirmRef=', confirmRef.current);
                 confirmRef.current(colorRef.current);
-                console.log('[EVw] confirmRef.current() called');
                 return;
             }
             const dirs: Record<string, [number, number]> = {

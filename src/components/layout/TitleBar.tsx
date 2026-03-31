@@ -1,6 +1,7 @@
 import { Pin, PinOff, Palette, Minus, Square, X, Copy } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -15,29 +16,21 @@ const EditorToggleButton = () => {
     const unlisteners: (() => void)[] = [];
 
     // 检查初始状态
-    import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
+    WebviewWindow.getByLabel('theme-editor').then(win => {
+      setEditorOpen(win !== null);
+    });
+
+    listen('tauri://window-created', () => {
       WebviewWindow.getByLabel('theme-editor').then(win => {
         setEditorOpen(win !== null);
       });
-    });
-
-    // 监听窗口创建
-    listen('tauri://window-created', () => {
-      import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
-        WebviewWindow.getByLabel('theme-editor').then(win => {
-          setEditorOpen(win !== null);
-        });
-      });
     }).then(fn => unlisteners.push(fn));
 
-    // 监听窗口销毁
     listen('tauri://destroyed', () => {
       // 延迟检查，确保窗口已销毁
       setTimeout(() => {
-        import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
-          WebviewWindow.getByLabel('theme-editor').then(win => {
-            setEditorOpen(win !== null);
-          });
+        WebviewWindow.getByLabel('theme-editor').then(win => {
+          setEditorOpen(win !== null);
         });
       }, 100);
     }).then(fn => unlisteners.push(fn));

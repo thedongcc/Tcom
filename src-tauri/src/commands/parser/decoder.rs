@@ -103,9 +103,9 @@ mod tests {
             frame_header: vec![0xAA, 0x55],
             min_frame_len: Some(10),
             fields: vec![
-                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1 },
-                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0 },
-                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0 },
+                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1, color: None },
+                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0, color: None },
+                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0, color: None },
             ],
         }
     }
@@ -128,8 +128,8 @@ mod tests {
             frame_header: vec![0xAA, 0x55],
             min_frame_len: Some(10),
             fields: vec![
-                FieldDef { name: "good".into(),     offset: 2, data_type: DataType::U8,    multiplier: 1.0 },
-                FieldDef { name: "overflow".into(), offset: 9, data_type: DataType::U16Be, multiplier: 1.0 },
+                FieldDef { name: "good".into(),     offset: 2, data_type: DataType::U8,    multiplier: 1.0, color: None },
+                FieldDef { name: "overflow".into(), offset: 9, data_type: DataType::U16Be, multiplier: 1.0, color: None },
             ],
         };
         let frame: &[u8] = &[0xAA, 0x55, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -169,7 +169,7 @@ mod tests {
             id: "x".into(), name: "t".into(),
             frame_header: vec![],
             min_frame_len: Some(2),
-            fields: vec![FieldDef { name: "rpm".into(), offset: 0, data_type: DataType::U16Be, multiplier: 0.01 }],
+            fields: vec![FieldDef { name: "rpm".into(), offset: 0, data_type: DataType::U16Be, multiplier: 0.01, color: None }],
         };
         let frame = [0x0B_u8, 0xB8]; // 3000 × 0.01 = 30.0
         let r = decode_frame(&frame, &scheme);

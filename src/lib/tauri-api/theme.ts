@@ -3,7 +3,8 @@
  * themeAPI 适配层 — 主题管理和编辑器 IPC。
  */
 import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { listen, emit, type UnlistenFn } from '@tauri-apps/api/event'
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 /** 创建全局事件监听器包装 */
 function createGlobalListener<T>(
@@ -45,7 +46,6 @@ export function registerThemeAPI(): void {
             createGlobalListener<boolean>('theme-editor:status-changed', callback),
 
         openThemeEditor: async () => {
-            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
             const existing = await WebviewWindow.getByLabel('theme-editor')
             if (existing) {
                 // toggle：已打开则关闭
@@ -102,13 +102,11 @@ export function registerThemeAPI(): void {
         },
 
         closeThemeEditor: async () => {
-            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
             const win = await WebviewWindow.getByLabel('theme-editor')
             if (win) await win.close()
         },
 
         isWindowOpen: async () => {
-            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
             const win = await WebviewWindow.getByLabel('theme-editor')
             return win !== null
         },
@@ -117,7 +115,6 @@ export function registerThemeAPI(): void {
             invoke('theme_editor_save', { id, themeDef }),
 
         applyPreview: async (edits) => {
-            const { emit } = await import('@tauri-apps/api/event')
             await emit('theme:apply-preview', edits)
         },
 
@@ -147,22 +144,18 @@ export function registerThemeAPI(): void {
         },
 
         startInspectorMode: async () => {
-            const { emit } = await import('@tauri-apps/api/event')
             await emit('theme-editor:start-inspector')
         },
 
         stopInspectorMode: async () => {
-            const { emit } = await import('@tauri-apps/api/event')
             await emit('theme-editor:inspector-stopped')
         },
 
         stopInspector: async () => {
-            const { emit } = await import('@tauri-apps/api/event')
             await emit('theme-editor:inspector-stopped')
         },
 
         componentPicked: async (data) => {
-            const { emit } = await import('@tauri-apps/api/event')
             await emit('theme-editor:component-picked', data)
         },
 

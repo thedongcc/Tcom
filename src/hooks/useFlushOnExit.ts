@@ -13,6 +13,8 @@
  * - 组件卸载时调用 flushRegistry.unregister(fn)
  */
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
 type FlushFn = () => Promise<void> | void;
 
 /** 全局 Flush 注册表 */
@@ -55,10 +57,9 @@ export const flushRegistry = new FlushRegistry();
 export function initFlushOnExit(): void {
     const FLUSH_TIMEOUT_MS = 2000;
 
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-        const win = getCurrentWindow();
+    const win = getCurrentWindow();
 
-        win.onCloseRequested(async (event) => {
+    win.onCloseRequested(async (event) => {
             // 阻止默认关闭行为
             event.preventDefault();
 
@@ -80,7 +81,6 @@ export function initFlushOnExit(): void {
 // log('[FlushOnExit] flush 完成/超时，销毁窗口');
 
             // 销毁窗口
-            await win.destroy();
-        });
+        await win.destroy();
     });
 }

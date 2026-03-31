@@ -63,9 +63,9 @@ pub fn load_config(app: &AppHandle) -> ParserConfig {
         Ok(json) => match serde_json::from_str::<ParserConfig>(&json) {
             Ok(config) => {
                 log::info!(
-                    "[ParserStorage] 配置加载成功，共 {} 个方案，激活 ID: {:?}",
+                    "[ParserStorage] 配置加载成功，共 {} 个方案，激活 IDs: {:?}",
                     config.schemes.len(),
-                    config.active_id
+                    config.active_ids
                 );
                 config
             }

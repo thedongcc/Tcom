@@ -28,9 +28,13 @@ impl ParserState {
         }
     }
 
-    /// 获取当前激活方案的快照（如有）— 供读取线程无锁热读
-    pub fn active_scheme_snapshot(&self) -> Option<ParserScheme> {
-        self.config.lock().ok()?.active_scheme().cloned()
+    /// 获取当前挂载的所有激活方案的快照（无锁热读）
+    #[allow(dead_code)]
+    pub fn active_schemes_snapshot(&self) -> Vec<ParserScheme> {
+        self.config
+            .lock()
+            .map(|cfg| cfg.active_schemes().into_iter().cloned().collect())
+            .unwrap_or_default()
     }
 }
 
@@ -99,7 +103,9 @@ pub fn get_parser_schema(state: State<'_, ParserState>) -> Result<ParserScheme, 
         .lock()
         .map_err(|e| format!("Lock error: {}", e))
         .and_then(|s| {
-            s.active_scheme()
+            s.active_schemes()
+                .first()
+                .cloned()
                 .cloned()
                 .ok_or_else(|| "无激活方案".to_string())
         })
@@ -115,8 +121,8 @@ pub fn update_parser_schema(
         .config
         .lock()
         .map_err(|e| format!("Lock error: {}", e))?;
-    // 以激活 ID 为准更新对应方案，若没有激活则追加
-    if let Some(id) = guard.active_id.clone() {
+    // 以第一个激活 ID 为准更新对应方案，若没有激活则追加
+    if let Some(id) = guard.active_ids.first().cloned() {
         if let Some(scheme) = guard.schemes.iter_mut().find(|s| s.id == id) {
             *scheme = new_schema;
             return Ok(());
@@ -126,6 +132,6 @@ pub fn update_parser_schema(
     let new_id = new_schema.id.clone();
     guard.schemes.clear();
     guard.schemes.push(new_schema);
-    guard.active_id = Some(new_id);
+    guard.active_ids = vec![new_id];
     Ok(())
 }

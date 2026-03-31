@@ -4,7 +4,7 @@
  * 从 MqttConfigPanel.tsx 中拆分出来。
  */
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { MqttTopicConfig } from '../../types/session';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -15,7 +15,7 @@ const COLORS = [
     '#cccccc', '#9ca3af'
 ];
 
-const inputCls = 'w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50';
+const inputCls = 'w-full h-7 bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] text-[12px] px-2 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50';
 
 interface MqttTopicListProps {
     topics: MqttTopicConfig[];
@@ -50,8 +50,16 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--mqtt-config-bg)] sticky top-0 border-b border-[var(--border-color)] shrink-0">
-                {t('mqtt.subscriptions')}
+            {/* 标题行：与 ParserSidebar SCHEMES / AutoReply RULES 保持完全一致的折叠标题样式 */}
+            <div className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--serial-config-bg)] sticky top-0 border-b border-[var(--border-color)] shrink-0 flex items-center justify-between">
+                <span>{t('mqtt.subscriptions')}</span>
+                <button
+                    className="text-[10px] px-2 py-0.5 rounded-sm text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] transition-colors cursor-pointer normal-case font-normal tracking-normal"
+                    onClick={handleAddTopic}
+                    disabled={!newTopicPath.trim()}
+                >
+                    + {t('mqtt.addTopic')}
+                </button>
             </div>
 
             <div className="p-3 flex flex-col gap-3 min-h-0">
@@ -63,13 +71,6 @@ export const MqttTopicList = React.memo(({ topics, onUpdate }: MqttTopicListProp
                         onChange={(e) => setNewTopicPath(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
                     />
-                    <button
-                        className="w-full py-1.5 bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] text-[var(--button-foreground)] text-[12px] rounded-sm transition-colors flex items-center justify-center gap-1"
-                        onClick={handleAddTopic}
-                    >
-                        <Plus size={14} />
-                        {t('mqtt.addTopic')}
-                    </button>
                 </div>
 
                 {/* 主题列表 */}

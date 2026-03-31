@@ -54,6 +54,28 @@ html[data-theme="light"] {
   --monitor-config-text: #333333;
   --session-item-active-bg: #e4e6f1;
   --session-item-active-border: #007acc;
+  /* === 侧边栏列表条目关键变量 — Light 主题专项覆盖 === */
+  --widget-background: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --widget-border-color: #e4e6ea;
+  --list-active-background: #dce8f5;
+  --list-hover-background: #eef2f7;
+  --hover-background: #eef2f7;
+  --border-color: #e0e2e8;
+  --input-background: color-mix(in srgb, #ffffff calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --input-border-color: #d0d3da;
+  --input-foreground: #333333;
+  --input-placeholder-color: #a0a4ae;
+  --focus-border-color: #007acc;
+  --app-foreground: #333333;
+  --button-background: #007acc;
+  --button-hover-background: #005fa3;
+  --button-foreground: #ffffff;
+  --button-secondary-background: #f0f2f5;
+  --button-secondary-hover-background: #e4e6ea;
+  --sidebar-background: color-mix(in srgb, #fafbfc calc(var(--tcom-ui-opacity, 100) * 1%), transparent);
+  --activitybar-inactive-foreground: #8c909a;
+  --scrollbar-slider-color: rgba(0,0,0,0.15);
+  --scrollbar-slider-hover-color: rgba(0,0,0,0.25);
   --session-item-foreground: #333333;
   --session-item-hover-bg: #e8e8e8;
   --session-list-sidebar-bg: color-mix(in srgb, #f0f2f5 calc(var(--tcom-ui-opacity, 100) * 1%), transparent);

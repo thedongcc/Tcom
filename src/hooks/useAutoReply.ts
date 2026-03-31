@@ -248,6 +248,32 @@ export function useAutoReply({ activeProfile, profileLoaded, sessionsData, write
         }));
     }, []);
 
+    const reorderRules = useCallback((fromIndex: number, toIndex: number) => {
+        setStore(prev => {
+            const rules = [...prev.rules];
+            const [moved] = rules.splice(fromIndex, 1);
+            rules.splice(toIndex, 0, moved);
+            return { ...prev, rules };
+        });
+    }, []);
+
+    const duplicateRule = useCallback((id: string) => {
+        setStore(prev => {
+            const idx = prev.rules.findIndex(r => r.id === id);
+            if (idx === -1) return prev;
+            const original = prev.rules[idx];
+            const copy: AutoReplyRule = {
+                ...original,
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                name: original.name + ' (副本)',
+                enabled: false,
+            };
+            const rules = [...prev.rules];
+            rules.splice(idx + 1, 0, copy);
+            return { ...prev, rules };
+        });
+    }, []);
+
     return {
         enabled,
         rules,
@@ -258,5 +284,7 @@ export function useAutoReply({ activeProfile, profileLoaded, sessionsData, write
         updateRule,
         deleteRule,
         toggleRuleEnabled,
+        reorderRules,
+        duplicateRule,
     };
 }

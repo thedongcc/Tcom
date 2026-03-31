@@ -35,7 +35,7 @@ pub fn theme_dir_pub(app: &tauri::AppHandle) -> Result<std::path::PathBuf, Strin
     theme_dir(app)
 }
 
-/// 确保默认主题文件存在（首次启动时创建）
+/// 确保默认主题文件存在（首次启动时创建，已存在则跳过）
 fn ensure_theme_files(dir: &std::path::Path) -> Result<(), String> {
     fs::create_dir_all(dir).map_err(|e| e.to_string())?;
 
@@ -54,8 +54,10 @@ fn ensure_theme_files(dir: &std::path::Path) -> Result<(), String> {
 
     for (filename, content) in defaults {
         let path = dir.join(filename);
-        // 强制覆盖内置主题（尤其是 pic.json），以确保新增的透明度变量能应用到用户本地配置
-        fs::write(&path, content).map_err(|e| e.to_string())?;
+        // 仅在文件不存在时写入（避免每次调用都做 4 次同步写盘）
+        if !path.exists() {
+            fs::write(&path, content).map_err(|e| e.to_string())?;
+        }
     }
 
     Ok(())

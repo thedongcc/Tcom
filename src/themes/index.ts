@@ -58,32 +58,48 @@ function isJitExcluded(key: string): boolean {
  * 当没有背景图时 --tcom-ui-opacity 默认 100，等同于纯色。
  * 当开启背景图且滑块拖动时，浏览器 GPU 自动让所有背景变半透明！
  */
+/** 追踪上一次 applyTheme 写入的变量名集合，用于差分清理 */
+let _lastThemeVarKeys: Set<string> = new Set();
+
+/**
+ * 将主题的所有 CSS 变量注入到 :root
+ * 切换时做差分更新：只删除旧主题独有的变量，避免清空排版/背景等非主题变量。
+ *
+ * 【JIT 拦截器模式】：
+ * 对背景色 hex 值自动包上 color-mix(in srgb, hex calc(var(--tcom-ui-opacity,100)*1%), transparent)
+ * 当没有背景图时 --tcom-ui-opacity 默认 100，等同于纯色。
+ * 当开启背景图且滑块拖动时，浏览器 GPU 自动让所有背景变半透明！
+ */
 export function applyTheme(theme: ThemeDefinition): void {
     const root = document.documentElement;
-
-    // 清除 :root 上所有以 -- 开头的 CSS 变量（上一个主题的残留）
     const inlineStyle = root.style;
-    const toRemove: string[] = [];
-    for (let i = 0; i < inlineStyle.length; i++) {
-        const prop = inlineStyle[i];
-        if (prop.startsWith('--')) {
-            toRemove.push(prop);
-        }
-    }
-    toRemove.forEach(prop => inlineStyle.removeProperty(prop));
 
-    // 注入新主题的所有 CSS 变量（JIT 拦截器模式）
+    console.time(`[Theme] applyTheme(${theme.id})`);
+
+    // ── Step 1：构建新主题变量 map ──
+    const newVars = new Map<string, string>();
     Object.entries(theme.colors).forEach(([key, value]) => {
-        // 是背景色 + 值为纯色 hex + 不在排除列表 → 包上全局透明度令牌
         if (isBgKey(key) && !isJitExcluded(key) && value.startsWith('#')) {
-            root.style.setProperty(
-                key,
-                `color-mix(in srgb, ${value} calc(var(--tcom-ui-opacity, 100) * 1%), transparent)`
-            );
+            newVars.set(key, `color-mix(in srgb, ${value} calc(var(--tcom-ui-opacity, 100) * 1%), transparent)`);
         } else {
-            root.style.setProperty(key, value);
+            newVars.set(key, value);
         }
     });
+
+    // ── Step 2：差分删除（仅删除旧主题有但新主题没有的变量，不碰排版/背景等变量）──
+    _lastThemeVarKeys.forEach(oldKey => {
+        if (!newVars.has(oldKey)) {
+            inlineStyle.removeProperty(oldKey);
+        }
+    });
+
+    // ── Step 3：写入新主题变量（同步，无 rAF 竞态风险）──
+    newVars.forEach((value, key) => {
+        inlineStyle.setProperty(key, value);
+    });
+
+    // 记录本次写入的变量名集合，供下次差分使用
+    _lastThemeVarKeys = new Set(newVars.keys());
 
     // 标记当前主题 ID，供 CSS 选择器匹配
     root.setAttribute('data-theme', theme.id);
@@ -96,6 +112,9 @@ export function applyTheme(theme: ThemeDefinition): void {
             document.body.classList.add(`theme-${safeClassName}`);
         }
     }
+
+    console.timeEnd(`[Theme] applyTheme(${theme.id})`);
+    console.log(`%c[Theme] 写入变量数: ${newVars.size}，删除旧变量数: ${_lastThemeVarKeys.size}`, 'color:#C586C0');
 }
 
 /**

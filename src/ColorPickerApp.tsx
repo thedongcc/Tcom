@@ -4,8 +4,9 @@
  * 支持从外部 init_update 事件唤醒复用（窗口常驻内存，避免重复创建）。
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { emit } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ColorPickerContent } from './components/theme/ColorPickerShared';
 import { SettingsProvider } from './context/SettingsContext';
 import { I18nProvider } from './context/I18nContext';
@@ -14,7 +15,6 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 /** 聚焦当前 Tauri 窗口 */
 async function focusCurrentWindow() {
     window.focus();
-    const { getCurrentWindow } = await import('@tauri-apps/api/window');
     getCurrentWindow().setFocus().catch(() => {});
 }
 
@@ -51,14 +51,12 @@ function useColorPickerSetup(
 
         // 监听外部唤醒事件，刷新颜色并重置关闭标志
         let unlisten: (() => void) | null = null;
-        import('@tauri-apps/api/event').then(({ listen }) => {
-            listen<string>('color_picker:init_update', (e) => {
-                setColor(e.payload);
-                setResetKey(k => k + 1); // 强制 ColorPickerContent 重挂载，清除吸管残留状态
-                hasClosed.current = false;
-                focusCurrentWindow();
-            }).then(fn => { unlisten = fn; });
-        });
+        listen<string>('color_picker:init_update', (e) => {
+            setColor(e.payload);
+            setResetKey(k => k + 1); // 强制 ColorPickerContent 重挂载，清除吸管残留状态
+            hasClosed.current = false;
+            focusCurrentWindow();
+        }).then(fn => { unlisten = fn; });
 
         return () => {
             window.removeEventListener('blur', hideSelf);

@@ -10,9 +10,10 @@
  * - 错误详情默认展开
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, RotateCcw, Send, Power, XCircle } from 'lucide-react';
+import { AlertTriangle, Send, Power, XCircle } from 'lucide-react';
 import { reportError, addBreadcrumb } from '../../lib/crashReporter';
 import { I18nContext } from '../../context/I18nContext';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface ErrorBoundaryProps {
     children: ReactNode;
@@ -62,7 +63,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     /** 关闭软件 */
     handleQuit = async () => {
         try {
-            const { getCurrentWindow } = await import('@tauri-apps/api/window');
             await getCurrentWindow().close();
         } catch {
             window.close();

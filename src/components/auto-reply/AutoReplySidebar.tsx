@@ -67,8 +67,8 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
 
     return (
         <div className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]" data-component="auto-reply-sidebar">
-            {/* 头部控制区 — 表单式布局（label 在上，控件在下） */}
-            <div className="px-4 py-2 flex flex-col gap-3">
+            {/* 头部控制区 — 与 ParserSidebar Switch 区完全一致：px-4 py-2 + border-b */}
+            <div className="px-4 py-2 flex flex-col gap-3 border-b border-[var(--border-color)] shrink-0">
                 {/* 启用开关 */}
                 <Switch
                     label={t('autoReply.title')}
@@ -76,7 +76,7 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
                     onChange={autoReply.setEnabled}
                 />
 
-                {/* 端口选择器 — 关闭时变暗（仿虚拟串口） */}
+                {/* 端口选择器 — 关闭时变暗 */}
                 <div className={`${!autoReply.enabled ? 'opacity-40 pointer-events-none' : ''} flex flex-col gap-3 transition-all duration-300`}>
                     {/* 生效端口 */}
                     <div className="flex flex-col gap-1">
@@ -98,13 +98,13 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
             >
                 <div className="flex items-center gap-2">
                     {rulesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    <span>{t('autoReply.rules', 'RULES')} · {autoReply.rules.length}</span>
+                    <span>{t('autoReply.rules')} · {autoReply.rules.length}</span>
                 </div>
                 <button
                     className="text-[10px] px-2 py-0.5 rounded-sm text-[var(--button-foreground)] bg-[var(--button-background)] hover:bg-[var(--button-hover-background)] transition-colors cursor-pointer"
                     onClick={(e) => { e.stopPropagation(); autoReply.addRule(); setRulesOpen(true); }}
                 >
-                    + {t('autoReply.addRule', '新建')}
+                    + {t('autoReply.addRule')}
                 </button>
             </div>
 
@@ -117,6 +117,8 @@ export const AutoReplySidebar = (_props: FeatureSidebarProps) => {
                         onUpdateRule={autoReply.updateRule}
                         onDeleteRule={autoReply.deleteRule}
                         onToggleRule={autoReply.toggleRuleEnabled}
+                        onReorderRules={autoReply.reorderRules}
+                        onDuplicateRule={autoReply.duplicateRule}
                     />
                 )}
             </div>

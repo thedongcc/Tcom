@@ -6,10 +6,20 @@
 import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
 import { registerAllTauriAPIs } from './lib/tauri-api'
 import { reportError, addBreadcrumb, initAutoBreadcrumbs } from './lib/crashReporter'
 import ColorPickerApp from './ColorPickerApp'
 import './index.css'
+
+// 屏蔽 Tauri 在 Vite HMR 开发模式下的无害警告（因热重载导致部分宏观生命周期丢失引发）
+const originalWarn = console.warn;
+console.warn = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes("Couldn't find callback id") && args[0].includes("app is reloaded")) {
+        return;
+    }
+    originalWarn(...args);
+};
 
 // 在 React 渲染前注册所有 Tauri IPC 适配层到 window 对象
 registerAllTauriAPIs()
@@ -41,9 +51,7 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 if (windowLabel === 'theme-editor') {
     // 主题编辑器窗口关闭时，同步隐藏颜色选择器弹窗
     window.addEventListener('pagehide', () => {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('color_picker_close').catch(() => {});
-        });
+        invoke('color_picker_close').catch(() => {});
     });
     // 主题编辑器窗口 — 直接渲染编辑器，跳过 AppShell 骨架
     const ThemeEditorApp = React.lazy(() => import('./ThemeEditorApp'));

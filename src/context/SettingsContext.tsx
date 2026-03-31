@@ -10,7 +10,7 @@
  * 子模块：
  * - settingsConfigMigration.ts — 配置合并与旧版本迁移
  */
-import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import { ThemeConfig, DEFAULT_THEME } from '../types/theme';
 import { ThemeDefinition } from '../themes';
 import { useColorPicker } from '../hooks/useColorPicker';
@@ -29,21 +29,41 @@ interface SettingsContextType {
     importConfig: (json: string) => void;
     exportConfig: () => string;
     resetConfig: () => void;
-    /** 设置模态窗口开关 */
+}
+
+// ── 设置弹窗状态独立 context（避免 open/close 导致整棵树 re-render）──
+interface SettingsModalContextType {
     isSettingsOpen: boolean;
     openSettings: () => void;
     closeSettings: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const SettingsModalContext = createContext<SettingsModalContextType | undefined>(undefined);
+
+export const useSettingsModal = () => {
+    const ctx = useContext(SettingsModalContext);
+    if (!ctx) throw new Error('useSettingsModal must be within SettingsProvider');
+    return ctx;
+};
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const [config, setConfig] = useState<ThemeConfig>(loadInitialConfig);
-    const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>([]);
+    // 从 localStorage 缓存同步恢复主题列表（惰性初始化，避免 IPC 等待期间 availableThemes 为空）
+    const [availableThemes, setAvailableThemes] = useState<ThemeDefinition[]>(() => {
+        try {
+            const cached = localStorage.getItem('tcom-themes-cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed as ThemeDefinition[];
+            }
+        } catch { /* 解析失败则使用空列表 */ }
+        return [];
+    });
     const [isLoaded, setIsLoaded] = useState(false);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-    // ── 设置模态窗口状态 ──
+    // ── 设置弹窗状态（独立 state，避免主 context re-render）──
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const openSettings = useCallback(() => setIsSettingsOpen(true), []);
     const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
@@ -60,20 +80,46 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // ── 加载主题 ──
-    const loadThemes = async () => {
+    // 稳定的弹窗 context value（仅在 isSettingsOpen 变化时更新）
+    const modalValue = useMemo<SettingsModalContextType>(
+        () => ({ isSettingsOpen, openSettings, closeSettings }),
+        [isSettingsOpen, openSettings, closeSettings]
+    );
+
+    // ── 加载主题（稳定引用 + in-flight 锁 + localStorage 缓存）──
+    const themesLoadedRef = useRef(false);        // 已加载标记（Ref 读写不触发 re-render）
+    const themesLoadingRef = useRef(false);       // 正在加载中标记
+    const setAvailableThemesRef = useRef(setAvailableThemes); // 稳定的 setter 引用
+    setAvailableThemesRef.current = setAvailableThemes;
+
+    // 若 availableThemes 已从缓存恢复，同步更新 Ref 标记，守卫生效
+    if (!themesLoadedRef.current && availableThemes.length > 0) {
+        themesLoadedRef.current = true;
+    }
+
+    const loadThemes = useCallback(async () => {
+        // 双重守卫：已加载 or 正在加载中，直接跳过
+        if (themesLoadedRef.current || themesLoadingRef.current) return;
+        themesLoadingRef.current = true;
+        console.time('[Settings] loadThemes');
         try {
             const api = window.themeAPI;
             if (api?.loadAll) {
                 const res = await api.loadAll();
                 if (res?.success) {
-                    setAvailableThemes(res.themes);
+                    console.log('%c[Settings] loadThemes 结果: ' + res.themes.length + ' 个主题', 'color:#CE9178');
+                    themesLoadedRef.current = true;
+                    try { localStorage.setItem('tcom-themes-cache', JSON.stringify(res.themes)); } catch { /* 忽略 */ }
+                    setAvailableThemesRef.current(res.themes);
                 }
             }
         } catch (e) {
             console.error('Failed to load themes:', e);
+        } finally {
+            themesLoadingRef.current = false;
+            console.timeEnd('[Settings] loadThemes');
         }
-    };
+    }, []); // 空依赖数组 → 稳定引用，不会导致 useMemo 重建
 
     // 初次挂载：从文件加载设置 + 加载主题
     useEffect(() => {
@@ -161,58 +207,61 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     useThemeEffects({ config, availableThemes });
     useColorPicker({ availableThemes, config });
 
-    // ── 配置修改函数 ──
+    // ── 配置修改函数（全部 useCallback，避免每次渲染产生新引用）──
 
-    const updateConfig = (updates: Partial<ThemeConfig> | ((prev: ThemeConfig) => ThemeConfig)) => {
+    const updateConfig = useCallback((updates: Partial<ThemeConfig> | ((prev: ThemeConfig) => ThemeConfig)) => {
         if (typeof updates === 'function') {
             setConfig(prev => ({ ...prev, ...updates(prev) }));
         } else {
             setConfig(prev => ({ ...prev, ...updates }));
         }
-    };
+    }, []);
 
-    const updateUI = (updates: Partial<ThemeConfig['ui']>) => {
+    const updateUI = useCallback((updates: Partial<ThemeConfig['ui']>) => {
         setConfig(prev => ({ ...prev, ui: { ...prev.ui, ...updates } }));
-    };
+    }, []);
 
-    const setTheme = (themeId: string) => {
+    const setTheme = useCallback((themeId: string) => {
         setConfig(prev => ({ ...prev, theme: themeId }));
         // 通知所有窗口（含主题编辑器独立窗口）主题已切换
         emit('theme:switched', themeId).catch(() => {});
-    };
+    }, []);
 
-    const importConfig = (json: string) => {
+    const importConfig = useCallback((json: string) => {
         try {
             const parsed = JSON.parse(json);
             setConfig(mergeAndMigrate(parsed));
         } catch (e) {
             console.error('Import failed', e);
         }
-    };
+    }, []);
 
-    const exportConfig = () => JSON.stringify(config, null, 2);
+    const exportConfig = useCallback(() => JSON.stringify(config, null, 2), [config]);
 
-    const resetConfig = () => {
+    const resetConfig = useCallback(() => {
         setConfig(DEFAULT_THEME);
-    };
+    }, []);
+
+    // 稳定的主 context value（isSettingsOpen 变化时不再触发此对象更新）
+    const contextValue = useMemo<SettingsContextType>(() => ({
+        config,
+        availableThemes,
+        loadThemes,
+        updateConfig,
+        updateUI,
+        setTheme,
+        importConfig,
+        exportConfig,
+        resetConfig,
+    }), [config, availableThemes, loadThemes, updateConfig, updateUI, setTheme,
+        importConfig, exportConfig, resetConfig]);
 
     return (
-        <SettingsContext.Provider value={{
-            config,
-            availableThemes,
-            loadThemes,
-            updateConfig,
-            updateUI,
-            setTheme,
-            importConfig,
-            exportConfig,
-            resetConfig,
-            isSettingsOpen,
-            openSettings,
-            closeSettings,
-        }}>
-            {children}
-        </SettingsContext.Provider>
+        <SettingsModalContext.Provider value={modalValue}>
+            <SettingsContext.Provider value={contextValue}>
+                {children}
+            </SettingsContext.Provider>
+        </SettingsModalContext.Provider>
     );
 };
 
@@ -223,3 +272,6 @@ export const useSettings = () => {
     }
     return context;
 };
+
+/** @deprecated 使用 useSettingsModal().isSettingsOpen */
+export const useIsSettingsOpen = () => useSettingsModal().isSettingsOpen;

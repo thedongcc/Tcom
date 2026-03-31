@@ -71,6 +71,7 @@ impl Framer {
     #[allow(dead_code)]
     pub fn buffer_len(&self) -> usize { self.buffer.len() }
 
+    #[allow(dead_code)]
     pub fn clear(&mut self) { self.buffer.clear(); }
 }
 
@@ -95,9 +96,9 @@ mod tests {
             frame_header: vec![0xAA, 0x55],
             min_frame_len: Some(10),
             fields: vec![
-                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1 },
-                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0 },
-                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0 },
+                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1, color: None },
+                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0, color: None },
+                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0, color: None },
             ],
         }
     }

@@ -19,9 +19,28 @@ export const useSettingsActions = () => {
 
     // 加载系统字体列表
     useEffect(() => {
+        // 1. 先从 localStorage 缓存搜取（同步，立即生效）
+        try {
+            const cached = localStorage.getItem('tcom-system-fonts');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setSystemFonts(parsed);
+                }
+            }
+        } catch { /* 缓存解析失败则忽略 */ }
+
+        // 2. 后台异步刷新（IPC 返回后更新缓存）
         window.updateAPI?.listFonts?.().then((res: { success: boolean; fonts?: string[] }) => {
             if (res?.success && Array.isArray(res.fonts)) {
-                setSystemFonts(res.fonts);
+                setSystemFonts(prev => {
+                    // 若新旧字体列表完全一致，则直接返回原引用，阻止组件重渲
+                    if (prev.length === res.fonts!.length && prev.every((f, i) => f === res.fonts![i])) {
+                        return prev;
+                    }
+                    try { localStorage.setItem('tcom-system-fonts', JSON.stringify(res.fonts)); } catch { /* 忽略 */ }
+                    return res.fonts!;
+                });
             }
         }).catch(() => { /* 忽略错误，使用预设列表 */ });
     }, []);

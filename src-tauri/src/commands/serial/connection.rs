@@ -23,7 +23,7 @@ pub fn open_port(
     app: &tauri::AppHandle,
     connection_id: String,
     options: SerialOpenOptions,
-    parser_scheme_id: Option<String>,
+    parser_scheme_ids: Option<Vec<String>>,
 ) -> Result<Value, String> {
     let state = app.state::<SerialState>();
 
@@ -67,7 +67,7 @@ pub fn open_port(
     let alive = Arc::new(AtomicBool::new(true));
 
     // 启动读取线程
-    spawn_reader_thread(app.clone(), connection_id.clone(), reader_port, parser_scheme_id, Arc::clone(&alive));
+    spawn_reader_thread(app.clone(), connection_id.clone(), reader_port, parser_scheme_ids, Arc::clone(&alive));
 
     // 保存句柄
     let mut ports = state.ports.lock().map_err(lock_err)?;
@@ -112,28 +112,35 @@ fn spawn_reader_thread(
     app: AppHandle,
     connection_id: String,
     reader_port: Box<dyn serialport::SerialPort>,
-    parser_scheme_id: Option<String>,
+    parser_scheme_ids: Option<Vec<String>>,
     alive: Arc<AtomicBool>,
 ) {
     thread::spawn(move || {
         let mut reader = reader_port;
         let mut buf = [0u8; 4096];
 
-        // ── 协议解析引擎初始化（克隆指定 ID 的配置方案，不再跟踪 active_scheme_snapshot）──
-        let mut framer = crate::commands::parser::framer::Framer::new();
-        let mut current_scheme: Option<crate::commands::parser::schema::ParserScheme> = None;
-        if let (Some(id), Some(state)) = (&parser_scheme_id, app.try_state::<ParserState>()) {
-            let config = state.config.lock().unwrap();
-            current_scheme = config.schemes.iter().find(|s| s.id == *id).cloned();
+        // ── 协议解析引擎组初始化 ──
+        struct ActiveParser {
+            scheme: crate::commands::parser::schema::ParserScheme,
+            framer: crate::commands::parser::framer::Framer,
+        }
+        let mut active_parsers: Vec<ActiveParser> = Vec::new();
+
+        // 首次初始化
+        if let (Some(ids), Some(state)) = (&parser_scheme_ids, app.try_state::<ParserState>()) {
+            if let Ok(config) = state.config.lock() {
+                active_parsers = config.schemes.iter()
+                    .filter(|s| ids.contains(&s.id))
+                    .map(|s| ActiveParser { scheme: s.clone(), framer: crate::commands::parser::framer::Framer::new() })
+                    .collect();
+            }
         }
         
-        // 批量聚合池：收集单次节流窗口内所有解析成功的帧
-        let mut parsed_batch: Vec<std::collections::HashMap<String, f64>> =
-            Vec::with_capacity(100);
-        // 节流锚点：60Hz = 约 16ms 发一次，防止 IPC 桥梁被洪流打爆
+        let mut parsed_batch: Vec<std::collections::HashMap<String, f64>> = Vec::with_capacity(100);
         let mut last_emit = std::time::Instant::now();
-        // 方案切换检测：记录上一次使用的方案 ID，切换时清空 Framer 缓冲区防止脏包
-        let mut last_scheme_id: Option<String> = None;
+        
+        // 方案切换检测指纹：如果用户在面板中修改了规则，需要重置对应的引擎以防脏包串流
+        let mut last_fingerprint = String::new();
 
         while alive.load(Ordering::SeqCst) {
             match reader.read(&mut buf) {
@@ -153,33 +160,47 @@ fn spawn_reader_thread(
                         },
                     );
 
-                    // 热更新：如果前端通过 UI 修改了同一个 ID 的方案，这里也能拿到最新！
-                    if let (Some(id), Some(state)) = (&parser_scheme_id, app.try_state::<ParserState>()) {
-                        let config = state.config.lock().unwrap();
-                        current_scheme = config.schemes.iter().find(|s| s.id == *id).cloned();
+                    // 热更新：支持获取面板对这批 scheme 随时做出的变更
+                    if let (Some(ids), Some(state)) = (&parser_scheme_ids, app.try_state::<ParserState>()) {
+                        // 安全地获取锁，避免因锁中毒导致读取线程 panic
+                        if let Ok(config) = state.config.lock() {
+                        let fresh_schemes: Vec<_> = config.schemes.iter().filter(|s| ids.contains(&s.id)).cloned().collect();
+                        
+                        // 快速指纹判断是否有变(包含内存地址或简单长计算，这里简单拼接 IDs + names)
+                        // 指纹包含所有影响解码结果的字段：id、name、fields 数量及每个字段的 offset/data_type/multiplier
+                        let new_fingerprint = fresh_schemes.iter().map(|s| {
+                            let fields_fp = s.fields.iter().map(|f| {
+                                format!("{},{:?},{}", f.offset, f.data_type, f.multiplier)
+                            }).collect::<Vec<_>>().join(";");
+                            format!("{}_{}_{}_[{}]", s.id, s.name, s.fields.len(), fields_fp)
+                        }).collect::<Vec<_>>().join("|");
+                        if new_fingerprint != last_fingerprint {
+                            active_parsers.clear();
+                            for scheme in fresh_schemes {
+                                active_parsers.push(ActiveParser {
+                                    scheme,
+                                    framer: crate::commands::parser::framer::Framer::new(),
+                                });
+                            }
+                            parsed_batch.clear();
+                            last_fingerprint = new_fingerprint;
+                        }
+                        } // lock guard drop
                     }
 
-                    // 方案切换检测：清空 Framer 缓冲区防止脏包污染新方案
-                    let current_id = current_scheme.as_ref().map(|s| s.id.clone());
-                    if current_id != last_scheme_id {
-                        framer.clear();
-                        parsed_batch.clear();
-                        last_scheme_id = current_id;
-                    }
-
-                    // 无激活方案则跳过解析
-                    let Some(ref scheme) = current_scheme else {
+                    if active_parsers.is_empty() {
                         continue;
-                    };
+                    }
 
-
-                    framer.append(&buf[..n]);
-                    let complete_frames = framer.extract_frames(scheme);
-
-                    for frame in complete_frames {
-                        let parsed = crate::commands::parser::decoder::decode_frame(&frame, scheme);
-                        if !parsed.is_empty() {
-                            parsed_batch.push(parsed);
+                    // 批量喂数据进各个协议分光仪
+                    for p in &mut active_parsers {
+                        p.framer.append(&buf[..n]);
+                        let complete_frames = p.framer.extract_frames(&p.scheme);
+                        for frame in complete_frames {
+                            let parsed = crate::commands::parser::decoder::decode_frame(&frame, &p.scheme);
+                            if !parsed.is_empty() {
+                                parsed_batch.push(parsed);
+                            }
                         }
                     }
 

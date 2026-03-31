@@ -88,8 +88,8 @@ export const SideBar = ({ activeView, onViewChange, editorLayout }: SideBarProps
             'commands': t('sidebar.commands'),
             'virtual-port': t('sidebar.virtualPort'),
             'auto-reply': t('sidebar.autoReply'),
-            'parser': t('sidebar.parser') || '数据解析',
-            'dashboard': '仪表盘库',
+            'parser': t('sidebar.parser'),
+            'dashboard': t('sidebar.dashboard'),
         };
         const translated = viewMap[activeView];
         if (translated) return translated;

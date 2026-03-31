@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { LayoutTemplate, Activity, CircleGauge, SlidersHorizontal, MousePointerClick } from 'lucide-react';
 import { useDashboardStore, type WidgetType } from '../../store/useDashboardStore';
+import { useI18n } from '../../context/I18nContext';
 
 // ─── 滚动条 ────────────────────────────────────
 const SCROLL_CSS = `
@@ -17,15 +18,15 @@ const SCROLL_CSS = `
 `;
 
 // ─── 组件模板定义 ──────────────────────────────
-const DISPLAY_WIDGETS: Array<{ type: WidgetType; label: string; icon: React.ReactNode; desc: string }> = [
-    { type: 'ValueWidget',     label: 'Monitor Value',  icon: <LayoutTemplate size={14} />,     desc: '大幅醒目数值展示' },
-    { type: 'LineChartWidget', label: 'uPlot Waveform', icon: <Activity size={14} />,           desc: '极速实时波形渲染' },
-    { type: 'GaugeWidget',     label: 'Dial Gauge',     icon: <CircleGauge size={14} />,        desc: '矢量指针仪表盘' },
+const getDisplayWidgets = (t: (k: any) => string): Array<{ type: WidgetType; label: string; icon: React.ReactNode; desc: string }> => [
+    { type: 'ValueWidget',     label: t('dashboardSidebar.widgets.monitorValue'),  icon: <LayoutTemplate size={14} />,     desc: t('dashboardSidebar.widgets.monitorValueDesc') },
+    { type: 'LineChartWidget', label: t('dashboardSidebar.widgets.uplotWaveform'), icon: <Activity size={14} />,           desc: t('dashboardSidebar.widgets.uplotWaveformDesc') },
+    { type: 'GaugeWidget',     label: t('dashboardSidebar.widgets.dialGauge'),     icon: <CircleGauge size={14} />,        desc: t('dashboardSidebar.widgets.dialGaugeDesc') },
 ];
 
-const CONTROL_WIDGETS: Array<{ type: WidgetType; label: string; icon: React.ReactNode; desc: string }> = [
-    { type: 'SliderWidget',    label: 'Control Slider', icon: <SlidersHorizontal size={14} />, desc: '闭环拖拽式滑块' },
-    { type: 'ButtonWidget',    label: 'Action Button',  icon: <MousePointerClick size={14} />, desc: '点动快速下发按钮' },
+const getControlWidgets = (t: (k: any) => string): Array<{ type: WidgetType; label: string; icon: React.ReactNode; desc: string }> => [
+    { type: 'SliderWidget',    label: t('dashboardSidebar.widgets.controlSlider'), icon: <SlidersHorizontal size={14} />, desc: t('dashboardSidebar.widgets.controlSliderDesc') },
+    { type: 'ButtonWidget',    label: t('dashboardSidebar.widgets.actionButton'),  icon: <MousePointerClick size={14} />, desc: t('dashboardSidebar.widgets.actionButtonDesc') },
 ];
 
 // ─── 单个组件模板卡片 ──────────────────────────
@@ -49,8 +50,7 @@ const WidgetCard: React.FC<{
         </div>
         {/* 拖拽提示 */}
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            className="flex-shrink-0 opacity-20 group-hover:opacity-50 transition-opacity"
-            style={{ color: 'var(--app-foreground)' }}>
+            className="flex-shrink-0 opacity-20 group-hover:opacity-50 transition-opacity text-[var(--app-foreground)]">
             <circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/>
             <circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/>
             <circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/>
@@ -69,6 +69,7 @@ const SectionTitle: React.FC<{ label: string; en: string }> = ({ label, en }) =>
 //  DashboardSidebar 主组件
 // ══════════════════════════════════════════════
 export const DashboardSidebar: React.FC = () => {
+    const { t } = useI18n();
     const draggingWidget = useDashboardStore(s => s.draggingWidget);
     const setDraggingWidget = useDashboardStore(s => s.setDraggingWidget);
     const [mousePos, setMousePos] = useState({ x: -999, y: -999 });
@@ -90,7 +91,9 @@ export const DashboardSidebar: React.FC = () => {
         window.addEventListener('pointerup', onUp);
     };
 
-    const allWidgets = [...DISPLAY_WIDGETS, ...CONTROL_WIDGETS];
+    const displayWidgets = getDisplayWidgets(t);
+    const controlWidgets = getControlWidgets(t);
+    const allWidgets = [...displayWidgets, ...controlWidgets];
 
     return (
         <div className="flex flex-col h-full overflow-hidden bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]">
@@ -100,9 +103,9 @@ export const DashboardSidebar: React.FC = () => {
             <div className="flex-1 overflow-y-auto overscroll-contain db-scroll flex flex-col gap-0">
                 {/* DISPLAY 区 */}
                 <section>
-                    <SectionTitle label="展示" en="DISPLAY" />
+                    <SectionTitle label={t('dashboardSidebar.display')} en="DISPLAY" />
                     <div className="px-3 py-2 space-y-1.5">
-                        {DISPLAY_WIDGETS.map(w => (
+                        {displayWidgets.map(w => (
                             <WidgetCard key={w.type} {...w} onPointerDown={onPointerDown} />
                         ))}
                     </div>
@@ -110,9 +113,9 @@ export const DashboardSidebar: React.FC = () => {
 
                 {/* CONTROL 区 */}
                 <section>
-                    <SectionTitle label="控制" en="CONTROL" />
+                    <SectionTitle label={t('dashboardSidebar.control')} en="CONTROL" />
                     <div className="px-3 py-2 space-y-1.5">
-                        {CONTROL_WIDGETS.map(w => (
+                        {controlWidgets.map(w => (
                             <WidgetCard key={w.type} {...w} onPointerDown={onPointerDown} />
                         ))}
                     </div>
@@ -132,20 +135,20 @@ export const DashboardSidebar: React.FC = () => {
                                 top: mousePos.y + 14,
                                 pointerEvents: 'none',
                                 zIndex: 99999,
-                                opacity: 0.85,
+                                opacity: 0.92,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 8,
                                 padding: '6px 12px',
-                                borderRadius: 8,
-                                background: 'rgba(15,15,20,0.92)',
-                                border: '1px solid var(--accent-color)',
+                                borderRadius: 4,
+                                background: 'var(--st-menu-bg)',
+                                border: '1px solid var(--focus-border-color)',
                                 backdropFilter: 'blur(12px)',
-                                boxShadow: '0 0 20px rgba(56,189,248,0.3)',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                             }}
                         >
-                            <span style={{ color: 'var(--accent-color)' }}>{tpl.icon}</span>
-                            <span className="text-xs font-semibold" style={{ color: 'var(--app-foreground)', whiteSpace: 'nowrap' }}>{tpl.label}</span>
+                            <span className="text-[var(--focus-border-color)]">{tpl.icon}</span>
+                            <span className="text-xs font-semibold text-[var(--app-foreground)] whitespace-nowrap">{tpl.label}</span>
                         </div>,
                         document.body
                     );

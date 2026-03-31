@@ -101,7 +101,7 @@ export const ModuleManagerSidebar = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--module-manager-bg)]" data-component="module-manager-sidebar">
+        <div className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]" data-component="module-manager-sidebar">
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {/* 核心功能 */}
                 <SectionTitle title={t('modules.core')} count={coreDescriptors.length} />

@@ -1,6 +1,6 @@
 /**
  * window.rs
- * 窗口管理 Command — 置顶控制 + 背景色同步。
+ * 窗口管理 Command — 置顶控制 + 背景色同步 + 开发者工具。
  */
 use serde_json::Value;
 
@@ -52,5 +52,12 @@ pub fn window_set_bg_color(window: tauri::Window, color: String) -> Result<Value
             }
         }
     }
+    Ok(serde_json::json!({ "success": true }))
+}
+
+/// 打开 WebView2 开发者工具（在 devtools feature 启用时生效，release 版本同样可用）
+#[tauri::command]
+pub fn window_open_devtools(window: tauri::WebviewWindow) -> Result<Value, String> {
+    window.open_devtools();
     Ok(serde_json::json!({ "success": true }))
 }

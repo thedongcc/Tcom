@@ -4,7 +4,7 @@
  * 选项菜单使用通用 MonitorOptionsPanel，隐藏 CRC 和接收分包（MQTT 不需要）。
  */
 import React from 'react';
-import { Trash2, ArrowDownToLine, Menu, Unplug, Plug, TerminalSquare, LayoutDashboard } from 'lucide-react';
+import { Trash2, ArrowDownToLine, Menu, Unplug, Plug } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { LogEntry } from '../../types/session';
@@ -20,8 +20,6 @@ interface MqttMonitorToolbarProps {
     filterMode: 'all' | 'rx' | 'tx';
     setFilterMode: (mode: 'all' | 'rx' | 'tx') => void;
     // 视图模式
-    showDashboard: boolean;
-    setShowDashboard: (view: boolean) => void;
     viewMode: 'text' | 'hex' | 'json' | 'base64';
     setViewMode: (mode: 'text' | 'hex' | 'json' | 'base64') => void;
     // 选项菜单
@@ -64,7 +62,6 @@ interface MqttMonitorToolbarProps {
 export const MqttMonitorToolbar = React.memo(({
     isConnected, host, port, logs,
     filterMode, setFilterMode,
-    showDashboard, setShowDashboard,
     viewMode, setViewMode,
     showOptionsMenu, setShowOptionsMenu,
     encoding, setEncoding,

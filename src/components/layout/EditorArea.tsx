@@ -88,7 +88,29 @@ export const EditorArea = ({ editorLayout, onShowSettings }: EditorAreaProps) =>
     const sessionManager = useSession();
     const { layout, activeGroupId, moveView, splitDrop } = editorLayout;
     const { t } = useI18n();
-    const { sessions } = sessionManager;
+    const { sessions, activeSessionId, setActiveSessionId } = sessionManager;
+
+    // 修复：启动时如果布局恢复了活动标签页，自动将其设为全局 activeSessionId
+    React.useEffect(() => {
+        if (!layout || !activeGroupId) return;
+
+        const traverse = (node: any): any => {
+            if (!node) return null;
+            if (node.id === activeGroupId) return node;
+            if (node.type === 'split') {
+                for (const child of node.children) {
+                    const found = traverse(child);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const activeNode = traverse(layout);
+        if (activeNode && activeNode.activeViewId && activeNode.activeViewId !== activeSessionId) {
+            setActiveSessionId(activeNode.activeViewId);
+        }
+    }, [layout, activeGroupId, activeSessionId, setActiveSessionId]);
 
     // DnD 逻辑
     const {

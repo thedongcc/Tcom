@@ -8,8 +8,9 @@
  * - SettingsComponents.tsx — FactoryResetDialog 对话框
  * - useSettingsActions.ts — 导入导出/重置等操作逻辑
  */
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore, Eye, Settings2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { Search, RotateCcw, Download, Upload, FolderOpen, FileJson, Settings, Package, ArchiveRestore, Eye, Settings2, Bug } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useI18n } from '../../context/I18nContext';
 import { confirm } from '../../services/confirmManager';
@@ -36,25 +37,41 @@ interface LiveSliderProps {
     onChange: (val: number) => void;
     liveUpdate?: (val: number) => void;
 }
-const LiveSlider = ({ label, value, min, max, unit = '', onChange, liveUpdate }: LiveSliderProps) => (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-color)] last:border-b-0">
-        <span className="text-[13px] text-[var(--st-settings-text)] font-semibold flex-1">{label}</span>
-        <div className="flex items-center gap-2 flex-shrink-0">
-            <input
-                type="range"
-                min={min} max={max}
-                value={value}
-                className="w-28 accent-[var(--accent-color)]"
-                onChange={e => {
-                    const v = Number(e.target.value);
-                    liveUpdate?.(v);
-                    onChange(v);
-                }}
-            />
-            <span className="text-[12px] text-[var(--input-placeholder-color)] w-12 text-right tabular-nums">{value}{unit}</span>
+const LiveSlider = ({ label, value, min, max, unit = '', onChange, liveUpdate }: LiveSliderProps) => {
+    const startPeek = (e: React.PointerEvent) => {
+        document.body.classList.add('settings-peek-mode');
+        const row = (e.target as HTMLElement).closest('[data-peek-row]');
+        if (row) row.classList.add('peek-active-slider');
+    };
+
+    const endPeek = () => {
+        document.body.classList.remove('settings-peek-mode');
+        document.querySelectorAll('.peek-active-slider').forEach(el => el.classList.remove('peek-active-slider'));
+    };
+
+    return (
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-color)] last:border-b-0" data-peek-row>
+            <span className="text-[13px] text-[var(--st-settings-text)] font-semibold flex-1">{label}</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <input
+                    type="range"
+                    min={min} max={max}
+                    value={value}
+                    className="w-28 accent-[var(--accent-color)] cursor-grab active:cursor-grabbing"
+                    onChange={e => {
+                        const v = Number(e.target.value);
+                        liveUpdate?.(v);
+                        onChange(v);
+                    }}
+                    onPointerDown={startPeek}
+                    onPointerUp={endPeek}
+                    onPointerCancel={endPeek}
+                />
+                <span className="text-[12px] text-[var(--input-placeholder-color)] w-12 text-right tabular-nums">{value}{unit}</span>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ── 生成分组 ID ──
 const sectionId = (index: number) => `settings-section-${index}`;
@@ -79,6 +96,7 @@ export const SettingsEditor = () => {
 
     // 操作函数和字体列表（委托给 Hook）
     const { handleImport, handleDownload, handleReset, performFactoryReset, finalFontList } = useSettingsActions();
+
 
     // ── Ghost Peek Mode
     useEffect(() => {
@@ -112,7 +130,8 @@ export const SettingsEditor = () => {
     // 显示状态栏设置展开控制
     const [showStatusBarOptions, setShowStatusBarOptions] = useState(false);
 
-    const settingSections: SettingSection[] = [
+    const settingSections: SettingSection[] = useMemo(() => {
+        const sections = [
         {
             title: t('settings.groups.appearance'),
             items: [
@@ -307,6 +326,8 @@ export const SettingsEditor = () => {
                                         <Tooltip content={t('settings.logFormat.bgImagePeek')} position="top">
                                             <button
                                                 onPointerDown={() => document.body.classList.add('settings-peek-mode')}
+                                                onPointerUp={() => document.body.classList.remove('settings-peek-mode')}
+                                                onPointerCancel={() => document.body.classList.remove('settings-peek-mode')}
                                                 className="p-1.5 rounded transition-colors cursor-grab active:cursor-grabbing text-[var(--input-placeholder-color)] hover:text-[var(--st-settings-text)] hover:bg-[var(--list-hover-background)]"
                                             >
                                                 <Eye size={14} />
@@ -541,9 +562,27 @@ export const SettingsEditor = () => {
                         </button>
                     ),
                 },
+                {
+                    label: '开发者工具',
+                    description: '打开 WebView2 调试控制台，可查看日志、元素、网络请求等',
+                    render: () => (
+                        <button
+                            onClick={() => invoke('window_open_devtools').catch(console.error)}
+                            className="flex items-center gap-1.5 bg-[var(--list-hover-background)] hover:bg-[var(--list-active-background)] text-[var(--st-settings-text)] px-3 py-1.5 rounded-[3px] text-xs transition-colors border border-[var(--border-color)]"
+                        >
+                            <Bug size={13} />
+                            打开 DevTools
+                        </button>
+                    ),
+                },
             ],
         },
-    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ]; // sections
+        return sections;
+    }, [t, config, availableThemes, showBgSettings, showStatusBarOptions, crashReportOn,
+        setShowBgSettings, setShowStatusBarOptions, setCrashReportOn, updateConfig, updateUI, setTheme,
+        loadThemes, JITAlphaUpdate, finalFontList, setResetInput, setShowFactoryReset]);
 
     // 目录数据：外观 → 布局 → 字体排版 → 功能模块 → 日志格式 → 快捷键 → 隐私 → 数据备份 → Danger Zone
     const MODULE_INDEX = 3; // 功能模块插在第 3 个位置（字体排版之后）

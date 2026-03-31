@@ -22,6 +22,8 @@ export const zhCN = {
         duplicate: '克隆',
         addCommand: '添加到命令',
         addToCommand: '添加到命令库',
+        collapse: '折叠',
+        expand: '展开',
     },
 
     // 设置页面
@@ -256,6 +258,7 @@ export const zhCN = {
         sessionName: '会话名称',
         sessionNamePlaceholder: '输入会话名称...',
         sessionNameExists: '该名称已被使用，请输入其他名称',
+        manageProfiles: '管理配置档案...',
         recentWorkspaces: '切换配置档案',
         noWorkspaceOpen: '未加载配置档案',
         openWorkspace: '新建配置档案',
@@ -274,6 +277,7 @@ export const zhCN = {
 
     // 串口
     serial: {
+        parser: '解析引擎绑定',
         connect: '连接',
         disconnect: '断开',
         send: '发送',
@@ -659,11 +663,21 @@ export const zhCN = {
         parser: '数据解析',
         dashboard: '组件库',
         schemes: '方案',
+        unnamedScheme: '未命名方案',
         fields: '字段',
         addScheme: '新建方案',
         addField: '添加字段',
         duplicateScheme: '复制方案',
         running: '运行中',
+        schemeActive: '当前激活方案',
+        activateScheme: '点击激活此方案',
+        noFields: '暂无字段',
+        noRules: '暂无规则，右键可添加',
+        clearData: '清空显示数据',
+        deleteWidget: '删除组件',
+        dragOrder: '拖拽调整顺序',
+        ruleEnabled: '规则已启用（点击禁用）',
+        ruleDisabled: '规则已禁用（点击启用）',
     },
 
     // 面板区域
@@ -692,6 +706,9 @@ export const zhCN = {
         serialConfig: '串口配置',
         mqttConfig: 'MQTT 配置',
         monitorConfig: '监控配置',
+        dashboardTitle: 'HMI 组态画板',
+        hmiMessage: '当前为组态画板页面。',
+        hmiInstruction: '请直接点击画板右侧上方的「LOCKED/EDITING」按钮切换操作模式。'
     },
 
 
@@ -798,6 +815,7 @@ export const zhCN = {
     // 自动回复
     autoReply: {
         title: '自动回复',
+        rules: '规则',
         noRules: '暂无规则，点击下方添加',
         addRule: '添加规则',
         untitled: '未命名规则',
@@ -819,6 +837,24 @@ export const zhCN = {
         enabled: '已开启',
         disabled: '已关闭',
         rulesActive: '条规则生效',
+    },
+
+    // 仪表盘侧边栏
+    dashboardSidebar: {
+        display: '展示',
+        control: '控制',
+        widgets: {
+            monitorValue: '数值展示',
+            monitorValueDesc: '大幅醒目数值展示',
+            uplotWaveform: '实时波形',
+            uplotWaveformDesc: '极速实时波形渲染',
+            dialGauge: '指针仪表',
+            dialGaugeDesc: '矢量指针仪表盘',
+            controlSlider: '控制滑块',
+            controlSliderDesc: '闭环拖拽式滑块',
+            actionButton: '动作按钮',
+            actionButtonDesc: '点动快速下发按钮'
+        }
     },
 } as const;
 

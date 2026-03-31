@@ -10,6 +10,10 @@ import { Pipette } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { useI18n } from '../../context/I18nContext';
 import { EyedropperViewer } from './EyedropperViewer';
+import { invoke } from '@tauri-apps/api/core';
+import { listen, emit } from '@tauri-apps/api/event';
+import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 // GlobalWindow definition merged into vite-env.d.ts
 
@@ -149,23 +153,20 @@ export const ColorPickerContent: React.FC<{
         const PICKER_W = 248; // 回退至经典 248 宽度
         const VIEWER_W = 220; // 右侧面版宽
         const w = isPicking ? PICKER_W + VIEWER_W : PICKER_W;
-        import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
-            getCurrentWindow().setSize(new LogicalSize(w, 284)).catch(() => {});
-        });
+        getCurrentWindow().setSize(new LogicalSize(w, 284)).catch(() => {});
     }, [isPicking, isStandalone]);
 
     const handleEyedropper = async () => {
         setIsPicking(!isPicking);
         if (!isPicking) {
             try {
-                const { invoke } = await import('@tauri-apps/api/core');
                 await invoke('eyedropper_mini_open');
             } catch (err) {
                 console.error('[EyeDropper] mini open failed:', err);
                 setIsPicking(false);
             }
         } else {
-            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
+            invoke('eyedropper_mini_close').catch(() => {});
         }
     };
 
@@ -361,12 +362,12 @@ export const ColorPickerContent: React.FC<{
                     <EyedropperViewer
                         onConfirm={c => {
                             onChange(c);
-                            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
+                            invoke('eyedropper_mini_close').catch(() => {});
                             setIsPicking(false);
                         }}
                         onCancel={() => {
                             setIsPicking(false);
-                            import('@tauri-apps/api/core').then(({ invoke }) => invoke('eyedropper_mini_close')).catch(() => {});
+                            invoke('eyedropper_mini_close').catch(() => {});
                         }}
                     />
                 </div>
@@ -377,14 +378,12 @@ export const ColorPickerContent: React.FC<{
 
 // ── ColorPickerTrigger（触发器色块）─────────────────────────
 
-export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: string) => void }> = ({ value, onChange }) => {
+export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: string) => void; shape?: 'rect' | 'circle'; size?: number }> = ({ value, onChange, shape = 'rect', size }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
 
     const handleClick = async () => {
         try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            const { listen, emit } = await import('@tauri-apps/api/event');
-            const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+
 
             if (triggerRef.current) {
                 const rect = triggerRef.current.getBoundingClientRect();
@@ -437,21 +436,22 @@ export const ColorPickerTrigger: React.FC<{ value: string; onChange: (val: strin
                     ref={triggerRef}
                     onClick={handleClick}
                     style={{
-                        width: 28,
-                        height: 20,
-                        borderRadius: 4,
+                        width: size ?? (shape === 'circle' ? 24 : 28),
+                        height: size ?? (shape === 'circle' ? 24 : 20),
+                        borderRadius: shape === 'circle' ? '50%' : 4,
                         border: '1px solid var(--border-color)',
                         cursor: 'pointer',
-                        padding: 2,
+                        padding: shape === 'circle' ? 2 : 2,
                         background: 'rgba(0,0,0,0.2)',
                         flexShrink: 0,
                     }}
                 >
                     {/* 透明格纹 + 颜色层 */}
                     <div style={{
-                        width: '100%', height: '100%', borderRadius: 2,
+                        width: '100%', height: '100%', borderRadius: shape === 'circle' ? '50%' : 2,
                         backgroundImage: 'conic-gradient(#333 0.25turn, #444 0.25turn 0.5turn, #333 0.5turn 0.75turn, #444 0.75turn)',
                         backgroundSize: '4px 4px',
+                        overflow: 'hidden',
                     }}>
                         <div style={{ width: '100%', height: '100%', backgroundColor: value }} />
                     </div>

@@ -54,7 +54,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--monitor-config-bg)] text-[var(--monitor-config-text)]" data-component="monitor-config">
+        <div className="flex flex-col h-full bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]" data-component="monitor-config">
             <div className="px-4 py-2 flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
                 {/* 未开启虚拟串口功能时显示提示 */}
                 {(!monitorEnabled || !isAdmin) && (
@@ -107,7 +107,7 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                         </div>
 
                         {monitorConfig.pairedPort && (
-                            <div className="px-2 py-1.5 bg-[var(--input-background)] border border-[var(--widget-border-color)] rounded-[3px] flex items-center justify-between shadow-sm">
+                            <div className="px-2 py-1.5 bg-[var(--input-background)] border border-[var(--border-color)] rounded-sm flex items-center justify-between">
                                 <span className="text-[11px] text-[var(--activitybar-inactive-foreground)] font-medium">{t('monitor.internalBridgePort')}</span>
                                 <span className="text-[12px] font-mono text-[var(--st-status-success)] font-bold">{monitorConfig.pairedPort}</span>
                             </div>
@@ -152,11 +152,11 @@ export const MonitorConfigPanel = ({ session }: MonitorConfigPanelProps) => {
                     </div>
 
                     <Switch
-                            label={t('monitor.autoDestroyPair')}
-                            checked={monitorConfig.autoDestroyPair ?? false}
-                            onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
-                            disabled={isConnected}
-                        />
+                        label={t('monitor.autoDestroyPair')}
+                        checked={monitorConfig.autoDestroyPair ?? false}
+                        onChange={() => updateConfig({ autoDestroyPair: !monitorConfig.autoDestroyPair })}
+                        disabled={isConnected}
+                    />
 
                     {/* Baud Rate & Params for Physical Port */}
                     <div className="flex flex-col gap-1">

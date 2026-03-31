@@ -7,6 +7,7 @@
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { X, ChevronDown, Palette, Save, RotateCcw, Search, Crosshair } from 'lucide-react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { componentTokenMap } from '../../themes/componentTokenMap';
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
@@ -124,8 +125,7 @@ export const ThemeColorEditor: React.FC<Props> = ({ isOpen, onClose }) => {
                         if (e.button !== 0) return;
                         const target = e.target as HTMLElement;
                         if (target.closest('button')) return;
-                        e.preventDefault();
-                        import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().startDragging());
+                        getCurrentWindow().startDragging();
                     }}
                 >
                     <div className="flex items-center gap-2">

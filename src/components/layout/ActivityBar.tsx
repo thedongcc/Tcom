@@ -8,7 +8,7 @@ import { Files, Box, Settings, Monitor } from 'lucide-react';
 import { useFeatureManager } from '../../context/FeatureContextShared';
 import { FEATURE_REGISTRY } from '../../features/registry';
 import { useI18n } from '../../context/I18nContext';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettingsModal } from '../../context/SettingsContext';
 import { Tooltip } from '../common/Tooltip';
 import { LineChart, LayoutDashboard } from 'lucide-react';
 import { useDashboardStore } from '../../store/useDashboardStore';
@@ -57,7 +57,7 @@ const DEFAULT_ITEMS = [
 export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
     const { features } = useFeatureManager();
     const { t } = useI18n();
-    const { openSettings } = useSettings();
+    const { openSettings } = useSettingsModal();
     const { showDashboard } = useDashboardStore();
 
     // 合并默认项 + 激活的功能模块
@@ -66,8 +66,9 @@ export const ActivityBar = ({ activeView, onViewChange }: ActivityBarProps) => {
         const translatedDefaults = DEFAULT_ITEMS.map(item => {
             let translatedLabel = item.label;
             if (item.id === 'explorer') translatedLabel = t('sidebar.sessions');
+            else if (item.id === 'dashboard') translatedLabel = t('sidebar.dashboard');
             else if (item.id === 'serial') translatedLabel = t('sidebar.configuration');
-            else if (item.id === 'parser') translatedLabel = t('sidebar.parser') || '数据解析';
+            else if (item.id === 'parser') translatedLabel = t('sidebar.parser');
             return { ...item, label: translatedLabel };
         });
 

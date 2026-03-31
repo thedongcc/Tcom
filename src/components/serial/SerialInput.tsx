@@ -82,7 +82,7 @@ export const SerialInput = ({
 
     const editorProps = useMemo(() => ({
         attributes: {
-            class: "absolute inset-0 bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-text z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium h-fit flex-1",
+            class: "relative w-full h-full bg-transparent text-[var(--input-foreground)] caret-[var(--app-foreground)] select-text z-10 p-2 break-all whitespace-pre-wrap outline-none border-none resize-none font-medium overflow-y-auto",
             style: `font-size: ${fontSize}px; font-family: ${fontFamily === 'mono' ? 'var(--font-mono)' : fontFamily === 'AppCoreFont' ? 'AppCoreFont' : (fontFamily || 'var(--st-font-family)')};`
         },
         // 键盘输入过滤
@@ -226,11 +226,11 @@ export const SerialInput = ({
             {/* 输入区域 */}
             <div className="flex gap-2 h-[96px]">
                 <div
-                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] rounded-sm focus-within:border-[var(--st-input-focus-border)] cursor-text flex flex-col overflow-y-auto bg-cover bg-center"
+                    className="flex-1 bg-[var(--st-input-bg,var(--input-background))] border border-[var(--st-input-border)] rounded-sm focus-within:border-[var(--st-input-focus-border)] cursor-text relative overflow-hidden bg-cover bg-center"
                     onClick={() => editor?.commands.focus()}
                     style={{ backgroundImage: 'var(--st-input-bg-img)' }}
                 >
-                    <EditorContent editor={editor} className="flex-1 outline-none" />
+                    <EditorContent editor={editor} className="absolute inset-0 overflow-y-auto" />
                 </div>
 
                 {!hideExtras && (

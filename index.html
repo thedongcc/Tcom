@@ -10,55 +10,38 @@
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tcom</title>
+  <link rel="stylesheet" href="/skeleton.css" />
 </head>
 
 <body spellcheck="false">
-  <!-- ⚡ 同步从 localStorage 读取主题颜色，避免 loading 界面颜色闪烁 -->
-  <script src="/src/boot-theme.js"></script>
+  <!-- ⚡ 同步从 localStorage 读取主题颜色，避免 loading 界面颜色闪烁（内联避免 Release 路径失效） -->
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('tcom-settings')||'{}');var id=s.theme||'dark';var d=id!=='light';var r=document.documentElement;r.style.setProperty('--loading-bg',d?'#1e1e1e':'#ffffff');r.style.setProperty('--loading-titlebar',d?'#3c3c3c':'#dddddd');r.style.setProperty('--loading-text',d?'#cccccc':'#616161');r.style.setProperty('--loading-spinner-track',d?'#3c3c3c':'#e0e0e0');r.style.backgroundColor=d?'#1e1e1e':'#ffffff';}catch(e){}})();</script>
   <div id="root">
-    <style>
-      /* 骨架屏变量默认值（被 boot-theme.js 覆盖为用户主题颜色） */
-      :root {
-        --st-font-family: 'AppCoreFont', 'Microsoft YaHei', monospace;
-        --st-font-size: 15px;
-        --st-line-height: 1.5;
-        --loading-bg: #1e1e1e;
-        --loading-titlebar: #2d2d2d;
-        --loading-activitybar: #333333;
-        --loading-sidebar: #252526;
-        --loading-text: #888888;
-        --loading-spinner-track: #3c3c3c;
-        --loading-spinner-accent: #007acc;
-      }
-      body { margin: 0; overflow: hidden; background-color: var(--loading-bg); }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
-    </style>
     <!-- 骨架屏：拟真 IDE 布局（React 挂载后自动替换） -->
-    <div style="height:100vh;width:100vw;display:flex;flex-direction:column;overflow:hidden;background:var(--loading-bg);">
+    <div class="sk-container">
       <!-- 标题栏 -->
-      <div style="height:35px;background:var(--loading-titlebar);-webkit-app-region:drag;user-select:none;display:flex;align-items:center;padding:0 12px;flex-shrink:0;">
-        <span style="font-size:12px;color:var(--loading-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:0.7;">Tcom</span>
+      <div class="sk-titlebar">
+        <span class="sk-title">Tcom</span>
       </div>
       <!-- 主体 -->
-      <div style="display:flex;flex:1;overflow:hidden;">
+      <div class="sk-main">
         <!-- 活动栏 -->
-        <div style="width:48px;background:var(--loading-activitybar);flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;gap:18px;">
-          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite;"></div>
-          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite 0.3s;"></div>
-          <div style="width:22px;height:22px;border-radius:4px;background:var(--loading-spinner-track);animation:pulse 2s ease-in-out infinite 0.6s;"></div>
+        <div class="sk-activitybar">
+          <div class="sk-icon"></div>
+          <div class="sk-icon sk-icon-2"></div>
+          <div class="sk-icon sk-icon-3"></div>
         </div>
         <!-- 侧边栏 -->
-        <div style="width:250px;background:var(--loading-sidebar);flex-shrink:0;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;padding:10px;">
-          <div style="height:14px;width:60%;background:var(--loading-spinner-track);border-radius:3px;margin-bottom:16px;animation:pulse 2s ease-in-out infinite;"></div>
-          <div style="height:10px;width:80%;background:var(--loading-spinner-track);border-radius:2px;margin-bottom:8px;opacity:0.5;animation:pulse 2s ease-in-out infinite 0.2s;"></div>
-          <div style="height:10px;width:65%;background:var(--loading-spinner-track);border-radius:2px;margin-bottom:8px;opacity:0.4;animation:pulse 2s ease-in-out infinite 0.4s;"></div>
-          <div style="height:10px;width:75%;background:var(--loading-spinner-track);border-radius:2px;opacity:0.3;animation:pulse 2s ease-in-out infinite 0.6s;"></div>
+        <div class="sk-sidebar">
+          <div class="sk-line-1"></div>
+          <div class="sk-line-2"></div>
+          <div class="sk-line-3"></div>
+          <div class="sk-line-4"></div>
         </div>
         <!-- 主区域 -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-          <div style="width:28px;height:28px;border:3px solid var(--loading-spinner-track);border-top-color:var(--loading-spinner-accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
-          <div style="font-size:13px;color:var(--loading-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:0.5px;">Loading Tcom Workstation...</div>
+        <div class="sk-content">
+          <div class="sk-spinner"></div>
+          <div class="sk-text">Loading Tcom Workstation...</div>
         </div>
       </div>
     </div>

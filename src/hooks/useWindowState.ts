@@ -9,6 +9,7 @@
  */
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 
 const WINDOW_STATE_KEY = 'tcom-window-state';
 
@@ -27,7 +28,6 @@ export async function restoreWindowState(): Promise<void> {
         if (!saved) return;
         const state: WindowState = JSON.parse(saved);
         const win = getCurrentWindow();
-        const { PhysicalPosition, PhysicalSize } = await import('@tauri-apps/api/dpi');
 
         if (state.maximized) {
             // 先恢复非最大化状态的位置/尺寸（这样取消最大化时位置正确）

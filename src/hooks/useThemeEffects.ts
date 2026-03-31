@@ -6,8 +6,8 @@
  * Glass 主题的面板色从出厂就是 rgba() 半透明值，无需 JS 动态混色。
  * 普通 Dark/Light 主题不支持背景图，不需要透明度处理。
  */
-import { useEffect } from 'react';
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { useEffect, useRef } from 'react';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import type { ThemeConfig } from '../types/theme';
 import type { ThemeDefinition } from '../themes';
 import { applyTheme } from '../themes';
@@ -80,20 +80,24 @@ interface UseThemeEffectsParams {
 }
 
 export function useThemeEffects({ config, availableThemes }: UseThemeEffectsParams): void {
-    useEffect(() => {
-        const root = document.documentElement;
+    // 记录上次实际 apply 的主题 ID，避免 availableThemes 更新时重复写入全量变量
+    const lastAppliedThemeIdRef = useRef<string>('');
 
-        // 1. 应用主题
+    useEffect(() => {
+        const _t0 = performance.now();
+        const root = document.documentElement;
+        const themeChanged = config.theme !== lastAppliedThemeIdRef.current;
+
+        // 1. 应用主题（僅在主题真正变更时，或首次有可用主题定义时）
         const theme = availableThemes.find(t => t.id === config.theme);
-        if (theme) {
+        if (theme && themeChanged) {
+            lastAppliedThemeIdRef.current = config.theme;
             applyTheme(theme);
 
             // 同步窗口原生背景色
             const bgColor = getComputedStyle(root).getPropertyValue('--editor-background').trim();
             if (bgColor) {
-                import('@tauri-apps/api/core').then(({ invoke }) => {
-                    invoke('window_set_bg_color', { color: bgColor }).catch(() => {});
-                });
+                invoke('window_set_bg_color', { color: bgColor }).catch(() => {});
             }
         }
 
@@ -123,5 +127,13 @@ export function useThemeEffects({ config, availableThemes }: UseThemeEffectsPara
                 }
             });
         }
+
+        console.log(
+            `%c[Theme] useThemeEffects 完成 — ${(performance.now() - _t0).toFixed(2)}ms`,
+            'color:#4FC1FF',
+            `| themeChanged=${themeChanged}`,
+            `| theme=${config.theme}`,
+            `| availableThemes=${availableThemes.length}`
+        );
     }, [config.theme, config.images, config.typography, availableThemes]);
 }

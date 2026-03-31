@@ -7,7 +7,7 @@
  * - 新增 ParserConfig（方案集合 + 激活 id）
  * - frame_length 改为可选的 min_frame_len（越界字段跳过，不再强制固定帧长）
  */
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
 // ─── DataType ─────────────────────────────────────────────────────────────────
@@ -45,6 +45,7 @@ pub struct FieldDef {
     pub data_type: DataType,
     #[serde(default = "default_multiplier")]
     pub multiplier: f64,
+    pub color: Option<String>,
 }
 
 fn default_multiplier() -> f64 { 1.0 }
@@ -97,9 +98,9 @@ impl ParserScheme {
             frame_header: vec![0xAA, 0x55],
             min_frame_len: Some(10),
             fields: vec![
-                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1 },
-                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0 },
-                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0 },
+                FieldDef { name: "pitch".into(), offset: 2, data_type: DataType::I16Be, multiplier: 0.1, color: None },
+                FieldDef { name: "temp".into(),  offset: 4, data_type: DataType::F32Le, multiplier: 1.0, color: None },
+                FieldDef { name: "pwm".into(),   offset: 8, data_type: DataType::U16Be, multiplier: 1.0, color: None },
             ],
             ui_meta: None,
         }
@@ -108,21 +109,40 @@ impl ParserScheme {
 
 // ─── ParserConfig（方案集合） ─────────────────────────────────────────────────
 
+fn flex_active_ids<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ActiveIds {
+        Single(Option<String>),
+        Multiple(Vec<String>),
+    }
+
+    match ActiveIds::deserialize(deserializer) {
+        Ok(ActiveIds::Single(Some(s))) => Ok(vec![s]),
+        Ok(ActiveIds::Single(None)) => Ok(vec![]),
+        Ok(ActiveIds::Multiple(v)) => Ok(v),
+        Err(_) => Ok(vec![]),
+    }
+}
+
 /// 解析器全局配置：包含所有方案，以及当前激活的方案 ID。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParserConfig {
     /// 所有解析方案列表
     pub schemes: Vec<ParserScheme>,
 
-    /// 当前激活方案的 ID（None = 无方案激活，不解析）
-    pub active_id: Option<String>,
+    /// 当前激活方案的 ID 列表（空 = 无方案激活，不解析）
+    #[serde(default, alias = "active_id", deserialize_with = "flex_active_ids")]
+    pub active_ids: Vec<String>,
 }
 
 impl ParserConfig {
-    /// 返回当前激活方案的引用（如果存在）
-    pub fn active_scheme(&self) -> Option<&ParserScheme> {
-        let id = self.active_id.as_deref()?;
-        self.schemes.iter().find(|s| s.id == id)
+    /// 返回当前挂载的所有激活方案（无锁并列读取支持）
+    pub fn active_schemes(&self) -> Vec<&ParserScheme> {
+        self.schemes.iter().filter(|s| self.active_ids.contains(&s.id)).collect()
     }
 
     /// 构造含一个默认测试方案的初始配置
@@ -131,7 +151,7 @@ impl ParserConfig {
         let id = scheme.id.clone();
         Self {
             schemes: vec![scheme],
-            active_id: Some(id),
+            active_ids: vec![id],
         }
     }
 }
@@ -187,10 +207,10 @@ mod tests {
     #[test]
     fn parser_config_active_scheme_returns_correct() {
         let cfg = ParserConfig::default_config();
-        let active = cfg.active_scheme();
-        assert!(active.is_some(), "默认配置应有激活方案");
-        assert_eq!(active.unwrap().name, "默认测试方案");
-        assert_eq!(active.unwrap().fields.len(), 3);
+        let actives = cfg.active_schemes();
+        assert_eq!(actives.len(), 1, "默认配置应有激活方案");
+        assert_eq!(actives[0].name, "默认测试方案");
+        assert_eq!(actives[0].fields.len(), 3);
     }
 
     #[test]
@@ -199,7 +219,7 @@ mod tests {
         let json = serde_json::to_string(&cfg).expect("序列化不应失败");
         let restored: ParserConfig = serde_json::from_str(&json).expect("反序列化不应失败");
         assert_eq!(restored.schemes.len(), 1);
-        assert_eq!(restored.active_id, cfg.active_id);
+        assert_eq!(restored.active_ids, cfg.active_ids);
     }
 
     #[test]

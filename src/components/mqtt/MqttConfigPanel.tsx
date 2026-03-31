@@ -10,6 +10,7 @@ import { Play, Square, ChevronDown, ChevronRight, RefreshCw, Check } from 'lucid
 import { useI18n } from '../../context/I18nContext';
 import { Tooltip } from '../common/Tooltip';
 import { MqttTopicList } from './MqttTopicList';
+import { CustomSelect } from '../common/CustomSelect';
 
 interface MqttConfigPanelProps {
     config: MqttSessionConfig;
@@ -20,8 +21,8 @@ interface MqttConfigPanelProps {
     onDisconnectToken: () => void;
 }
 
-// 公共输入框样式
-const inputCls = 'w-full bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] text-[12px] p-1.5 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50';
+// 公共输入框样式 — h-7 与 CustomSelect 等高
+const inputCls = 'w-full h-7 bg-[var(--input-background)] border border-[var(--input-border-color)] text-[var(--input-foreground)] text-[12px] px-2 outline-none rounded-sm focus:border-[var(--focus-border-color)] disabled:opacity-50 transition-colors';
 const labelCls = 'text-[11px] text-[var(--serial-config-label)] opacity-80 font-medium';
 
 
@@ -41,11 +42,11 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
     const isLocked = isConnected || isConnecting;
 
     return (
-        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--mqtt-config-bg)] text-[var(--mqtt-config-text)]" data-component="mqtt-config">
+        <div className="flex flex-col h-full overflow-y-auto overflow-x-hidden min-w-0 bg-[var(--serial-config-bg)] text-[var(--serial-config-text)]" data-component="mqtt-config">
             {/* 连接设置 */}
             <div className="border-b border-[var(--border-color)] shrink-0">
                 <div
-                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--mqtt-config-bg)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
+                    className="px-4 py-2 text-[11px] font-bold tracking-wide uppercase bg-[var(--serial-config-bg)] sticky top-0 flex items-center gap-2 cursor-pointer hover:bg-[var(--list-hover-background)] border-b border-[var(--border-color)]"
                     onClick={toggleConnectionExpanded}
                 >
                     {isConnectionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -70,25 +71,21 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                         <div className="flex gap-2">
                             <div className="flex flex-col gap-1 w-[80px] shrink-0">
                                 <label className={labelCls}>{t('mqtt.protocol')}</label>
-                                <select
-                                    className={inputCls}
+                                <CustomSelect
+                                    items={['TCP', 'WS', 'WSS', 'SSL'].map(p => ({ label: p, value: p.toLowerCase() }))}
                                     value={config.protocol}
-                                    onChange={(e) => {
-                                        const newProto = e.target.value as 'tcp' | 'ws' | 'wss' | 'ssl';
+                                    onChange={(newProto) => {
+                                        const proto = newProto as 'tcp' | 'ws' | 'wss' | 'ssl';
                                         let newPort = config.port;
                                         const standards: Record<string, number> = { tcp: 1883, ssl: 8883, ws: 8083, wss: 8084 };
                                         const isStandard = Object.values(standards).includes(config.port);
                                         if (isStandard || config.port === 0) {
-                                            newPort = standards[newProto] || 1883;
+                                            newPort = standards[proto] || 1883;
                                         }
-                                        onUpdate({ protocol: newProto, port: newPort });
+                                        onUpdate({ protocol: proto, port: newPort });
                                     }}
                                     disabled={isLocked}
-                                >
-                                    {['tcp', 'ws', 'wss', 'ssl'].map(p => (
-                                        <option key={p} value={p}>{p.toUpperCase()}</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
                             <div className="flex flex-col gap-1 w-[70px] shrink-0">
                                 <label className={labelCls}>{t('mqtt.port')}</label>
@@ -126,7 +123,7 @@ export const MqttConfigPanel = ({ config, isConnected, isConnecting, onUpdate, o
                                     />
                                     <Tooltip content={t('mqtt.generateId')} position="bottom" wrapperClassName="flex">
                                         <button
-                                            className="px-2 bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--st-monitor-config-text)] text-[11px] rounded-sm shrink-0 disabled:opacity-50"
+                                            className="h-7 w-7 flex items-center justify-center bg-[var(--button-secondary-background)] hover:bg-[var(--button-secondary-hover-background)] text-[var(--button-foreground)] text-[14px] rounded-sm shrink-0 disabled:opacity-50 transition-colors"
                                             onClick={() => onUpdate({ clientId: `client-${Math.random().toString(16).substring(2, 8)}` })}
                                             disabled={isLocked}
                                         >

@@ -6,12 +6,12 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettingsModal } from '../../context/SettingsContext';
 import { SettingsEditor } from './SettingsEditor';
 import { useI18n } from '../../context/I18nContext';
 
 export const SettingsModal = () => {
-    const { isSettingsOpen, closeSettings } = useSettings();
+    const { isSettingsOpen, closeSettings } = useSettingsModal();
     const { t } = useI18n();
 
     // ESC 键退出设置
