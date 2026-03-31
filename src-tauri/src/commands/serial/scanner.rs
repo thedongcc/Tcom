@@ -26,11 +26,53 @@ pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
             let (tx, rx) = std::sync::mpsc::channel();
             let path2 = path.clone();
             std::thread::spawn(move || {
+                #[cfg(target_os = "windows")]
+                let result = {
+                    use std::os::windows::ffi::OsStrExt;
+                    use windows_sys::Win32::Storage::FileSystem::{CreateFileW, OPEN_EXISTING};
+                    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+
+                    // 修复路径对于 COM1-COM9 以外的格式 (如 \\.\COM10)
+                    let full_path = if path2.starts_with("COM") {
+                        format!("\\\\.\\{}", path2)
+                    } else {
+                        path2.clone()
+                    };
+
+                    let path_w: Vec<u16> = std::ffi::OsStr::new(&full_path)
+                        .encode_wide()
+                        .chain(std::iter::once(0))
+                        .collect();
+
+                    unsafe {
+                        let handle = CreateFileW(
+                            path_w.as_ptr(),
+                            0, // exclusively open for query (No GENERIC_READ/WRITE)
+                            0, // exclusively open (NO SHARE)
+                            std::ptr::null(),
+                            OPEN_EXISTING,
+                            0, // normal attributes
+                            std::ptr::null_mut(),
+                        );
+                        if handle != INVALID_HANDLE_VALUE {
+                            CloseHandle(handle);
+                            Ok(())
+                        } else {
+                            use windows_sys::Win32::Foundation::GetLastError;
+                            let err_code = GetLastError();
+                            let err_msg = format!("CreateFileW failed with OS error code: {}", err_code);
+                            Err(err_msg)
+                        }
+                    }
+                };
+
+                #[cfg(not(target_os = "windows"))]
                 let result = serialport::new(&path2, 9600)
                     .timeout(std::time::Duration::from_millis(10))
                     .open()
                     .map(|_| ())
                     .map_err(|e| e.to_string());
+
                 let _ = tx.send(result);
             });
             (path, rx)
@@ -114,14 +156,16 @@ pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
         }
     }
 
-    // 3. 等待所有并行检测线程结果（最多等 50ms/个，超时 = 认为 busy）
+    // 3. 等待所有并行检测线程结果（最多等 200ms/个，超时 = 认为 busy）
     // busy_map: None = 可用，Some(err_msg) = 被占用（含错误原因）
     let mut busy_map: std::collections::HashMap<String, Option<String>> = std::collections::HashMap::new();
     for (path, rx) in checks {
-        let err_msg = match rx.recv_timeout(std::time::Duration::from_millis(50)) {
+        let err_msg = match rx.recv_timeout(std::time::Duration::from_millis(200)) {
             Ok(Ok(())) => None,                            // 打开成功 = 可用
             Ok(Err(e)) => Some(e),                         // 打开失败 = 被占用，记录原因
-            Err(_) => Some("Port check timed out".into()), // 超时 = 认为 busy
+            Err(_) => {
+                Some("Port check timed out".into())
+            }
         };
         busy_map.insert(path, err_msg);
     }
@@ -132,17 +176,60 @@ pub fn scan_ports(app: &tauri::AppHandle) -> Result<Value, String> {
             let path = port.path.clone();
             let (tx, rx) = std::sync::mpsc::channel();
             std::thread::spawn(move || {
+                #[cfg(target_os = "windows")]
+                let result = {
+                    use std::os::windows::ffi::OsStrExt;
+                    use windows_sys::Win32::Storage::FileSystem::{CreateFileW, OPEN_EXISTING};
+                    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+
+                    let full_path = if path.starts_with("COM") {
+                        format!("\\\\.\\{}", path)
+                    } else {
+                        path.clone()
+                    };
+
+                    let path_w: Vec<u16> = std::ffi::OsStr::new(&full_path)
+                        .encode_wide()
+                        .chain(std::iter::once(0))
+                        .collect();
+
+                    unsafe {
+                        let handle = CreateFileW(
+                            path_w.as_ptr(),
+                            0, // exclusively open for query
+                            0, // exclusively open
+                            std::ptr::null(),
+                            OPEN_EXISTING,
+                            0,
+                            std::ptr::null_mut(),
+                        );
+                        if handle != INVALID_HANDLE_VALUE {
+                            CloseHandle(handle);
+                            Ok(())
+                        } else {
+                            use windows_sys::Win32::Foundation::GetLastError;
+                            let err_code = GetLastError();
+                            let err_msg = format!("CreateFileW failed with OS error code: {}", err_code);
+                            Err(err_msg)
+                        }
+                    }
+                };
+
+                #[cfg(not(target_os = "windows"))]
                 let result = serialport::new(&path, 9600)
                     .timeout(std::time::Duration::from_millis(10))
                     .open()
                     .map(|_| ())
                     .map_err(|e| e.to_string());
+
                 let _ = tx.send(result);
             });
-            let err_msg = match rx.recv_timeout(std::time::Duration::from_millis(50)) {
+            let err_msg = match rx.recv_timeout(std::time::Duration::from_millis(200)) {
                 Ok(Ok(())) => None,
                 Ok(Err(e)) => Some(e),
-                Err(_) => Some("Port check timed out".into()),
+                Err(_) => {
+                    Some("Port check timed out".into())
+                }
             };
             busy_map.insert(port.path.clone(), err_msg);
         }
